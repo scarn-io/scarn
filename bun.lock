@@ -110,6 +110,7 @@
     "packages/pipeline-studio-ui": {
       "name": "@scarn/pipeline-studio-ui",
       "dependencies": {
+        "@scarn/design-tokens": "workspace:*",
         "@scarn/sdk": "workspace:*",
         "@scarn/shared-core": "workspace:*",
         "@xyflow/react": "^12.11.5",

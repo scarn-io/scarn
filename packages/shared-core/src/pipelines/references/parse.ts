@@ -13,6 +13,7 @@ export type Reference =
   | { kind: "error"; path: string[] }
   | { kind: "node"; nodeId: string; source: "result" | "input"; path: string[] }
   | { kind: "workItemTitle" }
+  | { kind: "workItemDescription" }
   | { kind: "workItemField"; alias: string; path: string[] };
 
 export type ReferenceKind = Reference["kind"];
@@ -86,12 +87,15 @@ export function parseReference(text: string): ParseReferenceResult {
       if (field === "title" && alias === undefined) {
         return { ok: true, reference: { kind: "workItemTitle" } };
       }
+      if (field === "description" && alias === undefined) {
+        return { ok: true, reference: { kind: "workItemDescription" } };
+      }
       if (field === "fields" && alias !== undefined) {
         return { ok: true, reference: { kind: "workItemField", alias, path } };
       }
       return fail(
         `"${text}" is not a valid work-item reference`,
-        'Use "workItem.title" or "workItem.fields.<alias>" with an alias declared in "workItemFields"',
+        'Use "workItem.title", "workItem.description" or "workItem.fields.<alias>" with an alias declared in "workItemFields"',
       );
     }
     default:
@@ -113,6 +117,8 @@ export function formatReference(reference: Reference): string {
       ].join(".");
     case "workItemTitle":
       return "workItem.title";
+    case "workItemDescription":
+      return "workItem.description";
     case "workItemField":
       return ["workItem", "fields", reference.alias, ...reference.path].join(
         ".",

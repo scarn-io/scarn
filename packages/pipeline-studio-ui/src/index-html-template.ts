@@ -33,7 +33,6 @@ export const STUDIO_INDEX_HTML = `<!doctype html>
         --studio-bg: #0f1115;
         --studio-surface: #171a21;
         --studio-surface-raised: #1e222b;
-        --studio-node-bg: #1e222b;
         --studio-hover: #232833;
         --studio-text: #e6e8ec;
         --studio-text-strong: #f5f6f8;
@@ -47,14 +46,12 @@ export const STUDIO_INDEX_HTML = `<!doctype html>
         --studio-severity-info: #4f9cf0;
         --studio-severity-none: #3a4050;
         --studio-chip-text: #0f1115;
-        --studio-node-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
       }
       [data-theme="light"] {
         color-scheme: light;
         --studio-bg: #ffffff;
         --studio-surface: #ffffff;
         --studio-surface-raised: #f7f7f7;
-        --studio-node-bg: #ffffff;
         --studio-hover: #f0f0f0;
         --studio-text: #1a1a1a;
         --studio-text-strong: #1a1a1a;
@@ -68,7 +65,14 @@ export const STUDIO_INDEX_HTML = `<!doctype html>
         --studio-severity-info: #0969da;
         --studio-severity-none: #1a192b1a;
         --studio-chip-text: #ffffff;
-        --studio-node-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+        /* The graph is dark-first (see graph-palette.ts); these swap its surfaces. */
+        --studio-graph-bg: #ffffff;
+        --studio-graph-bg-elev: #f6f8fa;
+        --studio-graph-border: #d0d7de;
+        --studio-graph-text: #1f2328;
+        --studio-graph-text-muted: #59636e;
+        --studio-graph-text-dim: #818b98;
+        --studio-graph-shadow: 0 1px 3px rgba(31, 35, 40, 0.12);
       }
       html, body, #root { height: 100%; margin: 0; }
       body {
@@ -105,7 +109,6 @@ export const STUDIO_INDEX_HTML = `<!doctype html>
       .studio-theme-toggle { cursor: pointer; }
       .studio-theme-toggle:hover { background: var(--studio-hover); }
       .studio-graph { grid-column: 1; grid-row: 2; }
-      .studio-graph .react-flow { --xy-background-color: var(--studio-bg); }
       .studio-issues {
         grid-column: 2;
         grid-row: 2;
@@ -158,80 +161,6 @@ export const STUDIO_INDEX_HTML = `<!doctype html>
         outline: 2px solid var(--studio-focus);
         outline-offset: -2px;
       }
-      /*
-       * React Flow's own stylesheet (imported by PipelineGraphView.tsx)
-       * gives every node's wrapper div a "react-flow__node-default" class
-       * with its own border/padding/background REGARDLESS of whether a
-       * custom nodeTypes component is registered — that wrapper still
-       * renders around StudioGraphNode's own .studio-node box below,
-       * producing a visible double border/corner. Neutralize it here
-       * rather than fight it with more specific selectors.
-       */
-      .react-flow__node-default {
-        padding: 0;
-        border: none;
-        background: none;
-        width: auto;
-        text-align: left;
-      }
-      .studio-node {
-        position: relative;
-        width: 240px;
-        box-sizing: border-box;
-        padding: 8px 10px;
-        border: 2px solid var(--studio-severity-none);
-        border-radius: 6px;
-        background: var(--studio-node-bg);
-        color: var(--studio-text);
-        box-shadow: var(--studio-node-shadow);
-        font-size: 12px;
-      }
-      .studio-node[data-selected="true"] { box-shadow: 0 0 0 2px var(--studio-focus); }
-      .studio-node-label { font-weight: bold; font-size: 13px; color: var(--studio-text-strong); }
-      .studio-node-kind {
-        color: var(--studio-text-muted);
-        text-transform: uppercase;
-        font-size: 10px;
-        letter-spacing: 0.02em;
-        margin-top: 2px;
-      }
-      .studio-node-counts { color: var(--studio-text-subtle); margin-top: 4px; }
-      .studio-node[data-match="all"] { border-bottom-style: double; border-bottom-width: 4px; }
-      .studio-node-fork {
-        margin-top: 4px;
-        color: var(--studio-text-muted);
-        font-size: 10px;
-        text-transform: uppercase;
-        letter-spacing: 0.02em;
-      }
-      .studio-node-merge {
-        display: inline-block;
-        max-width: 100%;
-        margin-bottom: 4px;
-        padding: 1px 6px;
-        border-radius: 3px;
-        background: var(--studio-surface-raised);
-        color: var(--studio-text-subtle);
-        font-size: 10px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-      .studio-node-badge {
-        position: absolute;
-        top: -8px;
-        right: -8px;
-        min-width: 16px;
-        height: 16px;
-        padding: 0 4px;
-        border-radius: 8px;
-        background: var(--studio-severity-error);
-        color: var(--studio-chip-text);
-        font-size: 10px;
-        font-weight: bold;
-        line-height: 16px;
-        text-align: center;
-      }
       .studio-detail-back {
         display: block;
         margin: 0 0 12px;
@@ -243,6 +172,13 @@ export const STUDIO_INDEX_HTML = `<!doctype html>
         cursor: pointer;
       }
       .studio-detail-back:hover { text-decoration: underline; }
+      .studio-node-kind {
+        color: var(--studio-text-muted);
+        text-transform: uppercase;
+        font-size: 10px;
+        letter-spacing: 0.02em;
+        margin-top: 2px;
+      }
       .studio-detail-title { margin: 0; font-size: 16px; color: var(--studio-text-strong); }
       .studio-detail-section { margin-top: 16px; }
       .studio-detail-section h3 {
@@ -288,17 +224,6 @@ export const STUDIO_INDEX_HTML = `<!doctype html>
         padding: 10px;
         margin: 6px 0 0;
       }
-      .studio-node-start {
-        width: 36px;
-        height: 36px;
-        margin: 0 38px;
-        border-radius: 50%;
-        background: var(--studio-text-muted);
-        box-shadow: 0 0 0 4px var(--studio-node-bg), 0 0 0 5px var(--studio-border);
-      }
-      .studio-node[data-kind="succeed"],
-      .studio-node[data-kind="fail"] { border-radius: 18px; }
-      .studio-node[data-kind="wait"] { border-style: dashed; }
       .studio-issue-hint { margin-top: 2px; color: var(--studio-text-muted); }
       .studio-issue-path {
         display: block;

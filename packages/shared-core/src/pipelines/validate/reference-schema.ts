@@ -34,6 +34,7 @@ import { describeSchema } from "./schema-relations";
 import { closest, quoteList } from "./suggest";
 
 const WORK_ITEM_TITLE_SCHEMA: JsonSchema = { type: "string" };
+const WORK_ITEM_DESCRIPTION_SCHEMA: JsonSchema = { type: ["string", "null"] };
 
 function describeBase(kind: string, owner: string | null): string {
   return owner === null ? kind : `"${owner}"'s ${kind}`;
@@ -116,7 +117,7 @@ export function resolveReferenceSchema(
       message: `"${text}" can't be used in ${where}`,
       hint:
         site.kind === "start"
-          ? 'The start transition can only use "workItem.title", "workItem.fields.<alias>" and { "value": ... }'
+          ? 'The start transition can only use "workItem.title", "workItem.description", "workItem.fields.<alias>" and { "value": ... }'
           : (KIND_HINTS[reference.kind] ??
             "Reach back with nodes.<id>.result or pass it along in args"),
     });
@@ -200,6 +201,8 @@ export function resolveReferenceSchema(
     }
     case "workItemTitle":
       return rooted(WORK_ITEM_TITLE_SCHEMA);
+    case "workItemDescription":
+      return rooted(WORK_ITEM_DESCRIPTION_SCHEMA);
     case "workItemField": {
       const aliases = Object.keys(ctx.document.workItemFields ?? {});
       if (!aliases.includes(reference.alias)) {

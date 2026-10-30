@@ -106,7 +106,11 @@ export function siteFor(
     return {
       sourceId: null,
       kind: "start",
-      allowed: new Set(["workItemTitle", "workItemField"]),
+      allowed: new Set([
+        "workItemTitle",
+        "workItemDescription",
+        "workItemField",
+      ]),
       useScope: [],
       silent,
     };
@@ -120,6 +124,7 @@ export function siteFor(
         "error",
         "node",
         "workItemTitle",
+        "workItemDescription",
         "workItemField",
       ]),
       useScope: scope,
@@ -131,6 +136,7 @@ export function siteFor(
     "input",
     "node",
     "workItemTitle",
+    "workItemDescription",
     "workItemField",
   ]);
   const site: Site = {

@@ -376,6 +376,13 @@ describe("scaffoldPipelineBuilderDirectory", () => {
       expect(STARTER_PIPELINE_FILE).toContain('decision("approve-fix", {');
     });
 
+    test("starter pipeline binds the report's title and description into triage", () => {
+      expect(STARTER_PIPELINE_FILE).toContain("title: workItem.title");
+      expect(STARTER_PIPELINE_FILE).toContain(
+        "description: workItem.description",
+      );
+    });
+
     test("default assignment file assigns the starter pipeline by default", () => {
       const dir = makeTempDir();
       try {

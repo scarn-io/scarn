@@ -9,9 +9,9 @@
       "default": "./src/graph/translate-spec-to-graph.ts"
     },
     "./view": {
-      "types": "./src/graph/PipelineGraphView.tsx",
-      "bun": "./src/graph/PipelineGraphView.tsx",
-      "default": "./src/graph/PipelineGraphView.tsx"
+      "types": "./src/graph/view.ts",
+      "bun": "./src/graph/view.ts",
+      "default": "./src/graph/view.ts"
     },
     "./package.json": "./package.json"
   },
@@ -21,6 +21,7 @@
     "test": "bun test src"
   },
   "dependencies": {
+    "@scarn/design-tokens": "workspace:*",
     "@scarn/sdk": "workspace:*",
     "@scarn/shared-core": "workspace:*",
     "@xyflow/react": "^12.11.5",

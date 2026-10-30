@@ -141,6 +141,24 @@ export default definePipeline({
 });
 `;
 
+const DESCRIPTION = `import { z } from "zod";
+import { codeStep } from "@scarn/sdk/definitions/steps";
+import { definePipeline, succeed, workItem } from "@scarn/sdk/pipelines";
+
+const triage = codeStep({
+  key: "triage",
+  name: "Triage",
+  inputSchema: z.object({ title: z.string(), description: z.string().nullable() }),
+  fn: () => ({}),
+});
+
+export default definePipeline({
+  key: "described",
+  start: triage({ title: workItem.title, description: workItem.description }),
+  flow: [triage.next(succeed("done"))],
+});
+`;
+
 const OLD_SDK = `export default { key: "old", name: "Old", version: 1, nodeDefinitions: [] };
 `;
 
@@ -221,6 +239,21 @@ describe("scarn pipelines build", () => {
     },
     { timeout: 20_000 },
   );
+
+  test("binds workItem.description into the start args", async () => {
+    const { root, builder, home } = project({ "described.ts": DESCRIPTION });
+
+    const result = await build(root, home);
+
+    expect(result.exitCode).toBe(0);
+    const document = JSON.parse(
+      readFileSync(join(builder, "described.json"), "utf8"),
+    ) as { start: unknown };
+    expect(document.start).toEqual({
+      to: "triage",
+      args: { title: "workItem.title", description: "workItem.description" },
+    });
+  });
 
   test("a definePipeline build error prints its TS location", async () => {
     const { root, home } = project({ "wired-twice.ts": BUILD_ERROR });

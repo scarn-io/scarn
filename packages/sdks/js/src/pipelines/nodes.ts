@@ -157,11 +157,19 @@ export function stepRef<
 }
 
 /** Work-item data, readable anywhere. */
-export const workItem: { readonly title: Placeholder<string> } = {
+export const workItem: {
+  readonly title: Placeholder<string>;
+  readonly description: Placeholder<string | null>;
+} = {
   get title() {
     return rootPlaceholder("workItem.title", {
       type: "string",
     }) as Placeholder<string>;
+  },
+  get description() {
+    return rootPlaceholder("workItem.description", {
+      type: ["string", "null"],
+    }) as Placeholder<string | null>;
   },
 };
 

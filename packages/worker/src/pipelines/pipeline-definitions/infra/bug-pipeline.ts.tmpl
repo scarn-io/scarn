@@ -20,6 +20,7 @@ import {
   greaterThanInclusive,
   lessThan,
   succeed,
+  workItem,
 } from "@scarn/sdk/pipelines";
 
 // The default bug pipeline. An opinionated starting point: change any of it.
@@ -109,9 +110,10 @@ export const evaluate = defineStep({
   environment: { runtime: Runtime.host() },
 
   agentPrompt: `
-Judge how actionable this bug report is. You have only its title, description
-and comments; you cannot read code or open the app. Judge the text in front of
-you and nothing else.
+Judge how actionable this bug report is. The report is the \`title\` and
+\`description\` in your input, and \`workItemComments\` holds the thread
+around it. A null \`description\` means the reporter wrote none. You cannot
+read code or open the app. Judge the text in front of you and nothing else.
 
 Look for: steps to reproduce, the expected behaviour versus what actually
 happened, the environment (URL, browser, account, version), and the scope (who
@@ -125,6 +127,11 @@ or what is affected).
   missing.
 - \`summary\`: one or two sentences restating the problem as you understand it.
 `,
+
+  additionalInput: z.object({
+    title: z.string(),
+    description: z.string().nullable(),
+  }),
 
   result: evaluation,
 });
@@ -191,9 +198,12 @@ export const investigateAndReproduce = defineStep({
   agentPrompt: ({ input, env }) => `
 Investigate the reported bug, reproduce it against the running application at
 ${input.appUrl}, and explain its cause. This is the most important step in the
-pipeline: everything after it works from your evidence. Your input's
-\`evaluate\` field is an earlier read of the report: its \`summary\` and
-\`missingDetails\` tell you what is clear and what is not.
+pipeline: everything after it works from your evidence. The original report
+is the \`title\` and \`description\` in your input (a null \`description\`
+means the reporter wrote none). Your input's \`evaluate\` field is an earlier
+read of the report: its \`summary\` and \`missingDetails\` tell you what is
+clear and what is not. Where \`evaluate.summary\` and the original report
+differ, trust the report.
 
 Use every tool you have. Drive the app with the browser tools. Read the code
 the reproduction points at. Where you have logs, error tracking or a database,
@@ -253,6 +263,8 @@ The next step turns this into a failing test, so be specific.
 
   additionalInput: z.object({
     appUrl: z.string().nullable().optional(),
+    title: z.string(),
+    description: z.string().nullable(),
     evaluate: evaluation,
   }),
 
@@ -453,7 +465,10 @@ const done = succeed("done");
 export default definePipeline({
   key: "bug-pipeline",
   title: "Bug Pipeline",
-  start: evaluate,
+  start: evaluate({
+    title: workItem.title,
+    description: workItem.description,
+  }),
   flow: [
     evaluate.next({
       routes: [
@@ -463,7 +478,12 @@ export default definePipeline({
         },
       ],
       otherwise: (r) =>
-        investigateAndReproduce({ appUrl: APP_URL, evaluate: r.result }),
+        investigateAndReproduce({
+          appUrl: APP_URL,
+          title: r.input.title,
+          description: r.input.description,
+          evaluate: r.result,
+        }),
     }),
 
     requestDetails.next(insufficientDetail),

@@ -610,7 +610,7 @@ export default definePipeline({
 | `decision("id", { input?, actions })` | `{ kind: "wait", for: "decision", actions: [{ key, label, body }] }` | Waits for a person in the dashboard to pick one of `actions`, each `{ label, body?: "optional" \| "required" }` (buttons in key order). Result is `{ action, body }`: `action` is one of the keys, `body` the trimmed text or `null`. `input` is a Zod schema typing the args shown to the person deciding |
 | `succeed("id", { title? })` / `fail("id", { error?, cause?, title? })` | Terminal nodes | No chain |
 | `reply("id")` | `{ kind: "wait", for: "reply" }` | Posts `questions: string[]` on the work item and waits for an answer. Result is `{ replied, body, commentId }` |
-| `workItem.title`, `workItemField(alias, label)` | `workItem.title`, `workItem.fields.<alias>` | Work-item values for args |
+| `workItem.title`, `workItem.description`, `workItemField(alias, label)` | `workItem.title`, `workItem.description`, `workItem.fields.<alias>` | Work-item values for args. `workItem.description` is `string \| null` |
 | `stepRef<TInput, TResult>("key")` | `step: "key"` | A step that exists only on the server; checked against the server's catalog at build time |
 
 ### Chains

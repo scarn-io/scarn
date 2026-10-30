@@ -39,6 +39,7 @@ describe("parseReference", () => {
         path: ["x"],
       },
       "workItem.title": { kind: "workItemTitle" },
+      "workItem.description": { kind: "workItemDescription" },
       "workItem.fields.companyNames": {
         kind: "workItemField",
         alias: "companyNames",
@@ -77,6 +78,7 @@ describe("parseReference", () => {
       "workItem",
       "workItem.body",
       "workItem.title.x",
+      "workItem.description.x",
       "workItem.fields",
     ]) {
       expect(parseReference(text).ok).toBe(false);
@@ -97,7 +99,11 @@ describe("resolveReferenceString", () => {
     nodes: {
       evaluate: { result: { quality: 0.5 }, input: { companyNames: "Acme" } },
     },
-    workItem: { title: "Bug", fields: { companyNames: "Acme" } },
+    workItem: {
+      title: "Bug",
+      description: "It crashes",
+      fields: { companyNames: "Acme" },
+    },
   };
 
   test.concurrent("reads values from every source", () => {
@@ -111,9 +117,7 @@ describe("resolveReferenceString", () => {
       name: "Scarn.Timeout",
       message: "took too long",
     });
-    expect(resolveReferenceString("error.name", context)).toBe(
-      "Scarn.Timeout",
-    );
+    expect(resolveReferenceString("error.name", context)).toBe("Scarn.Timeout");
     expect(
       resolveReferenceString("nodes.evaluate.result.quality", context),
     ).toBe(0.5);
@@ -121,6 +125,9 @@ describe("resolveReferenceString", () => {
       resolveReferenceString("nodes.evaluate.input.companyNames", context),
     ).toBe("Acme");
     expect(resolveReferenceString("workItem.title", context)).toBe("Bug");
+    expect(resolveReferenceString("workItem.description", context)).toBe(
+      "It crashes",
+    );
     expect(
       resolveReferenceString("workItem.fields.companyNames", context),
     ).toBe("Acme");
@@ -139,6 +146,14 @@ describe("resolveReferenceString", () => {
       resolveReferenceString("workItem.fields.nope", context),
     ).toBeUndefined();
     expect(resolveReferenceString("error", {})).toBeUndefined();
+  });
+
+  test.concurrent("resolves a work item with no description to null", () => {
+    expect(
+      resolveReferenceString("workItem.description", {
+        workItem: { title: "Bug", description: null, fields: {} },
+      }),
+    ).toBeNull();
   });
 
   test.concurrent(

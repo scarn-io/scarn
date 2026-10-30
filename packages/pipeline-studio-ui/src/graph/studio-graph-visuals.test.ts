@@ -2,9 +2,12 @@ import { describe, expect, test } from "bun:test";
 import type { StudioIssue, StudioNodeShape } from "./studio-graph-types";
 import {
   edgeDashArray,
+  edgeLegendKinds,
+  edgeTone,
   forkMarker,
   formatInOutCounts,
   highestSeverity,
+  kindLabel,
   mergeBadge,
   nodeCaption,
   nodeInOutCounts,
@@ -158,5 +161,41 @@ describe("formatInOutCounts", () => {
   test("formats as 'N in · M out'", () => {
     expect(formatInOutCounts({ inCount: 3, outCount: 1 })).toBe("3 in · 1 out");
     expect(formatInOutCounts({ inCount: 0, outCount: 0 })).toBe("0 in · 0 out");
+  });
+});
+
+describe("kindLabel", () => {
+  const base = { kind: "wait" as const };
+
+  test("labels a wait node by what it waits for", () => {
+    expect(kindLabel({ ...base, waitFor: "decision" })).toBe("Decision");
+    expect(kindLabel(base)).toBe("Wait");
+    expect(kindLabel({ ...base, waitFor: "reply" })).toBe("Wait · reply");
+  });
+
+  test("labels a step node with its step key", () => {
+    expect(kindLabel({ kind: "step", stepKey: "triage" })).toBe("Step · triage");
+    expect(kindLabel({ kind: "step" })).toBe("Step");
+  });
+});
+
+describe("edgeTone", () => {
+  test("catch wins over a loop route", () => {
+    expect(edgeTone({ kind: "catch", route: { kind: "loop", laneX: 0 } })).toBe("catch");
+    expect(edgeTone({ kind: "route", route: { kind: "loop", laneX: 0 } })).toBe("loop");
+    expect(edgeTone(undefined)).toBe("flow");
+  });
+});
+
+describe("edgeLegendKinds", () => {
+  test("always lists flow, plus each style present", () => {
+    expect(edgeLegendKinds([])).toEqual(["flow"]);
+    expect(
+      edgeLegendKinds([
+        { data: { kind: "catch" } },
+        { data: { lane: "each" } },
+        { data: { route: { kind: "loop", laneX: 0 } } },
+      ]),
+    ).toEqual(["flow", "loop", "catch", "each"]);
   });
 });

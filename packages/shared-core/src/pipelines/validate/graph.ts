@@ -217,7 +217,7 @@ function checkReachBack(
       code: "reference_not_allowed",
       path: pointer,
       message: `The start transition can't reach back to "${nodeId}": no node has run yet`,
-      hint: 'Use "workItem.title", "workItem.fields.<alias>" or { "value": ... }',
+      hint: 'Use "workItem.title", "workItem.description", "workItem.fields.<alias>" or { "value": ... }',
     };
   }
   if (nodeId === sourceId) {

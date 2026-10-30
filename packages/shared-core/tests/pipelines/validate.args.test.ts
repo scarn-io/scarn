@@ -1,4 +1,6 @@
 import { describe, expect, test } from "bun:test";
+import type { JsonSchema } from "@scarn/sdk/contracts/pipeline-document";
+import { obj } from "./fixture-schema";
 import { bugPipeline, bugSteps, clone } from "./fixtures";
 import { itemsPipeline, itemSteps } from "./fixtures-items";
 import {
@@ -109,6 +111,40 @@ describe("args against step inputs", () => {
       },
     ]);
   });
+
+  test.concurrent(
+    "workItem.description is allowed in start and is string | null",
+    () => {
+      const withDescription = (description: JsonSchema) => ({
+        ...bugSteps,
+        evaluate: {
+          ...stepOf(bugSteps, "evaluate"),
+          inputSchema: obj(
+            "EvaluateInput",
+            {
+              companyNames: { type: "string" },
+              employeeEmails: { type: "string" },
+              description,
+            },
+            ["companyNames", "employeeEmails"],
+          ),
+        },
+      });
+      const document = clone(bugPipeline());
+      (document["start"] as { args: Record<string, unknown> }).args[
+        "description"
+      ] = "workItem.description";
+
+      expect(
+        errorsOf(document, withDescription({ type: ["string", "null"] })),
+      ).toEqual([]);
+      expect(
+        errorsOf(document, withDescription({ type: "string" })),
+      ).toMatchObject([
+        { code: "type_mismatch", path: "/start/args/description" },
+      ]);
+    },
+  );
 
   test.concurrent("checks literal args against the input schema", () => {
     const document = clone(bugPipeline());

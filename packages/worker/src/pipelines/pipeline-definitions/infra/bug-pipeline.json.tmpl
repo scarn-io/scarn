@@ -3,7 +3,11 @@
   "key": "bug-pipeline",
   "title": "Bug Pipeline",
   "start": {
-    "to": "evaluate"
+    "to": "evaluate",
+    "args": {
+      "title": "workItem.title",
+      "description": "workItem.description"
+    }
   },
   "nodes": {
     "evaluate": {
@@ -29,6 +33,8 @@
             "appUrl": {
               "value": "https://staging.example.com"
             },
+            "title": "input.title",
+            "description": "input.description",
             "evaluate": "result"
           }
         }

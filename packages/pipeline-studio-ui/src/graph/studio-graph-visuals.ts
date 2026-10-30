@@ -1,5 +1,5 @@
-// Pure, React-free presentation logic shared by `StudioGraphNode.tsx` and
-// `StudioGraphEdge.tsx` — kept in a plain `.ts` file (rather than inside
+// Pure, React-free presentation logic shared by `GraphNode.tsx`,
+// `GraphEdge.tsx` and `graph-decoration.ts` — kept in a plain `.ts` file (rather than inside
 // either component) so `bun:test` can import and exercise it directly,
 // without a JSX/React-DOM test environment.
 import type {
@@ -78,6 +78,59 @@ export function nodeCaption(data: StudioNodeData): string {
     : KIND_CAPTION[data.kind];
 }
 
+/** The title-cased kind line on a graph node, e.g. `Step · triage` or `Decision`. */
+export function kindLabel(
+  data: Pick<StudioNodeData, "kind" | "stepKey" | "waitFor">,
+): string {
+  switch (data.kind) {
+    case "start":
+      return "Start";
+    case "step":
+      return data.stepKey ? `Step · ${data.stepKey}` : "Step";
+    case "wait":
+      if (data.waitFor === "decision") return "Decision";
+      return data.waitFor ? `Wait · ${data.waitFor}` : "Wait";
+    case "succeed":
+      return "Succeed";
+    case "fail":
+      return "Fail";
+  }
+}
+
+/** Which family of transition an edge draws as: plain flow, an error catch, or a loop back. */
+export type EdgeTone = "flow" | "catch" | "loop";
+
+export function edgeTone(
+  data: Partial<Pick<StudioEdgeData, "kind" | "route">> | undefined,
+): EdgeTone {
+  if (data?.kind === "catch") return "catch";
+  if (data?.route?.kind === "loop") return "loop";
+  return "flow";
+}
+
+export type EdgeLegendKind = "flow" | "loop" | "catch" | "each";
+
+export const EDGE_LEGEND_LABEL: Record<EdgeLegendKind, string> = {
+  flow: "Next",
+  loop: "Loop back",
+  catch: "On error",
+  each: "Each item",
+};
+
+/**
+ * The edge styles a graph's legend lists — always "flow", plus each other
+ * style the graph actually contains.
+ */
+export function edgeLegendKinds(
+  edges: readonly { data?: Partial<Pick<StudioEdgeData, "kind" | "lane" | "route">> }[],
+): EdgeLegendKind[] {
+  const kinds: EdgeLegendKind[] = ["flow"];
+  if (edges.some((edge) => edge.data?.route?.kind === "loop")) kinds.push("loop");
+  if (edges.some((edge) => edge.data?.kind === "catch")) kinds.push("catch");
+  if (edges.some((edge) => edge.data?.lane === "each")) kinds.push("each");
+  return kinds;
+}
+
 /**
  * The fork marker on a `match: "all"` node, whose matching routes all run
  * at once as lanes; `null` for every other node.
@@ -141,7 +194,7 @@ export function nodeLayoutSize(
  * differently from normal flow; `each` (fan-out into lanes) edges are dotted.
  */
 export function edgeDashArray(
-  data: Pick<StudioEdgeData, "kind" | "lane"> | undefined,
+  data: Partial<Pick<StudioEdgeData, "kind" | "lane">> | undefined,
 ): string | undefined {
   if (data?.kind === "catch") return "6 4";
   if (data?.lane === "each") return "2 4";

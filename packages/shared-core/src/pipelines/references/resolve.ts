@@ -22,7 +22,11 @@ export interface ReferenceContext {
   nodes?:
     | Readonly<Record<string, NodeValues>>
     | ((nodeId: string) => NodeValues | undefined);
-  workItem?: { title: string; fields: Readonly<Record<string, JsonValue>> };
+  workItem?: {
+    title: string;
+    description: string | null;
+    fields: Readonly<Record<string, JsonValue>>;
+  };
 }
 
 export class ReferenceError extends Error {
@@ -101,6 +105,8 @@ export function resolveReference(
     }
     case "workItemTitle":
       return context.workItem?.title;
+    case "workItemDescription":
+      return context.workItem?.description;
     case "workItemField": {
       const fields = context.workItem?.fields;
       if (fields === undefined || !Object.hasOwn(fields, reference.alias)) {

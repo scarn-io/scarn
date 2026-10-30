@@ -466,21 +466,7 @@ export function translatePipelineToSnapshot(
 }
 
 export { describeCondition } from "./describe-transition";
-export {
-  edgeDashArray,
-  forkMarker,
-  mergeBadge,
-  nodeLayoutSize,
-  orderedEdgeLabel,
-} from "./studio-graph-visuals";
-export {
-  FLOW_SOURCE_HANDLE,
-  FLOW_TARGET_HANDLE,
-  LOOP_SOURCE_HANDLE,
-  LOOP_TARGET_HANDLE,
-  graphBounds,
-  routeEdge,
-} from "./edge-route";
+
 export type {
   BrokenPipeline,
   PipelineGraphSnapshot,

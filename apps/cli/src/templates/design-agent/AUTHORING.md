@@ -437,6 +437,7 @@ build records the path; the server reads it at run time.
 | `r.node(step).result` / `r.node(step).input` | An earlier node's result or args |
 | `r.error` | The error, in a `.catch` target only |
 | `workItem.title` | The work item's title |
+| `workItem.description` | The work item's description, `string \| null` (null when the reporter wrote none) |
 | `workItemField("alias", "Form label")` | One field from the work item's form |
 
 **Args.** Each arg is either a reference of a matching type or a plain JSON
@@ -482,10 +483,11 @@ export default definePipeline({
   reference
   used in a template string, a comparison or arithmetic throws at build time,
   and a field read but never used fails the build.
-- **`input.workItemComments` is not an arg.** The work item's pinned comments
-  are added to every step's input at run time. Never pass them.
-- **Nothing else is added for you.** A step that needs the work item's title
-  or a form field gets it as an arg (`workItem.title`, `workItemField(...)`).
+- **`input.workItemComments` is not an arg.** The work item's comment thread
+  is added to every step's input at run time. Never pass it.
+- **Nothing else is added for you.** A step that needs the work item's title,
+  description or a form field gets it as an arg (`workItem.title`,
+  `workItem.description`, `workItemField(...)`).
 
 ## 4. Branching, decisions, lanes and errors
 
@@ -721,9 +723,9 @@ not which pipeline you build.
 
 | Node | Kind | What it produces |
 | --- | --- | --- |
-| `evaluate` | step, `Runtime.host()` | `quality` (0–1), `missingDetails[]`, a restated summary |
+| `evaluate` | step, `Runtime.host()`, given the report's title and description | `quality` (0–1), `missingDetails[]`, a restated summary |
 | `request-details` | `codeStep`, then `insufficient-detail` (`fail`) | a comment draft asking for the missing details |
-| `investigate-and-reproduce` | step, devcontainer, `Repo.readOnly()` | report, `reproduced`, `reproductionConfidence` (0–1), a `reproVideo` recording (or null), suspected root cause, evidence |
+| `investigate-and-reproduce` | step, devcontainer, `Repo.readOnly()`, given the report's title and description | report, `reproduced`, `reproductionConfidence` (0–1), a `reproVideo` recording (or null), suspected root cause, evidence |
 | `report-reproduction` | `codeStep` | a comment draft embedding the recording |
 | `failing-test` | step, devcontainer | a failing test, or `testWritten: false` with a reason |
 | `propose-fix` | step, devcontainer, `Repo.readOnly()` | a fix proposal for a human to review |
@@ -731,6 +733,13 @@ not which pipeline you build.
 | `fix` | step, devcontainer | the approved fix applied, with a stated confidence |
 
 How it is wired, and why:
+
+- **The report goes in explicitly.** `start` binds `workItem.title` and
+  `workItem.description` into `evaluate`, and `evaluate`'s chain passes them on
+  (`r.input.title`, `r.input.description`) to `investigateAndReproduce`, which
+  trusts the original report over `evaluate.summary` when they differ. Later
+  steps work from the earlier results; reach the report with
+  `r.node(investigateAndReproduce).input` if one needs it.
 
 - **A low bar to start.** `evaluate`'s chain only stops reports with nothing
   to start from (`quality` below `0.1`), so a user's first run almost always

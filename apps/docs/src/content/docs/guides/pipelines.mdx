@@ -285,6 +285,7 @@ Every literal is written as `{ "value": … }`. Any bare string is a reference, 
 | `error`, `error.name`, `error.message`, `error.cause` | The error being handled                       | `catch`                                                                                    |
 | `nodes.<id>.result[.path]`, `nodes.<id>.input[.path]` | An earlier node's result or args              | Anywhere it's guaranteed to have run. See [Reaching back](#reaching-back-to-earlier-nodes) |
 | `workItem.title`                                      | The work item's title                         | Anywhere, including `start`                                                                |
+| `workItem.description`                                | The work item's description, or `null`        | Anywhere, including `start`                                                                |
 | `workItem.fields.<alias>[.path]`                      | A work-item field, by its alias               | Anywhere, including `start`                                                                |
 | `{ "value": … }`                                      | A literal                                     | Anywhere                                                                                   |
 
