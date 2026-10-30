@@ -46,8 +46,8 @@ jobs:
 
       - name: Build opencode plugin
         run: |
-          bun run --filter @boboddy/opencode-plugin declarations
-          bun run --filter @boboddy/opencode-plugin build
+          bun run --filter @scarn/opencode-plugin declarations
+          bun run --filter @scarn/opencode-plugin build
 
       - name: Resolve image metadata
         id: meta

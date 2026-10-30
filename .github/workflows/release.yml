@@ -87,8 +87,8 @@ jobs:
 
       - name: Build opencode plugin
         run: |
-          bun run --filter @boboddy/opencode-plugin declarations
-          bun run --filter @boboddy/opencode-plugin build
+          bun run --filter @scarn/opencode-plugin declarations
+          bun run --filter @scarn/opencode-plugin build
 
       - name: Stamp CLI version
         working-directory: apps/cli
@@ -99,8 +99,8 @@ jobs:
           CLI_BUILD_VERSION: ${{ needs.resolve-version.outputs.version }}
           POSTHOG_CLI_KEY: ${{ secrets.POSTHOG_CLI_KEY }}
           POSTHOG_CLI_HOST: ${{ vars.POSTHOG_CLI_HOST }}
-          BOBODDY_REQUIRE_TELEMETRY_KEY: "1"
-        run: bun run --filter @boboddy/cli build
+          SCARN_REQUIRE_TELEMETRY_KEY: "1"
+        run: bun run --filter @scarn/cli build
 
       - name: Upload binaries
         uses: actions/upload-artifact@v4
@@ -124,8 +124,8 @@ jobs:
 
       - name: Sign macOS binaries
         run: |
-          chmod +x dist/boboddy-darwin-*
-          for bin in dist/boboddy-darwin-*; do
+          chmod +x dist/scarn-darwin-*
+          for bin in dist/scarn-darwin-*; do
             codesign --remove-signature "$bin" || true
             codesign --sign - --force "$bin"
           done
@@ -160,12 +160,12 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Build SDK
-        run: bun run --filter @boboddy/sdk build
+        run: bun run --filter @scarn/sdk build
 
       - name: Build opencode plugin
         run: |
-          bun run --filter @boboddy/opencode-plugin declarations
-          bun run --filter @boboddy/opencode-plugin build
+          bun run --filter @scarn/opencode-plugin declarations
+          bun run --filter @scarn/opencode-plugin build
 
       - name: Download signed CLI binaries
         uses: actions/download-artifact@v4
@@ -174,7 +174,7 @@ jobs:
           path: apps/cli/dist/
 
       - name: Restore binary permissions
-        run: chmod +x apps/cli/dist/boboddy-darwin-* apps/cli/dist/boboddy-linux-*
+        run: chmod +x apps/cli/dist/scarn-darwin-* apps/cli/dist/scarn-linux-*
 
       - name: Stamp package versions
         run: bun run scripts/stamp-versions.ts ${{ needs.resolve-version.outputs.version }}
@@ -223,7 +223,7 @@ jobs:
           tag_name: "v${{ needs.resolve-version.outputs.version }}"
           generate_release_notes: true
           prerelease: ${{ needs.resolve-version.outputs.prerelease == 'true' }}
-          files: apps/cli/dist/boboddy-*
+          files: apps/cli/dist/scarn-*
 
   resolve-docs-deploy:
     runs-on: ubuntu-latest
@@ -300,7 +300,7 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Build docs
-        run: bun run --filter boboddy-docs build
+        run: bun run --filter scarn-docs build
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

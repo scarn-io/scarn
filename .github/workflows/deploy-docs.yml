@@ -1,7 +1,7 @@
 name: Deploy docs
 
 # Builds the Astro docs site (apps/docs) and deploys it to GitHub Pages for this
-# public repo. Hosted at https://boboddy-dev.github.io/boboddy/.
+# public repo. Hosted at https://scarn-io.github.io/scarn/.
 #
 # It can be run manually from the Actions tab to redeploy docs.
 
@@ -36,7 +36,7 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Build docs
-        run: bun run --filter boboddy-docs build
+        run: bun run --filter scarn-docs build
 
       - uses: actions/upload-pages-artifact@v3
         with:

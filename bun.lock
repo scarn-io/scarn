@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "boboddy",
+      "name": "scarn",
       "devDependencies": {
         "@eslint/js": "^10.0.1",
         "@types/node": "^22.14.1",

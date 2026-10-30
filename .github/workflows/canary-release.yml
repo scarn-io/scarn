@@ -35,15 +35,15 @@ jobs:
           fi
           VERSION="0.0.0-canary.${SHA}"
           echo "Attempting to delete canary versions: ${VERSION}"
-          if npm unpublish "@boboddy/sdk@${VERSION}" --registry https://registry.npmjs.org 2>/dev/null; then
-            echo "Successfully unpublished @boboddy/sdk@${VERSION}"
+          if npm unpublish "@scarn/sdk@${VERSION}" --registry https://registry.npmjs.org 2>/dev/null; then
+            echo "Successfully unpublished @scarn/sdk@${VERSION}"
           else
-            echo "@boboddy/sdk@${VERSION} was not unpublished (may not have existed)"
+            echo "@scarn/sdk@${VERSION} was not unpublished (may not have existed)"
           fi
-          if npm unpublish "@boboddy/cli@${VERSION}" --registry https://registry.npmjs.org 2>/dev/null; then
-            echo "Successfully unpublished @boboddy/cli@${VERSION}"
+          if npm unpublish "@scarn/cli@${VERSION}" --registry https://registry.npmjs.org 2>/dev/null; then
+            echo "Successfully unpublished @scarn/cli@${VERSION}"
           else
-            echo "@boboddy/cli@${VERSION} was not unpublished (may not have existed)"
+            echo "@scarn/cli@${VERSION} was not unpublished (may not have existed)"
           fi
 
   build-canary:
@@ -94,14 +94,14 @@ jobs:
 
       - name: Build opencode plugin
         run: |
-          bun run --filter @boboddy/opencode-plugin declarations
-          bun run --filter @boboddy/opencode-plugin build
+          bun run --filter @scarn/opencode-plugin declarations
+          bun run --filter @scarn/opencode-plugin build
 
       - name: Stamp package versions
         run: bun run scripts/stamp-versions.ts ${{ steps.version.outputs.version }}
 
       - name: Build SDK
-        run: bun run --filter @boboddy/sdk build
+        run: bun run --filter @scarn/sdk build
 
       - name: Build CLI binaries
         env:
@@ -109,7 +109,7 @@ jobs:
         # AI image tag is read from apps/cli/ai-image.txt — canary reuses the
         # currently pinned stable image. Update ai-image.txt and cut a new
         # manual Docker release if a canary needs a different image.
-        run: bun run --filter @boboddy/cli build
+        run: bun run --filter @scarn/cli build
 
       - name: Upload CLI dist
         uses: actions/upload-artifact@v4
@@ -140,8 +140,8 @@ jobs:
 
       - name: Sign macOS binaries
         run: |
-          chmod +x dist/boboddy-darwin-*
-          for bin in dist/boboddy-darwin-*; do
+          chmod +x dist/scarn-darwin-*
+          for bin in dist/scarn-darwin-*; do
             codesign --remove-signature "$bin" || true
             codesign --sign - --force "$bin"
           done
@@ -197,7 +197,7 @@ jobs:
           path: apps/cli/dist/
 
       - name: Restore binary permissions
-        run: chmod +x apps/cli/dist/boboddy-darwin-* apps/cli/dist/boboddy-linux-*
+        run: chmod +x apps/cli/dist/scarn-darwin-* apps/cli/dist/scarn-linux-*
 
       - name: Publish SDK canary
         working-directory: packages/sdks/js
@@ -217,7 +217,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          MARKER="<!-- boboddy-canary-version -->"
+          MARKER="<!-- scarn-canary-version -->"
           BODY="${MARKER}
           **Canary published** \`${CANARY_VERSION}\`
 

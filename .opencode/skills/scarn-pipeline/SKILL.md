@@ -1,25 +1,25 @@
 ---
-name: boboddy-pipeline
-description: Create boboddy pipeline definitions from a natural-language description of steps, with a user-review gate before pushing
+name: scarn-pipeline
+description: Create scarn pipeline definitions from a natural-language description of steps, with a user-review gate before pushing
 ---
 
 ## What I do
 
-I translate a plain-language description of an agentic pipeline into a working TypeScript pipeline definition file using the boboddy SDK. I then pause for the user to review the definition before any push happens.
+I translate a plain-language description of an agentic pipeline into a working TypeScript pipeline definition file using the scarn SDK. I then pause for the user to review the definition before any push happens.
 
 ## When to use me
 
-Invoke me when a user says something like "create a pipeline that first investigates an issue, then triages it, then sends a report" — any request to build or modify a boboddy pipeline from a description of steps.
+Invoke me when a user says something like "create a pipeline that first investigates an issue, then triages it, then sends a report" — any request to build or modify a scarn pipeline from a description of steps.
 
 ---
 
 ## Workflow
 
-1. If `.boboddy/pipeline-builder/` does not exist, run `boboddy pipelines init` to scaffold it.
-2. Create or edit a `.ts` file inside `.boboddy/pipeline-builder/`. Each file must export a default `pipeline(...).step(...).advance(...).build()` chain.
+1. If `.scarn/pipeline-builder/` does not exist, run `scarn pipelines init` to scaffold it.
+2. Create or edit a `.ts` file inside `.scarn/pipeline-builder/`. Each file must export a default `pipeline(...).step(...).advance(...).build()` chain.
 3. Present the pipeline definition to the user for review. Summarize the steps, input bindings, and advancement rules so the user can verify intent without re-reading the file.
-4. Wait for explicit approval. Do not run `boboddy pipelines push` until the user confirms. If they request changes, iterate on the file and re-surface for review.
-5. Once approved, ask whether the user wants to push themselves or have me push. Only run `boboddy pipelines push` (or `boboddy pipelines push <projectId>`) if they choose the latter. The CLI auto-pushes any step definitions it finds in the same directory first.
+4. Wait for explicit approval. Do not run `scarn pipelines push` until the user confirms. If they request changes, iterate on the file and re-surface for review.
+5. Once approved, ask whether the user wants to push themselves or have me push. Only run `scarn pipelines push` (or `scarn pipelines push <projectId>`) if they choose the latter. The CLI auto-pushes any step definitions it finds in the same directory first.
 
 ---
 
@@ -27,8 +27,8 @@ Invoke me when a user says something like "create a pipeline that first investig
 
 ```typescript
 import { z } from "zod";
-import { defineStep, Features } from "@boboddy/sdk/definitions/steps";
-import { pipeline } from "@boboddy/sdk/definitions/pipelines";
+import { defineStep, Features } from "@scarn/sdk/definitions/steps";
+import { pipeline } from "@scarn/sdk/definitions/pipelines";
 ```
 
 ---
@@ -348,8 +348,8 @@ Pass a third `configFn` argument to `.step()` to cap how long a worker can spend
 
 ```typescript
 import { z } from "zod";
-import { defineStep } from "@boboddy/sdk/definitions/steps";
-import { pipeline } from "@boboddy/sdk/definitions/pipelines";
+import { defineStep } from "@scarn/sdk/definitions/steps";
+import { pipeline } from "@scarn/sdk/definitions/pipelines";
 
 export const investigate = defineStep({
   key: "investigate",
@@ -398,18 +398,18 @@ export default pipeline({
 
 ## Default pipeline assignment
 
-A project can have a single routing policy that automatically starts a pipeline when a work item arrives. This lives in the reserved file `.boboddy/pipeline-builder/default-pipeline-assignment.ts`.
+A project can have a single routing policy that automatically starts a pipeline when a work item arrives. This lives in the reserved file `.scarn/pipeline-builder/default-pipeline-assignment.ts`.
 
 **File rules:**
 - Reserved filename — the push scanner ignores it as a pipeline definition.
 - Only `defaultPipelineAssignment` is imported from the SDK; everything else comes from the callback context.
-- `boboddy pipelines push` syncs it to the server after pipelines are pushed. If the file is absent, server config is left unchanged.
-- `boboddy pipelines pull` writes or removes the file to match server state.
+- `scarn pipelines push` syncs it to the server after pipelines are pushed. If the file is absent, server config is left unchanged.
+- `scarn pipelines pull` writes or removes the file to match server state.
 
 ### Authoring
 
 ```typescript
-import { defaultPipelineAssignment } from "@boboddy/sdk/definitions/pipelines";
+import { defaultPipelineAssignment } from "@scarn/sdk/definitions/pipelines";
 import bugTriage from "./bug-triage";
 import regressionReview from "./regression-review";
 
@@ -459,20 +459,20 @@ All comparators from advancement policies work here: `.eq`, `.ne`, `.gt`, `.gte`
 Only push after the user has reviewed and approved the pipeline definition. Once approved, ask whether the user wants to push themselves or wants me to run the push.
 
 ```bash
-# First time setup (creates .boboddy/pipeline-builder/ with example files)
-boboddy pipelines init
+# First time setup (creates .scarn/pipeline-builder/ with example files)
+scarn pipelines init
 
 # Fetch existing definitions from the server as editable TypeScript
-boboddy pipelines pull
+scarn pipelines pull
 
 # Push all pipeline definitions (also pushes step definitions automatically)
 # Also syncs default-pipeline-assignment.ts if present
-boboddy pipelines push
+scarn pipelines push
 
 # Push to a specific project
-boboddy pipelines push <projectId>
+scarn pipelines push <projectId>
 ```
 
-Steps referenced in a pipeline must exist on the server. The `push` command handles this automatically by pushing all step definitions found in `.boboddy/pipeline-builder/` before pushing pipelines.
+Steps referenced in a pipeline must exist on the server. The `push` command handles this automatically by pushing all step definitions found in `.scarn/pipeline-builder/` before pushing pipelines.
 
 Incrementing `version` in `defineStep` or `pipeline()` creates a new entity on the server rather than updating the existing one.
