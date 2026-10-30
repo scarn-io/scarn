@@ -21,7 +21,7 @@ export type { ArtifactRetentionSettings, ConfigFile } from "./config-file";
 // redirect `resolveHomeDir()` at a scratch directory the same way this
 // package's own tests do.
 export { setHomeDirForTests } from "./home-dir";
-export { resolveBoboddyBaseUrl } from "./base-url";
+export { resolveScarnBaseUrl } from "./base-url";
 export {
   formatProjectRef,
   isProjectRef,

@@ -22,7 +22,7 @@ import { parseDevcontainerConfigContent } from "./local-devcontainer-jsonc";
  * make OpenCode unlaunchable inside the container.
  *
  * Conflict handling: a user-defined mount that targets the same container path
- * as a Boboddy mount is a hard error (we refuse to silently shadow or duplicate
+ * as a Scarn mount is a hard error (we refuse to silently shadow or duplicate
  * a target), surfaced as a {@link ConfigurationError}.
  */
 
@@ -103,7 +103,7 @@ export async function patchDevcontainerMounts(
 
   if (DEVCONTAINER_COMPOSE_KEY in parsed) {
     throw new ConfigurationError(
-      "Boboddy cannot inject the OpenCode runtime mount into a " +
+      "Scarn cannot inject the OpenCode runtime mount into a " +
         "docker-compose-based devcontainer (the devcontainer spec ignores " +
         "top-level `mounts` for `dockerComposeFile` configs). Use an `image` " +
         "or Dockerfile (`build`) based devcontainer for in-container OpenCode " +
@@ -121,7 +121,7 @@ export async function patchDevcontainerMounts(
     if (existingTargets.has(mount.target)) {
       throw new ConfigurationError(
         `The devcontainer already defines a mount at '${mount.target}', which ` +
-          "conflicts with a Boboddy-managed runtime mount. Remove the " +
+          "conflicts with a Scarn-managed runtime mount. Remove the " +
           "conflicting mount from your devcontainer.json.",
         "DEVCONTAINER_MOUNT_CONFLICT",
       );
@@ -156,7 +156,7 @@ export async function patchDevcontainerAppPort(
 
   if (DEVCONTAINER_COMPOSE_KEY in parsed) {
     throw new ConfigurationError(
-      "Boboddy cannot publish the OpenCode runtime port for a " +
+      "Scarn cannot publish the OpenCode runtime port for a " +
         "docker-compose-based devcontainer (the devcontainer spec ignores " +
         "`appPort` for `dockerComposeFile` configs). Use an `image` or " +
         "Dockerfile (`build`) based devcontainer for in-container OpenCode.",
@@ -208,7 +208,7 @@ export async function patchDevcontainerRunArgs(
 
   if (DEVCONTAINER_COMPOSE_KEY in parsed) {
     throw new ConfigurationError(
-      "Boboddy cannot inject Docker run args for a docker-compose-based " +
+      "Scarn cannot inject Docker run args for a docker-compose-based " +
         "devcontainer (the devcontainer spec ignores `runArgs` for " +
         "`dockerComposeFile` configs). Use an `image` or Dockerfile (`build`) " +
         "based devcontainer for in-container OpenCode execution.",

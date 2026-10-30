@@ -1,5 +1,5 @@
-import { describe, expect, setDefaultTimeout } from "bun:test";
-import type { LaunchOpencodeTuiInput } from "@boboddy/worker";
+import { describe, expect, setDefaultTimeout, test } from "bun:test";
+import type { LaunchOpencodeTuiInput } from "@scarn/worker";
 import {
   runDesignSession,
   type DesignArguments,
@@ -7,11 +7,7 @@ import {
 } from "../src/lib/design-session";
 import { STUDIO_HANDOFF_MESSAGE } from "../src/lib/design-studio";
 import { createCliLogger } from "../src/lib/logger";
-import {
-  concurrentTest as test,
-  createReporterRecorder,
-  runCli,
-} from "./utils";
+import { createReporterRecorder, runCli } from "./utils";
 
 // Spawns the CLI from source; under a loaded machine (test-all-workspaces)
 // that overruns bun's 5s default.
@@ -20,21 +16,21 @@ setDefaultTimeout(15_000);
 /**
  * The studio is a companion to the design session: it starts after the
  * preflight and before the TUI takes the terminal, reaches the agent only
- * through `BOBODDY_STUDIO_URL`, and is closed once the run offer is done or
+ * through `SCARN_STUDIO_URL`, and is closed once the run offer is done or
  * the TUI exits non-zero — before the exit-code passthrough. Every port is a
  * fake; this file is about ordering and wiring.
  */
 
 const STUDIO_URL = "http://localhost:54321";
 const MANIFEST_PATH =
-  "/home/test/.boboddy/projects/acme/project-1/discovered-tools.json";
+  "/home/test/.scarn/projects/acme/project-1/discovered-tools.json";
 
 const ARGS: DesignArguments = {
   project: undefined,
   baseUrl: "https://app.example.com",
   workItemId: undefined,
   studio: true,
-  repoRoot: "/nonexistent/boboddy-design-studio-test",
+  repoRoot: "/nonexistent/scarn-design-studio-test",
 };
 
 type Recorded = {
@@ -125,7 +121,7 @@ describe("runDesignSession — studio companion", () => {
       "runOffer",
       "closeStudio",
     ]);
-    expect(recorded.tuiInput?.env?.["BOBODDY_STUDIO_URL"]).toBe(STUDIO_URL);
+    expect(recorded.tuiInput?.env?.["SCARN_STUDIO_URL"]).toBe(STUDIO_URL);
     expect(recorder.calls.at(-1)).toEqual({
       method: "finish",
       message: `Starting the designer… ${STUDIO_HANDOFF_MESSAGE}`,
@@ -139,7 +135,7 @@ describe("runDesignSession — studio companion", () => {
     await runDesignSession({ args: { ...ARGS, studio: false }, ctx, ports });
 
     expect(recorded.order).toEqual(["preflight", "launchTui", "runOffer"]);
-    expect(recorded.tuiInput?.env).not.toHaveProperty("BOBODDY_STUDIO_URL");
+    expect(recorded.tuiInput?.env).not.toHaveProperty("SCARN_STUDIO_URL");
     expect(recorder.calls.at(-1)).toEqual({
       method: "finish",
       message: "Starting the designer…",
@@ -158,7 +154,7 @@ describe("runDesignSession — studio companion", () => {
       "launchTui",
       "runOffer",
     ]);
-    expect(recorded.tuiInput?.env).not.toHaveProperty("BOBODDY_STUDIO_URL");
+    expect(recorded.tuiInput?.env).not.toHaveProperty("SCARN_STUDIO_URL");
   });
 
   test("closes the studio before passing a non-zero TUI exit code through", async () => {

@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pushFromDirectory } from "../src/push/push-from-directory";
@@ -22,93 +22,144 @@ async function readRequest(
   };
 }
 
-const BASE_URL = "https://boboddy.example.com";
+const BASE_URL = "https://scarn.example.com";
+
+function json(body: object, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+type ServerPipeline = {
+  id: string;
+  key: string;
+  versions: string[];
+};
 
 /**
- * Mock fetch that remembers which step definitions have been upserted. On
- * subsequent GETs to `/api/step-definitions`, it returns those upserts so the
- * pipeline-upsert code can resolve `stepDefinitionId` references.
+ * Mock fetch that records every request and keeps just enough server state
+ * for a push: upserted steps, and pipelines whose versions are compared by
+ * serialized document, the way the server compares content hashes.
  */
 function makeMockFetch(captured: CapturedRequest[]): typeof globalThis.fetch {
   const upsertedSteps: Array<{ id: string; key: string; version: number }> = [];
+  const pipelines: ServerPipeline[] = [];
   let nextId = 1;
+
+  const versionContract = (pipeline: ServerPipeline) => ({
+    id: `${pipeline.id}-v${String(pipeline.versions.length)}`,
+    pipelineDefinitionId: pipeline.id,
+    version: pipeline.versions.length,
+  });
+  const pipelineContract = (pipeline: ServerPipeline) => ({
+    id: pipeline.id,
+    key: pipeline.key,
+    currentVersion: versionContract(pipeline),
+  });
+
   return (async (input: string | URL | Request) => {
     const req = await readRequest(input);
     captured.push(req);
+    const path = new URL(req.url).pathname;
 
-    if (req.method === "GET" && req.url.includes("/api/step-definitions")) {
-      return new Response(JSON.stringify(upsertedSteps), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      });
+    if (req.method === "GET" && path === "/api/step-definitions") {
+      return json(upsertedSteps);
     }
-    if (req.method === "GET") {
-      return new Response(JSON.stringify([]), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-    if (req.method === "PUT" && req.url.endsWith("/api/step-definitions")) {
+    if (req.method === "PUT" && path === "/api/step-definitions") {
       const body = req.body as { key: string; version: number };
       const id = `step-${String(nextId++)}`;
       upsertedSteps.push({ id, key: body.key, version: body.version });
-      return new Response(
-        JSON.stringify({ id, key: body.key, version: body.version }),
-        {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        },
-      );
+      return json({ id, key: body.key, version: body.version });
     }
-    return new Response(JSON.stringify({ id: "x" }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
+    if (req.method === "GET" && path.endsWith("/pipeline-definitions")) {
+      return json(pipelines.map(pipelineContract));
+    }
+    if (req.method === "POST" && path === "/api/pipeline-definitions") {
+      const body = req.body as { key: string; document: unknown };
+      const pipeline: ServerPipeline = {
+        id: `pipe-${String(nextId++)}`,
+        key: body.key,
+        versions: [JSON.stringify(body.document)],
+      };
+      pipelines.push(pipeline);
+      return json(pipelineContract(pipeline));
+    }
+    const versions = /^\/api\/pipeline-definitions\/([^/]+)\/versions$/.exec(
+      path,
+    );
+    if (req.method === "POST" && versions) {
+      const pipeline = pipelines.find((p) => p.id === versions[1]);
+      if (!pipeline) return json({ title: "Not found" }, 404);
+      const document = JSON.stringify(
+        (req.body as { document: unknown }).document,
+      );
+      const published = pipeline.versions.at(-1) !== document;
+      if (published) pipeline.versions.push(document);
+      return json({
+        published,
+        version: versionContract(pipeline),
+        pipelineDefinition: pipelineContract(pipeline),
+      });
+    }
+    if (req.method === "GET") {
+      return json([]);
+    }
+    return json({ id: "x" });
   }) as unknown as typeof globalThis.fetch;
 }
 
-const PIPELINE_SPEC_JS = (key: string) => `
+const STEP_A_JS = `
+export const stepA = {
+  key: "step-a",
+  name: "Step A",
+  description: null,
+  version: 1,
+  kind: "user_defined",
+  status: "active",
+  prompt: null,
+  inputSchemaJson: null,
+  resultSchemaJson: null,
+  opencodeMcpJson: null,
+};
+`;
+
+const STEP_AND_PIPELINE_JS = (key: string) => `
+${STEP_A_JS}
 export default {
   key: ${JSON.stringify(key)},
   name: ${JSON.stringify(key)},
-  description: null,
-  version: 1,
-  status: "active",
-  entryNodeKey: "step-a",
-  nodeDefinitions: [
-    {
-      nodeKey: "step-a",
-      kind: "step",
-      stepKey: "step-a",
-      stepName: "Step A",
-      stepDescription: null,
-      inputBindingsJson: {},
-      timeoutSeconds: null,
-      advancementPolicyDefinition: {
-        rulesJson: { rules: [] },
-        defaultEventType: "continue",
-        defaultEventParamsJson: null,
-        allowedEventTypes: ["continue"],
-      },
-      computedSignalDefinitions: [],
-    },
-  ],
-  dependencyEdges: [],
-  _stepDefinitions: [{
-    key: "step-a",
-    name: "Step A",
-    description: null,
-    version: 1,
-    kind: "user_defined",
-    status: "active",
-    prompt: null,
-    inputSchemaJson: null,
-    resultSchemaJson: null,
-    signalExtractorDefinitions: [],
-    opencodeMcpJson: null,
-  }],
+  start: "step-a",
+  nodes: { "step-a": { type: "step", step: "step-a" } },
 };
 `;
+
+const PIPELINE_DOCUMENT = (key: string, title: string) => ({
+  schemaVersion: 1,
+  key,
+  title,
+  start: { node: "a" },
+  nodes: { a: { kind: "step", step: "step-a" } },
+});
+
+/** A built assignment spec; the real file imports `defaultPipelineAssignment`. */
+const ASSIGNMENT_JS = (defaultKey: string, ruleKey: string) => `
+export default {
+  _tag: "default_pipeline_assignment",
+  default: { _tag: "assign", pipelineKey: ${JSON.stringify(defaultKey)} },
+  rules: [
+    {
+      _tag: "assignment_rule",
+      mode: "all",
+      conditions: [{ _tag: "leaf", fact: "workItem", path: "$.fields.demo", operator: "equal", value: "x" }],
+      outcome: { _tag: "assign", pipelineKey: ${JSON.stringify(ruleKey)} },
+    },
+  ],
+};
+`;
+
+const isPipelineWrite = (r: CapturedRequest) =>
+  r.method === "POST" && r.url.includes("/api/pipeline-definitions");
 
 describe("pushFromDirectory", () => {
   const previousFetch = globalThis.fetch;
@@ -116,10 +167,10 @@ describe("pushFromDirectory", () => {
   const captured: CapturedRequest[] = [];
 
   beforeAll(() => {
-    dir = mkdtempSync(join(tmpdir(), "boboddy-pfd-test-"));
+    dir = mkdtempSync(join(tmpdir(), "scarn-pfd-test-"));
     writeFileSync(
       join(dir, "investigation.js"),
-      PIPELINE_SPEC_JS("investigation"),
+      STEP_AND_PIPELINE_JS("investigation"),
     );
 
     globalThis.fetch = makeMockFetch(captured);
@@ -130,7 +181,7 @@ describe("pushFromDirectory", () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
-  test("upserts steps and pipelines discovered in the directory", async () => {
+  test("upserts the steps discovered in the directory and ignores unbuilt pipeline sources", async () => {
     const result = await pushFromDirectory(dir, {
       baseUrl: BASE_URL,
       projectId: "proj-1",
@@ -139,7 +190,7 @@ describe("pushFromDirectory", () => {
     });
 
     expect(result.pushedSteps).toBe(1);
-    expect(result.pushedPipelines).toBe(1);
+    expect(result.publishedPipelines).toEqual([]);
 
     const stepUpsert = captured.find(
       (r) => r.method === "PUT" && r.url.endsWith("/api/step-definitions"),
@@ -152,20 +203,13 @@ describe("pushFromDirectory", () => {
       version: 1,
     });
 
-    const pipelineUpsert = captured.find(
-      (r) => r.method === "PUT" && r.url.endsWith("/api/pipeline-definitions"),
-    );
-    expect(pipelineUpsert).toBeDefined();
-    if (!pipelineUpsert) throw new Error("expected pipelineUpsert");
-    expect(pipelineUpsert.body).toMatchObject({
-      projectId: "proj-1",
-      key: "investigation",
-      status: "active",
-    });
+    expect(
+      captured.filter((r) => r.url.includes("/pipeline-definitions")),
+    ).toEqual([]);
   });
 
   test("skips push.ts even when present", async () => {
-    const dir2 = mkdtempSync(join(tmpdir(), "boboddy-pfd-skip-"));
+    const dir2 = mkdtempSync(join(tmpdir(), "scarn-pfd-skip-"));
     const previous2 = globalThis.fetch;
     globalThis.fetch = makeMockFetch([]);
     try {
@@ -175,7 +219,7 @@ describe("pushFromDirectory", () => {
       );
       writeFileSync(
         join(dir2, "investigation.js"),
-        PIPELINE_SPEC_JS("investigation-2"),
+        STEP_AND_PIPELINE_JS("investigation-2"),
       );
       const result = await pushFromDirectory(dir2, {
         baseUrl: BASE_URL,
@@ -183,7 +227,7 @@ describe("pushFromDirectory", () => {
         accessToken: "tok",
         log: () => undefined,
       });
-      expect(result.pushedPipelines).toBe(1);
+      expect(result.pushedSteps).toBe(1);
     } finally {
       globalThis.fetch = previous2;
       rmSync(dir2, { recursive: true, force: true });
@@ -191,67 +235,32 @@ describe("pushFromDirectory", () => {
   });
 });
 
-describe("pushFromDirectory route validation", () => {
+// On a fresh project the assignment needs its pipelines on the server, and
+// publishing a pipeline needs its steps there: one push has to do all three,
+// in that order.
+describe("pushFromDirectory publishing built pipelines", () => {
   const previousFetch = globalThis.fetch;
   let dir: string;
+  const captured: CapturedRequest[] = [];
 
   beforeAll(() => {
-    dir = mkdtempSync(join(tmpdir(), "boboddy-pfd-route-"));
-    mkdirSync(dir, { recursive: true });
-
-    // Pipeline that routes to a non-existent target.
-    const PIPELINE = `
-      export default {
-        key: "router",
-        name: "Router",
-        description: null,
-        version: 1,
-        status: "active",
-        entryNodeKey: "step-a",
-        nodeDefinitions: [
-          {
-            nodeKey: "step-a",
-            kind: "step",
-            stepKey: "step-a",
-            stepName: "Step A",
-            stepDescription: null,
-            inputBindingsJson: {},
-            timeoutSeconds: null,
-            advancementPolicyDefinition: {
-              rulesJson: { rules: [] },
-              defaultEventType: "route",
-              defaultEventParamsJson: { pipelineKey: "missing-target" },
-              allowedEventTypes: ["route", "continue"],
-            },
-            computedSignalDefinitions: [],
-          },
-        ],
-        dependencyEdges: [],
-        _stepDefinitions: [{
-          key: "step-a",
-          name: "Step A",
-          description: null,
-          version: 1,
-          kind: "user_defined",
-          status: "active",
-          prompt: null,
-          inputSchemaJson: null,
-          resultSchemaJson: null,
-          signalExtractorDefinitions: [],
-          opencodeMcpJson: null,
-        }],
-      };
-    `;
-    writeFileSync(join(dir, "router.js"), PIPELINE);
-
-    globalThis.fetch = (() => {
-      return Promise.resolve(
-        new Response(JSON.stringify([]), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        }),
-      );
-    }) as unknown as typeof globalThis.fetch;
+    dir = mkdtempSync(join(tmpdir(), "scarn-pfd-publish-"));
+    writeFileSync(join(dir, "steps.js"), STEP_A_JS);
+    writeFileSync(
+      join(dir, "triage.json"),
+      JSON.stringify(PIPELINE_DOCUMENT("triage", "Triage")),
+    );
+    writeFileSync(
+      join(dir, "escalate.json"),
+      JSON.stringify(PIPELINE_DOCUMENT("escalate", "Escalate")),
+    );
+    writeFileSync(join(dir, "package.json"), JSON.stringify({ name: "x" }));
+    writeFileSync(join(dir, "fixture.json"), JSON.stringify({ rows: [] }));
+    writeFileSync(
+      join(dir, "default-pipeline-assignment.ts"),
+      ASSIGNMENT_JS("triage", "escalate"),
+    );
+    globalThis.fetch = makeMockFetch(captured);
   });
 
   afterAll(() => {
@@ -259,22 +268,66 @@ describe("pushFromDirectory route validation", () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
-  test("throws when a step routes to a pipeline that doesn't exist locally or on the server", async () => {
-    let caught: unknown;
-    try {
-      await pushFromDirectory(dir, {
-        baseUrl: BASE_URL,
-        projectId: "proj-3",
-        accessToken: "tok",
-        log: () => undefined,
-      });
-    } catch (err) {
-      caught = err;
-    }
-    expect(caught).toBeInstanceOf(Error);
-    expect((caught as Error).message).toContain(
-      'routes to pipeline "missing-target"',
+  const push = () =>
+    pushFromDirectory(dir, {
+      baseUrl: BASE_URL,
+      projectId: "proj-5",
+      accessToken: "tok",
+      log: () => undefined,
+    });
+
+  test("creates every built pipeline after the steps and before the assignment, on a fresh project", async () => {
+    const result = await push();
+
+    expect(result).toEqual({
+      pushedSteps: 1,
+      publishedPipelines: ["escalate", "triage"],
+      unchangedPipelines: [],
+      syncedDefaultPipelineAssignment: true,
+    });
+
+    const order = captured
+      .filter((r) => r.method !== "GET")
+      .map((r) => `${r.method} ${new URL(r.url).pathname}`);
+    expect(order).toEqual([
+      "PUT /api/step-definitions",
+      "POST /api/pipeline-definitions",
+      "POST /api/pipeline-definitions",
+      "PUT /api/projects/proj-5/default-pipeline-assignment",
+    ]);
+    expect(captured.filter(isPipelineWrite).map((r) => r.body)).toEqual([
+      {
+        projectId: "proj-5",
+        key: "escalate",
+        name: "Escalate",
+        document: PIPELINE_DOCUMENT("escalate", "Escalate"),
+      },
+      {
+        projectId: "proj-5",
+        key: "triage",
+        name: "Triage",
+        document: PIPELINE_DOCUMENT("triage", "Triage"),
+      },
+    ]);
+  });
+
+  test("a second push publishes existing pipelines as versions and reports unchanged ones", async () => {
+    writeFileSync(
+      join(dir, "triage.json"),
+      JSON.stringify(PIPELINE_DOCUMENT("triage", "Triage, revised")),
     );
+    captured.length = 0;
+
+    const result = await push();
+
+    expect(result.publishedPipelines).toEqual(["triage"]);
+    expect(result.unchangedPipelines).toEqual(["escalate"]);
+    expect(
+      captured
+        .filter(isPipelineWrite)
+        .map((r) => new URL(r.url).pathname)
+        .every((path) => path.endsWith("/versions")),
+    ).toBe(true);
   });
 });
 
@@ -286,7 +339,7 @@ describe("pushFromDirectory offline validation", () => {
   let dir: string;
   const captured: CapturedRequest[] = [];
 
-  const STEP_WITH_DEAD_SIGNAL = `
+  const STEP_WITH_ARTIFACT_IN_ARRAY = `
     export const step = {
       key: "step-a",
       name: "Step A",
@@ -298,24 +351,21 @@ describe("pushFromDirectory offline validation", () => {
       inputSchemaJson: null,
       resultSchemaJson: {
         type: "object",
-        properties: { outcome: { type: "string" } },
-        required: ["outcome"],
-        additionalProperties: false,
+        properties: {
+          shots: {
+            type: "array",
+            items: { type: "string", "x-scarn-artifact": { accept: [".png"] } },
+          },
+        },
+        required: ["shots"],
       },
-      signalExtractorDefinitions: [{
-        key: "dead",
-        sourcePath: "totally.not.real",
-        type: "string",
-        required: true,
-        availableWhenResultStatusIn: null,
-      }],
       opencodeMcpJson: null,
     };
   `;
 
   beforeAll(() => {
-    dir = mkdtempSync(join(tmpdir(), "boboddy-pfd-validate-"));
-    writeFileSync(join(dir, "steps.js"), STEP_WITH_DEAD_SIGNAL);
+    dir = mkdtempSync(join(tmpdir(), "scarn-pfd-validate-"));
+    writeFileSync(join(dir, "steps.js"), STEP_WITH_ARTIFACT_IN_ARRAY);
     globalThis.fetch = makeMockFetch(captured);
   });
 
@@ -324,7 +374,7 @@ describe("pushFromDirectory offline validation", () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
-  test("rejects a dead signal sourcePath without writing anything", async () => {
+  test("rejects an invalid step without writing anything", async () => {
     let caught: unknown;
     try {
       await pushFromDirectory(dir, {
@@ -340,9 +390,39 @@ describe("pushFromDirectory offline validation", () => {
     expect(caught).toBeInstanceOf(Error);
     const message = (caught as Error).message;
     expect(message).toContain('Step "step-a"');
-    expect(message).toContain('sourcePath "totally.not.real"');
-    expect(message).toContain("Valid sourcePaths for this step: outcome.");
+    expect(message).toContain('artifact field "shots[]"');
 
     expect(captured.filter((r) => r.method !== "GET")).toEqual([]);
+  });
+
+  test("rejects a pipeline document with no key without writing anything", async () => {
+    const badDir = mkdtempSync(join(tmpdir(), "scarn-pfd-nokey-"));
+    const requests: CapturedRequest[] = [];
+    const previous = globalThis.fetch;
+    globalThis.fetch = makeMockFetch(requests);
+    try {
+      writeFileSync(join(badDir, "steps.js"), STEP_A_JS);
+      writeFileSync(
+        join(badDir, "broken.json"),
+        JSON.stringify({ schemaVersion: 1, nodes: {} }),
+      );
+      let caught: unknown;
+      try {
+        await pushFromDirectory(badDir, {
+          baseUrl: BASE_URL,
+          projectId: "proj-6",
+          accessToken: "tok",
+          log: () => undefined,
+        });
+      } catch (err) {
+        caught = err;
+      }
+      expect(caught).toBeInstanceOf(Error);
+      expect((caught as Error).message).toContain('broken.json has no "key"');
+      expect(requests.filter((r) => r.method !== "GET")).toEqual([]);
+    } finally {
+      globalThis.fetch = previous;
+      rmSync(badDir, { recursive: true, force: true });
+    }
   });
 });

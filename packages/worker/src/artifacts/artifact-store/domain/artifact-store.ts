@@ -1,7 +1,7 @@
-import type { ArtifactKind } from "@boboddy/sdk/contracts/artifacts";
+import type { ArtifactKind } from "@scarn/sdk/contracts/artifacts";
 
 export type SaveArtifactInput = {
-  taskId: string;
+  taskRunId: string;
   sourcePath: string;
   relativeStorePath: string;
   /**

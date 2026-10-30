@@ -1,18 +1,19 @@
 import { describe, expect, test } from "bun:test";
 import type { Plugin } from "@opencode/plugin";
 import type { Info as ToolInfo } from "@opencode/plugin/promise/tool";
-import BoboddyOpencodePlugin from "./plugin";
+import ScarnOpencodePlugin from "./plugin";
 import {
-  BOBODDY_LIST_TOOLS_METHOD,
-  BOBODDY_RPC_ID,
-  type BoboddyListToolsOutput,
-} from "./boboddy-rpc";
-import { BOBODDY_SUBMIT_ARTIFACT_TOOL } from "./tools/boboddy-submit-artifact";
-import { BOBODDY_SUBMIT_STEP_FINDINGS_TOOL } from "./tools/boboddy-submit-step-findings";
+  SCARN_LIST_TOOLS_METHOD,
+  SCARN_RPC_ID,
+  type ScarnListToolsOutput,
+} from "./scarn-rpc";
+import { SCARN_END_CONVERSATION_TOOL } from "./tools/scarn-end-conversation";
+import { SCARN_SUBMIT_ARTIFACT_TOOL } from "./tools/scarn-submit-artifact";
+import { SCARN_SUBMIT_STEP_FINDINGS_TOOL } from "./tools/scarn-submit-step-findings";
 
 type RegisteredRpc = {
   definition: { id: string; methods: Record<string, unknown> };
-  handlers: Record<string, (input: object) => Promise<BoboddyListToolsOutput>>;
+  handlers: Record<string, (input: object) => Promise<ScarnListToolsOutput>>;
 };
 
 function createFakeContext(directory: string) {
@@ -50,17 +51,18 @@ function createFakeContext(directory: string) {
   };
 }
 
-describe("BoboddyOpencodePlugin", () => {
-  test("setup registers the Boboddy tools outside Code Mode", async () => {
+describe("ScarnOpencodePlugin", () => {
+  test("setup registers the Scarn tools outside Code Mode", async () => {
     const { context, added } = createFakeContext("/workspace");
 
-    await BoboddyOpencodePlugin.setup(context);
+    await ScarnOpencodePlugin.setup(context);
 
-    expect(BoboddyOpencodePlugin.id).toBe("boboddy");
+    expect(ScarnOpencodePlugin.id).toBe("scarn");
     expect(added.map((tool) => tool.name).sort()).toEqual([
-      BOBODDY_SUBMIT_ARTIFACT_TOOL,
-      BOBODDY_SUBMIT_STEP_FINDINGS_TOOL,
       "playwright-trace-analyzer",
+      SCARN_END_CONVERSATION_TOOL,
+      SCARN_SUBMIT_ARTIFACT_TOOL,
+      SCARN_SUBMIT_STEP_FINDINGS_TOOL,
     ]);
     for (const tool of added) {
       expect(tool.options?.codemode).toBe(false);
@@ -71,12 +73,12 @@ describe("BoboddyOpencodePlugin", () => {
   test("setup registers the listTools RPC reporting each tool's input schema", async () => {
     const { context, added, rpcs } = createFakeContext("/workspace");
 
-    await BoboddyOpencodePlugin.setup(context);
+    await ScarnOpencodePlugin.setup(context);
 
     expect(rpcs).toHaveLength(1);
     const [rpc] = rpcs;
-    expect(rpc?.definition.id).toBe(BOBODDY_RPC_ID);
-    const listTools = rpc?.handlers[BOBODDY_LIST_TOOLS_METHOD];
+    expect(rpc?.definition.id).toBe(SCARN_RPC_ID);
+    const listTools = rpc?.handlers[SCARN_LIST_TOOLS_METHOD];
     expect(listTools).toBeDefined();
 
     const output = await listTools?.({});
@@ -84,7 +86,7 @@ describe("BoboddyOpencodePlugin", () => {
       added.map((tool) => tool.name).sort(),
     );
     const submit = output?.tools.find(
-      (tool) => tool.id === BOBODDY_SUBMIT_STEP_FINDINGS_TOOL,
+      (tool) => tool.id === SCARN_SUBMIT_STEP_FINDINGS_TOOL,
     );
     expect(submit?.inputSchema).toMatchObject({
       type: "object",

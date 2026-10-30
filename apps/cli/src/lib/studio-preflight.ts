@@ -1,28 +1,28 @@
-import { PIPELINE_BUILDER_DIR } from "@boboddy/worker";
+import { PIPELINE_BUILDER_DIR } from "@scarn/worker";
 import type { BaseReporter } from "./reporter-types";
 
 /**
- * The preflight for `boboddy pipelines studio` — deliberately much lighter
+ * The preflight for `scarn pipelines studio` — deliberately much lighter
  * than `pipelines design`'s (`design-preflight.ts`). That command is about
  * to launch an authenticated agent session against a real project, so it
  * resolves a session, a project id, and a work item. The studio is
  * explicitly local-only — it never needs to talk to the server at all, so
  * this preflight only confirms/scaffolds the one thing it genuinely depends
- * on: `.boboddy/pipeline-builder` existing with its dependencies installed
+ * on: `.scarn/pipeline-builder` existing with its dependencies installed
  * (`collectDefinitionsFromDirectory` dynamically imports every file in it,
- * which needs `@boboddy/sdk` resolvable — the same precondition
+ * which needs `@scarn/sdk` resolvable — the same precondition
  * `pipelines push` already checks and fails the same way for).
  */
 
 export interface StudioPreflightPorts {
-  /** Does `.boboddy/pipeline-builder` already exist? */
+  /** Does `.scarn/pipeline-builder` already exist? */
   builderDirExists(): boolean;
   /**
    * Create it. Throws when the current directory is not a plausible project
    * root — see `assertProjectRoot` in `pipelines-studio.ts`.
    */
   scaffoldBuilderDir(): void;
-  /** Is `@boboddy/sdk` resolvable from inside the builder directory? */
+  /** Is `@scarn/sdk` resolvable from inside the builder directory? */
   dependenciesInstalled(): boolean;
 }
 

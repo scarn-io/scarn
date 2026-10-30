@@ -1,5 +1,5 @@
 /**
- * The lockfiles `.boboddy/pipeline-builder` may carry and the package manager
+ * The lockfiles `.scarn/pipeline-builder` may carry and the package manager
  * each one belongs to. Shared by the CLI (which installs on the author's
  * machine) and the managed runtime install (which installs in the container),
  * so a lockfile means the same thing in both.

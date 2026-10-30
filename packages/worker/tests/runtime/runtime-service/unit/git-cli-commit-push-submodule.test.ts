@@ -17,7 +17,7 @@ import path from "node:path";
 import { afterAll, describe, expect, test } from "bun:test";
 import { GitCliCommitPushService } from "../../../../src/runtime/runtime-service/infra/git-cli-commit-push-service";
 import { GitCliSubmoduleService } from "../../../../src/runtime/runtime-service/infra/git-cli-submodule-service";
-import { buildCommitAndPushWorkBranch } from "../../../../src/work/task/infra/work-branch-manager";
+import { buildCommitAndPushWorkBranch } from "../../../../src/work/task-run/infra/work-branch-manager";
 import { captureRejection } from "../../../support/capture-rejection";
 import { git, writeRepoFile } from "./git-test-fixtures";
 import {
@@ -107,12 +107,12 @@ describe("GitCliCommitPushService submodule methods", () => {
         const result = await service.commitInSubmodule({
           workspacePath: workspace,
           submodulePath: "vendor/dep",
-          branchName: "boboddy/step-x",
-          message: "boboddy: task x",
+          branchName: "scarn/step-x",
+          message: "scarn: task x",
         });
         expect(result).toEqual({ committed: true, branchCreated: true });
         expect(await git(sub, ["branch", "--show-current"])).toBe(
-          "boboddy/step-x",
+          "scarn/step-x",
         );
         expect(
           await git(sub, ["show", "--name-only", "--pretty=format:", "HEAD"]),
@@ -134,20 +134,20 @@ describe("GitCliCommitPushService submodule methods", () => {
         await service.commitInSubmodule({
           workspacePath: workspace,
           submodulePath: "vendor/dep",
-          branchName: "boboddy/step-push",
-          message: "boboddy: task push",
+          branchName: "scarn/step-push",
+          message: "scarn: task push",
         });
 
         await service.pushSubmodule({
           workspacePath: workspace,
           submodulePath: "vendor/dep",
-          branchName: "boboddy/step-push",
+          branchName: "scarn/step-push",
         });
 
-        const localTip = await git(sub, ["rev-parse", "boboddy/step-push"]);
+        const localTip = await git(sub, ["rev-parse", "scarn/step-push"]);
         const remoteTip = await git(subRemote, [
           "rev-parse",
-          "boboddy/step-push",
+          "scarn/step-push",
         ]);
         expect(remoteTip).toBe(localTip);
       } finally {
@@ -167,8 +167,8 @@ describe("GitCliCommitPushService submodule methods", () => {
         await service.commitInSubmodule({
           workspacePath: workspace,
           submodulePath: "vendor/dep",
-          branchName: "boboddy/step-fail",
-          message: "boboddy: task fail",
+          branchName: "scarn/step-fail",
+          message: "scarn: task fail",
         });
         // Point the submodule origin at a nonexistent bare repo.
         await git(sub, [
@@ -182,7 +182,7 @@ describe("GitCliCommitPushService submodule methods", () => {
           service.pushSubmodule({
             workspacePath: workspace,
             submodulePath: "vendor/dep",
-            branchName: "boboddy/step-fail",
+            branchName: "scarn/step-fail",
           }),
         );
         expect(failure).toBeInstanceOf(Error);
@@ -210,20 +210,17 @@ describe("GitCliCommitPushService submodule methods", () => {
             service,
             submoduleService,
             workspace,
-            "boboddy/with-changes",
+            "scarn/with-changes",
           );
 
           // Submodule branch created + pushed.
           expect(
-            await git(sub, ["branch", "--list", "boboddy/with-changes"]),
-          ).toContain("boboddy/with-changes");
-          const subLocal = await git(sub, [
-            "rev-parse",
-            "boboddy/with-changes",
-          ]);
+            await git(sub, ["branch", "--list", "scarn/with-changes"]),
+          ).toContain("scarn/with-changes");
+          const subLocal = await git(sub, ["rev-parse", "scarn/with-changes"]);
           const subRemoteTip = await git(subRemote, [
             "rev-parse",
-            "boboddy/with-changes",
+            "scarn/with-changes",
           ]);
           expect(subRemoteTip).toBe(subLocal);
 
@@ -258,12 +255,12 @@ describe("GitCliCommitPushService submodule methods", () => {
             service,
             submoduleService,
             workspace,
-            "boboddy/no-changes",
+            "scarn/no-changes",
           );
 
-          expect(
-            await git(sub, ["branch", "--list", "boboddy/no-changes"]),
-          ).toBe("");
+          expect(await git(sub, ["branch", "--list", "scarn/no-changes"])).toBe(
+            "",
+          );
           const gitlinkAfter = await git(workspace, [
             "rev-parse",
             "HEAD:vendor/dep",
@@ -299,14 +296,14 @@ describe("GitCliCommitPushService submodule methods", () => {
 
           await service.createBranch({
             workspacePath: bare,
-            branchName: "boboddy/uninit",
+            branchName: "scarn/uninit",
           });
           const closure = buildCommitAndPushWorkBranch({
             gitCommitPushService: service,
             submoduleService,
             workspacePath: bare,
-            workBranch: "boboddy/uninit",
-            taskId: "step-exec-uninit",
+            workBranch: "scarn/uninit",
+            taskRunId: "step-exec-uninit",
           });
           await closure({ result: {} });
 
@@ -375,14 +372,14 @@ describe("GitCliCommitPushService submodule methods", () => {
 
           await service.createBranch({
             workspacePath: ws,
-            branchName: "boboddy/mixed",
+            branchName: "scarn/mixed",
           });
           const closure = buildCommitAndPushWorkBranch({
             gitCommitPushService: service,
             submoduleService,
             workspacePath: ws,
-            workBranch: "boboddy/mixed",
-            taskId: "step-exec-mixed",
+            workBranch: "scarn/mixed",
+            taskRunId: "step-exec-mixed",
             onPushFailure: "warn",
           });
           // Under "warn" a failed submodule push must not throw.
@@ -404,9 +401,9 @@ describe("GitCliCommitPushService submodule methods", () => {
           // Successful sibling's gitlink IS recorded and matches its pushed tip.
           const sibLocal = await git(path.join(ws, "vendor/sib"), [
             "rev-parse",
-            "boboddy/mixed",
+            "scarn/mixed",
           ]);
-          const sibRemote = await git(sib, ["rev-parse", "boboddy/mixed"]);
+          const sibRemote = await git(sib, ["rev-parse", "scarn/mixed"]);
           expect(sibRemote).toBe(sibLocal);
           expect(await git(ws, ["rev-parse", "HEAD:vendor/sib"])).toBe(
             sibLocal,
@@ -429,14 +426,14 @@ describe("GitCliCommitPushService submodule methods", () => {
 
           await service.createBranch({
             workspacePath: plain,
-            branchName: "boboddy/plain",
+            branchName: "scarn/plain",
           });
           const closure = buildCommitAndPushWorkBranch({
             gitCommitPushService: service,
             submoduleService,
             workspacePath: plain,
-            workBranch: "boboddy/plain",
-            taskId: "step-exec-plain",
+            workBranch: "scarn/plain",
+            taskRunId: "step-exec-plain",
           });
           await closure({ result: {} });
 
@@ -448,10 +445,10 @@ describe("GitCliCommitPushService submodule methods", () => {
               "HEAD",
             ]),
           ).toContain("only.ts");
-          const localTip = await git(plain, ["rev-parse", "boboddy/plain"]);
+          const localTip = await git(plain, ["rev-parse", "scarn/plain"]);
           const remoteTip = await git(plainRemote, [
             "rev-parse",
-            "boboddy/plain",
+            "scarn/plain",
           ]);
           expect(remoteTip).toBe(localTip);
         } finally {

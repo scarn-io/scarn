@@ -1,5 +1,5 @@
-export type { AuthFile, AuthProfile } from "@boboddy/sdk/defaults";
+export type { AuthFile, AuthProfile } from "@scarn/sdk/defaults";
 export type {
   ConfigFile,
   ArtifactRetentionSettings,
-} from "@boboddy/sdk/defaults";
+} from "@scarn/sdk/defaults";

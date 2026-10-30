@@ -58,7 +58,7 @@ describe("ensureHostOpencodePayload", () => {
     expect(payload.version).toBe(OPENCODE_RUNTIME_VERSION);
     expect(payload.hostPayloadDir).toBe(expectedDir);
     expect(payload.containerPayloadDir).toBe(
-      `/opt/boboddy/runtimes/opencode/${OPENCODE_RUNTIME_VERSION}`,
+      `/opt/scarn/runtimes/opencode/${OPENCODE_RUNTIME_VERSION}`,
     );
   });
 
@@ -103,9 +103,9 @@ describe("ensureHostOpencodePayload", () => {
     const location: OpencodeRuntimePayloadLocation = {
       version: "0.0.0-test",
       hostPayloadDir: "/host/payload",
-      containerPayloadDir: "/opt/boboddy/runtimes/opencode/0.0.0-test",
+      containerPayloadDir: "/opt/scarn/runtimes/opencode/0.0.0-test",
       containerLaunchWrapperPath:
-        "/opt/boboddy/runtimes/opencode/0.0.0-test/launch.sh",
+        "/opt/scarn/runtimes/opencode/0.0.0-test/launch.sh",
     };
     class StubProvisioner extends OpencodeRuntimePayloadProvisioner {
       override ensure(): Promise<OpencodeRuntimePayloadLocation> {
@@ -185,7 +185,7 @@ describe("launchOpencodeTui", () => {
 
     const pending = launchOpencodeTui({
       launcherPath: "/cache/launch.sh",
-      cwd: "/project/.boboddy/pipeline-builder",
+      cwd: "/project/.scarn/pipeline-builder",
       configContent: '{"default_agent":"pipeline-designer"}',
       seedPrompt: "Let's design a pipeline",
       spawnFn,
@@ -195,7 +195,7 @@ describe("launchOpencodeTui", () => {
     expect(call).toBeDefined();
     expect(call?.command).toBe("/cache/launch.sh");
     expect(call?.stdio).toBe("inherit");
-    expect(call?.cwd).toBe("/project/.boboddy/pipeline-builder");
+    expect(call?.cwd).toBe("/project/.scarn/pipeline-builder");
     expect(call?.args).toEqual([
       "--standalone",
       "--prompt",

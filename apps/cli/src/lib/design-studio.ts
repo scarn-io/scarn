@@ -1,4 +1,4 @@
-import type { PipelineStudioServerHandle } from "@boboddy/worker";
+import type { PipelineStudioServerHandle } from "@scarn/worker";
 import type { BaseReporter } from "./reporter-types";
 
 /**
@@ -8,7 +8,7 @@ import type { BaseReporter } from "./reporter-types";
  */
 
 export const STUDIO_UNAVAILABLE_MESSAGE =
-  "Continuing without the studio. Run `boboddy pipelines studio` in another terminal to open it later.";
+  "Continuing without the studio. Run `scarn pipelines studio` in another terminal to open it later.";
 
 export const STUDIO_HANDOFF_MESSAGE =
   "The graph is in your browser; the designer is in this terminal.";

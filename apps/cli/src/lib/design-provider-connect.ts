@@ -4,8 +4,8 @@ import {
   launchOpencodeAuthLogin,
   type InstalledAiTool,
   type OpencodeProviderCredentialCheck,
-} from "@boboddy/worker";
-import { AnalyticsEvents } from "@boboddy/observability/analytics/events";
+} from "@scarn/worker";
+import { AnalyticsEvents } from "@scarn/observability/analytics/events";
 import type { BaseReporter } from "./reporter-types";
 import { CliError } from "./cli-error";
 import { captureMilestone } from "./telemetry";
@@ -19,11 +19,11 @@ import { captureMilestone } from "./telemetry";
  * `checkOpencodeProviderCredentials`), it names the AI tools the user already
  * has (see `detectInstalledAiTools`), tells them which entry to pick in
  * OpenCode's own `auth login` picker for each, hands the terminal to that
- * picker, then rechecks. Boboddy never reads, copies, or proxies another
+ * picker, then rechecks. Scarn never reads, copies, or proxies another
  * tool's tokens — the connection is always the user's action in OpenCode.
  *
  * Picker labels below were transcribed from a live capture of
- * `launch.sh auth login --standalone` on OpenCode 2.0.28 (the pinned
+ * `launch.sh auth login --standalone` on OpenCode 2.1.4 (the pinned
  * `OPENCODE_RUNTIME_VERSION`) with an empty sandboxed HOME. Re-check them
  * whenever that pin moves.
  *
@@ -97,10 +97,10 @@ export const CONNECT_NO_TOOL_LINE =
 export const CONNECT_HANDOFF_LINE = "Opening the provider connection…";
 
 export const CONNECT_DID_NOT_COMPLETE_MESSAGE =
-  "No AI provider was connected. Run `boboddy pipelines design` again to " +
+  "No AI provider was connected. Run `scarn pipelines design` again to " +
   "retry, or export a provider API key such as ANTHROPIC_API_KEY first.";
 
-const DESIGNER_TITLE = "Boboddy pipeline designer";
+const DESIGNER_TITLE = "Scarn pipeline designer";
 
 /** The guidance block, one entry per `reporter.info` line. */
 export function buildConnectGuidance(
@@ -169,7 +169,7 @@ export async function runOpencodeAuthLogin(
     throw new CliError(
       "opencode_login_failed",
       `\`opencode auth login\` exited with code ${String(result.exitCode)}. ` +
-        "Run `boboddy pipelines design` again once you have signed in.",
+        "Run `scarn pipelines design` again once you have signed in.",
     );
   }
 }

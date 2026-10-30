@@ -23,13 +23,13 @@ import { setHomeDirForTests } from "../src/defaults/home-dir";
  * `auth-file.ts` and `config-file.ts`. `afterEach` ALWAYS restores it to
  * `undefined` (the real `os.homedir()`), even if a test throws, so a bug
  * here can never silently start reading/writing a developer's actual
- * `~/.boboddy/` for the rest of the run.
+ * `~/.scarn/` for the rest of the run.
  */
 
 let fakeHome: string;
 
 beforeEach(() => {
-  fakeHome = mkdtempSync(join(tmpdir(), "boboddy-auth-file-"));
+  fakeHome = mkdtempSync(join(tmpdir(), "scarn-auth-file-"));
   setHomeDirForTests(fakeHome);
 });
 
@@ -46,7 +46,7 @@ describe("auth profiles", () => {
     });
 
     expect(authFile.getAuthFilePath()).toContain(
-      join(".boboddy", "auth.jsonc"),
+      join(".scarn", "auth.jsonc"),
     );
     expect(authFile.loadAuthProfile("https://example.test")).toEqual({
       accessToken: "token-123",

@@ -16,9 +16,9 @@ export interface AuthFile {
   profiles: Record<string, AuthProfile>;
 }
 
-const authFilePath = () => join(resolveHomeDir(), ".boboddy", "auth.jsonc");
+const authFilePath = () => join(resolveHomeDir(), ".scarn", "auth.jsonc");
 const configFilePath = () =>
-  join(resolveHomeDir(), ".boboddy", "config.jsonc");
+  join(resolveHomeDir(), ".scarn", "config.jsonc");
 
 /**
  * `auth-file.ts` and `config-file.ts` both need to trigger the one-time
@@ -138,7 +138,7 @@ export const deleteAuthProfile = (baseUrl: string) => {
   if (Object.keys(remainingProfiles).length === 0) {
     // Legacy-file cleanup used to happen here too, but `loadAuthFile()`
     // above already ran `migrateLegacyConfigIfNeeded`, which deletes any
-    // legacy `.boboddy`/`.boboddy.json` the first time either new file is
+    // legacy `.scarn`/`.scarn.json` the first time either new file is
     // read — by the time we get here that file is already gone, so a
     // second removal attempt would be dead code.
     rmSync(authFilePath(), { force: true });

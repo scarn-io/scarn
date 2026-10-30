@@ -1,5 +1,5 @@
 /**
- * The OpenCode v2 config document Boboddy emits as `OPENCODE_CONFIG_CONTENT`,
+ * The OpenCode v2 config document Scarn emits as `OPENCODE_CONFIG_CONTENT`,
  * taken from `@opencode/client`'s generated `ConfigEntry` so the overlay
  * follows the pinned runtime's schema instead of a hand-written copy.
  */

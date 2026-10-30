@@ -1,6 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import { createStepDefinitionsClient } from "../src/definitions/steps/step-definitions-client";
-import type { StepDefinitionSpec } from "../src/definitions/steps/define-step";
+import {
+  defineStep,
+  type StepDefinitionSpec,
+} from "../src/definitions/steps/define-step";
 
 type CapturedRequest = {
   url: string;
@@ -74,7 +77,7 @@ function createMockFetch(responses: MockResponse[]): {
 }
 
 const AUTH_HEADER = { Authorization: "Bearer test-token" };
-const BASE_URL = "https://boboddy.example.com";
+const BASE_URL = "https://scarn.example.com";
 
 function makeSpec(overrides?: Partial<StepDefinitionSpec>): StepDefinitionSpec {
   return {
@@ -87,7 +90,6 @@ function makeSpec(overrides?: Partial<StepDefinitionSpec>): StepDefinitionSpec {
     prompt: "Investigate the issue.",
     inputSchemaJson: null,
     resultSchemaJson: null,
-    signalExtractorDefinitions: [],
     opencodeMcpJson: null,
     healthChecksJson: null,
     ...overrides,
@@ -95,7 +97,7 @@ function makeSpec(overrides?: Partial<StepDefinitionSpec>): StepDefinitionSpec {
 }
 
 describe("createStepDefinitionsClient.upsertFromSpec", () => {
-  test("sends PUT to /api/step-definitions with body = { ...spec, projectId }", async () => {
+  test("sends PUT to /api/step-definitions with the spec, projectId and schemas", async () => {
     const { mockFetch, captured } = createMockFetch([
       { status: 200, body: { id: "step-id" } },
     ]);
@@ -111,11 +113,61 @@ describe("createStepDefinitionsClient.upsertFromSpec", () => {
       expect(captured[0]?.url).toBe(`${BASE_URL}/api/step-definitions`);
       expect(captured[0]?.body).toEqual({
         ...spec,
+        inputSchemaJson: { type: "object" },
+        resultSchemaJson: null,
         entrypointJson: null,
+        errors: [],
+        retry: [],
         projectId: "proj-1",
       });
       // Headers.entries() lowercases header names per the WHATWG spec.
       expect(captured[0]?.headers["authorization"]).toBe("Bearer test-token");
+    } finally {
+      globalThis.fetch = prev;
+    }
+  });
+
+  test("pushes a defineStep with no result as a conversation step, with a null result schema", async () => {
+    const { mockFetch, captured } = createMockFetch([
+      { status: 200, body: { id: "step-id" } },
+    ]);
+    const prev = globalThis.fetch;
+    globalThis.fetch = mockFetch;
+    try {
+      const client = createStepDefinitionsClient(BASE_URL);
+      const grill = defineStep({
+        key: "grill",
+        name: "Grill",
+        agentPrompt: "Grill the person.",
+      });
+      await client.upsertFromSpec("proj-1", grill, {
+        headers: AUTH_HEADER,
+      });
+      expect(captured[0]?.body).toMatchObject({
+        key: "grill",
+        resultSchemaJson: null,
+      });
+    } finally {
+      globalThis.fetch = prev;
+    }
+  });
+
+  test("pushes a code step with no result schema with an object schema", async () => {
+    const { mockFetch, captured } = createMockFetch([
+      { status: 200, body: { id: "step-id" } },
+    ]);
+    const prev = globalThis.fetch;
+    globalThis.fetch = mockFetch;
+    try {
+      const client = createStepDefinitionsClient(BASE_URL);
+      await client.upsertFromSpec(
+        "proj-1",
+        makeSpec({ kind: "code", prompt: null, resultSchemaJson: null }),
+        { headers: AUTH_HEADER },
+      );
+      expect(captured[0]?.body).toMatchObject({
+        resultSchemaJson: { type: "object" },
+      });
     } finally {
       globalThis.fetch = prev;
     }
@@ -202,6 +254,36 @@ describe("createStepDefinitionsClient.upsertFromSpec", () => {
       );
 
       expect(captured[0]?.body).toMatchObject({ envJson });
+    } finally {
+      globalThis.fetch = prev;
+    }
+  });
+
+  test("sends a defineStep handle's declared errors, without its signals or call signature", async () => {
+    const { mockFetch, captured } = createMockFetch([
+      { status: 200, body: { id: "step-id" } },
+    ]);
+    const prev = globalThis.fetch;
+    globalThis.fetch = mockFetch;
+    try {
+      const client = createStepDefinitionsClient(BASE_URL);
+      const step = defineStep({
+        key: "plan",
+        name: "Plan",
+        agentPrompt: "Plan the change.",
+        errors: ["NoPlan", "TooBig"],
+      });
+      await client.upsertFromSpec("proj-1", step, { headers: AUTH_HEADER });
+
+      expect(captured[0]?.body).toMatchObject({
+        key: "plan",
+        name: "Plan",
+        prompt: "Plan the change.",
+        errors: ["NoPlan", "TooBig"],
+      });
+      expect(captured[0]?.body).not.toHaveProperty(
+        "signalExtractorDefinitions",
+      );
     } finally {
       globalThis.fetch = prev;
     }

@@ -1,8 +1,8 @@
 {
-  "name": "@boboddy/cli",
+  "name": "@scarn/cli",
   "version": "0.0.0",
   "bin": {
-    "boboddy": "bin/boboddy"
+    "scarn": "bin/scarn"
   },
   "exports": {
     ".": "./src/index.ts",
@@ -17,7 +17,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/boboddy-dev/boboddy"
+    "url": "https://github.com/scarn-io/scarn"
   },
   "publishConfig": {
     "access": "public"
@@ -28,16 +28,16 @@
     "link": "bun run script/link.ts",
     "link:local": "bun run build && bun link --global .",
     "publish:package": "bun run script/publish.ts",
-    "test": "bun test test --path-ignore-patterns=compiled-binary-tests/**",
+    "test": "bun test test --parallel --path-ignore-patterns=compiled-binary-tests/**",
     "test:compiled": "bun test compiled-binary-tests",
     "typecheck": "tsgo -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@boboddy/observability": "workspace:*",
-    "@boboddy/opencode-plugin": "workspace:*",
-    "@boboddy/platform-client": "workspace:*",
-    "@boboddy/sdk": "workspace:*",
-    "@boboddy/worker": "workspace:*",
+    "@scarn/observability": "workspace:*",
+    "@scarn/opencode-plugin": "workspace:*",
+    "@scarn/sdk": "workspace:*",
+    "@scarn/shared-core": "workspace:*",
+    "@scarn/worker": "workspace:*",
     "@clack/prompts": "^1.0.0",
     "@devcontainers/cli": "catalog:",
     "ajv": "^8.20.0",

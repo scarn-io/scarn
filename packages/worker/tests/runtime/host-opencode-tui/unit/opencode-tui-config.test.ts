@@ -23,7 +23,7 @@ import { PIPELINE_BUILDER_DIR } from "../../../../src/pipelines/pipeline-definit
  * `@opencode/client` at compile time, in addition to targeted assertions.
  */
 
-const PROMPT = "You are the Boboddy pipeline designer.";
+const PROMPT = "You are the Scarn pipeline designer.";
 
 type OpencodeConfigDocument = ConfigEntry extends infer Entry
   ? Entry extends { type: "document"; info: infer Info }
@@ -135,7 +135,7 @@ describe("buildOpencodeTuiConfig", () => {
     "lets the agent read an allowed external file without a prompt, and nothing beside it",
     () => {
       const manifest =
-        "/home/u/.boboddy/projects/acme/app/discovered-tools.json";
+        "/home/u/.scarn/projects/acme/app/discovered-tools.json";
       const rules =
         buildOpencodeTuiConfig({
           description: "d",
@@ -195,15 +195,15 @@ describe("shell permission rules", () => {
    * whole string is listed too, in case a form reaches the check unsplit.
    */
   const PUSH_COMMANDS = [
-    "boboddy pipelines push",
-    "boboddy pipelines push --force",
-    '"$BOBODDY_CLI" pipelines push',
-    '"/opt/homebrew/bin/boboddy" pipelines push',
+    "scarn pipelines push",
+    "scarn pipelines push --force",
+    '"$SCARN_CLI" pipelines push',
+    '"/opt/homebrew/bin/scarn" pipelines push',
     '"/tmp/build-a3f9/cli.js" pipelines push',
-    'cd ../.. && "$BOBODDY_CLI" pipelines push',
-    "ls && boboddy pipelines push",
-    "bun run typecheck && boboddy pipelines push && echo done",
-    "npm run typecheck; boboddy pipelines push",
+    'cd ../.. && "$SCARN_CLI" pipelines push',
+    "ls && scarn pipelines push",
+    "bun run typecheck && scarn pipelines push && echo done",
+    "npm run typecheck; scarn pipelines push",
   ] as const;
 
   const resolveShell = (command: string) =>
@@ -232,7 +232,7 @@ describe("shell permission rules", () => {
   test.concurrent("the push gate cannot be reopened by a later allow", () => {
     const pushIndex = PIPELINE_DESIGNER_SHELL_PERMISSIONS.findIndex(
       (rule) =>
-        resolvePermission([rule], "shell", "boboddy pipelines push") === "ask",
+        resolvePermission([rule], "shell", "scarn pipelines push") === "ask",
     );
 
     expect(pushIndex).toBeGreaterThanOrEqual(0);
@@ -375,12 +375,12 @@ describe("edit permission allowlist", () => {
   test.concurrent(
     "the secrets-manifest it records env var names into is allowed",
     () => {
-      expect(resolveEdit(".boboddy/.env.example")).toBe("allow");
+      expect(resolveEdit(".scarn/.env.example")).toBe("allow");
     },
   );
 
   test.concurrent("the real secrets file is never writable", () => {
-    expect(resolveEdit(".boboddy/.env")).toBe("ask");
+    expect(resolveEdit(".scarn/.env")).toBe("ask");
   });
 
   test.concurrent(
@@ -405,8 +405,8 @@ describe("edit permission allowlist", () => {
       "src/index.ts",
       "app/page.tsx",
       ".github/workflows/ci.yml",
-      ".boboddy/boboddy.jsonc",
-      ".boboddy/.env",
+      ".scarn/scarn.jsonc",
+      ".scarn/.env",
       "devcontainer.json",
     ]) {
       expect(resolveEdit(filePath), filePath).toBe("ask");

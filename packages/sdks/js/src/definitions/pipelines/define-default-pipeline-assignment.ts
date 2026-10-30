@@ -1,4 +1,4 @@
-import type { PipelineDefinitionSpec } from "./define-pipeline";
+import type { PipelineDefinition } from "../../pipelines/define-pipeline";
 import {
   WORK_ITEM_FIELDS_PATH_PREFIX,
   WORK_ITEM_TOP_LEVEL_FIELDS,
@@ -51,8 +51,11 @@ type AssignmentCondition = LeafCondition | GroupCondition;
 
 export type AssignOutcome = {
   readonly _tag: "assign";
-  readonly pipeline: PipelineDefinitionSpec;
+  readonly pipelineKey: string;
 };
+
+/** What `assign(...)` accepts: a pipeline key, or a `definePipeline` value. */
+export type AssignablePipeline = string | Pick<PipelineDefinition, "_tag" | "key">;
 
 export type SkipOutcome = {
   readonly _tag: "skip";
@@ -193,11 +196,9 @@ function makeFieldRef<T = unknown>(
 // ─── Work-item top-level fields ───────────────────────────────────────────────
 //
 // `WORK_ITEM_TOP_LEVEL_FIELDS`/`WorkItemTopLevelField`/`WorkItemTopLevelFieldTypeMap`
-// live in `./work-item-fields` (imported above) — a shared module, not
-// private to this DSL, since the regular pipeline/step `WorkItemAccessor`
-// (`builder-helpers.ts`) needs the exact same list to expose the same
-// top-level properties on `ctx.workItem` there. See that module's doc
-// comments for the full rationale.
+// live in `./work-item-fields` (imported above), shared with core's
+// server-side resolvers. See that module's doc comments for the full
+// rationale.
 
 /** Comparator-bound accessor for the work item passed to `defaultPipelineAssignment`. */
 export type WorkItemAssignmentAccessor = {
@@ -212,7 +213,7 @@ export type WorkItemAssignmentAccessor = {
    * Two independent, optional type parameters:
    *  - `TName` constrains the `name` argument itself — pass a literal union
    *    of known field names (e.g. the `WorkItemFieldName` type
-   *    `boboddy pipelines pull` generates into `work-item-fields.ts`) to get
+   *    `scarn pipelines pull` generates into `work-item-fields.ts`) to get
    *    compile-time validation and autocomplete on the field name.
    *  - `TValue` types the comparator (`.eq`/`.gte`/etc.) argument, exactly
    *    like the top-level accessors above — pass it for a known-shaped
@@ -256,11 +257,11 @@ export type DefaultPipelineAssignmentCtx = {
    * for the platform-specific `fields` bag.
    *
    * @example
-   * workItem.field("issueType").eq("bug").then(assign(bugTriage))
-   * workItem.field("labels").contains("regression").then(assign(regressionReview))
+   * workItem.field("issueType").eq("bug").then(assign("bug-triage"))
+   * workItem.field("labels").contains("regression").then(assign("regression-review"))
    * workItem.field("status").eq("resolved").then(skip())
-   * workItem.platform.eq("github").then(assign(githubTriage))
-   * workItem.title.contains("[urgent]").then(assign(urgentTriage))
+   * workItem.platform.eq("github").then(assign("github-triage"))
+   * workItem.title.contains("[urgent]").then(assign("urgent-triage"))
    */
   workItem: WorkItemAssignmentAccessor;
   /**
@@ -268,19 +269,20 @@ export type DefaultPipelineAssignmentCtx = {
    * `context.isNew` is `true` when the work item is being created for the first time.
    *
    * @example
-   * context.isNew.eq(true).then(assign(onboarding))
+   * context.isNew.eq(true).then(assign("onboarding"))
    */
   context: {
     isNew: AssignmentFieldRef<boolean>;
   };
   /**
-   * Outcome: assign the work item to the given pipeline.
+   * Outcome: assign the work item to the given pipeline, by key or by the
+   * `definePipeline` value a pipeline file default-exports.
    * Used in both `rules` (via `.then(assign(...))`) and `default`.
    *
    * @example
-   * workItem.field("issueType").eq("bug").then(assign(bugTriage))
+   * workItem.field("issueType").eq("bug").then(assign("bug-triage"))
    */
-  assign: (pipeline: PipelineDefinitionSpec) => AssignOutcome;
+  assign: (pipeline: AssignablePipeline) => AssignOutcome;
   /**
    * Outcome: do not assign any pipeline to this work item.
    * Used in both `rules` (via `.then(skip())`) and `default`.
@@ -296,7 +298,7 @@ export type DefaultPipelineAssignmentCtx = {
    * all(
    *   workItem.field("issueType").eq("bug"),
    *   workItem.field("priority").eq("high"),
-   * ).then(assign(bugTriage))
+   * ).then(assign("bug-triage"))
    */
   all: (...refs: AssignmentNestable[]) => AssignmentGroup;
   /**
@@ -336,18 +338,14 @@ export type DefaultPipelineAssignmentSpec = {
 
 // ─── Context implementation ───────────────────────────────────────────────────
 
-function makeAssign(pipeline: PipelineDefinitionSpec): AssignOutcome {
-  if (
-    typeof pipeline !== "object" ||
-    typeof (pipeline as Record<string, unknown>)["key"] !== "string" ||
-    !Array.isArray((pipeline as Record<string, unknown>)["nodeDefinitions"])
-  ) {
+function makeAssign(pipeline: AssignablePipeline): AssignOutcome {
+  const key = typeof pipeline === "string" ? pipeline : pipeline.key;
+  if (typeof key !== "string" || key.length === 0) {
     throw new Error(
-      "assign() requires a pipeline spec produced by definePipeline(). " +
-        "Pass the default-exported value from a pipeline definition file.",
+      "assign() requires a pipeline key or the value definePipeline() returns.",
     );
   }
-  return { _tag: "assign", pipeline };
+  return { _tag: "assign", pipelineKey: key };
 }
 
 function extractCondition(ref: AssignmentNestable): AssignmentCondition {
@@ -390,23 +388,22 @@ function buildCtx(): DefaultPipelineAssignmentCtx {
  * `assign`, `skip`, `all`, and `any`. Return an object with `default` and
  * `rules`.
  *
- * `default` is the outcome when no rule matches — either `assign(pipeline)`
+ * `default` is the outcome when no rule matches — either `assign(key)`
  * or `skip()`.
  *
  * `rules` is an ordered list; the first matching rule wins.
  *
  * @example
- * import bugTriage from "./bug-triage";
- * import { defaultPipelineAssignment } from "@boboddy/sdk/definitions/pipelines";
+ * import { defaultPipelineAssignment } from "@scarn/sdk/definitions/pipelines";
  *
  * export default defaultPipelineAssignment(({ workItem, any, assign, skip }) => ({
- *   default: assign(bugTriage),
+ *   default: assign("bug-triage"),
  *   rules: [
  *     any(
  *       workItem.field("status").eq("resolved"),
  *       workItem.field("status").eq("manual support"),
  *     ).then(skip()),
- *     workItem.field("issueType").eq("bug").then(assign(bugTriage)),
+ *     workItem.field("issueType").eq("bug").then(assign("bug-triage")),
  *   ],
  * }));
  */
@@ -480,7 +477,7 @@ function serializeOutcome(outcome: DefaultPipelineAssignmentOutcome): {
   params: Record<string, unknown> | null;
 } {
   if (outcome._tag === "skip") return { type: "skip", params: null };
-  return { type: "assign", params: { pipelineKey: outcome.pipeline.key } };
+  return { type: "assign", params: { pipelineKey: outcome.pipelineKey } };
 }
 
 function serializeAssignmentRule(
@@ -507,11 +504,11 @@ export function serializeDefaultPipelineAssignment(
   // rule assign pipeline if default is skip().
   let primaryKey: string | null = null;
   if (spec.default._tag === "assign") {
-    primaryKey = spec.default.pipeline.key;
+    primaryKey = spec.default.pipelineKey;
   } else {
     for (const rule of spec.rules) {
       if (rule.outcome._tag === "assign") {
-        primaryKey = rule.outcome.pipeline.key;
+        primaryKey = rule.outcome.pipelineKey;
         break;
       }
     }

@@ -3,10 +3,10 @@ import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { getConfigFilePath, setHomeDirForTests } from "@boboddy/sdk/defaults";
+import { getConfigFilePath, setHomeDirForTests } from "@scarn/sdk/defaults";
 import { CompositeArtifactStore } from "../../../../src/artifacts/artifact-store/infra/composite-artifact-store";
 import { resolveArtifactStores } from "../../../../src/artifacts/artifact-store/infra/resolve-artifact-stores";
-import type { RemoteArtifactUploader } from "../../../../src/work/task/contracts/process-project-work-types";
+import type { RemoteArtifactUploader } from "../../../../src/work/task-run/contracts/process-project-work-types";
 
 const stubRemoteUploader: RemoteArtifactUploader = {
   createArtifactUploadUrl: () =>
@@ -30,7 +30,7 @@ describe("resolveArtifactStores", () => {
     await writeFile(sourceFile, "hello-artifact");
 
     // `getArtifactRetentionSettings()` (called whenever `remote` is part of
-    // the resolved selection) reads `~/.boboddy/config.jsonc`. Without this
+    // the resolved selection) reads `~/.scarn/config.jsonc`. Without this
     // override every test below that hits the default (both-stores)
     // selection would read/migrate the real developer's home directory.
     fakeHome = await mkdtemp(path.join(os.tmpdir(), "resolve-artifact-home-"));
@@ -45,13 +45,13 @@ describe("resolveArtifactStores", () => {
 
   test("local-only selection writes to the local dir", async () => {
     const store = resolveArtifactStores(
-      { BOBODDY_ARTIFACT_STORES: "local" },
+      { SCARN_ARTIFACT_STORES: "local" },
       { defaultLocalDir: localDir },
     );
     expect(store).toBeInstanceOf(CompositeArtifactStore);
 
     await store.saveArtifact({
-      taskId: "step-1",
+      taskRunId: "step-1",
       sourcePath: sourceFile,
       relativeStorePath: "out.txt",
       kind: "generic",
@@ -63,17 +63,17 @@ describe("resolveArtifactStores", () => {
     expect(stored).toBe("hello-artifact");
   });
 
-  test("uses BOBODDY_ARTIFACT_LOCAL_DIR override for the local store", async () => {
+  test("uses SCARN_ARTIFACT_LOCAL_DIR override for the local store", async () => {
     const overrideDir = await mkdtemp(
       path.join(os.tmpdir(), "resolve-artifact-override-"),
     );
     try {
       const store = resolveArtifactStores({
-        BOBODDY_ARTIFACT_STORES: "local",
-        BOBODDY_ARTIFACT_LOCAL_DIR: overrideDir,
+        SCARN_ARTIFACT_STORES: "local",
+        SCARN_ARTIFACT_LOCAL_DIR: overrideDir,
       });
       await store.saveArtifact({
-        taskId: "step-1",
+        taskRunId: "step-1",
         sourcePath: sourceFile,
         relativeStorePath: "out.txt",
         kind: "generic",
@@ -97,27 +97,27 @@ describe("resolveArtifactStores", () => {
 
   test("local-only selection never reads or creates config.json", async () => {
     const store = resolveArtifactStores(
-      { BOBODDY_ARTIFACT_STORES: "local" },
+      { SCARN_ARTIFACT_STORES: "local" },
       { defaultLocalDir: localDir },
     );
     expect(store).toBeInstanceOf(CompositeArtifactStore);
 
     await store.saveArtifact({
-      taskId: "step-1",
+      taskRunId: "step-1",
       sourcePath: sourceFile,
       relativeStorePath: "out.txt",
       kind: "generic",
     });
 
     // Decision 8: local-only mode must never auto-prune, so it must never
-    // even touch `~/.boboddy/config.jsonc`.
+    // even touch `~/.scarn/config.jsonc`.
     expect(existsSync(getConfigFilePath())).toBe(false);
   });
 
   test("throws when 'remote' is requested but no uploader is provided", () => {
     expect(() =>
       resolveArtifactStores(
-        { BOBODDY_ARTIFACT_STORES: "local,remote" },
+        { SCARN_ARTIFACT_STORES: "local,remote" },
         { defaultLocalDir: localDir },
       ),
     ).toThrow(/no remote uploader/i);
@@ -126,7 +126,7 @@ describe("resolveArtifactStores", () => {
   test("throws on unknown store name", () => {
     expect(() =>
       resolveArtifactStores(
-        { BOBODDY_ARTIFACT_STORES: "local,ftp" },
+        { SCARN_ARTIFACT_STORES: "local,ftp" },
         { defaultLocalDir: localDir, remoteUploader: stubRemoteUploader },
       ),
     ).toThrow(/Unknown artifact store 'ftp'/);
@@ -135,7 +135,7 @@ describe("resolveArtifactStores", () => {
   test("throws when selection resolves to no stores", () => {
     expect(() =>
       resolveArtifactStores(
-        { BOBODDY_ARTIFACT_STORES: " , " },
+        { SCARN_ARTIFACT_STORES: " , " },
         { defaultLocalDir: localDir, remoteUploader: stubRemoteUploader },
       ),
     ).toThrow(/No artifact stores are enabled/);

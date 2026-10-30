@@ -1,5 +1,5 @@
 {
-  "name": "@boboddy/pipeline-studio-ui",
+  "name": "@scarn/pipeline-studio-ui",
   "private": true,
   "type": "module",
   "exports": {
@@ -21,7 +21,8 @@
     "test": "bun test src"
   },
   "dependencies": {
-    "@boboddy/sdk": "workspace:*",
+    "@scarn/sdk": "workspace:*",
+    "@scarn/shared-core": "workspace:*",
     "@xyflow/react": "^12.11.5",
     "dagre": "^0.8.5",
     "react": "19.2.3",

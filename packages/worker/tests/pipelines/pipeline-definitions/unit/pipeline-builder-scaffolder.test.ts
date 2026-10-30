@@ -7,6 +7,8 @@ import {
   scaffoldPipelineBuilderDirectory,
   STARTER_PIPELINE_FILE,
   STARTER_PIPELINE_FILENAME,
+  STARTER_PIPELINE_JSON_FILE,
+  STARTER_PIPELINE_JSON_FILENAME,
 } from "../../../../src/pipelines/pipeline-definitions/infra/pipeline-builder-scaffolder";
 
 function makeTempDir(): string {
@@ -54,6 +56,7 @@ describe("scaffoldPipelineBuilderDirectory", () => {
         expect(result.created).toContain("tsconfig.json");
         expect(result.created).toContain(".gitignore");
         expect(result.created).toContain(STARTER_PIPELINE_FILENAME);
+        expect(result.created).toContain(STARTER_PIPELINE_JSON_FILENAME);
         expect(result.created).toContain("default-pipeline-assignment.ts");
         expect(result.skipped).toEqual([]);
       } finally {
@@ -70,6 +73,9 @@ describe("scaffoldPipelineBuilderDirectory", () => {
         expect(existsSync(join(dir, "tsconfig.json"))).toBe(true);
         expect(existsSync(join(dir, ".gitignore"))).toBe(true);
         expect(existsSync(join(dir, STARTER_PIPELINE_FILENAME))).toBe(true);
+        expect(existsSync(join(dir, STARTER_PIPELINE_JSON_FILENAME))).toBe(
+          true,
+        );
         expect(existsSync(join(dir, "default-pipeline-assignment.ts"))).toBe(
           true,
         );
@@ -135,6 +141,7 @@ describe("scaffoldPipelineBuilderDirectory", () => {
         // The files a teammate needs on a fresh clone must stay committable.
         for (const committable of [
           STARTER_PIPELINE_FILENAME,
+          STARTER_PIPELINE_JSON_FILENAME,
           "default-pipeline-assignment.ts",
           "steps.ts",
           "my-custom-pipeline.ts",
@@ -159,7 +166,7 @@ describe("scaffoldPipelineBuilderDirectory", () => {
 
         for (const ignored of [
           "node_modules",
-          "node_modules/@boboddy/sdk/package.json",
+          "node_modules/@scarn/sdk/package.json",
           "bun.lock",
           "bun.lockb",
           "package-lock.json",
@@ -175,34 +182,34 @@ describe("scaffoldPipelineBuilderDirectory", () => {
       }
     });
 
-    test("package.json contains @boboddy/sdk and zod dependencies", () => {
+    test("package.json contains @scarn/sdk and zod dependencies", () => {
       const dir = makeTempDir();
       try {
         scaffoldPipelineBuilderDirectory(dir, "0.0.0");
         const content = readFileSync(join(dir, "package.json"), "utf-8");
         const parsed = JSON.parse(content) as Record<string, unknown>;
         const deps = parsed["dependencies"] as Record<string, unknown>;
-        expect(deps).toHaveProperty("@boboddy/sdk");
+        expect(deps).toHaveProperty("@scarn/sdk");
         expect(deps).toHaveProperty("zod");
       } finally {
         rmSync(dir, { recursive: true, force: true });
       }
     });
 
-    test("package.json uses caret range for @boboddy/sdk when version is stable", () => {
+    test("package.json uses caret range for @scarn/sdk when version is stable", () => {
       const dir = makeTempDir();
       try {
         scaffoldPipelineBuilderDirectory(dir, "1.2.3");
         const content = readFileSync(join(dir, "package.json"), "utf-8");
         const parsed = JSON.parse(content) as Record<string, unknown>;
         const deps = parsed["dependencies"] as Record<string, unknown>;
-        expect(deps["@boboddy/sdk"]).toBe("^1.2.3");
+        expect(deps["@scarn/sdk"]).toBe("^1.2.3");
       } finally {
         rmSync(dir, { recursive: true, force: true });
       }
     });
 
-    test("package.json pins @boboddy/sdk exactly when version is a prerelease", () => {
+    test("package.json pins @scarn/sdk exactly when version is a prerelease", () => {
       const dir = makeTempDir();
       try {
         scaffoldPipelineBuilderDirectory(
@@ -214,7 +221,7 @@ describe("scaffoldPipelineBuilderDirectory", () => {
         const deps = parsed["dependencies"] as Record<string, unknown>;
         // Must be exact — no caret — so npm does not resolve to a different
         // prerelease that may be missing features added in this release.
-        expect(deps["@boboddy/sdk"]).toBe(
+        expect(deps["@scarn/sdk"]).toBe(
           "0.0.0-canary.7b958a970f3965d4f76c51ae393dad11f712a919",
         );
       } finally {
@@ -222,22 +229,22 @@ describe("scaffoldPipelineBuilderDirectory", () => {
       }
     });
 
-    test("package.json uses artifact path for @boboddy/sdk when BOBODDY_SDK_ARTIFACT_PATH is set", () => {
+    test("package.json uses artifact path for @scarn/sdk when SCARN_SDK_ARTIFACT_PATH is set", () => {
       const dir = makeTempDir();
-      const previous = process.env["BOBODDY_SDK_ARTIFACT_PATH"];
-      const fakeArtifact = "/tmp/boboddy-sdk-local-12345.tgz";
-      process.env["BOBODDY_SDK_ARTIFACT_PATH"] = fakeArtifact;
+      const previous = process.env["SCARN_SDK_ARTIFACT_PATH"];
+      const fakeArtifact = "/tmp/scarn-sdk-local-12345.tgz";
+      process.env["SCARN_SDK_ARTIFACT_PATH"] = fakeArtifact;
       try {
         scaffoldPipelineBuilderDirectory(dir, "0.0.0");
         const content = readFileSync(join(dir, "package.json"), "utf-8");
         const parsed = JSON.parse(content) as Record<string, unknown>;
         const deps = parsed["dependencies"] as Record<string, unknown>;
-        expect(deps["@boboddy/sdk"]).toBe(`file:${fakeArtifact}`);
+        expect(deps["@scarn/sdk"]).toBe(`file:${fakeArtifact}`);
       } finally {
         if (previous === undefined) {
-          delete process.env["BOBODDY_SDK_ARTIFACT_PATH"];
+          delete process.env["SCARN_SDK_ARTIFACT_PATH"];
         } else {
-          process.env["BOBODDY_SDK_ARTIFACT_PATH"] = previous;
+          process.env["SCARN_SDK_ARTIFACT_PATH"] = previous;
         }
         rmSync(dir, { recursive: true, force: true });
       }
@@ -321,30 +328,52 @@ describe("scaffoldPipelineBuilderDirectory", () => {
       }
     });
 
-    test("starter pipeline: evaluate, investigate, failing test, propose fix, fix", () => {
-      const content = STARTER_PIPELINE_FILE;
-      for (const state of [
-        "evaluate: {",
-        "checkQuality: {",
-        "investigateAndReproduce: {",
-        "checkReproduction: {",
-        "checkRecording: {",
-        "reportReproduction: {",
-        "failingTest: {",
-        "proposeFix: {",
-        "fix: {",
-      ]) {
-        expect(content).toContain(state);
+    test("starter pipeline's built JSON is written next to it, verbatim", () => {
+      const dir = makeTempDir();
+      try {
+        scaffoldPipelineBuilderDirectory(dir, "0.0.0");
+        const content = readFileSync(
+          join(dir, STARTER_PIPELINE_JSON_FILENAME),
+          "utf-8",
+        );
+        expect(STARTER_PIPELINE_JSON_FILENAME).toBe("bug-pipeline.json");
+        expect(content).toBe(STARTER_PIPELINE_JSON_FILE);
+        expect(JSON.parse(content)).toMatchObject({
+          schemaVersion: 1,
+          key: "bug-pipeline",
+        });
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
       }
+    });
+
+    test("starter pipeline: evaluate, investigate, failing test, propose fix, decision, fix", () => {
+      const nodes = Object.keys(
+        (JSON.parse(STARTER_PIPELINE_JSON_FILE) as { nodes: object }).nodes,
+      );
+      expect(nodes).toEqual([
+        "evaluate",
+        "request-details",
+        "investigate-and-reproduce",
+        "report-reproduction",
+        "failing-test",
+        "propose-fix",
+        "approve-fix",
+        "fix",
+        "insufficient-detail",
+        "not-reproduced",
+        "fix-rejected",
+        "done",
+      ]);
       // A low bar to start, a high bar to write a test, a human before the fix.
-      expect(content).toContain('Rule.when("quality", "lessThan", 0.1)');
-      expect(content).toContain(
-        'Rule.when("reproductionConfidence", "greaterThanInclusive", 0.8)',
+      expect(STARTER_PIPELINE_FILE).toContain(
+        "lessThan(r.result.quality, 0.1)",
       );
-      expect(content).toContain('Rule.when("reproVideo", "exists")');
-      expect(content).toContain(
-        'blockWhen: Rule.when("requiresHumanApproval", "equal", true)',
+      expect(STARTER_PIPELINE_FILE).toContain(
+        "greaterThanInclusive(r.result.reproductionConfidence, 0.8)",
       );
+      expect(STARTER_PIPELINE_FILE).toContain("exists(r.result.reproVideo)");
+      expect(STARTER_PIPELINE_FILE).toContain('decision("approve-fix", {');
     });
 
     test("default assignment file assigns the starter pipeline by default", () => {
@@ -356,8 +385,8 @@ describe("scaffoldPipelineBuilderDirectory", () => {
           "utf-8",
         );
         expect(content).toContain("defaultPipelineAssignment(");
-        expect(content).toContain('from "./bug-pipeline"');
-        expect(content).toContain("default: assign(");
+        expect(content).toContain('default: assign("bug-pipeline")');
+        expect(content.match(/^import /gm)).toHaveLength(1);
       } finally {
         rmSync(dir, { recursive: true, force: true });
       }

@@ -14,7 +14,7 @@
 export const BOOTSTRAP_COOKIE_NAME = "bb_ph_bootstrap";
 
 /** Must match `SHARE_LINK_COOKIE_DOMAIN` in the same API helper. */
-export const BOOTSTRAP_COOKIE_DOMAIN = ".boboddy.dev";
+export const BOOTSTRAP_COOKIE_DOMAIN = ".scarn.io";
 
 export type BootstrapCookieRead = {
   present: boolean;
@@ -61,12 +61,12 @@ export const hasPosthogCookie = (
     .some((pair) => pair.split("=")[0]?.trim() === wanted);
 };
 
-const isBoboddyHost = (hostname: string): boolean =>
-  hostname === "boboddy.dev" || hostname.endsWith(".boboddy.dev");
+const isScarnHost = (hostname: string): boolean =>
+  hostname === "scarn.io" || hostname.endsWith(".scarn.io");
 
 /**
  * The `document.cookie` assignment that expires the handoff cookie. It mirrors
- * how the server scoped it: `Domain=.boboddy.dev` on `boboddy.dev` hosts,
+ * how the server scoped it: `Domain=.scarn.io` on `scarn.io` hosts,
  * host-only elsewhere (localhost, preview deployments), and `Secure` over https.
  */
 export const buildBootstrapCookieDeletion = ({
@@ -78,7 +78,7 @@ export const buildBootstrapCookieDeletion = ({
 }): string =>
   [
     `${BOOTSTRAP_COOKIE_NAME}=`,
-    ...(isBoboddyHost(hostname.toLowerCase())
+    ...(isScarnHost(hostname.toLowerCase())
       ? [`Domain=${BOOTSTRAP_COOKIE_DOMAIN}`]
       : []),
     "Path=/",

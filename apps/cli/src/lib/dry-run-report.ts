@@ -3,7 +3,7 @@ import {
   type HealthCheckReport,
   type PipelineHealthDryRunReport,
   type WorkDryRunReport,
-} from "@boboddy/worker";
+} from "@scarn/worker";
 import {
   formatHealthFinding,
   type DryRunGateResult,

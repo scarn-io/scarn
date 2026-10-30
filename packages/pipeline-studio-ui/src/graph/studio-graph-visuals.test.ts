@@ -1,20 +1,24 @@
 import { describe, expect, test } from "bun:test";
-import type { DefinitionValidationIssue } from "@boboddy/sdk/definitions/validation";
-import type { StudioNodeShape } from "./studio-graph-types";
+import type { StudioIssue, StudioNodeShape } from "./studio-graph-types";
 import {
+  edgeDashArray,
+  forkMarker,
   formatInOutCounts,
   highestSeverity,
+  mergeBadge,
+  nodeCaption,
   nodeInOutCounts,
+  orderedEdgeLabel,
   severityColor,
 } from "./studio-graph-visuals";
 
 function issue(
-  overrides: Partial<DefinitionValidationIssue> & {
-    severity: DefinitionValidationIssue["severity"];
+  overrides: Partial<StudioIssue> & {
+    severity: StudioIssue["severity"];
   },
-): DefinitionValidationIssue {
+): StudioIssue {
   return {
-    check: "route-target",
+    code: "unknown_node",
     message: "message",
     ...overrides,
   };
@@ -35,22 +39,37 @@ describe("highestSeverity", () => {
 
   test("returns 'warning' over 'info', regardless of order", () => {
     expect(
-      highestSeverity([issue({ severity: "info" }), issue({ severity: "warning" })]),
+      highestSeverity([
+        issue({ severity: "info" }),
+        issue({ severity: "warning" }),
+      ]),
     ).toBe("warning");
     expect(
-      highestSeverity([issue({ severity: "warning" }), issue({ severity: "info" })]),
+      highestSeverity([
+        issue({ severity: "warning" }),
+        issue({ severity: "info" }),
+      ]),
     ).toBe("warning");
   });
 
   test("returns 'error' when any issue is an error, regardless of order", () => {
     expect(
-      highestSeverity([issue({ severity: "warning" }), issue({ severity: "error" })]),
+      highestSeverity([
+        issue({ severity: "warning" }),
+        issue({ severity: "error" }),
+      ]),
     ).toBe("error");
     expect(
-      highestSeverity([issue({ severity: "error" }), issue({ severity: "warning" })]),
+      highestSeverity([
+        issue({ severity: "error" }),
+        issue({ severity: "warning" }),
+      ]),
     ).toBe("error");
     expect(
-      highestSeverity([issue({ severity: "info" }), issue({ severity: "error" })]),
+      highestSeverity([
+        issue({ severity: "info" }),
+        issue({ severity: "error" }),
+      ]),
     ).toBe("error");
   });
 });
@@ -65,46 +84,73 @@ describe("severityColor", () => {
 });
 
 describe("nodeInOutCounts", () => {
-  test("counts a 'step' shape's own inputFields/outputSignals", () => {
+  test("counts a 'step' shape's input and result fields", () => {
     const shape: StudioNodeShape = {
       kind: "step",
       inputFields: [
-        { name: "a", type: "string", required: true, boundTo: null },
-        { name: "b", type: "number", required: false, boundTo: null },
+        { name: "a", type: "string", required: true },
+        { name: "b", type: "number", required: false },
       ],
-      outputSignals: [{ key: "out", type: "string", required: true }],
-      resultSchemaJson: null,
+      resultFields: [{ name: "out", type: "string", required: true }],
+      resultSchemaJson: {},
+      errors: [],
     };
     expect(nodeInOutCounts(shape)).toEqual({ inCount: 2, outCount: 1 });
   });
 
-  test("sums every branch's inputFields for a 'parallel' shape, treating null as 0", () => {
-    const shape: StudioNodeShape = {
-      kind: "parallel",
-      branches: [
-        {
-          key: "a",
-          label: "A",
-          inputFields: [{ name: "x", type: "string", required: true, boundTo: null }],
-          issues: [],
-        },
-        { key: "b", label: "B", inputFields: null, issues: [] },
-        {
-          key: "c",
-          label: "C",
-          inputFields: [
-            { name: "y", type: "boolean", required: false, boundTo: null },
-            { name: "z", type: "number", required: false, boundTo: null },
-          ],
-          issues: [],
-        },
-      ],
-    };
-    expect(nodeInOutCounts(shape)).toEqual({ inCount: 3, outCount: 0 });
-  });
-
   test("returns null for a 'none' shape — no fabricated zero counts", () => {
     expect(nodeInOutCounts({ kind: "none" })).toBeNull();
+  });
+});
+
+describe("edgeDashArray", () => {
+  test("dashes catch edges and dots each edges", () => {
+    expect(edgeDashArray({ kind: "catch", lane: null })).toBe("6 4");
+    expect(edgeDashArray({ kind: "route", lane: "each" })).toBe("2 4");
+    expect(
+      edgeDashArray({ kind: "otherwise", lane: "partial" }),
+    ).toBeUndefined();
+    expect(edgeDashArray(undefined)).toBeUndefined();
+  });
+});
+
+describe("nodeCaption", () => {
+  test("adds the step key or wait kind after the node kind", () => {
+    const base = { label: "x", issues: [], shape: { kind: "none" as const } };
+    expect(nodeCaption({ ...base, kind: "step", stepKey: "triage" })).toBe(
+      "step · triage",
+    );
+    expect(nodeCaption({ ...base, kind: "wait", waitFor: "decision" })).toBe(
+      "wait · decision",
+    );
+    expect(nodeCaption({ ...base, kind: "succeed" })).toBe("succeed");
+  });
+});
+
+describe("forkMarker", () => {
+  test("marks only all nodes as a fork", () => {
+    expect(forkMarker({ match: "all" })).toBe("fork · all routes");
+    expect(forkMarker({ match: "first" })).toBeNull();
+    expect(forkMarker({})).toBeNull();
+  });
+});
+
+describe("mergeBadge", () => {
+  test("lists the routes a merge waits for", () => {
+    expect(mergeBadge({ mergeWaitsFor: ["Review", "Test"] })).toBe(
+      "merges: Review, Test",
+    );
+    expect(mergeBadge({ mergeWaitsFor: [] })).toBeNull();
+    expect(mergeBadge({})).toBeNull();
+  });
+});
+
+describe("orderedEdgeLabel", () => {
+  test("prefixes ordered routes with their number and leaves others alone", () => {
+    expect(orderedEdgeLabel("x > 3", 1)).toBe("1. x > 3");
+    expect(orderedEdgeLabel(undefined, 2)).toBe("2.");
+    expect(orderedEdgeLabel("always", null)).toBe("always");
+    expect(orderedEdgeLabel(undefined, null)).toBeUndefined();
   });
 });
 

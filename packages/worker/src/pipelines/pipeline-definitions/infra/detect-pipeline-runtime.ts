@@ -54,7 +54,7 @@ export function detectPipelineRuntime(
         message:
           "Detected an npm/pnpm/yarn lockfile but tsx is not installed. " +
           "Re-run `npm install` (or `pnpm install` / `yarn install`) inside " +
-          ".boboddy/pipeline-builder/ to install it.",
+          ".scarn/pipeline-builder/ to install it.",
       };
     }
     return {
@@ -73,7 +73,7 @@ export function detectPipelineRuntime(
   return {
     ok: false,
     message:
-      "No supported runtime detected in .boboddy/pipeline-builder/. " +
+      "No supported runtime detected in .scarn/pipeline-builder/. " +
       "Install dependencies with one of: bun, npm, pnpm, yarn, or deno.",
   };
 }

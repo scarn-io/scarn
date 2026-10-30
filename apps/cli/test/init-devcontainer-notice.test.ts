@@ -1,4 +1,4 @@
-import { describe, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import {
   DEVCONTAINER_NOTICE_MESSAGE,
   DEVCONTAINER_PRESENT_LABEL,
@@ -7,14 +7,13 @@ import {
   reportDevcontainerStatus,
 } from "../src/lib/init-devcontainer-notice";
 import {
-  concurrentTest as test,
   createReporterRecorder as createRecorder,
   reportedMessages as messages,
   reportedMethods as methods,
 } from "./utils";
 
 /**
- * The devcontainer step of `boboddy init`.
+ * The devcontainer step of `scarn init`.
  *
  * This step used to throw, which aborted `init` before the designer handoff — so
  * the one thing that can now author a devcontainer was unreachable for exactly
@@ -80,7 +79,7 @@ describe("reportDevcontainerStatus", () => {
     expect(DEVCONTAINER_NOTICE_MESSAGE).toContain(
       ".devcontainer/devcontainer.json",
     );
-    expect(DEVCONTAINER_NOTICE_MESSAGE).not.toMatch(/re-run `boboddy init`/u);
+    expect(DEVCONTAINER_NOTICE_MESSAGE).not.toMatch(/re-run `scarn init`/u);
   });
 
   test("surfaces a failed check rather than swallowing it", async () => {

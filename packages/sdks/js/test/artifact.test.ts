@@ -82,9 +82,9 @@ describe("artifact()", () => {
       properties: {
         video: {
           type: "string",
-          "x-boboddy-artifact": { accept: [".mp4", ".webm"] },
+          "x-scarn-artifact": { accept: [".mp4", ".webm"] },
         },
-        any: { type: "string", "x-boboddy-artifact": { accept: [] } },
+        any: { type: "string", "x-scarn-artifact": { accept: [] } },
       },
     });
   });
@@ -102,7 +102,7 @@ describe("artifact()", () => {
     expect(plainZod.toJSONSchema(schema).properties?.["video"]).toMatchObject({
       description: "Repro video",
       anyOf: [
-        { type: "string", "x-boboddy-artifact": { accept: [".mp4"] } },
+        { type: "string", "x-scarn-artifact": { accept: [".mp4"] } },
         { type: "null" },
       ],
     });
@@ -119,7 +119,7 @@ describe("artifact()", () => {
     expect(z.artifact).toBe(artifact);
     expect(typeof z.object).toBe("function");
     expect(z.toJSONSchema(z.object({ a: z.artifact() }))).toMatchObject({
-      properties: { a: { "x-boboddy-artifact": { accept: [] } } },
+      properties: { a: { "x-scarn-artifact": { accept: [] } } },
     });
   });
 });

@@ -1,5 +1,5 @@
 import { open } from "node:fs/promises";
-import type { ArtifactKind } from "@boboddy/sdk/contracts/artifacts";
+import type { ArtifactKind } from "@scarn/sdk/contracts/artifacts";
 import {
   artifactKindFromContentType,
   detectArtifactContentType,

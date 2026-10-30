@@ -11,7 +11,7 @@ import {
  * silently ignored.
  *
  * Without `POSTHOG_CLI_KEY` the build still succeeds (local and PR-preview
- * builds), unless `BOBODDY_REQUIRE_TELEMETRY_KEY=1` — set that in release
+ * builds), unless `SCARN_REQUIRE_TELEMETRY_KEY=1` — set that in release
  * pipelines so a missing secret fails loudly instead of shipping a binary
  * that silently drops every event.
  *
@@ -26,9 +26,9 @@ export function resolveTelemetryDefines(
   const host = env["POSTHOG_CLI_HOST"] ?? "";
 
   if (!key) {
-    if (env["BOBODDY_REQUIRE_TELEMETRY_KEY"] === "1") {
+    if (env["SCARN_REQUIRE_TELEMETRY_KEY"] === "1") {
       throw new Error(
-        "POSTHOG_CLI_KEY is not set but BOBODDY_REQUIRE_TELEMETRY_KEY=1. Refusing to build a release binary that cannot report telemetry.",
+        "POSTHOG_CLI_KEY is not set but SCARN_REQUIRE_TELEMETRY_KEY=1. Refusing to build a release binary that cannot report telemetry.",
       );
     }
     log(

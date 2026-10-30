@@ -7,7 +7,7 @@ import { z } from "zod";
  *
  * - `value`: a literal or `{{input.…}}` template, stored in the definition
  *   and rendered per run. `secret` only controls log masking.
- * - `inherit`: read from the **worker** host at run time (`.boboddy/.env`,
+ * - `inherit`: read from the **worker** host at run time (`.scarn/.env`,
  *   then `process.env`). Only the variable *name* is stored. `mcp`, when set,
  *   is the step's `opencodeMcpJson` key of the ref'd MCP server the variable
  *   belongs to; absent means a plain step variable.
@@ -17,7 +17,7 @@ import { z } from "zod";
  * - `agent`: the agent (or code step) process, as `docker exec -e` argv on a
  *   container run, hence the entry count and value length caps.
  * - `setup`: only the `devcontainer up` process, so `initializeCommand` sees
- *   it. It overrides the worker's own variable of the same name. Boboddy never
+ *   it. It overrides the worker's own variable of the same name. Scarn never
  *   adds it to `containerEnv`; the repo forwards it with
  *   `${localEnv:NAME:default}` if it wants it inside the container.
  * - `both`: both of the above.
@@ -29,7 +29,7 @@ import { z } from "zod";
 
 export const ENV_VAR_NAME_PATTERN = /^[A-Z_][A-Z0-9_]*$/;
 
-/** Names Boboddy manages itself; a step may not declare them. */
+/** Names Scarn manages itself; a step may not declare them. */
 export const RESERVED_ENV_VAR_NAMES: readonly string[] = [
   "HOME",
   "XDG_CONFIG_HOME",
@@ -38,7 +38,7 @@ export const RESERVED_ENV_VAR_NAMES: readonly string[] = [
   "npm_config_cache",
 ];
 
-export const RESERVED_ENV_VAR_PREFIX = "BOBODDY_";
+export const RESERVED_ENV_VAR_PREFIX = "SCARN_";
 
 export const MAX_ENV_VARS = 64;
 export const MAX_ENV_VAR_NAME_LENGTH = 128;
@@ -63,7 +63,7 @@ const envVarNameSchema = z
   .max(MAX_ENV_VAR_NAME_LENGTH)
   .regex(ENV_VAR_NAME_PATTERN, "must match /^[A-Z_][A-Z0-9_]*$/")
   .refine((name) => !isReservedEnvVarName(name), {
-    message: `is reserved (BOBODDY_*, ${RESERVED_ENV_VAR_NAMES.join(", ")})`,
+    message: `is reserved (SCARN_*, ${RESERVED_ENV_VAR_NAMES.join(", ")})`,
   });
 
 const envVarValueSchema = z.string().max(MAX_ENV_VAR_VALUE_LENGTH);
@@ -85,7 +85,7 @@ export function appliesToSetup(applies: EnvVarApplies): boolean {
 
 /**
  * True when `name` is a worker-side variable an `inherit` entry may not read:
- * `BOBODDY_*` carries the worker's own credentials and configuration, which
+ * `SCARN_*` carries the worker's own credentials and configuration, which
  * must never be copied into a step's agent container.
  */
 export function isUninheritableWorkerEnvVarName(name: string): boolean {

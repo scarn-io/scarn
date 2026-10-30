@@ -74,8 +74,8 @@ describe("applyArtifactSubmissions — fill", () => {
         mode: "fill",
       });
       expect(result.problems).toEqual([
-        '`reproVideo` is filled in from submitted artifacts. Remove it and call `boboddy-submit-artifact` with `field: "reproVideo"`.',
-        '`details.screenshot` is required. Save the file and call `boboddy-submit-artifact` with `field: "details.screenshot"` first.',
+        '`reproVideo` is filled in from submitted artifacts. Remove it and call `scarn-submit-artifact` with `field: "reproVideo"`.',
+        '`details.screenshot` is required. Save the file and call `scarn-submit-artifact` with `field: "details.screenshot"` first.',
       ]);
       expect(input.reproVideo).toBe("/tmp/x.webm");
     },
@@ -123,7 +123,7 @@ describe("applyArtifactSubmissions — verify", () => {
 
 describe("artifacts.json on disk", () => {
   test.concurrent("round-trips and checks stored files", async () => {
-    const workspace = await mkdtemp(join(tmpdir(), "boboddy-artifacts-"));
+    const workspace = await mkdtemp(join(tmpdir(), "scarn-artifacts-"));
     expect(await readStepArtifactSubmissions(workspace)).toEqual({
       fields: {},
       extra: [],
@@ -140,19 +140,19 @@ describe("artifacts.json on disk", () => {
     expect(await readStepArtifactSubmissions(workspace)).toEqual(submissions);
 
     await writeFile(
-      join(workspace, ".boboddy/current-execution/artifacts.json"),
+      join(workspace, ".scarn/current-execution/artifacts.json"),
       JSON.stringify({ fields: { bad: { stored: 1 } }, extra: [] }),
     );
     expect(readStepArtifactSubmissions(workspace)).rejects.toThrow(
-      ".boboddy/current-execution/artifacts.json is malformed",
+      ".scarn/current-execution/artifacts.json is malformed",
     );
     await writeStepArtifactSubmissions(workspace, submissions);
 
-    await mkdir(join(workspace, ".boboddy/step-artifacts"), {
+    await mkdir(join(workspace, ".scarn/step-artifacts"), {
       recursive: true,
     });
     await writeFile(
-      join(workspace, ".boboddy/step-artifacts/reproVideo.webm"),
+      join(workspace, ".scarn/step-artifacts/reproVideo.webm"),
       "vid",
     );
     expect(
@@ -162,7 +162,7 @@ describe("artifacts.json on disk", () => {
         submissions,
       }),
     ).toEqual([
-      '`details.screenshot` was submitted as details.screenshot.png, but .boboddy/step-artifacts/details.screenshot.png is missing or empty. Save the file again and call `boboddy-submit-artifact` with `field: "details.screenshot"`.',
+      '`details.screenshot` was submitted as details.screenshot.png, but .scarn/step-artifacts/details.screenshot.png is missing or empty. Save the file again and call `scarn-submit-artifact` with `field: "details.screenshot"`.',
     ]);
   });
 });
@@ -171,12 +171,12 @@ describe("checkReturnedArtifactPaths", () => {
   test.concurrent(
     "accepts files inside the folder and rejects escapes, missing files and wrong extensions",
     async () => {
-      const workspace = await mkdtemp(join(tmpdir(), "boboddy-returned-"));
-      await mkdir(join(workspace, ".boboddy/step-artifacts/details"), {
+      const workspace = await mkdtemp(join(tmpdir(), "scarn-returned-"));
+      await mkdir(join(workspace, ".scarn/step-artifacts/details"), {
         recursive: true,
       });
       await writeFile(
-        join(workspace, ".boboddy/step-artifacts/details/shot.png"),
+        join(workspace, ".scarn/step-artifacts/details/shot.png"),
         "png",
       );
 
@@ -201,12 +201,12 @@ describe("checkReturnedArtifactPaths", () => {
           },
         }),
       ).toEqual([
-        '`reproVideo` must be a path relative to .boboddy/step-artifacts (use `Artifact.path("<name>")`), got "/abs/clip.webm".',
-        "`details.screenshot` is details/shot.jpg, but .boboddy/step-artifacts/details/shot.jpg is missing or empty.",
+        '`reproVideo` must be a path relative to .scarn/step-artifacts (use `Artifact.path("<name>")`), got "/abs/clip.webm".',
+        "`details.screenshot` is details/shot.jpg, but .scarn/step-artifacts/details/shot.jpg is missing or empty.",
       ]);
 
       await writeFile(
-        join(workspace, ".boboddy/step-artifacts/clip.mp4"),
+        join(workspace, ".scarn/step-artifacts/clip.mp4"),
         "mp4",
       );
       expect(
@@ -220,7 +220,7 @@ describe("checkReturnedArtifactPaths", () => {
         }),
       ).toEqual([
         "`reproVideo` accepts .webm, but clip.mp4 has .mp4.",
-        '`details.screenshot` must be a path relative to .boboddy/step-artifacts (use `Artifact.path("<name>")`), got "./x.png".',
+        '`details.screenshot` must be a path relative to .scarn/step-artifacts (use `Artifact.path("<name>")`), got "./x.png".',
       ]);
     },
   );

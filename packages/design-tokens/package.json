@@ -1,5 +1,5 @@
 {
-  "name": "@boboddy/design-tokens",
+  "name": "@scarn/design-tokens",
   "private": true,
   "type": "module",
   "exports": {

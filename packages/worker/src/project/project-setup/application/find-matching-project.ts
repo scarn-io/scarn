@@ -1,5 +1,5 @@
-import type { createBoboddyClient } from "@boboddy/sdk";
-import { isSameGitRepo } from "@boboddy/sdk/git-url";
+import type { createScarnClient } from "@scarn/sdk";
+import { isSameGitRepo } from "@scarn/sdk/git-url";
 import { ConfigurationError } from "../../../lib/errors";
 
 /** The subset of a project record this lookup cares about. */
@@ -34,7 +34,7 @@ export interface ProjectMatch {
  * match" and sending the user into a browser hand-off they don't need.
  */
 export async function findMatchingProject(input: {
-  client: ReturnType<typeof createBoboddyClient>;
+  client: ReturnType<typeof createScarnClient>;
   headers: { Authorization: string };
   gitUrl: string;
 }): Promise<ProjectMatch | undefined> {
@@ -73,9 +73,9 @@ export async function findMatchingProject(input: {
 function listProjectsFailedMessage(status: number): string {
   const hint =
     status === 401
-      ? " Your session may have expired; run 'boboddy auth login' and try again."
+      ? " Your session may have expired; run 'scarn auth login' and try again."
       : "";
-  return `Could not load your projects from the Boboddy server (HTTP ${String(status)}).${hint}`;
+  return `Could not load your projects from the Scarn server (HTTP ${String(status)}).${hint}`;
 }
 
 function compareOldestFirst(a: MatchedProject, b: MatchedProject): number {

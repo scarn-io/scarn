@@ -6,7 +6,7 @@ import {
 } from "../domain/agent-tools-manifest";
 
 /**
- * Write `manifest` to `~/.boboddy/projects/<owner>/<slug>/discovered-tools.json`
+ * Write `manifest` to `~/.scarn/projects/<owner>/<slug>/discovered-tools.json`
  * (see {@link agentToolsManifestPath}), replacing any earlier one, and return
  * the absolute path.
  */

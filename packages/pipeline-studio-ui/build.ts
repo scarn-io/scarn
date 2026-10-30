@@ -1,4 +1,4 @@
-// Produces the static assets `@boboddy/worker`'s local studio server reads
+// Produces the static assets `@scarn/worker`'s local studio server reads
 // from disk (see `run-pipeline-studio-server.ts`): `dist/index.html` and
 // `dist/main.js`.
 //

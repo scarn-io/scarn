@@ -2,16 +2,16 @@ import os from "node:os";
 import path from "node:path";
 
 /**
- * Domain definition of the Boboddy-managed OpenCode runtime payload.
+ * Domain definition of the Scarn-managed OpenCode runtime payload.
  *
  * Per the locked migration decision, OpenCode is NEVER launched from the
- * project Node / PATH / a global `opencode`. Instead a pinned, Boboddy-owned
+ * project Node / PATH / a global `opencode`. Instead a pinned, Scarn-owned
  * runtime payload is cached on the host, mounted into the devcontainer, and
  * launched by ABSOLUTE PATH via a wrapper script.
  *
  * Payload layout (host cache, keyed by version):
  *
- *   ~/.boboddy/runtimes/opencode/<version>/
+ *   ~/.scarn/runtimes/opencode/<version>/
  *     manifest.json                         # version + provisioned platforms
  *     launch.sh                             # arch/libc-detecting launch wrapper
  *     bin/<platform>/opencode               # standalone, embedded-Bun binaries
@@ -28,7 +28,7 @@ import path from "node:path";
  * (no container). `launch.sh` picks the right binary for the current OS/arch.
  *
  * The same directory is bind-mounted into the container at
- * `/opt/boboddy/runtimes/opencode/<version>` and `launch.sh` is invoked by its
+ * `/opt/scarn/runtimes/opencode/<version>` and `launch.sh` is invoked by its
  * absolute container path. `launch.sh` inspects `uname -m` and whether the
  * container's libc is musl (Alpine) vs glibc to pick the correct binary, so a
  * single mounted payload is portable across arbitrary devcontainer base images
@@ -38,17 +38,17 @@ import path from "node:path";
 /**
  * Pinned OpenCode runtime version. This is the single source of truth for which
  * OpenCode the worker provisions/mounts. Bumping it changes the cache key
- * (`~/.boboddy/runtimes/opencode/<version>`), causing a fresh provision and GC
+ * (`~/.scarn/runtimes/opencode/<version>`), causing a fresh provision and GC
  * of older versions on next launch.
  *
  * This constant is the single pin for the in-devcontainer OpenCode runtime.
  */
-export const OPENCODE_RUNTIME_VERSION = "2.0.28";
+export const OPENCODE_RUNTIME_VERSION = "2.1.4";
 
 /**
  * Override the pinned version via the worker env (e.g. for local dev).
  */
-export const OPENCODE_RUNTIME_VERSION_ENV = "BOBODDY_OPENCODE_RUNTIME_VERSION";
+export const OPENCODE_RUNTIME_VERSION_ENV = "SCARN_OPENCODE_RUNTIME_VERSION";
 
 /** Resolve the effective pinned OpenCode runtime version. */
 export function resolveOpencodeRuntimeVersion(
@@ -59,13 +59,13 @@ export function resolveOpencodeRuntimeVersion(
 }
 
 /**
- * Container mount root for Boboddy-managed runtimes. The version-specific
+ * Container mount root for Scarn-managed runtimes. The version-specific
  * payload is mounted at `<root>/opencode/<version>`.
  */
-export const CONTAINER_RUNTIME_ROOT = "/opt/boboddy/runtimes";
+export const CONTAINER_RUNTIME_ROOT = "/opt/scarn/runtimes";
 
-/** Host cache root: `~/.boboddy/runtimes`. */
-export const HOST_RUNTIME_CACHE_RELATIVE = [".boboddy", "runtimes"] as const;
+/** Host cache root: `~/.scarn/runtimes`. */
+export const HOST_RUNTIME_CACHE_RELATIVE = [".scarn", "runtimes"] as const;
 
 /** Wrapper script filename inside the payload, invoked by absolute path. */
 export const LAUNCH_WRAPPER_FILENAME = "launch.sh";
@@ -154,7 +154,7 @@ export function resolveHostHome(
   return explicit && explicit.length > 0 ? explicit : os.homedir();
 }
 
-/** Host cache root for OpenCode runtimes: `~/.boboddy/runtimes/opencode`. */
+/** Host cache root for OpenCode runtimes: `~/.scarn/runtimes/opencode`. */
 export function hostOpencodeRuntimeRoot(homeDir: string): string {
   return path.join(homeDir, ...HOST_RUNTIME_CACHE_RELATIVE, "opencode");
 }

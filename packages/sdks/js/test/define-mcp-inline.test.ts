@@ -72,7 +72,7 @@ describe("defineMcp — inline servers", () => {
         type: "local",
         name: "svc",
         command: ["x"],
-        environment: { T: "{env:BOBODDY_TOKEN}" },
+        environment: { T: "{env:SCARN_TOKEN}" },
       }),
     ).toThrow(/reserved/);
   });

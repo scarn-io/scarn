@@ -1,12 +1,12 @@
-import { loadAuthenticatedSession } from "@boboddy/worker";
+import { loadAuthenticatedSession } from "@scarn/worker";
 import { CliError } from "./cli-error";
 import { performDeviceLogin } from "./device-login";
 import type { Logger } from "./logger";
 import type { BaseReporter } from "./reporter-types";
 
 /**
- * The self-healing sign-in check shared by `boboddy init` and
- * `boboddy pipelines design`.
+ * The self-healing sign-in check shared by `scarn init` and
+ * `scarn pipelines design`.
  *
  * A stored token that the server no longer accepts (expired, revoked) counts
  * as signed out, the same as having no token at all. Either way an
@@ -24,7 +24,7 @@ export interface SignInPorts {
 
 export function notSignedInMessage(baseUrl: string): string {
   return (
-    `Not signed in to ${baseUrl}. Run 'boboddy auth login' in an interactive ` +
+    `Not signed in to ${baseUrl}. Run 'scarn auth login' in an interactive ` +
     "terminal, then re-run this command."
   );
 }

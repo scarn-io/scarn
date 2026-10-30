@@ -48,10 +48,10 @@ describe("PlainReporter", () => {
   });
 
   test("start includes a logs line when a log file path is given", () => {
-    new PlainReporter("/tmp/boboddy.log").start("Title");
+    new PlainReporter("/tmp/scarn.log").start("Title");
     const out = captured();
     expect(out).toContain("Title");
-    expect(out).toContain("/tmp/boboddy.log");
+    expect(out).toContain("/tmp/scarn.log");
   });
 
   test("startActivity returns a handle whose succeed writes a `✓` line", () => {

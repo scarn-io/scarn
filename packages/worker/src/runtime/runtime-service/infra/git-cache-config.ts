@@ -11,14 +11,14 @@ export type GitCacheConfig =
 /**
  * Resolves the git mirror cache configuration from environment variables.
  *
- *   - `BOBODDY_GIT_CACHE` is `on` or `off` (case-insensitive, trimmed). Unset or
+ *   - `SCARN_GIT_CACHE` is `on` or `off` (case-insensitive, trimmed). Unset or
  *     blank means `on`. Any other value is a configuration error.
- *   - `BOBODDY_GIT_CACHE_DIR` is an absolute directory for the mirrors. Unset or
- *     blank means `~/.boboddy/git-cache` (home via `resolveHostHome`). A relative
+ *   - `SCARN_GIT_CACHE_DIR` is an absolute directory for the mirrors. Unset or
+ *     blank means `~/.scarn/git-cache` (home via `resolveHostHome`). A relative
  *     value is a configuration error.
  *
  * When the cache is `off` the result carries no directory and
- * `BOBODDY_GIT_CACHE_DIR` is not validated.
+ * `SCARN_GIT_CACHE_DIR` is not validated.
  */
 export function resolveGitCacheConfig(env: Env): GitCacheConfig {
   if (!isCacheEnabled(env)) {
@@ -28,7 +28,7 @@ export function resolveGitCacheConfig(env: Env): GitCacheConfig {
 }
 
 function isCacheEnabled(env: Env): boolean {
-  const raw = env["BOBODDY_GIT_CACHE"]?.trim().toLowerCase();
+  const raw = env["SCARN_GIT_CACHE"]?.trim().toLowerCase();
   if (!raw || raw === "on") {
     return true;
   }
@@ -36,23 +36,23 @@ function isCacheEnabled(env: Env): boolean {
     return false;
   }
   throw new ConfigurationError(
-    `Unknown BOBODDY_GIT_CACHE value '${raw}'. Valid values are 'on' and 'off'.`,
+    `Unknown SCARN_GIT_CACHE value '${raw}'. Valid values are 'on' and 'off'.`,
     "GIT_CACHE_VALUE_UNKNOWN",
   );
 }
 
 function resolveCacheDir(env: Env): string {
-  const configured = env["BOBODDY_GIT_CACHE_DIR"]?.trim();
+  const configured = env["SCARN_GIT_CACHE_DIR"]?.trim();
   if (!configured) {
     return path.join(
       resolveHostHome((name) => env[name]),
-      ".boboddy",
+      ".scarn",
       "git-cache",
     );
   }
   if (!path.isAbsolute(configured)) {
     throw new ConfigurationError(
-      `BOBODDY_GIT_CACHE_DIR must be an absolute path, got '${configured}'.`,
+      `SCARN_GIT_CACHE_DIR must be an absolute path, got '${configured}'.`,
       "GIT_CACHE_DIR_NOT_ABSOLUTE",
     );
   }

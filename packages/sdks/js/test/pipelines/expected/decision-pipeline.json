@@ -1,0 +1,97 @@
+{
+  "schemaVersion": 1,
+  "key": "decision-loop",
+  "title": "Review a fix, sending it back until it's right",
+  "start": {
+    "to": "propose-fix",
+    "args": {
+      "title": "workItem.title"
+    }
+  },
+  "nodes": {
+    "propose-fix": {
+      "kind": "step",
+      "step": "propose-fix",
+      "next": {
+        "routes": [
+          {
+            "to": "review-fix",
+            "args": {
+              "plan": "result"
+            }
+          }
+        ]
+      }
+    },
+    "review-fix": {
+      "kind": "wait",
+      "title": "Review the fix",
+      "for": "decision",
+      "actions": [
+        {
+          "key": "approve",
+          "label": "Approve",
+          "body": "optional"
+        },
+        {
+          "key": "revise",
+          "label": "Request changes",
+          "body": "required"
+        },
+        {
+          "key": "reject",
+          "label": "Reject",
+          "body": "optional"
+        }
+      ],
+      "next": {
+        "routes": [
+          {
+            "when": {
+              "path": "result.action",
+              "op": "equal",
+              "value": "approve"
+            },
+            "to": "apply-fix",
+            "args": {
+              "plan": "nodes.propose-fix.result"
+            }
+          },
+          {
+            "when": {
+              "path": "result.action",
+              "op": "equal",
+              "value": "revise"
+            },
+            "to": "propose-fix",
+            "args": {
+              "title": "workItem.title",
+              "feedback": "result.body"
+            }
+          }
+        ],
+        "otherwise": {
+          "to": "rejected"
+        }
+      }
+    },
+    "apply-fix": {
+      "kind": "step",
+      "step": "apply-fix",
+      "next": {
+        "routes": [
+          {
+            "to": "done"
+          }
+        ]
+      }
+    },
+    "done": {
+      "kind": "succeed"
+    },
+    "rejected": {
+      "kind": "fail",
+      "error": "FixRejected"
+    }
+  }
+}

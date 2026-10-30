@@ -17,7 +17,7 @@ import type {
  * asserts on, or expects the code to surface, a token value.
  */
 
-const LAUNCHER = "/Users/dev/.boboddy/runtimes/opencode/2.0.28/launch.sh";
+const LAUNCHER = "/Users/dev/.scarn/runtimes/opencode/2.1.4/launch.sh";
 
 /** An env that sees nothing, so the ambient shell cannot leak in. */
 const emptyEnv: NodeJS.ProcessEnv = {};
@@ -133,7 +133,7 @@ describe("checkOpencodeProviderCredentials", () => {
     expect(result.remediation).not.toMatch(/(^|\s)opencode auth login/u);
   });
 
-  test("checks without provisioning a launcher first — `boboddy init` only", async () => {
+  test("checks without provisioning a launcher first — `scarn init` only", async () => {
     // `init` only needs the yes/no answer before deciding whether to launch
     // `opencode auth login` inline, so `launcherPath` is optional.
     const okResult = await checkOpencodeProviderCredentials({

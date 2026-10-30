@@ -3,12 +3,12 @@ import { join } from "node:path";
 import { resolveBuilderInstaller } from "../src/lib/pipeline-builder-install";
 
 /**
- * Picking the installer for `.boboddy/pipeline-builder`. The rule that matters:
+ * Picking the installer for `.scarn/pipeline-builder`. The rule that matters:
  * an existing lockfile always wins, so a design session never quietly switches
  * a project's package manager and leaves two lockfiles behind.
  */
 
-const DIR = "/repo/.boboddy/pipeline-builder";
+const DIR = "/repo/.scarn/pipeline-builder";
 
 function withLockfile(name: string) {
   return (path: string) => path === join(DIR, name);

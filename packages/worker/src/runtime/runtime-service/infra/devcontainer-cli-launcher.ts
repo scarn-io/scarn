@@ -8,7 +8,7 @@ import {
   logWork,
   logWorkDebug,
   logWorkError,
-} from "../../../work/task/application/work-logger";
+} from "../../../work/task-run/application/work-logger";
 import type {
   DevcontainerLaunchProgress,
   DevcontainerLaunchProgressLevel,
@@ -95,7 +95,7 @@ const DEVCONTAINER_CONFIG_CANDIDATES = [
 
 /**
  * Returns the path to the devcontainer CLI bundle script set by the shim via
- * BOBODDY_DEVCONTAINER_SCRIPT. The shim always sets this to
+ * SCARN_DEVCONTAINER_SCRIPT. The shim always sets this to
  * dist/devcontainer/dist/spec-node/devcontainers-cli.js, which build.ts copies
  * from @devcontainers/cli for every build (local and CI alike), so it is always
  * present. The bundle is nested at that depth so that its __dirname-based
@@ -104,17 +104,17 @@ const DEVCONTAINER_CONFIG_CANDIDATES = [
  * (used on Linux when remapping the container user's UID/GID).
  */
 export function resolveDevcontainerCliScriptPath(): string {
-  const scriptPath = process.env["BOBODDY_DEVCONTAINER_SCRIPT"];
+  const scriptPath = process.env["SCARN_DEVCONTAINER_SCRIPT"];
   if (!scriptPath) {
     throw new ConfigurationError(
-      "BOBODDY_DEVCONTAINER_SCRIPT is not set. This is normally injected by the " +
-        "CLI shim (bin/boboddy). If running the worker directly, set this env var " +
+      "SCARN_DEVCONTAINER_SCRIPT is not set. This is normally injected by the " +
+        "CLI shim (bin/scarn). If running the worker directly, set this env var " +
         "to the path of dist/devcontainer/dist/spec-node/devcontainers-cli.js.",
       "DEVCONTAINER_CLI_NOT_FOUND",
     );
   }
 
-  // The shim (bin/boboddy) already verifies this file exists before it ever
+  // The shim (bin/scarn) already verifies this file exists before it ever
   // launches the worker, so this should be unreachable in normal operation.
   // It fires when the worker is invoked directly (bypassing the shim, e.g. a
   // local `bun run` or a test) against a corrupted/incomplete install — most
@@ -125,10 +125,10 @@ export function resolveDevcontainerCliScriptPath(): string {
   // extract a summary from (see extractDevcontainerErrorSummary's fallback).
   if (!existsSync(scriptPath)) {
     throw new ConfigurationError(
-      `Devcontainer CLI bundle not found at ${scriptPath}. The boboddy install ` +
+      `Devcontainer CLI bundle not found at ${scriptPath}. The scarn install ` +
         "looks incomplete or corrupted. Try reinstalling: `npm install -g " +
-        "@boboddy/cli --force` (or `npm cache clean --force && npm install -g " +
-        "@boboddy/cli`).",
+        "@scarn/cli --force` (or `npm cache clean --force && npm install -g " +
+        "@scarn/cli`).",
       "DEVCONTAINER_CLI_NOT_FOUND",
     );
   }
@@ -486,11 +486,11 @@ export class DevcontainerCliLauncher implements DevcontainerLauncher {
           "--config",
           path.join(input.workspacePath, input.devcontainerConfigPath),
           "--id-label",
-          `boboddy.project-id=${input.projectId}`,
+          `scarn.project-id=${input.projectId}`,
           "--id-label",
-          `boboddy.project-runtime-session-id=${input.sessionId}`,
+          `scarn.project-runtime-session-id=${input.sessionId}`,
           "--id-label",
-          `boboddy.requested-by-user-id=${input.requestedByUserId}`,
+          `scarn.requested-by-user-id=${input.requestedByUserId}`,
           "--log-format",
           "json",
         ],

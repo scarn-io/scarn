@@ -1,7 +1,7 @@
-# @boboddy/cli 0.0.0 — derived from reporter strings in apps/cli/src (lib/design-preflight.ts, lib/design-work-item-adapters.ts), rendered through ClackReporter; not a live capture.
+# @scarn/cli 0.0.0 — derived from reporter strings in apps/cli/src (lib/design-preflight.ts, lib/design-work-item-adapters.ts), rendered through ClackReporter; not a live capture.
 # Trimmed by hand: clack's blank "│" spacer lines are dropped. Work item titles are examples.
-┌   Boboddy pipeline designer
-●  Logs → ~/.boboddy/logs/worker-2026-10-07T15-04-12-123Z.log
+┌   Scarn pipeline designer
+●  Logs → ~/.scarn/logs/worker-2026-10-07T15-04-12-123Z.log
 ◆  Signed in as you@example.com
 ◇  3 work item(s) [1s]
 ◆  What should this pipeline handle? (Ctrl+C to cancel)

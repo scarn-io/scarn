@@ -2,17 +2,17 @@ import type { ArgumentsCamelCase, Argv, CommandModule } from "yargs";
 import {
   investigateExecution,
   type InvestigateExecutionClient,
-} from "@boboddy/platform-client";
-import { resolveBoboddyBaseUrl } from "@boboddy/worker";
+} from "@scarn/shared-core";
+import { resolveScarnBaseUrl } from "@scarn/worker";
 import { connectApi } from "../lib/cli-api-client";
 import { withReporter } from "../lib/command-output";
 import { createFullLogSaver } from "../lib/execution-log-cache";
 
 /**
- * Mirrors `@boboddy/platform-client`'s `TaskLogStream` (imported as a
- * type only there — see `packages/platform-client/src/lib/api-types.ts`).
+ * Mirrors `@scarn/shared-core`'s `TaskLogStream` (imported as a
+ * type only there — see `packages/shared-core/src/lib/api-types.ts`).
  * Duplicated here as a runtime array so `--log-stream` can validate/describe
- * its choices without `@boboddy/platform-client` needing to export a value
+ * its choices without `@scarn/shared-core` needing to export a value
  * for CLI-only concerns.
  */
 const LOG_STREAM_VALUES = ["worker", "ai-server", "conversation"] as const;
@@ -42,21 +42,21 @@ const runView = (args: ArgumentsCamelCase<ViewArguments>): Promise<void> =>
       );
     }
 
-    const baseUrl = resolveBoboddyBaseUrl(args.baseUrl);
+    const baseUrl = resolveScarnBaseUrl(args.baseUrl);
     const api = await connectApi(baseUrl);
 
     const output = await investigateExecution({
       // `@hey-api/openapi-ts` encodes every nullable field on the generated
-      // `BoboddyClient` as `T | unknown` (collapsing to `unknown` — the same
-      // quirk `packages/platform-client/src/lib/api-types.ts` documents for
+      // `ScarnClient` as `T | unknown` (collapsing to `unknown` — the same
+      // quirk `packages/shared-core/src/lib/api-types.ts` documents for
       // why that package defines its own nullable-correct types instead of
       // importing the generated ones). That makes the generated client's
       // method return types structurally incompatible with
       // `InvestigateExecutionClient`'s (correctly-nullable) parameter types,
       // even though the real runtime values match at every field. Asserted
-      // here rather than in `platform-client` itself, which only defines the
+      // here rather than in `shared-core` itself, which only defines the
       // interface and never receives (so never has to convert) a real
-      // `BoboddyClient`.
+      // `ScarnClient`.
       client: api.client as unknown as InvestigateExecutionClient,
       headers: api.headers,
       executionId: args.executionId,
@@ -89,8 +89,7 @@ const viewCommand: CommandModule<object, ViewArguments> = {
         type: "number",
       })
       .option("step", {
-        describe:
-          "Step key to drill into: status, signals, output, and evaluation",
+        describe: "Step key to drill into: status, output, and evaluation",
         type: "string",
       })
       .option("log", {
@@ -112,7 +111,7 @@ const viewCommand: CommandModule<object, ViewArguments> = {
       })
       .option("baseUrl", {
         alias: "base-url",
-        describe: "Boboddy app base URL",
+        describe: "Scarn app base URL",
         type: "string",
       }),
   handler: runView,

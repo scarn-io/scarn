@@ -1,22 +1,19 @@
-import { describe, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import {
   DESIGN_LAUNCH_MESSAGE,
   DESIGN_NEXT_STEP_MESSAGE,
   runInitHandoff,
 } from "../src/lib/init-handoff";
-import {
-  concurrentTest,
-  createReporterRecorder as createRecorder,
-} from "./utils";
+import { createReporterRecorder as createRecorder } from "./utils";
 
 /**
- * The epilogue of `boboddy init`. The behavior that matters does not involve a
+ * The epilogue of `scarn init`. The behavior that matters does not involve a
  * terminal: the handoff must close the reporter block before the designer takes
  * over the tty.
  */
 
 describe("runInitHandoff", () => {
-  concurrentTest("prints the next step without prompting when non-interactive", async () => {
+  test("prints the next step without prompting when non-interactive", async () => {
     const { reporter, calls } = createRecorder();
     let confirmed = 0;
     let launched = 0;
@@ -44,7 +41,7 @@ describe("runInitHandoff", () => {
     );
   });
 
-  concurrentTest("launches the designer when the user accepts", async () => {
+  test("launches the designer when the user accepts", async () => {
     const { reporter, calls } = createRecorder();
     const order: string[] = [];
 
@@ -74,7 +71,7 @@ describe("runInitHandoff", () => {
     );
   });
 
-  concurrentTest("prints the next step when the user declines", async () => {
+  test("prints the next step when the user declines", async () => {
     const { reporter, calls } = createRecorder();
     let launched = 0;
 

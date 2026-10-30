@@ -2,17 +2,17 @@ import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:
 import { reporterLines } from "./utils";
 
 /**
- * `boboddy telemetry status`, driven in-process through `run()` so the
+ * `scarn telemetry status`, driven in-process through `run()` so the
  * baked-key case can be covered by mocking `build-constants` (a source run
  * never has a baked key). The persisted opt-out and the PostHog client are
- * mocked too, so nothing reads the real `~/.boboddy/config.jsonc` or touches
+ * mocked too, so nothing reads the real `~/.scarn/config.jsonc` or touches
  * the network.
  *
  * Plain `test()`: every case swaps `process.stdout`/`process.stderr` writers
  * and `process.env`, which are process-wide.
  */
 
-void mock.module("@boboddy/observability/analytics/server", () => ({
+void mock.module("@scarn/observability/analytics/server", () => ({
   init: () => false,
   isInitialized: () => false,
   capture: () => undefined,
@@ -22,8 +22,8 @@ void mock.module("@boboddy/observability/analytics/server", () => ({
 }));
 
 let fakeTelemetryDisabled = false;
-const realWorker = await import("@boboddy/worker");
-void mock.module("@boboddy/worker", () => ({
+const realWorker = await import("@scarn/worker");
+void mock.module("@scarn/worker", () => ({
   ...realWorker,
   isTelemetryDisabled: () => fakeTelemetryDisabled,
 }));
@@ -88,14 +88,14 @@ beforeEach(() => {
   // Empty, not deleted: `run()` loads `.env` without overriding, so an
   // existing (even empty) value keeps a developer's real key out of the test.
   process.env["POSTHOG_CLI_KEY"] = "";
-  delete process.env["BOBODDY_TELEMETRY_DISABLED"];
+  delete process.env["SCARN_TELEMETRY_DISABLED"];
 });
 
 afterEach(() => {
   resetEnv();
 });
 
-describe("boboddy telemetry status", () => {
+describe("scarn telemetry status", () => {
   test("reports a baked key", async () => {
     fakeBaked = { key: "phc_baked_secret" };
     const result = await runStatus();
@@ -136,12 +136,12 @@ describe("boboddy telemetry status", () => {
     ]);
   });
 
-  test("reports the BOBODDY_TELEMETRY_DISABLED=1 opt-out", async () => {
-    process.env["BOBODDY_TELEMETRY_DISABLED"] = "1";
+  test("reports the SCARN_TELEMETRY_DISABLED=1 opt-out", async () => {
+    process.env["SCARN_TELEMETRY_DISABLED"] = "1";
     const result = await runStatus();
     expect(result.exitCode).toBe(0);
     expect(infoLines(result.stderr)).toEqual([
-      "Telemetry is disabled for this invocation via BOBODDY_TELEMETRY_DISABLED=1.",
+      "Telemetry is disabled for this invocation via SCARN_TELEMETRY_DISABLED=1.",
       KEY_SOURCE_NONE_MESSAGE,
     ]);
   });
@@ -152,7 +152,7 @@ describe("boboddy telemetry status", () => {
   });
 });
 
-describe("boboddy telemetry status --json", () => {
+describe("scarn telemetry status --json", () => {
   test("writes exactly one JSON line to stdout and nothing to stderr", async () => {
     fakeBaked = { key: "phc_baked_secret" };
     const result = await runStatus(["--json"]);
@@ -179,8 +179,8 @@ describe("boboddy telemetry status --json", () => {
     expect(JSON.parse(none.stdout)).toMatchObject({ keySource: "none" });
   });
 
-  test("reports enabled: false under BOBODDY_TELEMETRY_DISABLED=1", async () => {
-    process.env["BOBODDY_TELEMETRY_DISABLED"] = "1";
+  test("reports enabled: false under SCARN_TELEMETRY_DISABLED=1", async () => {
+    process.env["SCARN_TELEMETRY_DISABLED"] = "1";
     fakeBaked = { key: "phc_baked_secret" };
     const result = await runStatus(["--json"]);
     expect(result.stderr).toBe("");

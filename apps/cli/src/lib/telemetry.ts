@@ -2,13 +2,13 @@ import type {
   AnalyticsEventName,
   AnalyticsEventProperties,
   CliContextProperties,
-} from "@boboddy/observability/analytics/events";
-import * as analyticsServer from "@boboddy/observability/analytics/server";
+} from "@scarn/observability/analytics/events";
+import * as analyticsServer from "@scarn/observability/analytics/server";
 import {
   getOrCreateAnonymousId,
   isTelemetryDisabled,
   loadAuthProfile,
-} from "@boboddy/worker";
+} from "@scarn/worker";
 import { bakedTelemetryConfig } from "./build-constants";
 import { createCliLogger } from "./logger";
 import { version as CLI_VERSION } from "../../package.json";
@@ -21,7 +21,7 @@ import { version as CLI_VERSION } from "../../package.json";
  * drop-off signal that matters most.
  *
  * Identity: every event is keyed to a persisted anonymous id
- * (`getOrCreateAnonymousId`, `~/.boboddy/config.jsonc`) until the real `userId` is
+ * (`getOrCreateAnonymousId`, `~/.scarn/config.jsonc`) until the real `userId` is
  * known, at which point later events in THIS process switch to it and a
  * PostHog `alias` call merges the two distinct ids server-side. A `userId`
  * already on disk (a signed-in session from an earlier run) is adopted the
@@ -50,10 +50,10 @@ import { version as CLI_VERSION } from "../../package.json";
 export const POSTHOG_KEY_ENV_VAR = "POSTHOG_CLI_KEY";
 /** Overrides the baked host; defaults to the ingestion host every other PostHog integration in this repo uses. */
 export const POSTHOG_HOST_ENV_VAR = "POSTHOG_CLI_HOST";
-/** Set to `1` to opt out for a single invocation without touching `~/.boboddy/config.jsonc`. */
-export const TELEMETRY_DISABLED_ENV_VAR = "BOBODDY_TELEMETRY_DISABLED";
+/** Set to `1` to opt out for a single invocation without touching `~/.scarn/config.jsonc`. */
+export const TELEMETRY_DISABLED_ENV_VAR = "SCARN_TELEMETRY_DISABLED";
 /** Set to `1` to print every telemetry payload to stderr, in addition to sending it. */
-export const TELEMETRY_DEBUG_ENV_VAR = "BOBODDY_TELEMETRY_DEBUG";
+export const TELEMETRY_DEBUG_ENV_VAR = "SCARN_TELEMETRY_DEBUG";
 
 const DEFAULT_POSTHOG_HOST = "https://us.i.posthog.com";
 const DEFAULT_SHUTDOWN_TIMEOUT_MS = 1500;
@@ -135,7 +135,7 @@ function debugPrint(payload: Record<string, unknown>): void {
   // Deliberately console.error, not the pino logger: the pretty-stderr
   // stream is silenced unless --verbose, but a debug env var should always
   // be visible regardless of that flag.
-  console.error("[boboddy telemetry]", JSON.stringify(payload));
+  console.error("[scarn telemetry]", JSON.stringify(payload));
 }
 
 /**
@@ -150,7 +150,7 @@ export function captureMilestone<E extends AnalyticsEventName>(
   const enabled = ensureInitialized();
   // Resolved only when actually sending: `resolveDistinctId` may create AND
   // PERSIST a fresh anonymous id (`getOrCreateAnonymousId` writes to
-  // `~/.boboddy/config.jsonc`). Someone who opted out — env var or the persisted
+  // `~/.scarn/config.jsonc`). Someone who opted out — env var or the persisted
   // flag itself — must not get a brand-new on-disk identifier as a side
   // effect of a command that is supposed to be a no-op.
   if (!enabled) {

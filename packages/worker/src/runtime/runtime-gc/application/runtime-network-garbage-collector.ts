@@ -9,7 +9,7 @@ const execFileAsync = promisify(execFile);
  * these, but the GC still reaps any leftovers from older runs.
  */
 export const RUNTIME_SESSION_NETWORK_NAME_PREFIX =
-  "boboddy-project-runtime-session";
+  "scarn-project-runtime-session";
 
 type DockerNetworkInspect = {
   Name?: string | undefined;

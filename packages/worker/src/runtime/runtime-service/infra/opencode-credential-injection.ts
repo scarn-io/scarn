@@ -1,7 +1,7 @@
 import {
   logWork,
   logWorkWarn,
-} from "../../../work/task/application/work-logger";
+} from "../../../work/task-run/application/work-logger";
 import type { OpencodeCredential } from "./opencode-credential-source";
 import { basicAuthHeader } from "./opencode-server-contract";
 

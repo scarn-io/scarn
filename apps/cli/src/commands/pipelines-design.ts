@@ -1,7 +1,7 @@
 import type { ArgumentsCamelCase, Argv, CommandModule } from "yargs";
 import { existsSync } from "node:fs";
 import * as clack from "@clack/prompts";
-import { isProjectRef, PROJECT_REF_FORMAT_HINT } from "@boboddy/sdk/defaults";
+import { isProjectRef, PROJECT_REF_FORMAT_HINT } from "@scarn/sdk/defaults";
 import {
   assertInteractiveTerminal,
   checkOpencodeProviderCredentials,
@@ -17,7 +17,7 @@ import {
   SdkMcpToolLister,
   verifyRequirements,
   writeAgentToolsManifest,
-} from "@boboddy/worker";
+} from "@scarn/worker";
 import { version as CLI_VERSION } from "../../package.json";
 import { openBrowser } from "../auth/browser";
 import { withReporter } from "../lib/command-output";
@@ -73,11 +73,11 @@ import {
 } from "../lib/resolve-project-ref";
 
 /**
- * `boboddy pipelines design` — the guided path from "I have a repo" to "I have
+ * `scarn pipelines design` — the guided path from "I have a repo" to "I have
  * a pipeline running against it".
  *
  * It provisions and launches the real OpenCode TUI, in the user's
- * `.boboddy/pipeline-builder` directory, booted into an injected
+ * `.scarn/pipeline-builder` directory, booted into an injected
  * `pipeline-designer` agent that interviews them and writes the definitions.
  * Everything before the launch is preflight, and every preflight step heals
  * itself rather than printing a "run X first" instruction — see
@@ -85,7 +85,7 @@ import {
  */
 
 /**
- * A scaffold outside a repository has no root to anchor `.boboddy/` to. Only
+ * A scaffold outside a repository has no root to anchor `.scarn/` to. Only
  * enforced when we would actually create the directory.
  */
 function assertInsideRepository(paths: DesignPaths, cwd: string): void {
@@ -94,7 +94,7 @@ function assertInsideRepository(paths: DesignPaths, cwd: string): void {
   }
   throw new CliError(
     "not_in_git_repo",
-    "Run `boboddy pipelines design` from inside your project's git repository. " +
+    "Run `scarn pipelines design` from inside your project's git repository. " +
       `No git repository was found at or above ${cwd}.`,
   );
 }
@@ -122,7 +122,7 @@ async function promptProject(): Promise<string | undefined> {
 
 /**
  * Identify the project for this repository and persist it to
- * `.boboddy/boboddy.jsonc` — the same code path `boboddy init` uses, so both
+ * `.scarn/scarn.jsonc` — the same code path `scarn init` uses, so both
  * entry points agree on how a repo maps to a project.
  *
  * Unlike `init`, this does NOT send the user to a browser hand-off when no
@@ -303,7 +303,7 @@ function buildDesignSessionPorts(
 }
 
 /**
- * The command body, callable without yargs' argv envelope so `boboddy init`
+ * The command body, callable without yargs' argv envelope so `scarn init`
  * can hand straight over to the designer in-process (see `lib/init-handoff.ts`)
  * instead of re-spawning the CLI.
  */
@@ -325,13 +325,13 @@ export const designCommand: CommandModule<object, DesignArguments> = {
     argv
       .positional("project", {
         describe:
-          'The project to design pipelines for, as owner/slug (defaults to "project" in .boboddy/boboddy.jsonc)',
+          'The project to design pipelines for, as owner/slug (defaults to "project" in .scarn/scarn.jsonc)',
         type: "string",
       })
       .option("baseUrl", {
         alias: "base-url",
         type: "string",
-        describe: "Boboddy app base URL",
+        describe: "Scarn app base URL",
       })
       .option("workItemId", {
         alias: "work-item-id",

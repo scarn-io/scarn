@@ -4,11 +4,11 @@ import { join } from "node:path";
 import {
   PIPELINE_BUILDER_LOCKFILES,
   type BuilderInstaller,
-} from "@boboddy/worker";
+} from "@scarn/worker";
 import { CliError } from "./cli-error";
 
 /**
- * Installing dependencies into `.boboddy/pipeline-builder`.
+ * Installing dependencies into `.scarn/pipeline-builder`.
  *
  * `detect-pipeline-runtime.ts` answers "how do I *run* a script here?" from the
  * lockfile, which only works once dependencies exist. This module answers the
@@ -17,11 +17,11 @@ import { CliError } from "./cli-error";
  */
 
 /**
- * The marker `boboddy pipelines push` checks for. Using the same probe here
+ * The marker `scarn pipelines push` checks for. Using the same probe here
  * means a successful preflight guarantees a later push won't bail on it.
  */
 export function builderDependenciesInstalled(builderDir: string): boolean {
-  return existsSync(join(builderDir, "node_modules", "@boboddy", "sdk"));
+  return existsSync(join(builderDir, "node_modules", "@scarn", "sdk"));
 }
 
 /**

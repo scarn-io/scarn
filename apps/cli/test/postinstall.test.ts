@@ -16,8 +16,8 @@ import { gzipSync } from "node:zlib";
 const projectRoot = resolve(import.meta.dir, "..");
 const postinstallSrc = resolve(projectRoot, "bin/postinstall.js");
 
-const PACKAGE_NAME = "@boboddy/cli-linux-x64";
-const BINARY_NAME = "boboddy-linux-x64";
+const PACKAGE_NAME = "@scarn/cli-linux-x64";
+const BINARY_NAME = "scarn-linux-x64";
 const VERSION = "0.0.0-test";
 
 interface SpawnResult {
@@ -26,10 +26,10 @@ interface SpawnResult {
   readonly exitCode: number;
 }
 
-/** Build a fake `@boboddy/cli` install root: package.json + bin/postinstall.js. */
+/** Build a fake `@scarn/cli` install root: package.json + bin/postinstall.js. */
 function makeFakeProjectRoot(): string {
-  const root = mkdtempSync(resolve(tmpdir(), "boboddy-postinstall-"));
-  writeFileSync(resolve(root, "package.json"), JSON.stringify({ name: "@boboddy/cli", version: VERSION }));
+  const root = mkdtempSync(resolve(tmpdir(), "scarn-postinstall-"));
+  writeFileSync(resolve(root, "package.json"), JSON.stringify({ name: "@scarn/cli", version: VERSION }));
   mkdirSync(resolve(root, "bin"), { recursive: true });
   cpSync(postinstallSrc, resolve(root, "bin/postinstall.js"));
   return root;
@@ -127,7 +127,7 @@ describe("bin/postinstall.js", () => {
       JSON.stringify({ name: PACKAGE_NAME, version: VERSION }),
     );
 
-    const result = await runPostinstall(root, { BOBODDY_PLATFORM: "linux", BOBODDY_ARCH: "x64" });
+    const result = await runPostinstall(root, { SCARN_PLATFORM: "linux", SCARN_ARCH: "x64" });
 
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toBe("");
@@ -138,21 +138,21 @@ describe("bin/postinstall.js", () => {
     const root = makeFakeProjectRoot();
     cleanupRoots.push(root);
 
-    const result = await runPostinstall(root, { BOBODDY_PLATFORM: "freebsd", BOBODDY_ARCH: "arm64" });
+    const result = await runPostinstall(root, { SCARN_PLATFORM: "freebsd", SCARN_ARCH: "arm64" });
 
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toBe("");
     expect(result.stderr).toBe("");
   });
 
-  test("skips silently when BOBODDY_DIST_DIR overrides to a dev build", async () => {
+  test("skips silently when SCARN_DIST_DIR overrides to a dev build", async () => {
     const root = makeFakeProjectRoot();
     cleanupRoots.push(root);
 
     const result = await runPostinstall(root, {
-      BOBODDY_DIST_DIR: root,
-      BOBODDY_PLATFORM: "linux",
-      BOBODDY_ARCH: "x64",
+      SCARN_DIST_DIR: root,
+      SCARN_PLATFORM: "linux",
+      SCARN_ARCH: "x64",
     });
 
     expect(result.exitCode).toBe(0);
@@ -168,8 +168,8 @@ describe("bin/postinstall.js", () => {
     cleanupServers.push(server);
 
     const result = await runPostinstall(root, {
-      BOBODDY_PLATFORM: "linux",
-      BOBODDY_ARCH: "x64",
+      SCARN_PLATFORM: "linux",
+      SCARN_ARCH: "x64",
       npm_config_registry: url,
     });
 
@@ -184,15 +184,15 @@ describe("bin/postinstall.js", () => {
     cleanupRoots.push(root);
 
     const result = await runPostinstall(root, {
-      BOBODDY_PLATFORM: "linux",
-      BOBODDY_ARCH: "x64",
+      SCARN_PLATFORM: "linux",
+      SCARN_ARCH: "x64",
       // Nothing listening here — every attempt fails immediately.
       npm_config_registry: "http://127.0.0.1:1/",
-      BOBODDY_POSTINSTALL_RETRY_DELAY_MS: "0",
+      SCARN_POSTINSTALL_RETRY_DELAY_MS: "0",
     });
 
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toContain("fallback download also failed");
-    expect(result.stderr).toContain("npm install -g @boboddy/cli --force");
+    expect(result.stderr).toContain("npm install -g @scarn/cli --force");
   });
 });

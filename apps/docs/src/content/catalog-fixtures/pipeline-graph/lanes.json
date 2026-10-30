@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 1,
+  "key": "catalog-lanes",
+  "title": "Edit and review each file",
+  "start": { "to": "planChanges", "args": { "request": "workItem.title" } },
+  "nodes": {
+    "planChanges": {
+      "kind": "step",
+      "title": "Plan changes",
+      "step": "plan-changes",
+      "next": {
+        "routes": [
+          {
+            "to": "editFile",
+            "each": { "over": "result.files", "maxConcurrency": 5 },
+            "args": { "file": "item", "planSummary": "result.summary" }
+          }
+        ]
+      }
+    },
+    "editFile": {
+      "kind": "step",
+      "title": "Edit one file",
+      "step": "edit-file",
+      "next": {
+        "routes": [
+          {
+            "to": "reviewEdit",
+            "args": { "path": "result.path", "diff": "result.diff" }
+          }
+        ]
+      }
+    },
+    "reviewEdit": {
+      "kind": "step",
+      "title": "Review the edit",
+      "step": "review-edit",
+      "next": {
+        "routes": [
+          {
+            "to": "approveReviews",
+            "args": { "reviews": { "list": ["result"] } },
+            "partial": true
+          }
+        ]
+      }
+    },
+    "approveReviews": {
+      "kind": "wait",
+      "title": "Approve the reviews",
+      "for": "decision",
+      "actions": [
+        { "key": "approve", "label": "Approve", "body": "optional" },
+        { "key": "reject", "label": "Reject", "body": "optional" }
+      ],
+      "next": {
+        "routes": [
+          {
+            "when": {
+              "path": "result.action",
+              "op": "equal",
+              "value": "approve"
+            },
+            "to": "openPr",
+            "args": {
+              "request": "nodes.planChanges.input.request",
+              "reviews": "input.reviews"
+            }
+          }
+        ],
+        "otherwise": { "to": "changesRejected" }
+      }
+    },
+    "openPr": {
+      "kind": "step",
+      "title": "Open a pull request",
+      "step": "open-pr",
+      "next": {
+        "routes": [{ "to": "done" }]
+      }
+    },
+    "done": { "kind": "succeed" },
+    "changesRejected": { "kind": "fail", "error": "ChangesRejected" }
+  }
+}

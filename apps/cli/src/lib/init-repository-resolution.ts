@@ -1,17 +1,17 @@
 import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { PROJECT_CONFIG_RELATIVE_PATH } from "@boboddy/sdk/defaults";
-import { stripGitUrlCredentials } from "@boboddy/sdk/git-url";
+import { PROJECT_CONFIG_RELATIVE_PATH } from "@scarn/sdk/defaults";
+import { stripGitUrlCredentials } from "@scarn/sdk/git-url";
 import type { BaseReporter } from "./reporter-types";
 
 /**
- * The first step of `boboddy init` (#140).
+ * The first step of `scarn init` (#140).
  *
  * `init` used to check for `.git` only in the exact working directory, so
  * running it from a subdirectory of a real repo — or from inside a
  * submodule — failed with no indication of what was checked. Resolution now
  * walks up to the real repo root (see `resolveGitRepository` in
- * `@boboddy/worker`), and this step prints what it found — the resolved
+ * `@scarn/worker`), and this step prints what it found — the resolved
  * repo path and `origin` remote URL — before any project-matching or auth
  * logic runs, so a subdirectory walk is never silent to the user.
  *
@@ -78,13 +78,13 @@ export function strayProjectConfigMessage(
   repoRoot: string,
 ): string {
   return (
-    `Found a stray .boboddy/ in ${cwd} from an earlier run; the project ` +
-    `config now lives at ${join(repoRoot, ".boboddy")}/. You can delete the stray one.`
+    `Found a stray .scarn/ in ${cwd} from an earlier run; the project ` +
+    `config now lives at ${join(repoRoot, ".scarn")}/. You can delete the stray one.`
   );
 }
 
 /**
- * Earlier versions of `init` wrote `.boboddy/` into whatever subdirectory
+ * Earlier versions of `init` wrote `.scarn/` into whatever subdirectory
  * they ran from. Point out a leftover one instead of migrating it: the user
  * may have edited it, and the root config is now the one that counts.
  */

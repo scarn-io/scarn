@@ -1,7 +1,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { loadProjectConfig, PROJECT_CONFIG_RELATIVE_PATH } from "@boboddy/sdk/defaults";
-import { parseJsonc } from "@boboddy/sdk/jsonc";
+import { loadProjectConfig, PROJECT_CONFIG_RELATIVE_PATH } from "@scarn/sdk/defaults";
+import { parseJsonc } from "@scarn/sdk/jsonc";
 
 export { loadProjectConfig };
 
@@ -27,7 +27,7 @@ async function readExistingConfigObject(configPath: string): Promise<Record<stri
 }
 
 /**
- * Writes `project` (`owner/slug`) into `.boboddy/boboddy.jsonc`, keeping every
+ * Writes `project` (`owner/slug`) into `.scarn/scarn.jsonc`, keeping every
  * other key already in the file (`branchPrefix`, `baseWorkBranch`, …). Drops
  * the retired `projectId` key.
  */

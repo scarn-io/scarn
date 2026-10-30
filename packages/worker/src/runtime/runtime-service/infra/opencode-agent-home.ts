@@ -1,6 +1,10 @@
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import {
+  BUNDLED_SKILL_FILES,
+  BUNDLED_SKILLS_HOME_DIR,
+} from "@scarn/opencode-plugin";
 
 /**
  * Shared preparation of a session-scoped OpenCode "agent HOME".
@@ -41,7 +45,7 @@ export function resolveHostHome(): string {
  * easy to GC; the orchestrator removes it on cleanup.
  */
 export function resolveSessionAgentHomeDir(sessionId: string): string {
-  return path.join(os.tmpdir(), "boboddy-agent-homes", sessionId);
+  return path.join(os.tmpdir(), "scarn-agent-homes", sessionId);
 }
 
 /**
@@ -115,6 +119,25 @@ export async function prepareAgentHomeConfig(input: {
   }
 
   return { hostConfigPath };
+}
+
+/**
+ * Write the plugin's bundled skills into the session-scoped agent HOME's
+ * `.claude/skills`, the lowest-precedence skill source, so the repo's own
+ * skills win on a name clash. Nothing is written to the workspace.
+ */
+export async function seedBundledSkills(input: {
+  sessionAgentHomeDir: string;
+}): Promise<void> {
+  const skillsRoot = path.join(
+    input.sessionAgentHomeDir,
+    BUNDLED_SKILLS_HOME_DIR,
+  );
+  for (const file of BUNDLED_SKILL_FILES) {
+    const target = path.join(skillsRoot, file.relativePath);
+    await mkdir(path.dirname(target), { recursive: true });
+    await writeFile(target, file.content, "utf8");
+  }
 }
 
 /** Remove the session-scoped agent HOME from the host. */

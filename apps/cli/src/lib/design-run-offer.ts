@@ -1,12 +1,12 @@
 import {
   AnalyticsEvents,
   type CliRunOfferSkippedReason,
-} from "@boboddy/observability/analytics/events";
+} from "@scarn/observability/analytics/events";
 import type { BaseReporter } from "./reporter-types";
 import { captureMilestone } from "./telemetry";
 
 /**
- * The tail of `boboddy pipelines design` — the command closing its own loop.
+ * The tail of `scarn pipelines design` — the command closing its own loop.
  *
  * A design session used to end in prose: a count of definition files and a
  * command to type. But the session already knows everything needed to run what
@@ -143,7 +143,7 @@ export const RUN_LAUNCH_MESSAGE = "Starting the worker…";
 
 /** The single closing line, worded identically wherever the offer can end. */
 export const REFINE_MESSAGE =
-  "Run `boboddy pipelines design` again to refine your pipelines.";
+  "Run `scarn pipelines design` again to refine your pipelines.";
 
 export const DEVCONTAINER_MISSING_MESSAGE =
   "No devcontainer in this repository. This pipeline has steps that run inside " +
@@ -162,7 +162,7 @@ export const HEALTH_DRY_RUN_FAILED_MESSAGE =
   "would be an obviously-broken run:";
 
 export const HEALTH_DRY_RUN_FAILED_NEXT_STEPS =
-  "Run `boboddy pipelines design` again — the next session's orientation will " +
+  "Run `scarn pipelines design` again — the next session's orientation will " +
   "surface this and help you fix it before you push again.";
 
 /** Precedes the copyable command on the paths that end without running. */
@@ -184,12 +184,12 @@ export const NOTHING_QUEUED_MESSAGE =
  */
 export const RUN_REPAIR_GUIDANCE =
   "A failed run — a step, or the devcontainer build — is something to take back " +
-  "to the designer: run `boboddy pipelines design` again and tell the agent what " +
+  "to the designer: run `scarn pipelines design` again and tell the agent what " +
   "happened. The edit loop is the repair loop.";
 
 /** The whole command, ready to paste, scoped to this one work item. */
 export function formatRunCommand(target: DesignRunTarget): string {
-  return `boboddy work ${target.project} --work-item-id ${target.workItemId}`;
+  return `scarn work ${target.project} --work-item-id ${target.workItemId}`;
 }
 
 /**

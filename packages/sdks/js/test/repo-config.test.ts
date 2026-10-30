@@ -124,7 +124,7 @@ describe("commit message rule", () => {
 
   test.each([
     "{{env.SECRET}}",
-    "{{boboddy.artifactsDir}}",
+    "{{scarn.artifactsDir}}",
     "ok {{input.a}} then {{env.B}}",
     "{{ input.spaced }}",
     "{{inputs.title}}",
@@ -138,9 +138,9 @@ describe("commit message rule", () => {
   test("lists the disallowed roots in order", () => {
     expect(
       findDisallowedCommitMessageTokenRoots(
-        "{{env.A}} {{input.b}} {{boboddy.c}} {{result.d}}",
+        "{{env.A}} {{input.b}} {{scarn.c}} {{result.d}}",
       ),
-    ).toEqual(["env", "boboddy"]);
+    ).toEqual(["env", "scarn"]);
   });
 });
 

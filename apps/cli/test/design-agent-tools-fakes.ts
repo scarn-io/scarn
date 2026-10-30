@@ -1,8 +1,8 @@
-import type { DiscoveredAgentTools } from "@boboddy/worker";
+import type { DiscoveredAgentTools } from "@scarn/worker";
 import type { AgentToolsPorts } from "../src/lib/design-agent-tools";
 
 export const FAKE_AGENT_TOOLS_MANIFEST_PATH =
-  "/home/test/.boboddy/projects/acme/app/discovered-tools.json";
+  "/home/test/.scarn/projects/acme/app/discovered-tools.json";
 
 export const EMPTY_DISCOVERY: DiscoveredAgentTools = {
   servers: [],

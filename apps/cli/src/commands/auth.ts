@@ -3,15 +3,15 @@ import {
   deleteAuthProfile,
   loadAuthenticatedSession,
   loadAuthProfile,
-  resolveBoboddyBaseUrl,
-} from "@boboddy/worker";
+  resolveScarnBaseUrl,
+} from "@scarn/worker";
 import { withReporter } from "../lib/command-output";
 import { performDeviceLogin } from "../lib/device-login";
 
 const addBaseUrlOption = (argv: Argv<object>) =>
   argv.option("base-url", {
     type: "string",
-    describe: "Boboddy app base URL",
+    describe: "Scarn app base URL",
   });
 
 const getBaseUrlArgument = (arguments_: ArgumentsCamelCase<object>) => {
@@ -21,13 +21,13 @@ const getBaseUrlArgument = (arguments_: ArgumentsCamelCase<object>) => {
 
 const runLogin = async (arguments_: ArgumentsCamelCase<object>) =>
   withReporter("auth", async ({ reporter, logger }) => {
-    const baseUrl = resolveBoboddyBaseUrl(getBaseUrlArgument(arguments_));
+    const baseUrl = resolveScarnBaseUrl(getBaseUrlArgument(arguments_));
     await performDeviceLogin({ baseUrl, reporter, logger });
   });
 
 const runStatus = async (arguments_: ArgumentsCamelCase<object>) =>
   withReporter("auth", async ({ reporter }) => {
-    const baseUrl = resolveBoboddyBaseUrl(getBaseUrlArgument(arguments_));
+    const baseUrl = resolveScarnBaseUrl(getBaseUrlArgument(arguments_));
     const profile = loadAuthProfile(baseUrl);
 
     if (!profile) {
@@ -52,7 +52,7 @@ const runStatus = async (arguments_: ArgumentsCamelCase<object>) =>
 
 const runWhoAmI = async (arguments_: ArgumentsCamelCase<object>) =>
   withReporter("auth", async () => {
-    const baseUrl = resolveBoboddyBaseUrl(getBaseUrlArgument(arguments_));
+    const baseUrl = resolveScarnBaseUrl(getBaseUrlArgument(arguments_));
     const authenticated = await loadAuthenticatedSession(baseUrl);
 
     if (!authenticated) {
@@ -64,7 +64,7 @@ const runWhoAmI = async (arguments_: ArgumentsCamelCase<object>) =>
 
 const runLogout = async (arguments_: ArgumentsCamelCase<object>) =>
   withReporter("auth", ({ reporter }) => {
-    const baseUrl = resolveBoboddyBaseUrl(getBaseUrlArgument(arguments_));
+    const baseUrl = resolveScarnBaseUrl(getBaseUrlArgument(arguments_));
     deleteAuthProfile(baseUrl);
     reporter.success(`Signed out of ${baseUrl}`);
   });
@@ -99,7 +99,7 @@ const logoutCommand: CommandModule<object, object> = {
 
 export const authCommand: CommandModule<object, object> = {
   command: "auth <command>",
-  describe: "Authenticate the Boboddy CLI",
+  describe: "Authenticate the Scarn CLI",
   builder: (argv) =>
     argv
       .command(loginCommand)

@@ -3,7 +3,7 @@ import {
   OPENCODE_RUNTIME_VERSION,
   type InstalledAiTool,
   type OpencodeProviderCredentialCheck,
-} from "@boboddy/worker";
+} from "@scarn/worker";
 import { CliError } from "../src/lib/cli-error";
 import {
   buildConnectGuidance,
@@ -24,7 +24,7 @@ import { createReporterRecorder, type RecordedReport } from "./utils";
  * the clack block closes before the login owns the tty and reopens after.
  */
 
-const LAUNCHER = `/home/u/.boboddy/runtimes/opencode/${OPENCODE_RUNTIME_VERSION}/launch.sh`;
+const LAUNCHER = `/home/u/.scarn/runtimes/opencode/${OPENCODE_RUNTIME_VERSION}/launch.sh`;
 const OK: OpencodeProviderCredentialCheck = {
   ok: true,
   providers: ["anthropic"],
@@ -92,7 +92,7 @@ async function expectRejection(promise: Promise<unknown>): Promise<Error> {
  * disabled — nothing is sent and no anonymous id is persisted, so no
  * `mock.module` of `telemetry.ts` (process-wide in bun) is needed.
  */
-const TELEMETRY_ENV = ["BOBODDY_TELEMETRY_DISABLED", "BOBODDY_TELEMETRY_DEBUG"];
+const TELEMETRY_ENV = ["SCARN_TELEMETRY_DISABLED", "SCARN_TELEMETRY_DEBUG"];
 let savedTelemetryEnv: Record<string, string | undefined> = {};
 let consoleErrorSpy: ReturnType<typeof spyOn<Console, "error">>;
 
@@ -100,8 +100,8 @@ beforeEach(() => {
   savedTelemetryEnv = Object.fromEntries(
     TELEMETRY_ENV.map((key) => [key, process.env[key]]),
   );
-  process.env["BOBODDY_TELEMETRY_DISABLED"] = "1";
-  process.env["BOBODDY_TELEMETRY_DEBUG"] = "1";
+  process.env["SCARN_TELEMETRY_DISABLED"] = "1";
+  process.env["SCARN_TELEMETRY_DEBUG"] = "1";
   consoleErrorSpy = spyOn(console, "error").mockImplementation(() => {});
 });
 
@@ -117,7 +117,7 @@ type CapturedEvent = { event: string; properties?: Record<string, unknown> };
 
 function capturedEvents(): CapturedEvent[] {
   return consoleErrorSpy.mock.calls
-    .filter((args) => args[0] === "[boboddy telemetry]")
+    .filter((args) => args[0] === "[scarn telemetry]")
     .map((args) => JSON.parse(String(args[1])) as CapturedEvent)
     .map(({ event, properties }) => ({ event, properties }));
 }
@@ -158,7 +158,7 @@ describe("ensureProviderConnected", () => {
       CONNECT_HANDOFF_LINE,
     );
     expect(log.find((entry) => entry.method === "start")?.message).toBe(
-      "Boboddy pipeline designer",
+      "Scarn pipeline designer",
     );
     expect(log.at(-1)?.message).toBe("AI provider ready (openai)");
     expect(capturedEvents()).toEqual([

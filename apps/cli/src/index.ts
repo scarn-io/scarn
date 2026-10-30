@@ -1,4 +1,4 @@
-// IMPORTANT: this side-effect import MUST come first. It pins BOBODDY_LOG_LEVEL
+// IMPORTANT: this side-effect import MUST come first. It pins SCARN_LOG_LEVEL
 // for the interactive case before any worker module (pulled in transitively by
 // the imports below) constructs its module-level pino loggers. Moving it down
 // will re-introduce noisy logs interleaving with the reporter UI.

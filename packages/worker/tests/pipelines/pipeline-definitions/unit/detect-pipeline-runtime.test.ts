@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { detectPipelineRuntime } from "../../../../src/pipelines/pipeline-definitions/infra/detect-pipeline-runtime";
 
 function makeTempDir(): string {
-  return mkdtempSync(join(tmpdir(), "boboddy-detect-runtime-"));
+  return mkdtempSync(join(tmpdir(), "scarn-detect-runtime-"));
 }
 
 describe("detectPipelineRuntime", () => {

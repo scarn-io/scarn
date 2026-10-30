@@ -1,5 +1,0 @@
-{
-  "name": "boboddy-integration-dummy",
-  "image": "node:20-bookworm-slim",
-  "overrideCommand": true
-}

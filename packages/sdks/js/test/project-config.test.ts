@@ -34,9 +34,9 @@ describe("parseProjectRef", () => {
 });
 
 function writeConfig(contents: string): string {
-  const rootDir = mkdtempSync(join(tmpdir(), "boboddy-project-config-"));
-  mkdirSync(join(rootDir, ".boboddy"), { recursive: true });
-  writeFileSync(join(rootDir, ".boboddy", "boboddy.jsonc"), contents);
+  const rootDir = mkdtempSync(join(tmpdir(), "scarn-project-config-"));
+  mkdirSync(join(rootDir, ".scarn"), { recursive: true });
+  writeFileSync(join(rootDir, ".scarn", "scarn.jsonc"), contents);
   return rootDir;
 }
 
@@ -117,7 +117,7 @@ describe("loadProjectConfig", () => {
   });
 
   test("returns null when the file is absent", async () => {
-    const dir = mkdtempSync(join(tmpdir(), "boboddy-project-config-empty-"));
+    const dir = mkdtempSync(join(tmpdir(), "scarn-project-config-empty-"));
     try {
       expect(await loadProjectConfig(dir)).toBeNull();
     } finally {

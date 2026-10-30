@@ -5,7 +5,7 @@ import {
   resolveRepoConfig,
   type RepoConfig,
   type RepoConfigInput,
-} from "@boboddy/sdk/repo-config";
+} from "@scarn/sdk/repo-config";
 import {
   generateStepsFileContent,
   type StepDefContract,
@@ -27,7 +27,6 @@ function makeStep(overrides: Partial<StepDefContract> = {}): StepDefContract {
     opencodeMcpJson: null,
     healthChecksJson: null,
     envJson: null,
-    signalExtractorDefinitions: [],
     ...overrides,
   };
 }
@@ -42,7 +41,7 @@ describe("generateStepsFileContent environment", () => {
       "environment: {\n    runtime: Runtime.host(),\n  }",
     );
     expect(content).toContain(
-      'import { defineStep, Runtime } from "@boboddy/sdk/definitions/steps";',
+      'import { defineStep, Runtime } from "@scarn/sdk/definitions/steps";',
     );
     expect(content).not.toContain("executionMode");
   });
@@ -58,7 +57,7 @@ describe("generateStepsFileContent environment", () => {
       'runtime: Runtime.devcontainer({ config: ".devcontainer/frontend/devcontainer.json" }),',
     );
     expect(content).toContain(
-      'import { defineStep, Runtime } from "@boboddy/sdk/definitions/steps";',
+      'import { defineStep, Runtime } from "@scarn/sdk/definitions/steps";',
     );
   });
 
@@ -100,7 +99,7 @@ describe("generateStepsFileContent environment", () => {
       ].join("\n"),
     );
     expect(content).toContain(
-      'import { defineStep, Runtime, Env } from "@boboddy/sdk/definitions/steps";',
+      'import { defineStep, Runtime, Env } from "@scarn/sdk/definitions/steps";',
     );
   });
 
@@ -111,7 +110,7 @@ describe("generateStepsFileContent environment", () => {
     ]);
 
     expect(content).toContain(
-      'import { defineStep, Runtime } from "@boboddy/sdk/definitions/steps";',
+      'import { defineStep, Runtime } from "@scarn/sdk/definitions/steps";',
     );
     expect(content.match(/Runtime\.host\(\)/g)).toHaveLength(1);
   });
@@ -191,7 +190,7 @@ describe("generateStepsFileContent environment", () => {
       "  environment: {\n    repo: Repo.readOnly(),\n  },",
     );
     expect(content).toContain(
-      'import { defineStep, Repo } from "@boboddy/sdk/definitions/steps";',
+      'import { defineStep, Repo } from "@scarn/sdk/definitions/steps";',
     );
     expect(content).not.toContain("Runtime");
   });
@@ -296,7 +295,7 @@ describe("generateStepsFileContent environment", () => {
       ].join("\n"),
     );
     expect(content).toContain(
-      'import { defineStep, Runtime, Repo, Env } from "@boboddy/sdk/definitions/steps";',
+      'import { defineStep, Runtime, Repo, Env } from "@scarn/sdk/definitions/steps";',
     );
   });
 

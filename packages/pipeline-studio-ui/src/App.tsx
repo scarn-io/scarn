@@ -1,38 +1,46 @@
 import { useEffect, useMemo, useState } from "react";
-import type { DefinitionValidationIssue } from "@boboddy/sdk/definitions/validation";
-import type { BrokenPipeline } from "@boboddy/sdk/push";
 import { NodeDetailPanel } from "./graph/NodeDetailPanel";
 import { PipelineGraphView } from "./graph/PipelineGraphView";
 import { SeverityChip } from "./graph/SeverityChip";
-import type { StudioSnapshot } from "./graph/studio-graph-types";
+import type {
+  BrokenPipeline,
+  StudioIssue,
+  StudioSnapshot,
+} from "./graph/studio-graph-types";
 import { useStudioTheme } from "./theme";
 
 /**
- * One issue row. Step-only issues (`nodeKey === undefined`, e.g.
- * `signal-source-path`/`health-check-*`) have no node to jump to and render
- * as a plain, non-interactive row; everything else is clickable and selects
- * the node it's about, swapping in `NodeDetailPanel` (see `App`).
+ * One issue row. Issues with no node (document-level or step-only ones)
+ * render as a plain, non-interactive row; everything else is clickable and
+ * selects the node it's about, swapping in `NodeDetailPanel` (see `App`).
  */
 function IssueRow({
   issue,
   onSelectNode,
 }: {
-  issue: DefinitionValidationIssue;
+  issue: StudioIssue;
   onSelectNode: (nodeKey: string) => void;
 }) {
-  if (issue.nodeKey === undefined) {
-    return (
-      <li className="studio-issue">
-        <div className="studio-issue-header">
-          <SeverityChip severity={issue.severity} />
-          <span className="studio-issue-check">{issue.check}</span>
-        </div>
-        {issue.message}
-      </li>
-    );
+  const body = (
+    <>
+      <div className="studio-issue-header">
+        <SeverityChip severity={issue.severity} />
+        <span className="studio-issue-check">{issue.code}</span>
+      </div>
+      {issue.message}
+      {issue.hint ? (
+        <div className="studio-issue-hint">{issue.hint}</div>
+      ) : null}
+      {issue.path ? (
+        <code className="studio-issue-path">{issue.path}</code>
+      ) : null}
+    </>
+  );
+  if (issue.nodeId === undefined) {
+    return <li className="studio-issue">{body}</li>;
   }
 
-  const nodeKey = issue.nodeKey;
+  const nodeKey = issue.nodeId;
 
   return (
     <li
@@ -49,11 +57,7 @@ function IssueRow({
         }
       }}
     >
-      <div className="studio-issue-header">
-        <SeverityChip severity={issue.severity} />
-        <span className="studio-issue-check">{issue.check}</span>
-      </div>
-      {issue.message}
+      {body}
     </li>
   );
 }
@@ -91,7 +95,7 @@ function IssuesPanel({
   hasCompileErrors,
   onSelectNode,
 }: {
-  issues: readonly DefinitionValidationIssue[];
+  issues: readonly StudioIssue[];
   hasCompileErrors: boolean;
   onSelectNode: (nodeKey: string) => void;
 }) {
@@ -99,7 +103,7 @@ function IssuesPanel({
     return (
       <p className="studio-issues-empty">
         {hasCompileErrors
-          ? "Files that fail to compile can't be validated — fix the compile errors above first."
+          ? "Files that fail to parse can't be validated — fix the errors above first."
           : "No validation issues."}
       </p>
     );
@@ -108,7 +112,7 @@ function IssuesPanel({
     <ul className="studio-issues-list">
       {issues.map((issue, index) => (
         <IssueRow
-          key={`${issue.check}-${issue.nodeKey ?? ""}-${String(index)}`}
+          key={`${issue.code}-${issue.path ?? ""}-${String(index)}`}
           issue={issue}
           onSelectNode={onSelectNode}
         />
@@ -124,13 +128,18 @@ function IssuesPanel({
  */
 function BrokenPipelinePanel({ pipeline }: { pipeline: BrokenPipeline }) {
   return (
-    <section className="studio-broken" role="alert" aria-labelledby="studio-broken-title">
+    <section
+      className="studio-broken"
+      role="alert"
+      aria-labelledby="studio-broken-title"
+    >
       <h2 id="studio-broken-title" className="studio-broken-title">
-        {`${pipeline.key}.ts failed to compile`}
+        {`${pipeline.key} could not be read`}
       </h2>
       <pre className="studio-broken-message">{pipeline.message}</pre>
       <p className="studio-broken-hint">
-        Fix the file in .boboddy/pipeline-builder and save — the studio reloads automatically.
+        Fix the file in .scarn/pipeline-builder and save — the studio reloads
+        automatically.
       </p>
     </section>
   );
@@ -153,7 +162,7 @@ function CompileErrorsPanel({
 }) {
   return (
     <>
-      <h2>Compile errors</h2>
+      <h2>Unreadable files</h2>
       <ul className="studio-issues-list">
         {pipelines.map((pipeline) => (
           <li
@@ -174,9 +183,11 @@ function CompileErrorsPanel({
           >
             <div className="studio-issue-header">
               <SeverityChip severity="error" />
-              <span className="studio-issue-check">{`${pipeline.key}.ts`}</span>
+              <span className="studio-issue-check">{pipeline.key}</span>
             </div>
-            <span className="studio-compile-error-message">{pipeline.message}</span>
+            <span className="studio-compile-error-message">
+              {pipeline.message}
+            </span>
           </li>
         ))}
       </ul>
@@ -191,7 +202,8 @@ export function App() {
   const [selectedNodeKey, setSelectedNodeKey] = useState<string | null>(null);
 
   const pipelines = snapshot?.status === "ok" ? snapshot.pipelines : [];
-  const brokenPipelines = snapshot?.status === "ok" ? snapshot.brokenPipelines : [];
+  const brokenPipelines =
+    snapshot?.status === "ok" ? snapshot.brokenPipelines : [];
 
   // A broken entry is shown only when it's explicitly selected, or when there
   // is no working pipeline to fall back to — then the first error is shown
@@ -207,7 +219,9 @@ export function App() {
     () =>
       selectedBroken
         ? null
-        : (pipelines.find((p) => p.key === selectedKey) ?? pipelines[0] ?? null),
+        : (pipelines.find((p) => p.key === selectedKey) ??
+          pipelines[0] ??
+          null),
     [pipelines, selectedBroken, selectedKey],
   );
 
@@ -218,24 +232,20 @@ export function App() {
     setSelectedNodeKey(null);
   }, [selected?.key]);
 
-  const selectedNode = selected?.nodes.find((n) => n.id === selectedNodeKey) ?? null;
+  const selectedNode =
+    selected?.nodes.find((n) => n.id === selectedNodeKey) ?? null;
 
-  // Narrows the full-batch `validationIssues` down to the currently selected
-  // pipeline's own issues, PLUS step-only issues (`pipelineKey === undefined`
-  // — `signal-source-path`/`health-check-*`) — those never belong to any one
-  // pipeline and would otherwise be unreachable from every picker selection,
-  // so they stay visible regardless of what's selected. Matches
-  // `issuesForPipeline`'s filter in `translate-spec-to-graph.ts` (which
-  // deliberately excludes step-only issues, since it's building per-pipeline
-  // GRAPH data that has no node to attach them to) plus that broader
-  // "always show step-only" carve-out. When a broken entry is showing
-  // (`selected === null`), this only shows step-only issues — there's no
-  // working pipeline for the pipeline-scoped half to match.
-  const validationIssues = snapshot?.status === "ok" ? snapshot.validationIssues : [];
+  // The selected pipeline's own issues, plus step-only issues
+  // (`pipelineKey === undefined`), which belong to no one pipeline and would
+  // otherwise be unreachable from every picker selection.
+  const validationIssues =
+    snapshot?.status === "ok" ? snapshot.validationIssues : [];
   const filteredIssues = useMemo(
     () =>
       validationIssues.filter(
-        (issue) => issue.pipelineKey === selected?.key || issue.pipelineKey === undefined,
+        (issue) =>
+          issue.pipelineKey === selected?.key ||
+          issue.pipelineKey === undefined,
       ),
     [validationIssues, selected],
   );
@@ -245,13 +255,15 @@ export function App() {
   }
 
   if (snapshot.status === "error") {
-    return <p className="studio-status studio-status-error">{snapshot.message}</p>;
+    return (
+      <p className="studio-status studio-status-error">{snapshot.message}</p>
+    );
   }
 
   if (pipelines.length === 0 && brokenPipelines.length === 0) {
     return (
       <p className="studio-status">
-        No pipelines found in .boboddy/pipeline-builder yet.
+        No pipelines found in .scarn/pipeline-builder yet.
       </p>
     );
   }

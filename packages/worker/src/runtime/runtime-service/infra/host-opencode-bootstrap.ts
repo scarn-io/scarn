@@ -1,13 +1,14 @@
 import { spawn } from "node:child_process";
 import { mkdir, open, readFile } from "node:fs/promises";
 import path from "node:path";
-import { SecretMasker } from "../../../work/task/application/secret-masker";
+import { SecretMasker } from "../../../work/task-run/application/secret-masker";
 import {
   logWork,
   logWorkDebug,
   logWorkError,
-} from "../../../work/task/application/work-logger";
+} from "../../../work/task-run/application/work-logger";
 import { findFreePort } from "./devcontainer-opencode-bootstrap";
+import { seedBundledSkills } from "./opencode-agent-home";
 import {
   opencodeCredentialSecrets,
   type OpencodeCredential,
@@ -22,7 +23,7 @@ import {
 import { formatServeLogExcerpt } from "./opencode-serve-log-excerpt";
 
 /**
- * Bootstraps the Boboddy-managed OpenCode runtime DIRECTLY ON THE HOST for
+ * Bootstraps the Scarn-managed OpenCode runtime DIRECTLY ON THE HOST for
  * `no_workspace` tasks — no docker, no devcontainer.
  *
  * This mirrors {@link DevcontainerOpencodeBootstrap.start}/`stop`/`waitForHealth`
@@ -36,8 +37,9 @@ import { formatServeLogExcerpt } from "./opencode-serve-log-excerpt";
  * The process's `HOME` and every `XDG_*` dir point at a session-scoped agent
  * HOME (prepared by `opencode-agent-home.ts`), so the user's global config is
  * read exactly as on the container path and the server's database, state and
- * cache stay isolated per session. The server is protected by a per-session
- * password (`OPENCODE_SERVER_PASSWORD`) returned to the caller. Boboddy's
+ * cache stay isolated per session. The plugin's bundled skills are seeded into
+ * that HOME's `.claude/skills` before launch. The server is protected by a per-session
+ * password (`OPENCODE_SERVER_PASSWORD`) returned to the caller. Scarn's
  * override config is passed inline via `OPENCODE_CONFIG_CONTENT` (precedence
  * #6), and the resolved provider env is injected as-is. Once ready, config
  * diagnostics are checked and the user's credentials are injected over the API
@@ -47,7 +49,7 @@ import { formatServeLogExcerpt } from "./opencode-serve-log-excerpt";
  * follow it (the host-file tail path in `OpencodeLogTail`).
  */
 
-const HOST_AGENT_LOG_DIRNAME = ".boboddy-log";
+const HOST_AGENT_LOG_DIRNAME = ".scarn-log";
 /** Filename of the host opencode serve log within the log directory. */
 export const HOST_AGENT_SERVE_LOG_FILENAME = "opencode-serve.log";
 const HOST_OPENCODE_BIND_HOST = "127.0.0.1";
@@ -90,7 +92,7 @@ export type HostStartInput = {
    */
   stepEnv?: Readonly<Record<string, string>> | undefined;
   /**
-   * Boboddy's override config as a JSON string. Passed as
+   * Scarn's override config as a JSON string. Passed as
    * `OPENCODE_CONFIG_CONTENT` (precedence level #6 — inline).
    */
   opencodeConfigContent: string;
@@ -141,6 +143,7 @@ export class HostOpencodeBootstrap {
       HOST_AGENT_LOG_DIRNAME,
     );
     await mkdir(agentLogDirectory, { recursive: true });
+    await seedBundledSkills({ sessionAgentHomeDir: input.sessionAgentHomeDir });
     const agentLogPath = path.join(
       agentLogDirectory,
       HOST_AGENT_SERVE_LOG_FILENAME,
@@ -158,13 +161,13 @@ export class HostOpencodeBootstrap {
       XDG_DATA_HOME: path.join(input.sessionAgentHomeDir, ".local", "share"),
       XDG_STATE_HOME: path.join(input.sessionAgentHomeDir, ".local", "state"),
       XDG_CACHE_HOME: path.join(input.sessionAgentHomeDir, ".cache"),
-      // Boboddy override layer (permission baseline, step MCPs, plugins,
+      // Scarn override layer (permission baseline, step MCPs, plugins,
       // AGENT_DEFAULT_MODEL). Wins over global (#2) and project (#4) configs.
       OPENCODE_CONFIG_CONTENT: input.opencodeConfigContent,
-      // The resolved workspace folder OpenCode operates against; the Boboddy
-      // plugin's findings tool reads `.boboddy/current-execution/execution.json`
+      // The resolved workspace folder OpenCode operates against; the Scarn
+      // plugin's findings tool reads `.scarn/current-execution/execution.json`
       // relative to it.
-      BOBODDY_WORKSPACE_FOLDER: input.workspaceFolder,
+      SCARN_WORKSPACE_FOLDER: input.workspaceFolder,
       ...input.providerEnv,
       ...input.stepEnv,
       [SERVER_PASSWORD_ENV]: serverPassword,

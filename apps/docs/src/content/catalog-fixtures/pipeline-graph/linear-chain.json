@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "key": "catalog-linear-chain",
+  "title": "Triage a bug report",
+  "start": { "to": "intake" },
+  "nodes": {
+    "intake": {
+      "kind": "step",
+      "title": "Read report",
+      "step": "intake-step",
+      "next": {
+        "routes": [{ "to": "analyze" }]
+      }
+    },
+    "analyze": {
+      "kind": "step",
+      "title": "Analyze severity",
+      "step": "analyze-step",
+      "next": {
+        "routes": [{ "to": "summarize" }]
+      }
+    },
+    "summarize": {
+      "kind": "step",
+      "title": "Write summary",
+      "step": "summarize-step",
+      "next": {
+        "routes": [{ "to": "done" }]
+      }
+    },
+    "done": { "kind": "succeed" }
+  }
+}

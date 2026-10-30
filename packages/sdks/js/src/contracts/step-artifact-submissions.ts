@@ -1,6 +1,6 @@
 /**
- * The record of files submitted with `boboddy-submit-artifact`
- * (`.boboddy/current-execution/artifacts.json`) and the checks that tie it to
+ * The record of files submitted with `scarn-submit-artifact`
+ * (`.scarn/current-execution/artifacts.json`) and the checks that tie it to
  * a step's findings. Shared by the opencode plugin, which fills declared
  * artifact fields in from it, and the worker, which checks the findings file
  * against it before completing the step.
@@ -16,9 +16,9 @@ import {
   type ArtifactJsonSchemaNode,
 } from "./artifacts";
 
-export const STEP_ARTIFACTS_RELATIVE_DIR = ".boboddy/step-artifacts";
+export const STEP_ARTIFACTS_RELATIVE_DIR = ".scarn/step-artifacts";
 export const STEP_ARTIFACT_SUBMISSIONS_RELATIVE_PATH =
-  ".boboddy/current-execution/artifacts.json";
+  ".scarn/current-execution/artifacts.json";
 
 export type SubmittedArtifact = {
   /** Path relative to the step-artifacts folder. */
@@ -159,7 +159,7 @@ function writePath(
 }
 
 function submitHint(field: string): string {
-  return `call \`boboddy-submit-artifact\` with \`field: "${field}"\``;
+  return `call \`scarn-submit-artifact\` with \`field: "${field}"\``;
 }
 
 export type ApplyArtifactSubmissionsMode =

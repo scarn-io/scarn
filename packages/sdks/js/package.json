@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
-  "name": "@boboddy/sdk",
+  "name": "@scarn/sdk",
   "version": "0.0.0",
   "type": "module",
   "exports": {
@@ -9,9 +9,11 @@
     "./contracts/artifacts": "./src/contracts/artifacts.ts",
     "./contracts/artifact-markers": "./src/contracts/artifact-markers.ts",
     "./contracts/step-artifact-submissions": "./src/contracts/step-artifact-submissions.ts",
+    "./contracts/pipeline-document": "./src/contracts/pipeline-document/index.ts",
     "./definitions/steps": "./src/definitions/steps/index.ts",
     "./definitions/pipelines": "./src/definitions/pipelines/index.ts",
-    "./definitions/advancement-policies": "./src/definitions/advancement-policies/index.ts",
+    "./pipelines": "./src/pipelines/index.ts",
+    "./eslint": "./src/eslint.ts",
     "./definitions/validation": "./src/definitions/validation/index.ts",
     "./defaults": "./src/defaults/index.ts",
     "./push": "./src/push/index.ts",
@@ -24,7 +26,7 @@
     "./repo-config": "./src/repo-config.ts",
     "./git-url": "./src/git-url/git-repo-identity.ts",
     "./jsonc": "./src/jsonc.ts",
-    "./boboddy-config-parser": "./src/boboddy-config-parser.ts"
+    "./scarn-config-parser": "./src/scarn-config-parser.ts"
   },
   "files": [
     "dist",
@@ -32,7 +34,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/boboddy-dev/boboddy"
+    "url": "https://github.com/scarn-io/scarn"
   },
   "scripts": {
     "generate": "openapi-ts",
@@ -46,11 +48,17 @@
     "jsonc-parser": "^3.3.1"
   },
   "peerDependencies": {
-    "zod": "^4.0.0"
+    "zod": "^4.0.0",
+    "eslint": "^9.0.0"
+  },
+  "peerDependenciesMeta": {
+    "eslint": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@hey-api/openapi-ts": "^0.90.10",
-    "@opencode/client": "2.0.28",
+    "@opencode/client": "2.1.4",
     "bun-types": "^1.4.0",
     "zod": "^4.3.6"
   }

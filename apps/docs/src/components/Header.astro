@@ -1,7 +1,7 @@
 ---
 /*
   Overrides `@astrojs/starlight/components/Header.astro` (Phase 3b) to add a
-  link back to the marketing site (`boboddy.dev`) — the only header change
+  link back to the marketing site (`scarn.io`) — the only header change
   from upstream. Layout, search, social icons, theme select, and language
   select are otherwise untouched from Starlight's default implementation.
 */
@@ -29,8 +29,8 @@ const shouldRenderSearch =
     {shouldRenderSearch && <Search />}
   </div>
   <div class="sl-hidden md:sl-flex print:hidden right-group">
-    <a href="https://boboddy.dev" class="site-return-link" rel="noopener noreferrer">
-      boboddy.dev
+    <a href="https://scarn.io" class="site-return-link" rel="noopener noreferrer">
+      scarn.io
     </a>
     <div class="sl-flex social-icons">
       <SocialIcons />

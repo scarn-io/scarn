@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 
 /**
- * The OpenCode v2 `serve` contract Boboddy depends on, in one place: how a
+ * The OpenCode v2 `serve` contract Scarn depends on, in one place: how a
  * server is authenticated, how its readiness is probed, and the log flags it is
  * launched with. Shared by the host and devcontainer bootstraps and the dry-run
  * health re-check.

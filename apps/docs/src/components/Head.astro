@@ -17,12 +17,12 @@ import Default from "@astrojs/starlight/components/Head.astro";
 <Default />
 
 <script>
-  import * as analytics from "@boboddy/observability/analytics/browser";
+  import * as analytics from "@scarn/observability/analytics/browser";
   import {
     AnalyticsEvents,
     type AnalyticsEventProperties,
     type DocsQuickstartScrollDepth,
-  } from "@boboddy/observability/analytics/events";
+  } from "@scarn/observability/analytics/events";
 
   const key = import.meta.env["PUBLIC_POSTHOG_KEY"];
   const host = import.meta.env["PUBLIC_POSTHOG_HOST"];

@@ -1,11 +1,11 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { createBoboddyClient } from "../src/client";
+import { createScarnClient } from "../src/client";
 import {
   ProjectRefError,
   resolveProjectRef,
 } from "../src/defaults/project-ref";
 
-const BASE_URL = "https://boboddy.example.com";
+const BASE_URL = "https://scarn.example.com";
 const headers = { Authorization: "Bearer token" };
 const previousFetch = globalThis.fetch;
 
@@ -40,7 +40,7 @@ describe("resolveProjectRef", () => {
     const requested = respondWith(200, { id: "project-uuid" });
 
     const resolved = await resolveProjectRef(
-      createBoboddyClient(BASE_URL),
+      createScarnClient(BASE_URL),
       "acme/web-app",
       { headers },
     );
@@ -59,7 +59,7 @@ describe("resolveProjectRef", () => {
     const requested = respondWith(200, { id: "project-uuid" });
 
     const error = await captureError(
-      resolveProjectRef(createBoboddyClient(BASE_URL), "web-app", { headers }),
+      resolveProjectRef(createScarnClient(BASE_URL), "web-app", { headers }),
     );
 
     expect(error.kind).toBe("invalid");
@@ -76,14 +76,14 @@ describe("resolveProjectRef", () => {
     });
 
     const error = await captureError(
-      resolveProjectRef(createBoboddyClient(BASE_URL), "acme/web-app", {
+      resolveProjectRef(createScarnClient(BASE_URL), "acme/web-app", {
         headers,
       }),
     );
 
     expect(error.kind).toBe("not_found");
     expect(error.message).toBe(
-      'No project acme/web-app. Check "project" in .boboddy/boboddy.jsonc — the owner may have renamed their username.',
+      'No project acme/web-app. Check "project" in .scarn/scarn.jsonc — the owner may have renamed their username.',
     );
   });
 
@@ -91,7 +91,7 @@ describe("resolveProjectRef", () => {
     respondWith(403, { type: "x", title: "Forbidden", status: 403 });
 
     const error = await captureError(
-      resolveProjectRef(createBoboddyClient(BASE_URL), "acme/web-app", {
+      resolveProjectRef(createScarnClient(BASE_URL), "acme/web-app", {
         headers,
         action: "run work for",
       }),
@@ -107,7 +107,7 @@ describe("resolveProjectRef", () => {
     respondWith(403, { type: "x", title: "Forbidden", status: 403 });
 
     const error = await captureError(
-      resolveProjectRef(createBoboddyClient(BASE_URL), "acme/web-app", {
+      resolveProjectRef(createScarnClient(BASE_URL), "acme/web-app", {
         headers,
       }),
     );

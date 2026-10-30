@@ -1,5 +1,5 @@
 import type { ArgumentsCamelCase, Argv, CommandModule } from "yargs";
-import { RuntimeNetworkGarbageCollector } from "@boboddy/worker";
+import { RuntimeNetworkGarbageCollector } from "@scarn/worker";
 import { withReporter } from "../lib/command-output";
 
 type CleanupNetworksArguments = {
@@ -43,7 +43,7 @@ async function cleanupNetworksHandler(
 const cleanupNetworksCommand: CommandModule<object, CleanupNetworksArguments> =
   {
     command: "cleanup-networks",
-    describe: "Remove unused Boboddy runtime Docker networks",
+    describe: "Remove unused Scarn runtime Docker networks",
     builder: (argv: Argv<object>) =>
       argv.option("verbose", {
         alias: "v",

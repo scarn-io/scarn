@@ -70,7 +70,7 @@ export async function seedHostPayload(
 ): Promise<string> {
   const payloadDir = path.join(
     homeDir,
-    ".boboddy",
+    ".scarn",
     "runtimes",
     "opencode",
     OPENCODE_RUNTIME_VERSION,

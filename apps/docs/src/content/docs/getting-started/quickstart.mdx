@@ -1,6 +1,6 @@
 ---
 title: Quickstart
-description: From boboddy init to a running pipeline in one terminal session
+description: From scarn init to a running pipeline in one terminal session
 ---
 
 import { Steps, FileTree } from "@astrojs/starlight/components";
@@ -14,8 +14,8 @@ import workerTranscript from "../../transcripts/06-worker.txt?raw";
 
 :::tip[Have your assistant drive]
 Using Claude Code, Codex, or Copilot? Paste this page's URL and say _follow
-the Boboddy quickstart in this repo_. The docs are published as
-[`llms-full.txt`](/boboddy/llms-full.txt) for exactly that.
+the Scarn quickstart in this repo_. The docs are published as
+[`llms-full.txt`](/scarn/llms-full.txt) for exactly that.
 :::
 
 By the end you'll have a pipeline built around one of your own work items,
@@ -29,36 +29,36 @@ the pipeline graph.
 - Node.js or Bun.
 - Claude Code, Codex, or GitHub Copilot — or an API key from any AI provider.
 
-Details are in [Installation](/boboddy/getting-started/installation/#requirements).
+Details are in [Installation](/scarn/getting-started/installation/#requirements).
 Steps that work inside your code run in a container, so the run may also need
-Docker — see [Runtime](/boboddy/getting-started/concepts/#runtime).
+Docker — see [Runtime](/scarn/getting-started/concepts/#runtime).
 
 <Steps>
 
 1. **Install the CLI**
 
    ```bash
-   npm i -g @boboddy/cli
+   npm i -g @scarn/cli
    ```
 
-   Prefer Bun? See [Installation](/boboddy/getting-started/installation/#install-the-cli).
+   Prefer Bun? See [Installation](/scarn/getting-started/installation/#install-the-cli).
 
 2. **Link your repo**
 
    From anywhere inside your repository:
 
    ```bash
-   boboddy init
+   scarn init
    ```
 
    <Transcript src={initTranscript} />
 
    `init` signs you in, then finds or creates the
-   [project](/boboddy/getting-started/concepts/#project) for this repo. The one
-   decision is `Create Boboddy project … from GitHub?` — say yes, and your
+   [project](/scarn/getting-started/concepts/#project) for this repo. The one
+   decision is `Create Scarn project … from GitHub?` — say yes, and your
    issues keep syncing in as work items. If it isn't asked, `init` opens a
    pre-filled page in your browser; finish creating the project there (see
-   [Create a project](/boboddy/how-to/create-a-project/)).
+   [Create a project](/scarn/how-to/create-a-project/)).
 
    The notices need nothing from you. Answer yes to
    `Design your first pipeline now?`.
@@ -68,13 +68,13 @@ Docker — see [Runtime](/boboddy/getting-started/concepts/#runtime).
    <Transcript src={workItemTranscript} />
 
    The designer builds every pipeline around one real
-   [work item](/boboddy/getting-started/concepts/#work-item) — its interview
+   [work item](/scarn/getting-started/concepts/#work-item) — its interview
    asks how _this_ item should be handled — so pick something typical. Not
    listed? Search, paste a ticket link, or describe one in a sentence.
 
 4. <strong id="connect-your-ai-tool">Connect your AI tool</strong>
 
-   The designer runs on a Boboddy-managed OpenCode runtime that needs its own
+   The designer runs on a Scarn-managed OpenCode runtime that needs its own
    connection to a model. First it lists the MCP servers and skills your
    repository defines, for the designer to offer your steps. The first time,
    it then names the AI tools it finds and hands you OpenCode's provider menu.
@@ -90,7 +90,7 @@ Docker — see [Runtime](/boboddy/getting-started/concepts/#runtime).
    | Codex          | **OpenAI**, then **Sign in with ChatGPT** to use your ChatGPT subscription (or **API key**)                                                   |
    | None of these  | Any provider (Anthropic is recommended), then follow the prompts — see OpenCode's [Connecting providers](https://opencode.ai/docs/providers/) |
 
-   It's one-time: the same connection runs your steps later. Boboddy never
+   It's one-time: the same connection runs your steps later. Scarn never
    reads those tools' credentials. Already exported a key such as
    `ANTHROPIC_API_KEY`? This step is skipped.
 
@@ -99,11 +99,11 @@ Docker — see [Runtime](/boboddy/getting-started/concepts/#runtime).
    <Transcript src={sessionTranscript} />
 
    Your terminal becomes the
-   [designer](/boboddy/getting-started/concepts/#the-designer), and your browser
-   opens the [studio](/boboddy/getting-started/concepts/#the-studio): a live
+   [designer](/scarn/getting-started/concepts/#the-designer), and your browser
+   opens the [studio](/scarn/getting-started/concepts/#the-studio): a live
    graph of the pipeline that redraws every time the designer saves a file.
 
-   ![The pipeline studio: the pipeline picker in the top bar, the graph of the pipeline's states in the centre, and the validation issues panel on the right.](../../../assets/quickstart/studio.png)
+   ![The pipeline studio: the pipeline picker in the top bar, the graph of the pipeline's nodes in the centre, and the validation issues panel on the right.](../../../assets/quickstart/studio.png)
 
    The designer reads your repository first, then interviews you about the
    item you picked, one question at a time:
@@ -116,16 +116,17 @@ Docker — see [Runtime](/boboddy/getting-started/concepts/#runtime).
    - _What must never be touched?_ Production writes, customer data, anything
      that sends email or charges money.
 
-   It adapts the [default pipeline](/boboddy/getting-started/concepts/#default-pipeline)
+   It adapts the [default pipeline](/scarn/getting-started/concepts/#default-pipeline)
    to your answers and writes the
-   [default pipeline assignment](/boboddy/getting-started/concepts/#default-pipeline-assignment)
+   [default pipeline assignment](/scarn/getting-started/concepts/#default-pipeline-assignment)
    that routes new items to it. With no `.devcontainer/devcontainer.json`, it
-   writes one ([Runtime](/boboddy/getting-started/concepts/#runtime)). For a
-   secret it asks only the variable name; you put the value in `.boboddy/.env`
-   ([Secrets](/boboddy/guides/steps/#secrets)).
+   writes one ([Runtime](/scarn/getting-started/concepts/#runtime)). For a
+   secret it asks only the variable name; you put the value in `.scarn/.env`
+   ([Secrets](/scarn/guides/steps/#secrets)).
 
-   Finally it typechecks and runs `boboddy pipelines push`, which always asks
-   for permission. Say yes: that's the moment your pipeline reaches Boboddy.
+   Finally it typechecks, runs `scarn pipelines push` to upload the steps,
+   then builds and publishes the pipeline. Push always asks for permission.
+   Say yes: that's the moment your definitions reach Scarn.
    Then quit the designer with `/exit`.
 
 6. **Run it**
@@ -135,23 +136,23 @@ Docker — see [Runtime](/boboddy/getting-started/concepts/#runtime).
    <Transcript src={runOfferTranscript} />
 
    Say yes. It queues the run and starts a
-   [worker](/boboddy/getting-started/concepts/#worker) in the same terminal:
+   [worker](/scarn/getting-started/concepts/#worker) in the same terminal:
 
    <Transcript src={workerTranscript} />
 
    The worker polls until you press Ctrl+C. If the check or a step fails, run
-   `boboddy pipelines design` again and tell the designer what happened. Said
-   no? See [Run a pipeline on any work item](/boboddy/how-to/run-on-a-work-item/).
+   `scarn pipelines design` again and tell the designer what happened. Said
+   no? See [Run a pipeline on any work item](/scarn/how-to/run-on-a-work-item/).
 
 7. **Watch it in the dashboard**
 
    {/* Screenshot pending (docs onboarding plan, Phase 2d): the apps/next run page on the demo project, graph with one succeeded and one running node. */}
 
    Open your project in the
-   [dashboard](/boboddy/getting-started/concepts/#dashboard), go to the
+   [dashboard](/scarn/getting-started/concepts/#dashboard), go to the
    _Executions_ tab, and select the run. The run page shows the pipeline
    graph and each step's status. Select a step for its logs and
-   [evidence](/boboddy/getting-started/concepts/#evidence-and-artifacts):
+   [evidence](/scarn/getting-started/concepts/#evidence-and-artifacts):
    _Output_ holds its result, such as the investigation report, and
    _Artifacts_ its files. **View trace** opens a Playwright trace of the
    reproduction.
@@ -166,11 +167,12 @@ Docker — see [Runtime](/boboddy/getting-started/concepts/#runtime).
 <FileTree>
 
 - my-repo/
-  - .boboddy/
-    - boboddy.jsonc the project, as owner/slug
+  - .scarn/
+    - scarn.jsonc the project, as owner/slug
     - .env.example secret variable names, only if a step needs any
     - pipeline-builder/
       - bug-pipeline.ts the pipeline and its steps
+      - bug-pipeline.json the pipeline, built from the `.ts`
       - default-pipeline-assignment.ts
       - package.json
       - …
@@ -179,23 +181,23 @@ Docker — see [Runtime](/boboddy/getting-started/concepts/#runtime).
 
 </FileTree>
 
-Commit `.boboddy/` and `.devcontainer/`; the builder's `.gitignore` already
+Commit `.scarn/` and `.devcontainer/`; the builder's `.gitignore` already
 skips `node_modules/`, `push.ts`, and
-[lockfiles](/boboddy/how-to/commit-your-pipeline/). Never commit
-`.boboddy/.env`.
+[lockfiles](/scarn/how-to/commit-your-pipeline/). Never commit
+`.scarn/.env`.
 
 ## Next
 
-- [Change this pipeline](/boboddy/how-to/change-a-pipeline/) — run
-  `boboddy pipelines design` again with another work item; it edits what's
+- [Change this pipeline](/scarn/how-to/change-a-pipeline/) — run
+  `scarn pipelines design` again with another work item; it edits what's
   there instead of starting over.
-- [Let a step read your repo](/boboddy/how-to/let-a-step-read-your-repo/) —
+- [Let a step read your repo](/scarn/how-to/let-a-step-read-your-repo/) —
   when a step needs your code, it runs in your devcontainer.
-- [Automate intake](/boboddy/how-to/integrations/) — connect GitHub, Bitbucket or Jira, and
+- [Automate intake](/scarn/how-to/integrations/) — connect GitHub, Bitbucket or Jira, and
   route new items with
-  [Default Pipeline Assignment](/boboddy/guides/pipeline-assignment/).
-- [Scale workers](/boboddy/guides/workers/) — concurrency, polling, and work
+  [Default Pipeline Assignment](/scarn/guides/pipeline-assignment/).
+- [Scale workers](/scarn/guides/workers/) — concurrency, polling, and work
   branches.
 
 Rather write pipelines by hand? Start from
-[`boboddy pipelines init`](/boboddy/reference/cli/#boboddy-pipelines-init).
+[`scarn pipelines init`](/scarn/reference/cli/#scarn-pipelines-init).

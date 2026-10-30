@@ -5,8 +5,8 @@
     "noEmit": true,
     "exactOptionalPropertyTypes": false,
     "paths": {
-      "@boboddy/worker": ["../../packages/worker/src/index.ts"],
-      "@boboddy/worker/*": ["../../packages/worker/src/*"]
+      "@scarn/worker": ["../../packages/worker/src/index.ts"],
+      "@scarn/worker/*": ["../../packages/worker/src/*"]
     }
   },
   "include": [

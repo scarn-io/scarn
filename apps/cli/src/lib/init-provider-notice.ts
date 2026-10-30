@@ -1,8 +1,8 @@
-import type { OpencodeProviderCredentialCheck } from "@boboddy/worker";
+import type { OpencodeProviderCredentialCheck } from "@scarn/worker";
 import type { BaseReporter } from "./reporter-types";
 
 /**
- * The AI-provider step of `boboddy init`.
+ * The AI-provider step of `scarn init`.
  *
  * `init` used to gate on an OpenCode provider credential: with none found it
  * downloaded the runtime and spawned `opencode auth login` before the project

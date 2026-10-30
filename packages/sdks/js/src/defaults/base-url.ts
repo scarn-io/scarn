@@ -1,4 +1,4 @@
-const DEFAULT_BASE_URL = "https://app.boboddy.dev";
+const DEFAULT_BASE_URL = "https://app.scarn.io";
 
 const trimTrailingSlashes = (value: string) => {
   let endIndex = value.length;
@@ -8,11 +8,11 @@ const trimTrailingSlashes = (value: string) => {
   return value.slice(0, endIndex);
 };
 
-export const resolveBoboddyBaseUrl = (value?: string | null) => {
+export const resolveScarnBaseUrl = (value?: string | null) => {
   const trimmedValue = value?.trim();
   if (trimmedValue) return trimTrailingSlashes(trimmedValue);
 
-  const envValue = process.env["BOBODDY_BASE_URL"]?.trim();
+  const envValue = process.env["SCARN_BASE_URL"]?.trim();
   if (envValue) return trimTrailingSlashes(envValue);
 
   return DEFAULT_BASE_URL;

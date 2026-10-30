@@ -129,9 +129,7 @@ describe("defineStep — mcps", () => {
       },
     ]);
 
-    expect(validateDefinitionSpecs({ pipelines: [], steps: [spec] })).toEqual(
-      [],
-    );
+    expect(validateDefinitionSpecs([spec])).toEqual([]);
   });
 
   test("a var optional on both servers stays optional", () => {
@@ -158,9 +156,7 @@ describe("defineStep — mcps", () => {
     expect(spec.healthChecksJson?.map((check) => check.name)).toEqual([
       "first.creds",
     ]);
-    expect(validateDefinitionSpecs({ pipelines: [], steps: [spec] })).toEqual(
-      [],
-    );
+    expect(validateDefinitionSpecs([spec])).toEqual([]);
   });
 
   test("empty mcps leaves the step's own fields untouched", () => {
@@ -240,8 +236,6 @@ describe("defineStep — mcps", () => {
         applies: "agent",
       },
     ]);
-    expect(validateDefinitionSpecs({ pipelines: [], steps: [spec] })).toEqual(
-      [],
-    );
+    expect(validateDefinitionSpecs([spec])).toEqual([]);
   });
 });

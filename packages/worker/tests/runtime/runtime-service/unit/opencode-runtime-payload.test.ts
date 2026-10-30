@@ -30,13 +30,13 @@ describe("opencode runtime payload domain", () => {
 
   test("host + container payload paths are version-keyed", () => {
     expect(hostOpencodeRuntimeVersionDir("/home/u", "1.2.3")).toBe(
-      "/home/u/.boboddy/runtimes/opencode/1.2.3",
+      "/home/u/.scarn/runtimes/opencode/1.2.3",
     );
     expect(containerOpencodeRuntimeVersionDir("1.2.3")).toBe(
-      "/opt/boboddy/runtimes/opencode/1.2.3",
+      "/opt/scarn/runtimes/opencode/1.2.3",
     );
     expect(containerLaunchWrapperPath("1.2.3")).toBe(
-      "/opt/boboddy/runtimes/opencode/1.2.3/launch.sh",
+      "/opt/scarn/runtimes/opencode/1.2.3/launch.sh",
     );
   });
 
@@ -154,7 +154,7 @@ describe("opencode launch wrapper", () => {
   test("warns before exec when a musl binary lacks libstdc++ / libgcc", () => {
     expect(wrapper).toContain("libstdc++.so.6 libgcc_s.so.1");
     expect(wrapper).toContain(
-      "boboddy: Alpine images need 'apk add libstdc++ libgcc' for OpenCode",
+      "scarn: Alpine images need 'apk add libstdc++ libgcc' for OpenCode",
     );
     expect(wrapper.indexOf("apk add libstdc++")).toBeLessThan(
       wrapper.lastIndexOf('exec "$candidate" "$@"'),

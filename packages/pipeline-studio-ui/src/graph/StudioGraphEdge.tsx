@@ -1,14 +1,21 @@
-import { BaseEdge, getBezierPath, type EdgeProps } from "@xyflow/react";
+import { BaseEdge, type EdgeProps } from "@xyflow/react";
+import { routeEdge } from "./edge-route";
 import type { StudioEdge } from "./studio-graph-types";
-import { highestSeverity, severityColor } from "./studio-graph-visuals";
+import {
+  edgeDashArray,
+  highestSeverity,
+  orderedEdgeLabel,
+  severityColor,
+} from "./studio-graph-visuals";
 
 /**
  * The studio's custom edge renderer — registered as `edgeTypes.default` in
- * `PipelineGraphView.tsx`. Renders the same bezier path React Flow's own
- * built-in default edge uses, colored by `highestSeverity(data.issues)` —
- * reuses the exact same `severityColor` helper `StudioGraphNode.tsx` uses,
- * so an edge carrying a `signal-binding` issue reads with the same red/amber
- * vocabulary as an issue-carrying node.
+ * `PipelineGraphView.tsx`. The routed path the layout computed (see
+ * `routeEdge`: forward edges step down through their label slot, loops run up
+ * a lane beside the graph), colored by
+ * `highestSeverity(data.issues)`, dashed for `catch` edges and dotted for
+ * `each` edges (see `edgeDashArray`). Routes of a `first` node are numbered
+ * in check order; routes of an `all` node aren't (see `orderedEdgeLabel`).
  */
 export function StudioGraphEdge({
   id,
@@ -16,20 +23,15 @@ export function StudioGraphEdge({
   sourceY,
   targetX,
   targetY,
-  sourcePosition,
-  targetPosition,
   markerEnd,
   label,
   data,
 }: EdgeProps<StudioEdge>) {
-  const [path, labelX, labelY] = getBezierPath({
-    sourceX,
-    sourceY,
-    sourcePosition,
-    targetX,
-    targetY,
-    targetPosition,
-  });
+  const { path, labelX, labelY } = routeEdge(
+    data?.route,
+    { x: sourceX, y: sourceY },
+    { x: targetX, y: targetY },
+  );
   const severity = highestSeverity(data?.issues ?? []);
 
   return (
@@ -37,10 +39,18 @@ export function StudioGraphEdge({
       id={id}
       path={path}
       markerEnd={markerEnd}
-      label={label}
+      label={orderedEdgeLabel(
+        typeof label === "string" ? label : undefined,
+        data?.order ?? null,
+      )}
       labelX={labelX}
       labelY={labelY}
-      style={severity ? { stroke: severityColor(severity), strokeWidth: 2 } : undefined}
+      style={{
+        strokeDasharray: edgeDashArray(data),
+        ...(severity
+          ? { stroke: severityColor(severity), strokeWidth: 2 }
+          : {}),
+      }}
     />
   );
 }

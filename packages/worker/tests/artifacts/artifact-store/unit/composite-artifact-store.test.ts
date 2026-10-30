@@ -56,7 +56,7 @@ class FailingPruneStore implements ArtifactStore {
 }
 
 const input: SaveArtifactInput = {
-  taskId: "step-1",
+  taskRunId: "step-1",
   sourcePath: "/tmp/report.txt",
   relativeStorePath: "report.txt",
   kind: "generic",

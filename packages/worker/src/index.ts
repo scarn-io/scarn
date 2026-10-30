@@ -36,7 +36,7 @@ export type { UuidV7 } from "./common/contracts/uuid-v7";
 export type { OpenCodeMcpServers } from "./common/contracts/opencode-mcp";
 export {
   CLI_AUTH_CLIENT_ID,
-  resolveBoboddyBaseUrl,
+  resolveScarnBaseUrl,
 } from "./auth/session/infra/auth-config";
 export { createCliAuthClient } from "./auth/session/infra/auth-client";
 export {
@@ -197,6 +197,8 @@ export {
   STARTER_DEFAULT_PIPELINE_ASSIGNMENT_FILE,
   STARTER_PIPELINE_FILE,
   STARTER_PIPELINE_FILENAME,
+  STARTER_PIPELINE_JSON_FILE,
+  STARTER_PIPELINE_JSON_FILENAME,
   STARTER_PIPELINE_KEY,
   buildPipelineBuilderPackageJson,
   scaffoldPipelineBuilderDirectory,
@@ -214,8 +216,22 @@ export type { PipelineRuntime } from "./pipelines/pipeline-definitions/infra/det
 export {
   pullPipelineDefinitions,
   listExistingPipelineBuilderFiles,
+  pipelineDocumentFileName,
+  serializePipelineDocument,
 } from "./pipelines/pipeline-definitions/application/pull-pipeline-definitions";
 export type { PullPipelineDefinitionsResult } from "./pipelines/pipeline-definitions/application/pull-pipeline-definitions";
+export {
+  buildPipelineDocuments,
+  listPipelineSourceFiles,
+} from "./pipelines/pipeline-definitions/application/build-pipeline-documents";
+export type {
+  BuildPipelineDocumentsOptions,
+  BuildPipelineDocumentsResult,
+  BuiltFileReport,
+  BuiltFileStatus,
+  ServerCatalogResult,
+} from "./pipelines/pipeline-definitions/application/build-pipeline-documents";
+export { BuildScriptError } from "./pipelines/pipeline-definitions/infra/run-build-script";
 export {
   UnsupportedRuleError,
   generateDefaultPipelineAssignmentFileContent,
@@ -231,27 +247,27 @@ export type {
   SaveArtifactInput,
   SaveArtifactResult,
 } from "./artifacts/artifact-store/domain/artifact-store";
-export { DefaultOpencodeStepRunner } from "./work/task/infra/opencode-step-runner";
+export { DefaultOpencodeStepRunner } from "./work/task-run/infra/opencode-step-runner";
 export {
   processProjectWork,
   runProjectWork,
-} from "./work/task/application/run-project-work";
+} from "./work/task-run/application/run-project-work";
 export type {
   ProcessProjectWorkDeps,
   ProcessProjectWorkOptions,
   ProcessProjectWorkResult,
   LocalRuntimeSessionStore,
-} from "./work/task/application/run-project-work";
-export { noopReporter } from "./work/task/contracts/work-reporter";
+} from "./work/task-run/application/run-project-work";
+export { noopReporter } from "./work/task-run/contracts/work-reporter";
 export type {
   WorkEvent,
   WorkReporter,
   WorkActivity,
-} from "./work/task/contracts/work-reporter";
+} from "./work/task-run/contracts/work-reporter";
 export {
   runWorkDryRun,
   listProjectStepDefinitionsForDryRun,
-} from "./work/task/application/run-work-dry-run";
+} from "./work/task-run/application/run-work-dry-run";
 export type {
   HealthCheckOutcome,
   HealthCheckReport,
@@ -259,22 +275,25 @@ export type {
   WorkDryRunOptions,
   WorkDryRunReport,
   WorkDryRunScope,
-} from "./work/task/application/run-work-dry-run";
+} from "./work/task-run/application/run-work-dry-run";
+export { runPipelineFirstStepDryRun } from "./work/task-run/application/run-pipeline-first-step-dry-run";
 export {
-  resolveFirstStepDefinitionId,
-  runPipelineFirstStepDryRun,
-} from "./work/task/application/run-pipeline-first-step-dry-run";
-export type { PipelineFirstStepDryRunOptions } from "./work/task/application/run-pipeline-first-step-dry-run";
-export { runPipelineHealthChecksDryRun } from "./work/task/application/run-pipeline-health-checks-dry-run";
+  listPinnedStepDefinitionIds,
+  readActivePipelineVersion,
+  resolveStartStepDefinitionId,
+} from "./work/task-run/application/pipeline-version-steps";
+export type { ActivePipelineVersion } from "./work/task-run/application/pipeline-version-steps";
+export type { PipelineFirstStepDryRunOptions } from "./work/task-run/application/run-pipeline-first-step-dry-run";
+export { runPipelineHealthChecksDryRun } from "./work/task-run/application/run-pipeline-health-checks-dry-run";
 export type {
   PipelineHealthChecksDryRunOptions,
   PipelineHealthDryRunReport,
-} from "./work/task/application/run-pipeline-health-checks-dry-run";
-export { listStepHealthCheckFindings } from "./work/task/application/pipeline-health-check-report";
+} from "./work/task-run/application/run-pipeline-health-checks-dry-run";
+export { listStepHealthCheckFindings } from "./work/task-run/application/pipeline-health-check-report";
 export type {
   StepHealthCheckFinding,
   StepHealthCheckReport,
-} from "./work/task/application/pipeline-health-check-report";
+} from "./work/task-run/application/pipeline-health-check-report";
 export { computeStudioSnapshot } from "./pipelines/pipeline-studio/application/compute-studio-snapshot";
 export { runPipelineStudioServer } from "./pipelines/pipeline-studio/application/run-pipeline-studio-server";
 export type {

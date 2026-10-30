@@ -8,19 +8,23 @@
  * exports, never from shared module instances.
  *
  * Takes type-only imports so it carries no runtime dependency on the rest of
- * the SDK and can be imported on its own (`@boboddy/sdk/code-step-lookup`).
+ * the SDK and can be imported on its own (`@scarn/sdk/code-step-lookup`).
  */
 
-import type { PipelineDefinitionSpec } from "../definitions/pipelines";
 import type { StepDefinitionSpec } from "../definitions/steps";
 
 type CodeStepFn = NonNullable<StepDefinitionSpec["entrypoint"]>["fn"];
 
+/**
+ * A step spec, or a step handle: `defineStep` and `codeStep` return a function
+ * carrying the spec's fields.
+ */
 export function isStepDefinitionSpec(
   // eslint-disable-next-line local/no-unknown-parameter-type
   value: unknown,
 ): value is StepDefinitionSpec {
-  if (typeof value !== "object" || value === null) return false;
+  if (typeof value !== "object" && typeof value !== "function") return false;
+  if (value === null) return false;
   const obj = value as Record<string, unknown>;
   return (
     typeof obj["key"] === "string" &&
@@ -30,24 +34,9 @@ export function isStepDefinitionSpec(
   );
 }
 
-export function isPipelineDefinitionSpec(
-  // eslint-disable-next-line local/no-unknown-parameter-type
-  value: unknown,
-): value is PipelineDefinitionSpec {
-  if (typeof value !== "object" || value === null) return false;
-  const obj = value as Record<string, unknown>;
-  return (
-    typeof obj["key"] === "string" &&
-    typeof obj["name"] === "string" &&
-    typeof obj["version"] === "number" &&
-    Array.isArray(obj["nodeDefinitions"])
-  );
-}
-
 /**
- * Every step spec a module defines: its named exports that are step specs,
- * plus the embedded steps of its default-exported pipeline. Deduped by
- * reference, so a step both exported and embedded appears once.
+ * Every step spec a module defines: its named exports that are step specs.
+ * Deduped by reference, so a step exported under two names appears once.
  */
 export function stepsInModule(
   mod: Readonly<Record<string, unknown>>,
@@ -57,13 +46,6 @@ export function stepsInModule(
   for (const [exportName, value] of Object.entries(mod)) {
     if (exportName !== "default" && isStepDefinitionSpec(value)) {
       found.add(value);
-    }
-  }
-
-  const defaultExport = mod["default"];
-  if (isPipelineDefinitionSpec(defaultExport)) {
-    for (const embedded of defaultExport._stepDefinitions ?? []) {
-      found.add(embedded);
     }
   }
 

@@ -8,7 +8,7 @@ export default defineConfig({
     {
       name: "@hey-api/sdk",
       operations: {
-        containerName: "BoboddyClient",
+        containerName: "ScarnClient",
         nesting: (operation) => {
           const [firstTag] = operation.tags ?? [];
           const group = firstTag

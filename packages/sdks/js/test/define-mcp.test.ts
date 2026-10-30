@@ -233,7 +233,7 @@ describe("defineMcp — names and validation", () => {
       /must match/,
     );
     expect(() =>
-      defineMcp({ type: "ref", name: "x", env: ["BOBODDY_TOKEN"] }),
+      defineMcp({ type: "ref", name: "x", env: ["SCARN_TOKEN"] }),
     ).toThrow(/reserved/);
     expect(() =>
       defineMcp({ type: "ref", name: "x", optionalEnv: ["HOME"] }),

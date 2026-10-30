@@ -4,7 +4,7 @@ import type {
   OpenCodePermissionRule,
 } from "./opencode-overlay-config";
 import {
-  buildBoboddyOverrideConfig,
+  buildScarnOverrideConfig,
   mcpToolActionPattern,
 } from "./build-task-opencode-config";
 
@@ -12,7 +12,7 @@ const BASELINE: Config = {
   $schema: "https://opencode.ai/config.json",
   permissions: [
     { action: "*", resource: "*", effect: "allow" },
-    { action: "boboddy*", resource: "*", effect: "allow" },
+    { action: "scarn*", resource: "*", effect: "allow" },
     { action: "question", resource: "*", effect: "deny" },
   ],
   mcp: { servers: {} },
@@ -55,7 +55,7 @@ function effectiveRules(
   ];
 }
 
-describe("buildBoboddyOverrideConfig", () => {
+describe("buildScarnOverrideConfig", () => {
   let savedModel: string | undefined;
   beforeEach(() => {
     savedModel = process.env["AGENT_DEFAULT_MODEL"];
@@ -67,13 +67,13 @@ describe("buildBoboddyOverrideConfig", () => {
   });
 
   test("returns the baseline unchanged when the step adds nothing", () => {
-    expect(buildBoboddyOverrideConfig({ baseConfig: BASELINE })).toEqual(
+    expect(buildScarnOverrideConfig({ baseConfig: BASELINE })).toEqual(
       BASELINE,
     );
   });
 
   test("passes step MCP servers through under mcp.servers with Code Mode off", () => {
-    const config = buildBoboddyOverrideConfig({
+    const config = buildScarnOverrideConfig({
       baseConfig: BASELINE,
       stepMcpServers: {
         playwright: {
@@ -105,7 +105,7 @@ describe("buildBoboddyOverrideConfig", () => {
   });
 
   test("step MCP tools are denied to every agent except build", () => {
-    const config = buildBoboddyOverrideConfig({
+    const config = buildScarnOverrideConfig({
       baseConfig: BASELINE,
       stepMcpServers: {
         playwright: { type: "local", command: ["npx", "@playwright/mcp"] },
@@ -134,12 +134,12 @@ describe("buildBoboddyOverrideConfig", () => {
     expect(evaluate(effectiveRules(config, "plan"), "read")).toBe("allow");
     expect(evaluate(effectiveRules(config, "build"), "question")).toBe("deny");
     expect(
-      evaluate(effectiveRules(config, "build"), "boboddy-submit-step-findings"),
+      evaluate(effectiveRules(config, "build"), "scarn-submit-step-findings"),
     ).toBe("allow");
   });
 
   test("a server's deny rule does not catch another server sharing its prefix", () => {
-    const config = buildBoboddyOverrideConfig({
+    const config = buildScarnOverrideConfig({
       baseConfig: BASELINE,
       stepMcpServers: {
         fix: { type: "local", command: ["fix"] },
@@ -157,19 +157,19 @@ describe("buildBoboddyOverrideConfig", () => {
   });
 
   test("the step prompt becomes the build agent's system prompt", () => {
-    const config = buildBoboddyOverrideConfig({
+    const config = buildScarnOverrideConfig({
       baseConfig: BASELINE,
-      agentPromptText: "Execute the Boboddy step.",
+      agentPromptText: "Execute the Scarn step.",
     });
     expect(config.agents?.["build"]).toEqual({
-      system: "Execute the Boboddy step.",
+      system: "Execute the Scarn step.",
       permissions: [],
     });
     expect(config.permissions).toEqual(BASELINE.permissions);
   });
 
   test("keeps existing build agent rules ahead of the step allow rules", () => {
-    const config = buildBoboddyOverrideConfig({
+    const config = buildScarnOverrideConfig({
       baseConfig: {
         ...BASELINE,
         agents: {
@@ -196,7 +196,7 @@ describe("buildBoboddyOverrideConfig", () => {
     const plugins = [
       { package: "opencode-helicone-session", options: { project: "abc" } },
     ];
-    const config = buildBoboddyOverrideConfig({
+    const config = buildScarnOverrideConfig({
       baseConfig: { ...BASELINE, plugins },
     });
     expect(config.plugins).toEqual(plugins);
@@ -204,14 +204,14 @@ describe("buildBoboddyOverrideConfig", () => {
 
   test("AGENT_DEFAULT_MODEL sets model", () => {
     process.env["AGENT_DEFAULT_MODEL"] = "openai/gpt-5.4";
-    expect(buildBoboddyOverrideConfig({ baseConfig: BASELINE }).model).toBe(
+    expect(buildScarnOverrideConfig({ baseConfig: BASELINE }).model).toBe(
       "openai/gpt-5.4",
     );
   });
 
   test("does not mutate the baseline", () => {
     const baseConfig = structuredClone(BASELINE);
-    buildBoboddyOverrideConfig({
+    buildScarnOverrideConfig({
       baseConfig,
       stepMcpServers: { a: { type: "local", command: ["a"] } },
       agentPromptText: "x",

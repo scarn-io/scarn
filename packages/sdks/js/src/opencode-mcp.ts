@@ -1,6 +1,6 @@
 /**
  * Step-declared MCP servers, in OpenCode v2's native `mcp.servers.<name>` entry
- * shape, plus a Boboddy-only `ref` entry. The worker resolves refs before
+ * shape, plus a Scarn-only `ref` entry. The worker resolves refs before
  * passing the resulting `local`/`remote` entries to the runtime overlay, so
  * the `local`/`remote` schemas mirror the v2 config schema.
  * `test/opencode-config-shapes.test.ts` fails typecheck if they drift from
@@ -73,7 +73,7 @@ export const openCodeMcpRemoteConfigSchema = z
  * files (`.opencode/opencode.json`, `.mcp.json`, `.codex/config.toml`, …).
  * `name` defaults to the step's server key. The worker resolves refs into
  * `local`/`remote` entries before launch, applying the shared fields on top;
- * `name` is Boboddy-only and dropped during resolution, so a ref never reaches
+ * `name` is Scarn-only and dropped during resolution, so a ref never reaches
  * OpenCode.
  */
 export const openCodeMcpRefConfigSchema = z

@@ -1,9 +1,9 @@
 import { access } from "node:fs/promises";
 import path from "node:path";
-import { createLazyLogger } from "@boboddy/observability/logging/host";
+import { createLazyLogger } from "@scarn/observability/logging/host";
 
 /**
- * The config path Boboddy asks for when one has to be created — the canonical
+ * The config path Scarn asks for when one has to be created — the canonical
  * spelling, and the only one the pipeline designer is permitted to write.
  *
  * Load-bearing in two places across two packages: the candidate list below, and
@@ -24,7 +24,7 @@ const DEVCONTAINER_CONFIG_CANDIDATES = [
 ] as const;
 
 const logger = createLazyLogger({
-  name: "@boboddy/worker",
+  name: "@scarn/worker",
   scope: "ensure-devcontainer",
 });
 
@@ -32,7 +32,7 @@ const logger = createLazyLogger({
  * Does this repository already carry a devcontainer config?
  *
  * Deliberately a question, not an assertion: a missing devcontainer no longer
- * blocks onboarding. `boboddy init` reports it as a notice and the pipeline
+ * blocks onboarding. `scarn init` reports it as a notice and the pipeline
  * designer authors one in-session, so every caller wants the boolean.
  */
 export async function hasDevcontainer(rootDir: string): Promise<boolean> {

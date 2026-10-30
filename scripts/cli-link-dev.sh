@@ -5,8 +5,8 @@ set -e
 # and capture the last stdout line (the artifact path printed by the script).
 ARTIFACT_PATH=$(cd packages/sdks/js && bun run pack:local | tee /dev/stderr | tail -1)
 
-bun run --filter @boboddy/opencode-plugin build
-BOBODDY_SDK_ARTIFACT_PATH="$ARTIFACT_PATH" bun run --filter @boboddy/cli build:dev
-# Link as "boboddy-dev" (not "boboddy") so this doesn't clobber a real boboddy
+bun run --filter @scarn/opencode-plugin build
+SCARN_SDK_ARTIFACT_PATH="$ARTIFACT_PATH" bun run --filter @scarn/cli build:dev
+# Link as "scarn-dev" (not "scarn") so this doesn't clobber a real scarn
 # CLI install on the same machine.
-BOBODDY_CLI_LINK_NAME="boboddy-dev" bun run --filter @boboddy/cli link
+SCARN_CLI_LINK_NAME="scarn-dev" bun run --filter @scarn/cli link

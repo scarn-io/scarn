@@ -49,10 +49,10 @@ describe("devcontainer mount injection", () => {
     expect(
       renderBindMountString({
         source: "/host/payload",
-        target: "/opt/boboddy/x",
+        target: "/opt/scarn/x",
         readOnly: true,
       }),
-    ).toBe("type=bind,source=/host/payload,target=/opt/boboddy/x,readonly");
+    ).toBe("type=bind,source=/host/payload,target=/opt/scarn/x,readonly");
   });
 
   test("injects mounts into an image-based devcontainer (with comments)", async () => {
@@ -106,7 +106,7 @@ describe("devcontainer mount injection", () => {
         patchDevcontainerMounts(workspacePath, configRel, [
           { source: "/host/a", target: "/opt/a" },
         ]),
-      /conflicts with a Boboddy-managed runtime mount/u,
+      /conflicts with a Scarn-managed runtime mount/u,
     );
   });
 

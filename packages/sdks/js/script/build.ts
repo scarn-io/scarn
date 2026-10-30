@@ -24,11 +24,18 @@ await $`rm -rf dist`;
 const result = await Bun.build({
   entrypoints,
   outdir: distDir,
+  // Emit entrypoints flat under `dist/` so their relative imports of shared
+  // chunks stay valid; moving them after the build would break those paths.
+  root: resolve(projectRoot, "src"),
   format: "esm",
   // `bun` target keeps `node:*` imports external rather than polyfilling them
   // (which the browser target does, dropping members like `readdirSync`). The
   // SDK runs in bun/node/deno; there is no browser use case today.
   target: "bun",
+  // Entrypoints share module-level state (the pipelines registry WeakMaps):
+  // without splitting each entrypoint inlines its own copy, so steps defined
+  // via `definitions/steps` are invisible to `definePipeline`.
+  splitting: true,
 });
 
 if (!result.success) {
@@ -44,15 +51,6 @@ await $`bunx tsc --project tsconfig.build.json`;
 const nestedSrcDir = resolve(distDir, "packages/sdks/js/src");
 for (const entry of await readdir(nestedSrcDir).catch(() => [])) {
   await cp(resolve(nestedSrcDir, entry), resolve(distDir, entry), {
-    recursive: true,
-  });
-}
-
-// Flatten Bun.build output, which preserves the `src/` segment from the
-// entrypoint paths. The published `exports` field assumes flat `dist/` paths.
-const bunBuildSrcDir = resolve(distDir, "src");
-for (const entry of await readdir(bunBuildSrcDir).catch(() => [])) {
-  await cp(resolve(bunBuildSrcDir, entry), resolve(distDir, entry), {
     recursive: true,
   });
 }

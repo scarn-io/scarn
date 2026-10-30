@@ -2,8 +2,8 @@ import { existsSync, lstatSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { resolveHomeDir } from "./home-dir";
 
-const legacyBareAuthFilePath = () => join(resolveHomeDir(), ".boboddy");
-const legacyJsonAuthFilePath = () => join(resolveHomeDir(), ".boboddy.json");
+const legacyBareAuthFilePath = () => join(resolveHomeDir(), ".scarn");
+const legacyJsonAuthFilePath = () => join(resolveHomeDir(), ".scarn.json");
 
 // eslint-disable-next-line local/no-unknown-parameter-type
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>
@@ -11,8 +11,8 @@ const isPlainObject = (value: unknown): value is Record<string, unknown> =>
 
 /**
  * One-time, idempotent: if either new file is still missing, find the old
- * combined file (`.boboddy.json`, falling back to the even older bare
- * `.boboddy`), split it, and delete it. Safe to call redundantly from both
+ * combined file (`.scarn.json`, falling back to the even older bare
+ * `.scarn`), split it, and delete it. Safe to call redundantly from both
  * `auth-file.ts` and `config-file.ts` — whichever loads first does the work;
  * the other's own `existsSync` check on its own new path short-circuits.
  *
@@ -52,10 +52,10 @@ export function migrateLegacyConfigIfNeeded(input: {
   if (!isPlainObject(parsed)) return;
 
   // Delete the legacy file(s) BEFORE writing the new ones: the bare
-  // `~/.boboddy` legacy path is the exact same path as the new `~/.boboddy/`
+  // `~/.scarn` legacy path is the exact same path as the new `~/.scarn/`
   // directory that `auth.jsonc`/`config.jsonc` live under, so writing first
-  // (which `mkdirSync`s `~/.boboddy/`) would collide with the still-present
-  // legacy file and throw `ENOTDIR`. `.boboddy.json` doesn't have this
+  // (which `mkdirSync`s `~/.scarn/`) would collide with the still-present
+  // legacy file and throw `ENOTDIR`. `.scarn.json` doesn't have this
   // problem — it's a sibling path, not the same one — but deleting first is
   // correct and just as safe for it too, since `parsed` is already captured.
   rmSync(legacyPath, { force: true });

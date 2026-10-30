@@ -23,7 +23,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 let baseDir: string;
 
 beforeEach(async () => {
-  baseDir = await mkdtemp(path.join(os.tmpdir(), "boboddy-artifact-prune-"));
+  baseDir = await mkdtemp(path.join(os.tmpdir(), "scarn-artifact-prune-"));
 });
 
 afterEach(async () => {
@@ -31,14 +31,14 @@ afterEach(async () => {
 });
 
 async function writeStepDir(
-  taskId: string,
+  taskRunId: string,
   {
     bytes = 100,
     ageMs = 0,
     nested = false,
   }: { bytes?: number; ageMs?: number; nested?: boolean } = {},
 ): Promise<string> {
-  const dirPath = path.join(baseDir, taskId);
+  const dirPath = path.join(baseDir, taskRunId);
   await mkdir(dirPath, { recursive: true });
   const filePath = nested
     ? (await mkdir(path.join(dirPath, "nested"), { recursive: true }),

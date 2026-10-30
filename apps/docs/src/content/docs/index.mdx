@@ -1,11 +1,11 @@
 ---
 title: Introduction
-description: What Boboddy is and the ten-minute path to a running pipeline
+description: What Scarn is and the ten-minute path to a running pipeline
 ---
 
 import { CardGrid, LinkCard } from '@astrojs/starlight/components';
 
-Boboddy runs AI agents over your backlog, on your machines. You say what
+Scarn runs AI agents over your backlog, on your machines. You say what
 should come out the other end, what evidence you need to trust it, and what
 must never be touched; the agents work out the path. A worker on your laptop
 or CI box runs a pipeline against each work item that arrives.
@@ -17,14 +17,14 @@ report, a Playwright trace when the app is reachable, the test, and the fix.
 The designer adapts it to your repository, using the MCP servers and skills it
 finds there.
 
-![A work item arrives, a pipeline is picked for it, a worker runs the current step, and the step's signals decide whether to advance, block for a human, or finish.](../../assets/intro-loop.svg)
+![A work item arrives, a pipeline is picked for it, a worker runs the current step, and the pipeline's transitions decide whether to advance, wait for a human, or finish.](../../assets/intro-loop.svg)
 
 ## You'll need
 
-- A git repository with a remote — see [Installation](/boboddy/getting-started/installation/#requirements).
-- Node.js or Bun — see [Installation](/boboddy/getting-started/installation/#requirements).
+- A git repository with a remote — see [Installation](/scarn/getting-started/installation/#requirements).
+- Node.js or Bun — see [Installation](/scarn/getting-started/installation/#requirements).
 - Claude Code, Codex, or GitHub Copilot, or an API key from any AI provider — see
-  [Installation](/boboddy/getting-started/installation/#requirements).
+  [Installation](/scarn/getting-started/installation/#requirements).
 
 ## Where to go next
 
@@ -32,22 +32,22 @@ finds there.
   <LinkCard
     title="Quickstart"
     description="Ten minutes to a running pipeline."
-    href="/boboddy/getting-started/quickstart/"
+    href="/scarn/getting-started/quickstart/"
   />
   <LinkCard
     title="Core concepts"
     description="The dozen words the rest of the docs assume."
-    href="/boboddy/getting-started/concepts/"
+    href="/scarn/getting-started/concepts/"
   />
   <LinkCard
     title="CLI reference"
-    description="Every boboddy command and flag."
-    href="/boboddy/reference/cli/"
+    description="Every scarn command and flag."
+    href="/scarn/reference/cli/"
   />
 </CardGrid>
 
 ## Start now
 
 ```bash
-npm i -g @boboddy/cli && boboddy init
+npm i -g @scarn/cli && scarn init
 ```

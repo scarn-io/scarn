@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
 import {
@@ -9,7 +9,9 @@ import {
 } from "../src/push/collect-definitions";
 
 function makeTempDir(): string {
-  return mkdtempSync(join(tmpdir(), "boboddy-collect-defs-test-"));
+  return realpathSync(
+    mkdtempSync(join(tmpdir(), "scarn-collect-defs-test-")),
+  );
 }
 
 // Absolute path to `define-code-step.ts`, computed from this test file's own
@@ -33,26 +35,6 @@ async function collectionError(dir: string): Promise<string> {
     return error instanceof Error ? error.message : String(error);
   }
   return "";
-}
-
-function embeddedOnlyPipelineSource(fromDir: string): string {
-  return `
-import { codeStep } from "${codeStepImportSpecifier(fromDir)}";
-
-export default {
-  key: "embedded-pipeline",
-  name: "Embedded Pipeline",
-  description: null,
-  version: 1,
-  status: "active",
-  entryNodeKey: "done",
-  nodeDefinitions: [{ nodeKey: "done", kind: "succeed" }],
-  dependencyEdges: [],
-  _stepDefinitions: [
-    codeStep({ key: "embedded-step", name: "Embedded Step", fn: (input) => input }),
-  ],
-};
-`;
 }
 
 describe("collectDefinitionsFromDirectory — code steps", () => {
@@ -90,7 +72,7 @@ export const reviewFileStep = codeStep({
     }
   });
 
-  // Regression test for the bug where `boboddy pipelines push` (and
+  // Regression test for the bug where `scarn pipelines push` (and
   // `studio`) spawn their collecting subprocess with `cwd` already set to
   // the pipeline-builder directory being collected — the real-world
   // condition `resolveCodeStepEntrypoint` must resolve `sourceFile`
@@ -152,28 +134,6 @@ export const inlineStep = codeStep({
       expect(step?.entrypoint).toBeUndefined();
       expect(step?.entrypointJson).toEqual({
         sourceFile: join(PIPELINE_BUILDER_DIR, "inline-step.ts"),
-      });
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
-  });
-
-  test("resolves an embedded-only code step to the pipeline's file", async () => {
-    const dir = makeTempDir();
-    try {
-      writeFileSync(
-        join(dir, "embedded-pipeline.ts"),
-        embeddedOnlyPipelineSource(dir),
-      );
-
-      const collected = await collectDefinitionsFromDirectory(dir);
-      const step = collected.steps.find((s) => s.key === "embedded-step");
-
-      expect(collected.pipelines).toHaveLength(1);
-      expect(step?.kind).toBe("code");
-      expect(step?.entrypoint).toBeUndefined();
-      expect(step?.entrypointJson).toEqual({
-        sourceFile: join(PIPELINE_BUILDER_DIR, "embedded-pipeline.ts"),
       });
     } finally {
       rmSync(dir, { recursive: true, force: true });
@@ -249,21 +209,15 @@ export const step = codeStep({ key: "shared", name: "Shared", fn: () => 1 });
 });
 
 describe("collectDefinitionsFromDirectoryTolerant", () => {
-  test("isolates one broken file — every other file's pipeline still collects", async () => {
+  test("isolates one broken file — every other file's steps still collect", async () => {
     const dir = makeTempDir();
     try {
       writeFileSync(
-        join(dir, "good-pipeline.ts"),
-        `export default {
-  key: "good-pipeline",
-  name: "Good Pipeline",
-  description: null,
-  version: 1,
-  status: "active",
-  entryNodeKey: "done",
-  nodeDefinitions: [{ nodeKey: "done", kind: "succeed" }],
-  dependencyEdges: [],
-};
+        join(dir, "good-step.ts"),
+        `
+import { codeStep } from "${codeStepImportSpecifier(dir)}";
+
+export const goodStep = codeStep({ key: "good-step", name: "Good", fn: () => 1 });
 `,
       );
       writeFileSync(
@@ -273,36 +227,11 @@ describe("collectDefinitionsFromDirectoryTolerant", () => {
 
       const collected = await collectDefinitionsFromDirectoryTolerant(dir);
 
-      expect(collected.pipelines).toHaveLength(1);
-      expect(collected.pipelines[0]?.key).toBe("good-pipeline");
+      expect(collected.steps.map((s) => s.key)).toEqual(["good-step"]);
       expect(collected.brokenPipelines).toHaveLength(1);
       expect(collected.brokenPipelines[0]).toMatchObject({
         key: "bad-pipeline",
         message: 'state "a" targets unknown state "b"',
-      });
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
-  });
-
-  test("an embedded-only code step no longer marks its pipeline broken", async () => {
-    const dir = makeTempDir();
-    try {
-      writeFileSync(
-        join(dir, "embedded-pipeline.ts"),
-        embeddedOnlyPipelineSource(dir),
-      );
-
-      const collected = await collectDefinitionsFromDirectoryTolerant(dir);
-
-      expect(collected.brokenPipelines).toEqual([]);
-      expect(collected.pipelines.map((p) => p.key)).toEqual([
-        "embedded-pipeline",
-      ]);
-      expect(
-        collected.steps.find((s) => s.key === "embedded-step")?.entrypointJson,
-      ).toEqual({
-        sourceFile: join(PIPELINE_BUILDER_DIR, "embedded-pipeline.ts"),
       });
     } finally {
       rmSync(dir, { recursive: true, force: true });
@@ -314,7 +243,7 @@ describe("collectDefinitionsFromDirectoryTolerant", () => {
     try {
       const collected = await collectDefinitionsFromDirectoryTolerant(dir);
       expect(collected).toMatchObject({
-        pipelines: [],
+        steps: [],
         brokenPipelines: [],
         defaultPipelineAssignment: null,
       });

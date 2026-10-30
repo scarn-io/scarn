@@ -1,4 +1,4 @@
-import { describe, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import {
   CREATE_TASK_LABEL,
   REFRESH_TASK_LABEL,
@@ -11,7 +11,6 @@ import {
   type ProjectAutocreatePorts,
 } from "../src/lib/init-project-autocreate";
 import {
-  concurrentTest as test,
   createReporterRecorder as createRecorder,
   reportedMessages as messages,
 } from "./utils";
@@ -23,7 +22,7 @@ import {
  * browser hand-off.
  */
 
-const BASE_URL = "https://app.boboddy.dev";
+const BASE_URL = "https://app.scarn.io";
 const REMOTE = "git@github.com:Acme/My-Repo.git";
 const REPO = { id: 42, fullName: "acme/my-repo" };
 

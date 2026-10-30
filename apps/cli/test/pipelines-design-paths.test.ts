@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { PIPELINE_BUILDER_DIR, writeProjectConfig } from "@boboddy/worker";
+import { PIPELINE_BUILDER_DIR, writeProjectConfig } from "@scarn/worker";
 import { buildDesignPreflightPorts } from "../src/commands/pipelines-design";
 import { resolveDesignPaths } from "../src/lib/design-session";
 import { createCliLogger } from "../src/lib/logger";
@@ -20,7 +20,7 @@ describe("pipelines design paths", () => {
   let nested: string;
 
   beforeEach(() => {
-    repoRoot = mkdtempSync(resolve(tmpdir(), "boboddy-design-nested-"));
+    repoRoot = mkdtempSync(resolve(tmpdir(), "scarn-design-nested-"));
     execFileSync("git", ["-C", repoRoot, "init", "-b", "main"]);
     nested = join(repoRoot, "packages", "app");
     mkdirSync(nested, { recursive: true });
@@ -46,7 +46,7 @@ describe("pipelines design paths", () => {
   });
 
   test("falls back to the cwd, with no repo root, outside any repository", async () => {
-    const outside = mkdtempSync(resolve(tmpdir(), "boboddy-design-outside-"));
+    const outside = mkdtempSync(resolve(tmpdir(), "scarn-design-outside-"));
     try {
       expect(
         await resolveDesignPaths({ repoRoot: undefined, cwd: outside }),
@@ -80,6 +80,6 @@ describe("pipelines design paths", () => {
 
     expect(ports.builderDirExists()).toBe(true);
     expect(existsSync(join(repoRoot, PIPELINE_BUILDER_DIR))).toBe(true);
-    expect(existsSync(join(nested, ".boboddy"))).toBe(false);
+    expect(existsSync(join(nested, ".scarn"))).toBe(false);
   });
 });

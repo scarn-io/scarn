@@ -9,7 +9,7 @@ import { stepSpecWithOverrides } from "./definition-spec-fixtures";
  */
 describe("validateDefinitionSpecs — env vars", () => {
   const validate = (steps: ReturnType<typeof stepSpecWithOverrides>[]) =>
-    validateDefinitionSpecs({ pipelines: [], steps });
+    validateDefinitionSpecs(steps);
 
   test.concurrent("accepts a step declaring valid env vars", () => {
     expect(

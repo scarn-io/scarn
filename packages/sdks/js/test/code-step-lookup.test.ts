@@ -1,10 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
 import { pathToFileURL } from "node:url";
 import { codeStep } from "../src/definitions/steps/define-code-step";
-import type { StepDefinitionSpec } from "../src/definitions/steps";
+import { toStepSpec, type StepDefinitionSpec } from "../src/definitions/steps";
 import {
   findCodeStepInModule,
   stepsInModule,
@@ -13,20 +13,6 @@ import {
   PIPELINE_BUILDER_DIR,
   collectDefinitionsFromDirectory,
 } from "../src/push/collect-definitions";
-
-function pipelineWith(steps: StepDefinitionSpec[]) {
-  return {
-    key: "pipeline",
-    name: "Pipeline",
-    description: null,
-    version: 1,
-    status: "active",
-    entryNodeKey: "done",
-    nodeDefinitions: [{ nodeKey: "done", kind: "succeed" }],
-    dependencyEdges: [],
-    _stepDefinitions: steps,
-  };
-}
 
 function userDefinedStep(key: string): StepDefinitionSpec {
   return {
@@ -39,7 +25,6 @@ function userDefinedStep(key: string): StepDefinitionSpec {
     prompt: "hello",
     inputSchemaJson: null,
     resultSchemaJson: null,
-    signalExtractorDefinitions: [],
     opencodeMcpJson: null,
     healthChecksJson: null,
   };
@@ -51,15 +36,6 @@ describe("findCodeStepInModule", () => {
     const step = codeStep({ key: "exported", name: "Exported", fn });
 
     expect(findCodeStepInModule({ step }, "exported")).toBe(fn);
-  });
-
-  test("finds a code step that exists only inside the default pipeline", () => {
-    const fn = () => 2;
-    const step = codeStep({ key: "embedded", name: "Embedded", fn });
-
-    expect(
-      findCodeStepInModule({ default: pipelineWith([step]) }, "embedded"),
-    ).toBe(fn);
   });
 
   test("returns undefined for an unknown key", () => {
@@ -76,7 +52,7 @@ describe("findCodeStepInModule", () => {
 
   test("ignores a code spec without a function at entrypoint.fn", () => {
     const step = codeStep({ key: "no-fn", name: "No fn", fn: () => 1 });
-    const stripped: StepDefinitionSpec = { ...step };
+    const stripped = toStepSpec(step);
     delete stripped.entrypoint;
 
     expect(findCodeStepInModule({ step: stripped }, "no-fn")).toBeUndefined();
@@ -89,46 +65,37 @@ describe("findCodeStepInModule", () => {
     expect(() => findCodeStepInModule({ first, second }, "dup")).toThrow(
       /"dup" is ambiguous/,
     );
-    expect(() =>
-      findCodeStepInModule({ first, default: pipelineWith([second]) }, "dup"),
-    ).toThrow(/"dup" is ambiguous/);
   });
 
-  test("does not throw when the same fn is exported and embedded", () => {
+  test("does not throw when the same fn is exported under two keys", () => {
     const fn = () => 1;
-    const exported = codeStep({ key: "both", name: "Both", fn });
-    const embedded = codeStep({ key: "both", name: "Both", fn });
+    const first = codeStep({ key: "both", name: "Both", fn });
+    const second = codeStep({ key: "both", name: "Both", fn });
 
-    expect(
-      findCodeStepInModule(
-        { step: exported, default: pipelineWith([embedded]) },
-        "both",
-      ),
-    ).toBe(fn);
+    expect(findCodeStepInModule({ first, second }, "both")).toBe(fn);
   });
 });
 
 describe("stepsInModule", () => {
-  test("dedupes a step reachable by export and by embedding", () => {
+  test("dedupes a step exported under two names", () => {
     const step = codeStep({ key: "once", name: "Once", fn: () => 1 });
     const alias = step;
 
-    expect(
-      stepsInModule({ step, alias, default: pipelineWith([step]) }),
-    ).toEqual([step]);
+    expect(stepsInModule({ step, alias })).toEqual([step]);
   });
 
-  test("takes embedded steps only from a pipeline default export", () => {
-    const step = codeStep({ key: "embedded", name: "Embedded", fn: () => 1 });
+  test("ignores the default export", () => {
+    const step = codeStep({ key: "default", name: "Default", fn: () => 1 });
 
-    expect(stepsInModule({ default: { notAPipeline: true } })).toEqual([]);
-    expect(stepsInModule({ pipeline: pipelineWith([step]) })).toEqual([]);
+    expect(stepsInModule({ default: step })).toEqual([]);
   });
 });
 
 describe("collector parity", () => {
   test("every collected code step is found by findCodeStepInModule in its sourceFile", async () => {
-    const dir = mkdtempSync(join(tmpdir(), "boboddy-code-step-lookup-test-"));
+    const dir = realpathSync(
+      mkdtempSync(join(tmpdir(), "scarn-code-step-lookup-test-")),
+    );
     const stepModule = join(
       import.meta.dir,
       "../src/definitions/steps/define-code-step",
@@ -150,20 +117,6 @@ export const inlineArrow = codeStep({ key: "inline-arrow", name: "Inline arrow",
         `${header}
 const shared = codeStep({ key: "shared", name: "Shared", fn: () => "shared" });
 export { shared };
-export default {
-  key: "pipeline",
-  name: "Pipeline",
-  description: null,
-  version: 1,
-  status: "active",
-  entryNodeKey: "done",
-  nodeDefinitions: [{ nodeKey: "done", kind: "succeed" }],
-  dependencyEdges: [],
-  _stepDefinitions: [
-    shared,
-    codeStep({ key: "embedded-only", name: "Embedded only", fn: () => "embedded" }),
-  ],
-};
 `,
       );
 
@@ -171,7 +124,6 @@ export default {
       const codeSteps = collected.steps.filter((s) => s.kind === "code");
       expect(codeSteps.map((s) => s.key).sort()).toEqual([
         "by-reference",
-        "embedded-only",
         "inline-arrow",
         "shared",
       ]);

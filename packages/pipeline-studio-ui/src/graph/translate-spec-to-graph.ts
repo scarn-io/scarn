@@ -1,413 +1,499 @@
-// Pure `PipelineDefinitionSpec` → React Flow `{nodes, edges}` translation. No
-// I/O, no randomness: the same spec + issues always produce the same graph, which is
-// what lets this run identically in the browser and (for the SSE payload
-// server-side, see `@boboddy/worker`'s `compute-studio-snapshot.ts`) in Bun.
+// Pure pipeline document → React Flow `{nodes, edges}` translation. No I/O,
+// no randomness: the same document + issues always produce the same graph,
+// which is what lets this run identically in the browser, in the Next app
+// (over a version's `definition_json`) and in the worker's studio server.
 //
 // `@xyflow/react`'s `Node`/`Edge` are imported type-only in
-// `studio-graph-types.ts`, so importing THIS module's types alone never pulls
-// in React or the React Flow runtime — only `dagre` (a plain graph-layout
-// library with no DOM dependency) is a real runtime dependency here, which is
-// why the worker's server can call `translateSpecToGraph` directly instead of
-// duplicating the layout logic.
+// `studio-graph-types.ts`, so importing THIS module never pulls in React or
+// the React Flow runtime — only `dagre` (a plain graph-layout library with no
+// DOM dependency) is a real runtime dependency here.
 import dagre from "dagre";
 import {
-  isWorkingNodeDefinition,
-  type DependencyEdgeSpec,
-  type NodeDefinitionSpec,
-  type ParallelBranchSpec,
-  type PipelineDefinitionSpec,
-  type SerializedBinding,
-} from "@boboddy/sdk/definitions/pipelines";
-import type { StepDefinitionSpec } from "@boboddy/sdk/definitions/steps";
+  CONVERSATION_RESULT_SCHEMA,
+  routeAt,
+  type JsonSchema,
+  type PipelineDocument,
+  type PipelineNode,
+  type StepCatalog,
+} from "@scarn/sdk/contracts/pipeline-document";
 import {
-  resolveSchemaType,
-  type DefinitionValidationIssue,
-  type JsonSchemaNode,
-} from "@boboddy/sdk/definitions/validation";
+  buildGraph,
+  type Edge as DocumentEdge,
+} from "@scarn/shared-core/pipelines";
+import { describeCatch, describeRoute } from "./describe-transition";
+import {
+  EDGE_LABEL_HEIGHT,
+  edgeLabelWidth,
+  FLOW_SOURCE_HANDLE,
+  FLOW_TARGET_HANDLE,
+  LOOP_SOURCE_HANDLE,
+  LOOP_TARGET_HANDLE,
+} from "./edge-route";
 import type {
   PipelineGraphSnapshot,
   StudioEdge,
+  StudioEdgeRoute,
+  StudioIssue,
   StudioNode,
-  StudioNodeInputField,
-  StudioNodeOutputSignal,
   StudioNodeShape,
-  StudioParallelBranchShape,
+  StudioPoint,
+  StudioSchemaField,
 } from "./studio-graph-types";
+import { nodeLayoutSize, orderedEdgeLabel } from "./studio-graph-visuals";
 
-const NODE_WIDTH = 220;
-const NODE_HEIGHT = 72;
+const LOOP_LANE_GAP = 36;
 
-function nodeLabel(node: NodeDefinitionSpec): string {
-  if (isWorkingNodeDefinition(node)) return node.stepName;
-  switch (node.kind) {
-    case "choice":
-    case "succeed":
-    case "fail":
-      return node.name ?? node.nodeKey;
-    default:
-      return node.nodeKey;
-  }
+/** Id of the synthetic node the document's `start` transition leaves from. */
+export const START_NODE_ID = "$start";
+
+function schemaType(schema: JsonSchema): string {
+  if (typeof schema === "boolean") return "any";
+  if (Array.isArray(schema.type)) return schema.type.join(" | ");
+  if (typeof schema.type === "string") return schema.type;
+  if (schema.$ref !== undefined) return schema.$ref.split("/").at(-1) ?? "ref";
+  if (schema.anyOf ?? schema.oneOf) return "union";
+  if (schema.enum !== undefined) return "enum";
+  return "any";
 }
 
-/**
- * An edge's on-graph label: a `loop` edge's `loopExit` (`next`/`onExhausted`)
- * or a `choice` edge's designer-only display summary (`label`, e.g.
- * `outcome == "reproduced"` / `otherwise`).
- */
-function edgeLabel(
-  edge: DependencyEdgeSpec,
-  nodeKindByKey: ReadonlyMap<string, NodeDefinitionSpec["kind"]>,
-): string | undefined {
-  const loopExit = edge.discriminantJson?.["loopExit"];
-  if (typeof loopExit === "string") return loopExit;
-  const label = edge.discriminantJson?.["label"];
-  if (nodeKindByKey.get(edge.fromNodeKey) === "choice" && typeof label === "string") {
-    return label;
-  }
-  return undefined;
-}
-
-// ─── Node/branch shape: a consumer step's input/output/result, for display ───
-//
-// Presentation-only mirror of `validate-input-bindings.ts`'s binding-shape
-// reads — same general approach (read `inputSchemaJson.properties`/
-// `required` off the step, resolve each property's type via
-// `resolveSchemaType`), but simplified: no cross-version unioning (studio is
-// local/offline, so `stepsByKey` picking the first version present per key
-// is enough — see `stepsByKey` below), and `describeBindingSource` here is a
-// short, human-readable label for display, not an error-message fragment.
-
-// This is the narrowing boundary for raw JSON read off a step's
-// `inputSchemaJson` — mirrors `validate-input-bindings.ts`'s own
-// `isJsonSchemaNode`.
-// eslint-disable-next-line local/no-unknown-parameter-type
-function isJsonSchemaNode(value: unknown): value is JsonSchemaNode {
-  return (
-    typeof value === "boolean" ||
-    (typeof value === "object" && value !== null && !Array.isArray(value))
-  );
-}
-
-/**
- * A short, human-readable description of what a bound field resolves to —
- * e.g. `signal "diff" of analyze`, `output of analyze`,
- * `pipeline input "x"`, `work_item.title`, `literal value`, `fan-out item`.
- * Presentation-only: doesn't need to match `validate-input-bindings.ts`'s
- * private `describeBindingSource` verbatim, though matching its general
- * voice is fine.
- */
-function describeBindingSource(binding: SerializedBinding): string {
-  switch (binding.source) {
-    case "step_signal":
-      return `signal "${binding.signalKey}" of ${binding.stepKey}`;
-    case "step_output":
-      return `output of ${binding.stepKey}`;
-    case "signals_list":
-      return `signals list of ${binding.stepKey}`;
-    case "pipeline_input":
-      return `pipeline input "${binding.path}"`;
-    case "work_item":
-      return `work_item.${binding.field}`;
-    case "literal":
-      return "literal value";
-    case "fan_out_item":
-      return "fan-out item";
-  }
-}
-
-/**
- * A consumer step's `additionalInput` fields, as declared on
- * `inputSchemaJson.properties`/`required` ONLY — deliberately excludes the
- * two always-auto-bound `workItemTitle`/`workItemDescription` fields (see
- * `bindings.ts`'s `serializeInputBindings`): they're fixed plumbing present
- * on every working node, not step-declared shape, and including them would
- * make every node's field count off by two with no useful signal.
- */
-function stepInputFields(
-  step: StepDefinitionSpec,
-  inputBindingsJson: Record<string, SerializedBinding>,
-): StudioNodeInputField[] {
-  const schema = step.inputSchemaJson;
-  if (!schema) return [];
-
-  const properties = schema["properties"];
-  if (!properties || typeof properties !== "object" || Array.isArray(properties)) {
-    return [];
-  }
-
-  const required = schema["required"];
-  const requiredFields = new Set(
-    Array.isArray(required)
-      ? required.filter((entry): entry is string => typeof entry === "string")
-      : [],
-  );
-
-  return Object.entries(properties as Record<string, unknown>)
-    .filter((entry): entry is [string, JsonSchemaNode] => isJsonSchemaNode(entry[1]))
-    .map(([name, node]) => {
-      const binding = inputBindingsJson[name];
-      return {
-        name,
-        type: resolveSchemaType(node, schema),
-        required: requiredFields.has(name),
-        boundTo: binding ? describeBindingSource(binding) : null,
-      };
-    });
-}
-
-/** A consumer step's declared output signals, as-is off `signalExtractorDefinitions`. */
-function stepOutputSignals(step: StepDefinitionSpec): StudioNodeOutputSignal[] {
-  return step.signalExtractorDefinitions.map((signal) => ({
-    key: signal.key,
-    type: signal.type,
-    required: signal.required,
+/** The top-level properties of an object schema, in declaration order. */
+export function schemaFields(schema: JsonSchema): StudioSchemaField[] {
+  if (typeof schema === "boolean" || !schema.properties) return [];
+  const required = new Set(schema.required ?? []);
+  return Object.entries(schema.properties).map(([name, property]) => ({
+    name,
+    type: schemaType(property),
+    required: required.has(name),
   }));
 }
 
-/**
- * Picks the first version present for a given step key — studio is
- * local/offline, and in practice there's exactly one version collected per
- * key, so (unlike the correctness-critical validation checks in
- * `validate-input-bindings.ts`) there's no need to union facts across
- * versions for this display-only lookup.
- */
-function buildStepsByKey(
-  steps: readonly StepDefinitionSpec[],
-): Map<string, StepDefinitionSpec> {
-  const byKey = new Map<string, StepDefinitionSpec>();
-  for (const step of steps) {
-    if (!byKey.has(step.key)) byKey.set(step.key, step);
-  }
-  return byKey;
-}
-
-function branchShape(
-  branchKey: string,
-  branch: ParallelBranchSpec,
-  stepsByKey: ReadonlyMap<string, StepDefinitionSpec>,
-  branchIssues: DefinitionValidationIssue[],
-): StudioParallelBranchShape {
-  const step = stepsByKey.get(branch.stepKey);
+function nodeShape(node: PipelineNode, steps: StepCatalog): StudioNodeShape {
+  if (node.kind !== "step") return { kind: "none" };
+  const step = steps[node.step];
+  if (!step) return { kind: "none" };
+  const resultSchema = step.resultSchema ?? CONVERSATION_RESULT_SCHEMA;
   return {
-    key: branchKey,
-    label: branch.stepName,
-    inputFields: step ? stepInputFields(step, branch.inputBindingsJson) : null,
-    issues: branchIssues,
+    kind: "step",
+    inputFields: schemaFields(step.inputSchema),
+    resultFields: schemaFields(resultSchema),
+    resultSchemaJson: typeof resultSchema === "boolean" ? {} : resultSchema,
+    errors: [...step.errors],
   };
 }
 
-/**
- * A node's step-derived shape — see `StudioNodeShape`'s own doc comment for
- * the discriminant and the `"none"` fallback rules.
- */
-function buildNodeShape(
-  node: NodeDefinitionSpec,
-  stepsByKey: ReadonlyMap<string, StepDefinitionSpec>,
-  nodeIssues: readonly DefinitionValidationIssue[],
-): StudioNodeShape {
-  if (isWorkingNodeDefinition(node)) {
-    const step = stepsByKey.get(node.stepKey);
-    if (!step) return { kind: "none" };
-    return {
-      kind: "step",
-      inputFields: stepInputFields(step, node.inputBindingsJson),
-      outputSignals: stepOutputSignals(step),
-      resultSchemaJson: step.resultSchemaJson,
-    };
-  }
+function edgeId(edge: DocumentEdge): string {
+  return `${edge.from ?? START_NODE_ID}:${edge.kind}:${String(edge.index)}->${edge.to}`;
+}
 
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- hand-edited/generated spec may claim `kind: "parallel"` without setting `branches`
-  if (node.kind === "parallel" && node.branches) {
-    const branches = Object.entries(node.branches).map(([branchKey, branch]) =>
-      branchShape(
-        branchKey,
-        branch,
-        stepsByKey,
-        nodeIssues.filter((issue) => issue.branchKey === branchKey),
-      ),
+function edgePointer(edge: DocumentEdge): string {
+  return `/${edge.pointer.map(String).join("/")}`;
+}
+
+function edgeLabel(
+  document: PipelineDocument,
+  edge: DocumentEdge,
+): string | undefined {
+  if (edge.from === null) return describeRoute(document.start, "start");
+  const node = document.nodes[edge.from];
+  if (!node || (node.kind !== "step" && node.kind !== "wait")) return undefined;
+  if (edge.kind === "catch") {
+    const entry = node.kind === "step" ? node.catch?.[edge.index] : undefined;
+    return entry ? describeCatch(entry) : "catch";
+  }
+  if (edge.kind === "start") return undefined;
+  const route = routeAt(node.next, edge.kind, edge.index);
+  return route
+    ? describeRoute(route, edge.kind, node.next?.match ?? "first")
+    : undefined;
+}
+
+function nodeMatch(node: PipelineNode): "first" | "all" | undefined {
+  if (node.kind !== "step" && node.kind !== "wait") return undefined;
+  return node.next ? (node.next.match ?? "first") : undefined;
+}
+
+/** The 1-based check order of a route of a `first` node with several routes. */
+function routeOrder(
+  document: PipelineDocument,
+  edge: DocumentEdge,
+): number | null {
+  if (edge.kind !== "route" || edge.from === null) return null;
+  const node = document.nodes[edge.from];
+  if (node?.kind !== "step" && node?.kind !== "wait") return null;
+  if (node.next === undefined || nodeMatch(node) !== "first") return null;
+  return node.next.routes.length > 1 ? edge.index + 1 : null;
+}
+
+/** Each merge node's waited-for sources: the titles of the nodes its `partial` routes come from. */
+function mergeSources(
+  document: PipelineDocument,
+  edges: readonly DocumentEdge[],
+): Map<string, string[]> {
+  const sources = new Map<string, string[]>();
+  for (const edge of edges) {
+    if (edge.lane !== "partial" || edge.from === null) continue;
+    const title = document.nodes[edge.from]?.title ?? edge.from;
+    const existing = sources.get(edge.to) ?? [];
+    if (!existing.includes(title)) sources.set(edge.to, [...existing, title]);
+  }
+  return sources;
+}
+
+/** The node id a document pointer such as `/nodes/fix/next/routes/0` is about. */
+export function nodeIdFromPath(path: string | undefined): string | undefined {
+  const match = /^\/nodes\/([^/]+)/.exec(path ?? "");
+  return match?.[1]?.replaceAll("~1", "/").replaceAll("~0", "~");
+}
+
+function isWithin(path: string, prefix: string): boolean {
+  return path === prefix || path.startsWith(`${prefix}/`);
+}
+
+function pushTo(
+  map: Map<string, StudioIssue[]>,
+  key: string,
+  issue: StudioIssue,
+): void {
+  map.set(key, [...(map.get(key) ?? []), issue]);
+}
+
+/**
+ * Attaches each issue for this pipeline to the edge whose transition its
+ * `path` points into, else to the node it names. Issues with no path inside
+ * a node or transition (document-level ones) attach nowhere and are shown in
+ * the issues list only.
+ */
+function attachIssues(
+  document: PipelineDocument,
+  edges: readonly DocumentEdge[],
+  issues: readonly StudioIssue[],
+): { byNode: Map<string, StudioIssue[]>; byEdge: Map<string, StudioIssue[]> } {
+  const byNode = new Map<string, StudioIssue[]>();
+  const byEdge = new Map<string, StudioIssue[]>();
+  for (const issue of issues) {
+    if (issue.pipelineKey !== document.key || issue.path === undefined)
+      continue;
+    const path = issue.path;
+    const edge = edges.find((candidate) =>
+      isWithin(path, edgePointer(candidate)),
     );
-    return { kind: "parallel", branches };
-  }
-
-  return { kind: "none" };
-}
-
-/**
- * Issues relevant to this pipeline, in the shape `checkRouteTargets`/
- * `checkSignalBindings` actually produce: `pipelineKey` set to this
- * pipeline's own key. Step-only checks (`signal-source-path`,
- * `health-check-*`) never carry a `pipelineKey` and are excluded here — they
- * have no `nodeKey` either, so they could never attach to a node/edge below
- * regardless; the caller is responsible for still surfacing them elsewhere
- * (see `StudioSnapshot.validationIssues`).
- */
-function issuesForPipeline(
-  spec: PipelineDefinitionSpec,
-  issues: readonly DefinitionValidationIssue[],
-): DefinitionValidationIssue[] {
-  return issues.filter((issue) => issue.pipelineKey === spec.key);
-}
-
-/**
- * True when `fromNodeKey -> toNodeKey` (in either direction) is a real,
- * compiler-derived edge in this pipeline — used to decide whether a
- * `signal-binding` issue (which names a `nodeKey`/`targetNodeKey` pair that
- * need not be directly connected) should attach to the edge itself or, when
- * there is no such edge, fall back to the consuming node.
- */
-function findDirectEdge(
-  edges: readonly DependencyEdgeSpec[],
-  a: string,
-  b: string,
-): DependencyEdgeSpec | undefined {
-  return edges.find(
-    (edge) =>
-      (edge.fromNodeKey === a && edge.toNodeKey === b) ||
-      (edge.fromNodeKey === b && edge.toNodeKey === a),
-  );
-}
-
-function edgeId(edge: DependencyEdgeSpec): string {
-  return `${edge.fromNodeKey}->${edge.toNodeKey}`;
-}
-
-/** Builds every node/edge with placeholder positions, before dagre lays them out. */
-function buildRawGraph(
-  spec: PipelineDefinitionSpec,
-  issues: readonly DefinitionValidationIssue[],
-  stepsByKey: ReadonlyMap<string, StepDefinitionSpec>,
-): { nodes: StudioNode[]; edges: StudioEdge[] } {
-  const nodeIssues = new Map<string, DefinitionValidationIssue[]>();
-  const edgeIssues = new Map<string, DefinitionValidationIssue[]>();
-
-  const addNodeIssue = (nodeKey: string, issue: DefinitionValidationIssue) => {
-    const existing = nodeIssues.get(nodeKey);
-    if (existing) existing.push(issue);
-    else nodeIssues.set(nodeKey, [issue]);
-  };
-  const addEdgeIssue = (id: string, issue: DefinitionValidationIssue) => {
-    const existing = edgeIssues.get(id);
-    if (existing) existing.push(issue);
-    else edgeIssues.set(id, [issue]);
-  };
-
-  for (const issue of issuesForPipeline(spec, issues)) {
-    if (issue.nodeKey === undefined) continue;
-
-    const direct =
-      issue.targetNodeKey !== undefined
-        ? findDirectEdge(spec.dependencyEdges, issue.nodeKey, issue.targetNodeKey)
-        : undefined;
-
-    if (direct) {
-      addEdgeIssue(edgeId(direct), issue);
-    } else {
-      addNodeIssue(issue.nodeKey, issue);
+    if (edge) {
+      pushTo(byEdge, edgeId(edge), issue);
+      continue;
     }
+    const nodeId = nodeIdFromPath(path);
+    if (nodeId !== undefined) pushTo(byNode, nodeId, issue);
   }
+  return { byNode, byEdge };
+}
 
-  const nodes: StudioNode[] = spec.nodeDefinitions.map((node) => {
-    const issuesForNode = nodeIssues.get(node.nodeKey) ?? [];
-    return {
-      id: node.nodeKey,
+function buildRawGraph(
+  document: PipelineDocument,
+  issues: readonly StudioIssue[],
+  steps: StepCatalog,
+): { nodes: StudioNode[]; edges: StudioEdge[] } {
+  const graph = buildGraph(document);
+  const { byNode, byEdge } = attachIssues(document, graph.edges, issues);
+  const merges = mergeSources(document, graph.edges);
+
+  const startNode: StudioNode = {
+    id: START_NODE_ID,
+    position: { x: 0, y: 0 },
+    data: {
+      label: "Start",
+      kind: "start",
+      issues: [],
+      shape: { kind: "none" },
+    },
+  };
+  const nodes: StudioNode[] = [
+    startNode,
+    ...Object.entries(document.nodes).map(([id, node]) => ({
+      id,
       position: { x: 0, y: 0 },
       data: {
-        label: nodeLabel(node),
+        label: node.title ?? id,
         kind: node.kind,
-        stepKey: isWorkingNodeDefinition(node) ? node.stepKey : undefined,
-        issues: issuesForNode,
-        shape: buildNodeShape(node, stepsByKey, issuesForNode),
+        stepKey: node.kind === "step" ? node.step : undefined,
+        waitFor: node.kind === "wait" ? node.for : undefined,
+        match: nodeMatch(node),
+        mergeWaitsFor: merges.get(id),
+        issues: byNode.get(id) ?? [],
+        shape: nodeShape(node, steps),
       },
-    };
-  });
+    })),
+  ];
 
-  const nodeKindByKey = new Map(
-    spec.nodeDefinitions.map((node) => [node.nodeKey, node.kind] as const),
-  );
-  const edges: StudioEdge[] = spec.dependencyEdges.map((edge) => ({
+  const edges: StudioEdge[] = graph.edges.map((edge) => ({
     id: edgeId(edge),
-    source: edge.fromNodeKey,
-    target: edge.toNodeKey,
-    label: edgeLabel(edge, nodeKindByKey),
-    data: { issues: edgeIssues.get(edgeId(edge)) ?? [] },
+    source: edge.from ?? START_NODE_ID,
+    target: edge.to,
+    label: edgeLabel(document, edge),
+    data: {
+      kind: edge.kind,
+      index: edge.index,
+      lane: edge.lane,
+      order: routeOrder(document, edge),
+      issues: byEdge.get(edgeId(edge)) ?? [],
+    },
   }));
 
   return { nodes, edges };
 }
 
-/** Runs dagre over the raw graph and writes each node's computed position back in. */
-function layoutGraph(nodes: StudioNode[], edges: StudioEdge[]): StudioNode[] {
-  const graph = new dagre.graphlib.Graph();
-  graph.setGraph({ rankdir: "TB", nodesep: 48, ranksep: 96 });
+/**
+ * The ids of the edges that point back up the flow: a self loop, or an edge
+ * to a node still on the depth-first path from the start node (visiting
+ * routes in document order). Removing them leaves a DAG that reads top to
+ * bottom; they are drawn as loops instead.
+ */
+function findBackEdges(nodes: StudioNode[], edges: StudioEdge[]): Set<string> {
+  const outgoing = new Map<string, StudioEdge[]>();
+  for (const edge of edges) {
+    outgoing.set(edge.source, [...(outgoing.get(edge.source) ?? []), edge]);
+  }
+  const back = new Set<string>();
+  const state = new Map<string, "active" | "done">();
+  const visit = (id: string): void => {
+    state.set(id, "active");
+    for (const edge of outgoing.get(id) ?? []) {
+      const targetState = state.get(edge.target);
+      if (targetState === "active") back.add(edge.id);
+      else if (targetState === undefined) visit(edge.target);
+    }
+    state.set(id, "done");
+  };
+  for (const node of nodes) {
+    if (!state.has(node.id)) visit(node.id);
+  }
+  return back;
+}
+
+type Box = { left: number; right: number; top: number; bottom: number };
+
+function boxAround(center: StudioPoint, width: number, height: number): Box {
+  return {
+    left: center.x - width / 2,
+    right: center.x + width / 2,
+    top: center.y - height / 2,
+    bottom: center.y + height / 2,
+  };
+}
+
+/**
+ * Picks a vertical lane for each loop edge, to the right of every node and
+ * label box between its two ends and of every loop lane already placed over
+ * an overlapping stretch. Shorter loops are placed first so they nest inside
+ * longer ones instead of crossing them.
+ */
+function placeLoopLanes(
+  loops: readonly { id: string; top: number; bottom: number; labelWidth: number }[],
+  obstacles: readonly Box[],
+): Map<string, number> {
+  const placed: { top: number; bottom: number; right: number }[] = [];
+  const lanes = new Map<string, number>();
+  const sorted = [...loops].sort(
+    (a, b) => a.bottom - a.top - (b.bottom - b.top),
+  );
+  for (const loop of sorted) {
+    const overlaps = (box: { top: number; bottom: number }) =>
+      box.bottom > loop.top && box.top < loop.bottom;
+    const clearOf = Math.max(
+      ...obstacles.filter(overlaps).map((box) => box.right),
+      ...placed.filter(overlaps).map((lane) => lane.right),
+    );
+    const halfLabel = Math.max(loop.labelWidth / 2, 0);
+    const laneX = clearOf + LOOP_LANE_GAP + halfLabel;
+    lanes.set(loop.id, laneX);
+    placed.push({ top: loop.top, bottom: loop.bottom, right: laneX + halfLabel });
+  }
+  return lanes;
+}
+
+/**
+ * Runs dagre over the graph minus its back edges, giving every forward edge
+ * label a slot of its own so labels never overlap each other or a node, then
+ * routes each back edge as a loop up a lane clear of everything it passes.
+ * Writes node positions and each edge's `route` back in.
+ */
+function layoutGraph(
+  nodes: StudioNode[],
+  edges: StudioEdge[],
+): { nodes: StudioNode[]; edges: StudioEdge[] } {
+  const backEdges = findBackEdges(nodes, edges);
+  const graph = new dagre.graphlib.Graph({ multigraph: true });
+  graph.setGraph({ rankdir: "TB", nodesep: 40, edgesep: 24, ranksep: 64 });
   graph.setDefaultEdgeLabel(() => ({}));
 
+  const sizes = new Map(nodes.map((node) => [node.id, nodeLayoutSize(node.data)]));
   for (const node of nodes) {
-    graph.setNode(node.id, { width: NODE_WIDTH, height: NODE_HEIGHT });
+    graph.setNode(node.id, { ...(sizes.get(node.id) ?? { width: 0, height: 0 }) });
   }
+  const labelText = (edge: StudioEdge) =>
+    orderedEdgeLabel(
+      typeof edge.label === "string" ? edge.label : undefined,
+      edge.data?.order ?? null,
+    );
   for (const edge of edges) {
-    graph.setEdge(edge.source, edge.target);
+    if (backEdges.has(edge.id)) continue;
+    const text = labelText(edge);
+    graph.setEdge(
+      edge.source,
+      edge.target,
+      text
+        ? { width: edgeLabelWidth(text), height: EDGE_LABEL_HEIGHT, labelpos: "c" }
+        : { width: 0, height: 0 },
+      edge.id,
+    );
   }
 
   dagre.layout(graph);
 
-  return nodes.map((node) => {
-    const laidOut = graph.node(node.id) as { x: number; y: number } | undefined;
-    if (!laidOut) return node;
-    // dagre positions are node-centered; React Flow positions from the
-    // top-left corner.
-    return {
-      ...node,
-      position: {
-        x: laidOut.x - NODE_WIDTH / 2,
-        y: laidOut.y - NODE_HEIGHT / 2,
+  const centers = new Map<string, StudioPoint>();
+  for (const node of nodes) {
+    const laidOut = graph.node(node.id) as StudioPoint | undefined;
+    if (laidOut) centers.set(node.id, { x: laidOut.x, y: laidOut.y });
+  }
+
+  const obstacles: Box[] = [];
+  for (const node of nodes) {
+    const center = centers.get(node.id);
+    const size = sizes.get(node.id);
+    if (center && size) obstacles.push(boxAround(center, size.width, size.height));
+  }
+
+  const flowRoutes = new Map<string, StudioEdgeRoute>();
+  for (const edge of edges) {
+    if (backEdges.has(edge.id)) continue;
+    const laidOut = graph.edge(edge.source, edge.target, edge.id) as
+      | { points?: StudioPoint[]; x?: number; y?: number; width: number }
+      | undefined;
+    if (!laidOut) continue;
+    const label =
+      laidOut.width > 0 && laidOut.x !== undefined && laidOut.y !== undefined
+        ? { x: laidOut.x, y: laidOut.y }
+        : null;
+    if (label) obstacles.push(boxAround(label, laidOut.width, EDGE_LABEL_HEIGHT));
+    flowRoutes.set(edge.id, {
+      kind: "flow",
+      waypoints: (laidOut.points ?? []).slice(1, -1).map(({ x, y }) => ({ x, y })),
+      label,
+    });
+  }
+
+  const loops = edges.flatMap((edge) => {
+    if (!backEdges.has(edge.id)) return [];
+    const source = centers.get(edge.source);
+    const target = centers.get(edge.target);
+    if (!source || !target) return [];
+    const text = labelText(edge);
+    const halfHeight = (id: string) => (sizes.get(id)?.height ?? 0) / 2;
+    return [
+      {
+        id: edge.id,
+        top: Math.min(target.y - halfHeight(edge.target), source.y - halfHeight(edge.source)),
+        bottom: Math.max(source.y + halfHeight(edge.source), target.y + halfHeight(edge.target)),
+        labelWidth: text ? edgeLabelWidth(text) : 0,
       },
-    };
+    ];
   });
+  const lanes = placeLoopLanes(loops, obstacles);
+
+  return {
+    nodes: nodes.map((node) => {
+      const center = centers.get(node.id);
+      const size = sizes.get(node.id);
+      if (!center || !size) return node;
+      return {
+        ...node,
+        position: { x: center.x - size.width / 2, y: center.y - size.height / 2 },
+      };
+    }),
+    edges: edges.map((edge) => {
+      const laneX = lanes.get(edge.id);
+      const route: StudioEdgeRoute | undefined =
+        laneX !== undefined ? { kind: "loop", laneX } : flowRoutes.get(edge.id);
+      if (!route || !edge.data) return edge;
+      const isLoop = route.kind === "loop";
+      return {
+        ...edge,
+        sourceHandle: isLoop ? LOOP_SOURCE_HANDLE : FLOW_SOURCE_HANDLE,
+        targetHandle: isLoop ? LOOP_TARGET_HANDLE : FLOW_TARGET_HANDLE,
+        data: { ...edge.data, route },
+      };
+    }),
+  };
 }
 
 /**
- * Translates one pipeline's compiled spec into a React Flow graph, with every
- * enriched `DefinitionValidationIssue` attached to the node (or, when it
- * names a real edge, the edge) it is about. Positions are always
- * auto-computed by `dagre` here — never persisted or author-supplied,
- * consistent with the designer's "no two-way editing" v1 scope.
+ * Translates one pipeline document into a React Flow graph: a synthetic
+ * start node, one node per document node, and one edge per `start`
+ * transition, `next` route (`otherwise` included) and `catch` handler
+ * (labelled with its condition, `always`, `otherwise`, `each`/`partial` lane
+ * marker or caught error names). Step and wait nodes carry their `match`
+ * mode, merge nodes the sources of their `partial` routes, and routes of a
+ * `first` node with several routes their check order. Every issue is
+ * attached to the edge or node its JSON pointer names. Positions are always
+ * computed by `dagre`; every edge carries its `route` (see `layoutGraph`),
+ * which a renderer draws with `routeEdge`.
  *
- * `steps` is the batch of step specs this pipeline's nodes reference — used
- * only to resolve each node's `shape` (see `StudioNodeShape`). Pass `[]`
- * when no step specs are available (e.g. hand-authored fixtures with no
- * separate step collection) — every node's `shape` then falls back to
- * `{kind: "none"}`.
+ * `steps` resolves each step node's input/result shape (see
+ * `StudioNodeShape`). Pass `{}` when no step catalog is available; every
+ * node's `shape` then falls back to `{kind: "none"}`.
  */
-export function translateSpecToGraph(
-  spec: PipelineDefinitionSpec,
-  issues: readonly DefinitionValidationIssue[],
-  steps: readonly StepDefinitionSpec[] = [],
+export function translateDocumentToGraph(
+  document: PipelineDocument,
+  issues: readonly StudioIssue[] = [],
+  steps: StepCatalog = {},
 ): { nodes: StudioNode[]; edges: StudioEdge[] } {
-  const stepsByKey = buildStepsByKey(steps);
-  const { nodes, edges } = buildRawGraph(spec, issues, stepsByKey);
-  return { nodes: layoutGraph(nodes, edges), edges };
+  const { nodes, edges } = buildRawGraph(document, issues, steps);
+  return layoutGraph(nodes, edges);
 }
 
-/** `translateSpecToGraph`, wrapped with the pipeline's own key/name. */
+/** `translateDocumentToGraph`, wrapped with the pipeline's own key/title. */
 export function translatePipelineToSnapshot(
-  spec: PipelineDefinitionSpec,
-  issues: readonly DefinitionValidationIssue[],
-  steps: readonly StepDefinitionSpec[] = [],
+  document: PipelineDocument,
+  issues: readonly StudioIssue[] = [],
+  steps: StepCatalog = {},
 ): PipelineGraphSnapshot {
-  const { nodes, edges } = translateSpecToGraph(spec, issues, steps);
-  return { key: spec.key, name: spec.name, nodes, edges };
+  const { nodes, edges } = translateDocumentToGraph(document, issues, steps);
+  return {
+    key: document.key,
+    name: document.title ?? document.key,
+    nodes,
+    edges,
+  };
 }
 
+export { describeCondition } from "./describe-transition";
+export {
+  edgeDashArray,
+  forkMarker,
+  mergeBadge,
+  nodeLayoutSize,
+  orderedEdgeLabel,
+} from "./studio-graph-visuals";
+export {
+  FLOW_SOURCE_HANDLE,
+  FLOW_TARGET_HANDLE,
+  LOOP_SOURCE_HANDLE,
+  LOOP_TARGET_HANDLE,
+  graphBounds,
+  routeEdge,
+} from "./edge-route";
 export type {
+  BrokenPipeline,
   PipelineGraphSnapshot,
   StudioEdge,
   StudioEdgeData,
+  StudioEdgeKind,
+  StudioEdgeRoute,
+  StudioPoint,
+  StudioIssue,
   StudioNode,
   StudioNodeData,
-  StudioNodeInputField,
-  StudioNodeOutputSignal,
+  StudioNodeKind,
   StudioNodeShape,
-  StudioParallelBranchShape,
+  StudioSchemaField,
   StudioSnapshot,
 } from "./studio-graph-types";
-export type { BrokenPipeline } from "@boboddy/sdk/push";

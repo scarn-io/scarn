@@ -2,14 +2,16 @@ import { access, readFile } from "node:fs/promises";
 import path from "node:path";
 
 export const CURRENT_EXECUTION_INFO_RELATIVE_PATH =
-  ".boboddy/current-execution/execution.json";
+  ".scarn/current-execution/execution.json";
 
 export type CurrentExecutionInfo = {
-  taskId: string;
+  taskRunId: string;
   resultSchemaJson: Record<string, unknown> | null;
+  /** How many more turns this step allows; `null` outside a run. */
+  turnsRemaining: number | null;
 };
 
-/** Reads `.boboddy/current-execution/execution.json` under the workspace. */
+/** Reads `.scarn/current-execution/execution.json` under the workspace. */
 export async function loadCurrentExecutionInfo(
   worktree: string,
 ): Promise<CurrentExecutionInfo> {
@@ -36,12 +38,12 @@ export async function loadCurrentExecutionInfo(
   }
 
   const parsedRecord = parsed as Record<string, unknown>;
-  const taskId = parsedRecord["taskId"];
+  const taskRunId = parsedRecord["taskRunId"];
   const resultSchemaJson = parsedRecord["resultSchemaJson"];
 
-  if (typeof taskId !== "string" || taskId.length === 0) {
+  if (typeof taskRunId !== "string" || taskRunId.length === 0) {
     throw new Error(
-      `Current execution metadata file at ${CURRENT_EXECUTION_INFO_RELATIVE_PATH} must contain a non-empty taskId`,
+      `Current execution metadata file at ${CURRENT_EXECUTION_INFO_RELATIVE_PATH} must contain a non-empty taskRunId`,
     );
   }
 
@@ -54,9 +56,15 @@ export async function loadCurrentExecutionInfo(
     );
   }
 
+  const turnsRemaining = parsedRecord["turnsRemaining"];
+
   return {
-    taskId,
+    taskRunId,
     resultSchemaJson: resultSchemaJson as Record<string, unknown> | null,
+    turnsRemaining:
+      typeof turnsRemaining === "number" && Number.isInteger(turnsRemaining)
+        ? turnsRemaining
+        : null,
   };
 }
 

@@ -14,7 +14,7 @@ export type PromptTemplateContext<
 > = {
   input: PromptInputProxy<TInput>;
   env: TPromptEnv;
-  boboddy: {
+  scarn: {
     artifactsDir: string;
   };
 };
@@ -46,9 +46,9 @@ export function createPromptTemplateContext<
   return {
     input: createPromptInputProxy(["input"]),
     env: createPromptInputProxy(["env"]) as unknown as TPromptEnv,
-    boboddy: {
+    scarn: {
       artifactsDir: createPromptInputProxy([
-        "boboddy",
+        "scarn",
         "artifactsDir",
       ]),
     },

@@ -1,12 +1,12 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
-import type { AuthProfile } from "@boboddy/worker";
+import type { AuthProfile } from "@scarn/worker";
 
 /**
  * `telemetry.ts` reaches into two real modules that must not touch the
- * network or the developer's real `~/.boboddy/config.jsonc` in a test run:
- * `@boboddy/observability/analytics/server` (mocked fully, mirroring
+ * network or the developer's real `~/.scarn/config.jsonc` in a test run:
+ * `@scarn/observability/analytics/server` (mocked fully, mirroring
  * `packages/observability/tests/analytics/server.test.ts`) and
- * `@boboddy/worker` (mocked partially — only the
+ * `@scarn/worker` (mocked partially — only the
  * three functions telemetry actually calls; everything else stays real, so
  * command modules pulled in transitively still resolve).
  *
@@ -34,7 +34,7 @@ let shutdownCalls: (number | undefined)[] = [];
 let initialized = false;
 let captureShouldThrow = false;
 
-void mock.module("@boboddy/observability/analytics/server", () => ({
+void mock.module("@scarn/observability/analytics/server", () => ({
   init: (options: InitArgs) => {
     initCalls.push(options);
     initialized = Boolean(options.key && options.host);
@@ -67,8 +67,8 @@ let fakeTelemetryDisabled = false;
 let fakeProfiles: Record<string, AuthProfile | null> = {};
 let getOrCreateAnonymousIdCalls = 0;
 
-const realWorker = await import("@boboddy/worker");
-void mock.module("@boboddy/worker", () => ({
+const realWorker = await import("@scarn/worker");
+void mock.module("@scarn/worker", () => ({
   ...realWorker,
   getOrCreateAnonymousId: () => {
     getOrCreateAnonymousIdCalls += 1;
@@ -119,9 +119,9 @@ beforeEach(() => {
   fakeBaked = {};
   resetEnv();
   process.env["POSTHOG_CLI_KEY"] = "phc_test";
-  process.env["POSTHOG_CLI_HOST"] = "https://t.boboddy.dev";
-  delete process.env["BOBODDY_TELEMETRY_DISABLED"];
-  delete process.env["BOBODDY_TELEMETRY_DEBUG"];
+  process.env["POSTHOG_CLI_HOST"] = "https://t.scarn.io";
+  delete process.env["SCARN_TELEMETRY_DISABLED"];
+  delete process.env["SCARN_TELEMETRY_DEBUG"];
   telemetry.resetTelemetryStateForTests();
 });
 
@@ -162,8 +162,8 @@ describe("captureMilestone", () => {
     expect(getOrCreateAnonymousIdCalls).toBe(0);
   });
 
-  test("is a silent no-op when BOBODDY_TELEMETRY_DISABLED=1", () => {
-    process.env["BOBODDY_TELEMETRY_DISABLED"] = "1";
+  test("is a silent no-op when SCARN_TELEMETRY_DISABLED=1", () => {
+    process.env["SCARN_TELEMETRY_DISABLED"] = "1";
     telemetry.captureMilestone("cli_init_started");
     expect(captureCalls).toEqual([]);
     expect(initCalls).toEqual([]);
@@ -177,7 +177,7 @@ describe("captureMilestone", () => {
   });
 
   test("never creates/persists an anonymous id when disabled via env var", () => {
-    process.env["BOBODDY_TELEMETRY_DISABLED"] = "1";
+    process.env["SCARN_TELEMETRY_DISABLED"] = "1";
     telemetry.captureMilestone("cli_init_started");
     expect(getOrCreateAnonymousIdCalls).toBe(0);
   });
@@ -280,7 +280,7 @@ describe("key and host resolution", () => {
     fakeBaked = { key: "phc_baked", host: "https://baked.example.com" };
     telemetry.captureMilestone("cli_init_started");
     expect(initCalls).toEqual([
-      { key: "phc_test", host: "https://t.boboddy.dev" },
+      { key: "phc_test", host: "https://t.scarn.io" },
     ]);
   });
 
@@ -379,8 +379,8 @@ describe("identity", () => {
 });
 
 describe("debug mode", () => {
-  test("BOBODDY_TELEMETRY_DEBUG=1 still sends the event (alongside printing)", () => {
-    process.env["BOBODDY_TELEMETRY_DEBUG"] = "1";
+  test("SCARN_TELEMETRY_DEBUG=1 still sends the event (alongside printing)", () => {
+    process.env["SCARN_TELEMETRY_DEBUG"] = "1";
     telemetry.captureMilestone("cli_init_started");
     expect(captureCalls).toHaveLength(1);
   });
@@ -435,4 +435,25 @@ describe("run() failure reporting", () => {
     ]);
     expect(shutdownCalls).toEqual([1500]);
   });
+
+  test.each([
+    [["pipelines", "push", "--no-such-flag"], "pipelines push"],
+    [["pipelines"], "pipelines"],
+    [["no-such-command"], "unknown"],
+    [[], "unknown"],
+  ])(
+    "reports a rejected command line %j as invalid_usage on %s",
+    async (argv, command) => {
+      const { run } = await import("../src/cli");
+
+      const exitCode = await run(argv);
+
+      expect(exitCode).toBe(1);
+      expect(
+        captureCalls
+          .filter((call) => call.event === "cli_command_failed")
+          .map((call) => call.properties),
+      ).toEqual([{ command, code: "invalid_usage", ...context("env") }]);
+    },
+  );
 });

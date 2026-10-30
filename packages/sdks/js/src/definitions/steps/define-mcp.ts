@@ -198,7 +198,7 @@ function assertEnvNames(
     }
     if (isReservedEnvVarName(name)) {
       throw new Error(
-        `defineMcp "${label}": env var "${name}" is reserved for Boboddy.`,
+        `defineMcp "${label}": env var "${name}" is reserved for Scarn.`,
       );
     }
     if (seen.has(name)) {

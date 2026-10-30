@@ -1,16 +1,16 @@
 import type { ArgumentsCamelCase, Argv, CommandModule } from "yargs";
 import * as clack from "@clack/prompts";
-import type { createBoboddyClient } from "@boboddy/sdk";
-import { AnalyticsEvents } from "@boboddy/observability/analytics/events";
+import type { createScarnClient } from "@scarn/sdk";
+import { AnalyticsEvents } from "@scarn/observability/analytics/events";
 import {
   checkOpencodeProviderCredentials,
   completeProjectHandoff,
   hasDevcontainer,
   localConfigSetup,
-  resolveBoboddyBaseUrl,
+  resolveScarnBaseUrl,
   resolveGitRepository,
   verifyRequirements,
-} from "@boboddy/worker";
+} from "@scarn/worker";
 import { openBrowser } from "../auth/browser";
 import { buildProjectsNewUrl } from "../lib/build-projects-new-url";
 import { withReporter } from "../lib/command-output";
@@ -38,9 +38,9 @@ import type { BaseReporter } from "../lib/reporter-types";
 import { createSignInPorts, ensureSignedIn } from "../lib/ensure-signed-in";
 
 /**
- * `boboddy init` — everything a repository needs before pipelines exist:
+ * `scarn init` — everything a repository needs before pipelines exist:
  * requirements, global config, and the project record in
- * `.boboddy/boboddy.jsonc`. It writes no analysis of the repository: the
+ * `.scarn/scarn.jsonc`. It writes no analysis of the repository: the
  * pipeline designer orients itself by reading the repository directly.
  *
  * The very first thing it does — before auth or project-matching — is
@@ -50,11 +50,11 @@ import { createSignInPorts, ensureSignedIn } from "../lib/ensure-signed-in";
  * touches the filesystem — the project config, the devcontainer check, and
  * the designer — so `init` behaves the same from any subdirectory of a repo
  * (including inside a submodule). See `lib/init-repository-resolution.ts` and
- * `resolveGitRepository` in `@boboddy/worker`.
+ * `resolveGitRepository` in `@scarn/worker`.
  *
- * Signing in to Boboddy heals the same way: a missing or no-longer-valid
+ * Signing in to Scarn heals the same way: a missing or no-longer-valid
  * session runs the device login inline in an interactive terminal, and only a
- * non-interactive one stops with "run `boboddy auth login`". See
+ * non-interactive one stops with "run `scarn auth login`". See
  * `lib/ensure-signed-in.ts`.
  *
  * The AI provider is only *reported*, never required: `init` checks the
@@ -76,7 +76,7 @@ import { createSignInPorts, ensureSignedIn } from "../lib/ensure-signed-in";
  * because the handoff below is what fixes it.
  *
  * It deliberately does NOT create any pipeline. Authoring happens in exactly
- * one place — `boboddy pipelines design` — which this command hands over to.
+ * one place — `scarn pipelines design` — which this command hands over to.
  * An optional `--work-item-id` is carried straight through to that handoff
  * (see `buildDesignerHandoffPorts`) rather than discarded, for the same
  * reason `pipelines design` accepts it directly: onboarding may already have
@@ -140,7 +140,7 @@ export interface LinkProjectPorts {
 }
 
 function buildLinkProjectPorts(input: {
-  client: ReturnType<typeof createBoboddyClient>;
+  client: ReturnType<typeof createScarnClient>;
   headers: { Authorization: string };
   repoRoot: string;
 }): LinkProjectPorts {
@@ -155,7 +155,7 @@ function buildLinkProjectPorts(input: {
 }
 
 /**
- * Make sure `<repoRoot>/.boboddy/boboddy.jsonc` names this repository's
+ * Make sure `<repoRoot>/.scarn/scarn.jsonc` names this repository's
  * project: keep an existing config, link a matching project, or — when there
  * is none — create one through the API and fall back to the browser hand-off.
  * Exported so the whole ladder is testable against a fake client.
@@ -164,7 +164,7 @@ export async function linkInitProject(input: {
   baseUrl: string;
   interactive: boolean;
   reporter: BaseReporter;
-  client: ReturnType<typeof createBoboddyClient>;
+  client: ReturnType<typeof createScarnClient>;
   headers: { Authorization: string };
   repo: ResolvedRepository;
   ports: LinkProjectPorts;
@@ -246,7 +246,7 @@ interface InitArguments {
 
 function runInit(argv: ArgumentsCamelCase<InitArguments>): Promise<void> {
   return withReporter("init", async ({ reporter, logger }) => {
-    const baseUrl = resolveBoboddyBaseUrl(argv.baseUrl);
+    const baseUrl = resolveScarnBaseUrl(argv.baseUrl);
     const interactive = process.stdin.isTTY && process.stdout.isTTY;
 
     // A signed-in session from an earlier run gives every milestone below
@@ -329,7 +329,7 @@ const addInitOptions = (argv: Argv<object>) =>
   argv
     .option("base-url", {
       type: "string",
-      describe: "Boboddy app base URL",
+      describe: "Scarn app base URL",
     })
     .option("workItemId", {
       alias: "work-item-id",
@@ -347,7 +347,7 @@ const addInitOptions = (argv: Argv<object>) =>
 
 export const initCommand: CommandModule = {
   command: "init",
-  describe: "Initialize boboddy globally and for the current project",
+  describe: "Initialize scarn globally and for the current project",
   builder: addInitOptions,
   handler: runInit,
 };

@@ -18,7 +18,7 @@ import type {
   PipelineExecution,
   Task,
   WorkItem,
-} from "@boboddy/platform-client";
+} from "@scarn/shared-core";
 
 /**
  * `execution view --log`'s full-log file is exercised in-process rather than
@@ -27,7 +27,7 @@ import type {
  * these tests own (the real, disk-backed `saveFullLog`). Instead,
  * `../src/lib/cli-api-client` and `../src/lib/execution-log-cache` are mocked
  * (mirroring `telemetry.test.ts`'s `mock.module` pattern), while the real
- * `investigateExecution` (`@boboddy/platform-client`, unmocked) and the real
+ * `investigateExecution` (`@scarn/shared-core`, unmocked) and the real
  * `createFullLogSaver` (only redirected to a temp dir) still run — so this
  * proves the actual wiring in `commands/execution.ts` and the actual disk
  * write. Neither mocked module is imported by any other test file in this
@@ -78,7 +78,7 @@ const { executionCommand } = await import("../src/commands/execution");
 
 /** Log lines whose rendered form comfortably exceeds `MAX_LOG_RENDER_CHARS`
  * (20,000 chars), mirroring
- * `packages/platform-client/tests/investigate-execution.test.ts`'s own
+ * `packages/shared-core/tests/investigate-execution.test.ts`'s own
  * `makeOversizedLogLines`. */
 function makeOversizedLogLines(): LogLine[] {
   return Array.from({ length: 2_000 }, (_, index) => ({
@@ -123,7 +123,7 @@ function buildFakeInvestigateClient(
             status: "running",
             satisfactionStatus: "not_evaluated",
             taskId: TASK_ID,
-            workBranch: "boboddy/investigate-1",
+            workBranch: "scarn/investigate-1",
             outputJson: null,
             evaluation: null,
             acceptedByUserId: null,
@@ -178,8 +178,8 @@ function buildFakeInvestigateClient(
     workItems: {
       getWorkItem: () => Promise.resolve({ data: workItem, error: undefined }),
     },
-    tasks: {
-      getTask: () => Promise.resolve({ data: task, error: undefined }),
+    taskRuns: {
+      getTaskRun: () => Promise.resolve({ data: task, error: undefined }),
       readTaskLogs: () =>
         Promise.resolve({
           data: {
@@ -245,7 +245,7 @@ async function runExecutionCommand(
 describe("execution view --log full log file", () => {
   beforeEach(() => {
     logCacheDir = mkdtempSync(
-      join(tmpdir(), "boboddy-execution-log-cache-test-"),
+      join(tmpdir(), "scarn-execution-log-cache-test-"),
     );
     recordedSaves.length = 0;
     failNextSave = null;

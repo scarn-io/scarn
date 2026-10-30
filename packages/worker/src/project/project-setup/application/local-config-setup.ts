@@ -1,6 +1,6 @@
-import type { createBoboddyClient } from "@boboddy/sdk";
-import { stripGitUrlCredentials } from "@boboddy/sdk/git-url";
-import { createLazyLogger } from "@boboddy/observability/logging/host";
+import type { createScarnClient } from "@scarn/sdk";
+import { stripGitUrlCredentials } from "@scarn/sdk/git-url";
+import { createLazyLogger } from "@scarn/observability/logging/host";
 import { projectConfigRef } from "../../project-config/domain/project-config";
 import { deriveProjectName } from "../../project-config/infra/fs-project-config-repo";
 import { readProjectConfig } from "../../project-config/application/read-project-config";
@@ -9,21 +9,21 @@ import { findMatchingProject } from "./find-matching-project";
 import { resolveGitRepository } from "./resolve-git-repository";
 
 const logger = createLazyLogger({
-  name: "@boboddy/worker",
+  name: "@scarn/worker",
   scope: "local-config-setup",
 });
 
 /**
  * The three ways `localConfigSetup` can leave things (#141):
  *
- * - `already-configured` — `.boboddy/boboddy.jsonc` already has a
+ * - `already-configured` — `.scarn/scarn.jsonc` already has a
  *   `project`; nothing else ran.
  * - `matched` — an existing project's `gitUrl` points at the same repository
  *   as this repo's remote (see `findMatchingProject`); its `owner/slug` ref
- *   has been persisted to `.boboddy/boboddy.jsonc`. `matchCount` above one means several projects
+ *   has been persisted to `.scarn/scarn.jsonc`. `matchCount` above one means several projects
  *   point at this repo and the oldest was picked.
  * - `handoff-required` — no project matches this remote. Nothing is created
- *   here. The caller (`boboddy init`) either creates the project through the
+ *   here. The caller (`scarn init`) either creates the project through the
  *   API from a GitHub repo the user's installation covers, or sends the user
  *   to `/projects/new` in a browser — pre-filled with `gitUrl`/`suggestedName`
  *   — and polls `completeProjectHandoff` until it exists.
@@ -33,7 +33,7 @@ export type LocalConfigSetupResult =
   | {
       status: "matched";
       projectId: string;
-      /** The `owner/slug` ref written to `.boboddy/boboddy.jsonc`. */
+      /** The `owner/slug` ref written to `.scarn/scarn.jsonc`. */
       project: string;
       projectName: string;
       matchCount: number;
@@ -41,10 +41,10 @@ export type LocalConfigSetupResult =
   | { status: "handoff-required"; gitUrl: string; suggestedName: string };
 
 export async function localConfigSetup(input: {
-  client: ReturnType<typeof createBoboddyClient>;
+  client: ReturnType<typeof createScarnClient>;
   headers: { Authorization: string };
   /**
-   * The repo root `.boboddy/` lives in. Defaults to `process.cwd()`; `init`
+   * The repo root `.scarn/` lives in. Defaults to `process.cwd()`; `init`
    * passes the resolved root so a run from a subdirectory still writes there.
    */
   rootDir?: string;

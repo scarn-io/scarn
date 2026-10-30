@@ -1,26 +1,26 @@
 // Knowledge assets for the `pipeline-designer` primary agent injected into the
-// OpenCode TUI by `boboddy pipelines design`.
+// OpenCode TUI by `scarn pipelines design`.
 //
 // Every asset is inlined at build time via Bun's `with { type: "text" }` import
 // attribute, so the `bun build --compile` binary carries them as strings —
 // nothing is read from disk at runtime.
 //
 // They are concatenated into ONE prompt string rather than written into the
-// user's `.boboddy/pipeline-builder/` directory. OpenCode's `{file:…}` prompt
+// user's `.scarn/pipeline-builder/` directory. OpenCode's `{file:…}` prompt
 // templating resolves relative to the process cwd, which is the user's
 // directory, so the file-reference approach would mean littering their repo
 // with a prompt file. Inline keeps the user's directory clean and makes the
 // prompt atomic with the config that carries it.
 //
 // The default pipeline is the scaffolder's starter pipeline
-// (`STARTER_PIPELINE_FILE` in `@boboddy/worker`), so the file the agent is
+// (`STARTER_PIPELINE_FILE` in `@scarn/worker`), so the file the agent is
 // told about is byte-for-byte the file already sitting in the user's
 // directory. `test/design-agent-default-pipeline.test.ts` compiles it against
-// the real SDK in one `tsc` pass, so SDK drift fails the build instead of
-// silently rotting the agent's reference material.
+// the real SDK in one `tsc` pass and builds it, so SDK drift fails the build
+// instead of silently rotting the agent's reference material.
 import agentPrompt from "../templates/design-agent/AGENT_PROMPT.md" with { type: "text" };
 import authoringReference from "../templates/design-agent/AUTHORING.md" with { type: "text" };
-import { STARTER_PIPELINE_FILE, STARTER_PIPELINE_KEY } from "@boboddy/worker";
+import { STARTER_PIPELINE_FILE, STARTER_PIPELINE_KEY } from "@scarn/worker";
 import {
   HEALTH_CHECK_CATALOG,
   type HealthCheckCatalogEntry,
@@ -48,7 +48,7 @@ export const DEFAULT_PIPELINE_TEMPLATE: {
 /** Shown in the OpenCode agent picker. */
 export const PIPELINE_DESIGNER_AGENT_DESCRIPTION =
   "Interviews you about your work items and execution environment, then " +
-  "authors and pushes Boboddy pipeline definitions.";
+  "authors and pushes Scarn pipeline definitions.";
 
 /**
  * Where the default pipeline source is spliced into the authoring reference:
@@ -65,12 +65,13 @@ const DEFAULT_PIPELINE_SECTION_PREAMBLE = `### The default pipeline file
 
 The block below is a complete file that compiles against the shipped SDK. The
 scaffold already wrote it, verbatim, to
-\`.boboddy/pipeline-builder/bug-pipeline.ts\`. Edit that file in place as
+\`.scarn/pipeline-builder/bug-pipeline.ts\`. Edit that file in place as
 described above: configure \`investigateAndReproduce\` for what the agent can
 reach, and rewrite every prompt for this user's repository and vocabulary.
-Never author the state objects from scratch, and never leave its prompts
+Never author the \`flow\` from scratch, and never leave its prompts
 unrewritten — prompt text is where a pipeline's quality lives, and these are
-written for a generic project.`;
+written for a generic project. The scaffold also wrote
+\`bug-pipeline.json\`, its build; \`scarn pipelines build\` rewrites it.`;
 
 /**
  * Render the default pipeline as one markdown block.
@@ -144,7 +145,7 @@ const HEALTH_CHECK_GUIDANCE = `- **No secrets in check arguments.** There is no 
   or an inline \`local\`/\`remote\` \`defineMcp\`'s \`environment\`/\`headers\`),
   referenced as \`{env:VAR}\` (or in \`defineMcp\`'s \`env\` when the server
   reads \`process.env\` itself), with the variable name recorded in
-  \`.boboddy/.env.example\` per §1's "Secrets" note.
+  \`.scarn/.env.example\` per §1's "Secrets" note.
 - **Prefer tools whose output is trivial.** Health check output is logged in
   full.`;
 
@@ -178,7 +179,7 @@ export function buildHealthCheckExampleSource(
   const stepKey = `${entry.id}-health-check-example`;
   const varName = `${entry.id}HealthCheckExample`;
   const argsLiteral = JSON.stringify(entry.args);
-  return `import { defineMcp, defineStep, z } from "@boboddy/sdk/definitions/steps";
+  return `import { defineMcp, defineStep, z } from "@scarn/sdk/definitions/steps";
 
 // The repository's "${entry.ref}" server launches "${entry.packageHint}". See
 // the caveats above for what its definition needs.
@@ -197,7 +198,6 @@ export const ${varName} = defineStep({
   agentPrompt: "Use the ${entry.ref} MCP tools.",
   mcps: { ${entry.ref} },
   result: z.object({ ok: z.boolean() }),
-  signals: [{ sourcePath: "ok" }],
 });
 `;
 }

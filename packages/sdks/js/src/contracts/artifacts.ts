@@ -1,6 +1,6 @@
 /**
  * Artifact contract shared by the SDK, the opencode plugin, the worker and
- * core. Everything here works on JSON Schema only (the `x-boboddy-artifact`
+ * core. Everything here works on JSON Schema only (the `x-scarn-artifact`
  * keyword), never on Zod schemas, so the server can use it without knowing
  * how a step was authored.
  */
@@ -14,7 +14,7 @@ export const artifactKindSchema = z.enum([
 ]);
 export type ArtifactKind = z.infer<typeof artifactKindSchema>;
 
-export const ARTIFACT_SCHEMA_KEYWORD = "x-boboddy-artifact";
+export const ARTIFACT_SCHEMA_KEYWORD = "x-scarn-artifact";
 
 export type ArtifactSchemaKeyword = {
   readonly accept: readonly string[];
@@ -44,7 +44,7 @@ export type ArtifactPlatform = (typeof artifactPlatforms)[number];
 
 /**
  * Extensions each platform can show inline in a comment. Anything else is
- * linked to its Boboddy artifact page. GitHub and Bitbucket link everything
+ * linked to its Scarn artifact page. GitHub and Bitbucket link everything
  * in v1.
  */
 export const EMBEDDABLE_ARTIFACT_EXTENSIONS: Readonly<
@@ -104,7 +104,7 @@ function schemaBranches(
   );
 }
 
-/** Reads the `x-boboddy-artifact` keyword on this exact node. */
+/** Reads the `x-scarn-artifact` keyword on this exact node. */
 export function readArtifactKeyword(
   node: ArtifactJsonSchemaNode,
 ): ArtifactSchemaKeyword | null {

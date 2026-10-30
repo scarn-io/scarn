@@ -5,7 +5,7 @@
 import yargs from "yargs/yargs";
 import { hideBin } from "yargs/helpers";
 import dotenv from "dotenv";
-import { CoreError } from "@boboddy/worker";
+import { CoreError } from "@scarn/worker";
 
 import { authCommand } from "./commands/auth";
 import { executionCommand } from "./commands/execution";
@@ -17,11 +17,27 @@ import { pipelinesCommand } from "./commands/pipelines";
 import { telemetryCommand } from "./commands/telemetry";
 import { workCommand } from "./commands/work";
 import { createCliLogger } from "./lib/logger";
-import { AnalyticsEvents } from "@boboddy/observability/analytics/events";
-import { classifyCliError } from "./lib/cli-error";
+import { AnalyticsEvents } from "@scarn/observability/analytics/events";
+import { classifyCliError, CliUsageError } from "./lib/cli-error";
 import { captureMilestone, shutdownTelemetry } from "./lib/telemetry";
 import { version as CLI_VERSION } from "../package.json";
 const logger = createCliLogger("cli");
+
+interface YargsCommandContext {
+  getInternalMethods(): { getContext(): { commands: string[] } };
+}
+
+/**
+ * The declared command names yargs had matched when parsing failed (e.g.
+ * `"pipelines push"`), read from its internal context because the public API
+ * exposes nothing before middleware runs. Never includes positional values.
+ */
+function matchedCommandPath(cli: object): string {
+  const commands = (cli as YargsCommandContext)
+    .getInternalMethods()
+    .getContext().commands;
+  return commands.length > 0 ? commands.join(" ") : "unknown";
+}
 
 /**
  * The command tree. `onCommand` receives the resolved command path (e.g.
@@ -32,8 +48,9 @@ export function createCli(
   argv: readonly string[],
   onCommand: (command: string) => void = () => undefined,
 ) {
-  return yargs(argv)
-    .scriptName("boboddy")
+  const cli = yargs(argv);
+  return cli
+    .scriptName("scarn")
     .strict()
     .help()
     .version(CLI_VERSION)
@@ -42,7 +59,7 @@ export function createCli(
         throw error;
       }
 
-      throw new Error(message);
+      throw new CliUsageError(matchedCommandPath(cli), message);
     })
     .showHelpOnFail(false)
     .exitProcess(false)
@@ -62,7 +79,7 @@ export function createCli(
     .middleware((arguments_) => {
       onCommand(arguments_._.map(String).join(" "));
       dotenv.config({ path: arguments_.envFile ?? ".env", override: false });
-      dotenv.config({ path: ".boboddy.env", override: false });
+      dotenv.config({ path: ".scarn.env", override: false });
     })
     .command(authCommand)
     .command(executionCommand)
@@ -87,7 +104,7 @@ export async function run(
     return 0;
   } catch (error) {
     captureMilestone(AnalyticsEvents.CliCommandFailed, {
-      command,
+      command: error instanceof CliUsageError ? error.command : command,
       code: classifyCliError(error),
     });
 

@@ -1,17 +1,16 @@
-import { describe, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { buildProjectsNewUrl } from "../src/lib/build-projects-new-url";
-import { concurrentTest as test } from "./utils";
 
 describe("buildProjectsNewUrl", () => {
   test("builds /projects/new with gitUrl and name query params", () => {
     const url = buildProjectsNewUrl({
-      baseUrl: "https://app.boboddy.dev",
+      baseUrl: "https://app.scarn.io",
       gitUrl: "git@github.com:acme/my-repo.git",
       suggestedName: "my-repo",
     });
 
     const parsed = new URL(url);
-    expect(parsed.origin).toBe("https://app.boboddy.dev");
+    expect(parsed.origin).toBe("https://app.scarn.io");
     expect(parsed.pathname).toBe("/projects/new");
     expect(parsed.searchParams.get("gitUrl")).toBe(
       "git@github.com:acme/my-repo.git",
@@ -20,7 +19,7 @@ describe("buildProjectsNewUrl", () => {
     expect(parsed.searchParams.get("source")).toBe("cli");
   });
 
-  test("respects a non-default base URL (e.g. --base-url / BOBODDY_BASE_URL)", () => {
+  test("respects a non-default base URL (e.g. --base-url / SCARN_BASE_URL)", () => {
     const url = buildProjectsNewUrl({
       baseUrl: "http://localhost:3000",
       gitUrl: "https://example.com/acme/my-repo.git",
@@ -32,7 +31,7 @@ describe("buildProjectsNewUrl", () => {
 
   test("strips credentials from the gitUrl it puts in the link", () => {
     const url = buildProjectsNewUrl({
-      baseUrl: "https://app.boboddy.dev",
+      baseUrl: "https://app.scarn.io",
       gitUrl: "https://user:ghp_secret@github.com/acme/my-repo.git",
       suggestedName: "my-repo",
     });

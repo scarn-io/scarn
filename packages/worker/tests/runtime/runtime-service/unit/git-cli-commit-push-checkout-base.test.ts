@@ -28,7 +28,7 @@ async function setupFixture(): Promise<{
   await mkdir(remote, { recursive: true });
   await git(remote, ["init", "--bare", "-b", "main"]);
   await git(root, ["clone", remote, seed]);
-  await git(seed, ["config", "user.email", "seed@boboddy.dev"]);
+  await git(seed, ["config", "user.email", "seed@scarn.io"]);
   await git(seed, ["config", "user.name", "Seed"]);
   await writeRepoFile(seed, "README.md", "hello\n");
   await git(seed, ["add", "-A"]);
@@ -75,17 +75,17 @@ describe("GitCliCommitPushService.checkoutBase fetch behavior", () => {
     async () => {
       const fx = await setupFixture();
       try {
-        const sha = await fx.publishBranch("boboddy/prev-step");
+        const sha = await fx.publishBranch("scarn/prev-step");
         await git(fx.root, ["clone", fx.remote, fx.workspace]);
         await breakOrigin(fx.workspace, fx.root);
 
         await service.checkoutBase({
           workspacePath: fx.workspace,
-          baseWorkBranch: "boboddy/prev-step",
+          baseWorkBranch: "scarn/prev-step",
         });
 
         expect(await git(fx.workspace, ["branch", "--show-current"])).toBe(
-          "boboddy/prev-step",
+          "scarn/prev-step",
         );
         expect(await git(fx.workspace, ["rev-parse", "HEAD"])).toBe(sha);
       } finally {
@@ -100,23 +100,23 @@ describe("GitCliCommitPushService.checkoutBase fetch behavior", () => {
       const fx = await setupFixture();
       try {
         await git(fx.root, ["clone", fx.remote, fx.workspace]);
-        const sha = await fx.publishBranch("boboddy/late-step");
+        const sha = await fx.publishBranch("scarn/late-step");
         await captureError(
           git(fx.workspace, [
             "rev-parse",
             "--verify",
             "--quiet",
-            "refs/remotes/origin/boboddy/late-step",
+            "refs/remotes/origin/scarn/late-step",
           ]),
         );
 
         await service.checkoutBase({
           workspacePath: fx.workspace,
-          baseWorkBranch: "boboddy/late-step",
+          baseWorkBranch: "scarn/late-step",
         });
 
         expect(await git(fx.workspace, ["branch", "--show-current"])).toBe(
-          "boboddy/late-step",
+          "scarn/late-step",
         );
         expect(await git(fx.workspace, ["rev-parse", "HEAD"])).toBe(sha);
       } finally {
@@ -135,12 +135,12 @@ describe("GitCliCommitPushService.checkoutBase fetch behavior", () => {
         const error = await captureError(
           service.checkoutBase({
             workspacePath: fx.workspace,
-            baseWorkBranch: "boboddy/never-pushed",
+            baseWorkBranch: "scarn/never-pushed",
           }),
         );
 
         expect(error.message).toMatch(
-          /couldn't find remote ref boboddy\/never-pushed/,
+          /couldn't find remote ref scarn\/never-pushed/,
         );
       } finally {
         await rm(fx.root, { recursive: true, force: true });
@@ -159,11 +159,11 @@ describe("GitCliCommitPushService.checkoutBase fetch behavior", () => {
         const error = await captureError(
           service.checkoutBase({
             workspacePath: fx.workspace,
-            baseWorkBranch: "boboddy/never-pushed",
+            baseWorkBranch: "scarn/never-pushed",
           }),
         );
 
-        expect(error.message).toContain("fetch origin boboddy/never-pushed");
+        expect(error.message).toContain("fetch origin scarn/never-pushed");
       } finally {
         await rm(fx.root, { recursive: true, force: true });
       }
@@ -175,9 +175,9 @@ describe("GitCliCommitPushService.checkoutBase fetch behavior", () => {
     async () => {
       const fx = await setupCachedCloneFixture();
       try {
-        await git(fx.seed, ["checkout", "-b", "boboddy/prev-step"]);
+        await git(fx.seed, ["checkout", "-b", "scarn/prev-step"]);
         const sha = await fx.commit("prev-step");
-        await git(fx.seed, ["push", "origin", "boboddy/prev-step"]);
+        await git(fx.seed, ["push", "origin", "scarn/prev-step"]);
 
         await fx.service.cloneRepository({
           gitUrl: fx.remote,
@@ -188,11 +188,11 @@ describe("GitCliCommitPushService.checkoutBase fetch behavior", () => {
 
         await service.checkoutBase({
           workspacePath: fx.workspacePath,
-          baseWorkBranch: "boboddy/prev-step",
+          baseWorkBranch: "scarn/prev-step",
         });
 
         expect(await git(fx.workspacePath, ["branch", "--show-current"])).toBe(
-          "boboddy/prev-step",
+          "scarn/prev-step",
         );
         expect(await git(fx.workspacePath, ["rev-parse", "HEAD"])).toBe(sha);
       } finally {

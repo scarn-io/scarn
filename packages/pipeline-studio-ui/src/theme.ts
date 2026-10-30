@@ -7,7 +7,7 @@ import { useState } from "react";
  */
 export type StudioTheme = "light" | "dark";
 
-const STORAGE_KEY = "boboddy-studio-theme";
+const STORAGE_KEY = "scarn-studio-theme";
 
 function currentTheme(): StudioTheme {
   return document.documentElement.dataset["theme"] === "light" ? "light" : "dark";

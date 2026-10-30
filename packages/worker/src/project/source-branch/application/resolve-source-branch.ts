@@ -1,10 +1,10 @@
 import { GitCliSourceBranchPort } from "../infra/git-cli-source-branch-port";
 
 /**
- * Resolve the branch `boboddy work` checks out for the FIRST step of a
+ * Resolve the branch `scarn work` checks out for the FIRST step of a
  * pipeline attempt, immediately after the worker clones the repo — distinct
  * from `baseWorkBranch` (the predecessor step's work branch, handed down by
- * the server for later steps; see `process-claimed-task-helpers`).
+ * the server for later steps; see `process-claimed-task-run-helpers`).
  *
  * Two sources, in precedence order:
  *   1. An explicit override (e.g. `--source-branch`) — the caller's intent is
@@ -22,7 +22,7 @@ import { GitCliSourceBranchPort } from "../infra/git-cli-source-branch-port";
  * Returns `{ branch: null }` (no error) when there is nothing to resolve:
  * `cwd` is not a git repository, or HEAD is detached (no current branch).
  * Both are treated as "opt out silently" rather than failures, since
- * `boboddy work` has always been usable from either context.
+ * `scarn work` has always been usable from either context.
  */
 export class SourceBranchVerificationError extends Error {
   constructor(message: string) {
@@ -59,7 +59,7 @@ export type SourceBranchGitPort = {
 };
 
 export type ResolveSourceBranchInput = {
-  /** The user's working directory at `boboddy work` invocation. */
+  /** The user's working directory at `scarn work` invocation. */
   cwd: string;
   /** Explicit override (e.g. `--source-branch`); trimmed, empty treated as unset. */
   override?: string | undefined;
@@ -164,12 +164,12 @@ async function verifyCurrentBranchInSyncWithOrigin(
 
   throw new SourceBranchVerificationError(
     `Current branch "${branch}" has diverged from origin/${branch}. ` +
-      `Reconcile the histories (e.g. rebase or merge) before running boboddy work.`,
+      `Reconcile the histories (e.g. rebase or merge) before running scarn work.`,
   );
 }
 
 /**
- * Resolve (and verify) the branch `boboddy work` should check out for the
+ * Resolve (and verify) the branch `scarn work` should check out for the
  * first step of a pipeline attempt. Throws {@link SourceBranchVerificationError}
  * with a user-facing message when the resolved branch isn't safely usable at
  * all (doesn't exist on origin, behind, or diverged); callers should fail

@@ -3,14 +3,14 @@ title: SDK Reference
 description: TypeScript SDK types, helpers, and API client
 ---
 
-You don't install the SDK yourself to write pipelines. `@boboddy/sdk` is a
-dependency of `.boboddy/pipeline-builder/package.json`, which
-[`boboddy pipelines design`](/boboddy/reference/cli/#boboddy-pipelines-design-project)
-scaffolds and installs for you ([`boboddy pipelines init`](/boboddy/reference/cli/#boboddy-pipelines-init)
+You don't install the SDK yourself to write pipelines. `@scarn/sdk` is a
+dependency of `.scarn/pipeline-builder/package.json`, which
+[`scarn pipelines design`](/scarn/reference/cli/#scarn-pipelines-design-project)
+scaffolds and installs for you ([`scarn pipelines init`](/scarn/reference/cli/#scarn-pipelines-init)
 scaffolds it; you run the install). Add it to another package directly only
 to script against the [API client](#api-client).
 
-See the [Pipeline Graph catalog entry](/boboddy/catalog/pipeline-graph/) for an interactive view of a compiled pipeline's node/edge graph.
+See the [Pipeline Graph catalog entry](/scarn/catalog/pipeline-graph/) for an interactive view of a compiled pipeline's node/edge graph.
 
 ---
 
@@ -19,7 +19,7 @@ See the [Pipeline Graph catalog entry](/boboddy/catalog/pipeline-graph/) for an 
 Define a reusable, versioned step with typed input/output schemas.
 
 ```typescript
-import { defineStep } from "@boboddy/sdk";
+import { defineStep } from "@scarn/sdk";
 import { z } from "zod";
 
 const myStep = defineStep({
@@ -29,18 +29,11 @@ const myStep = defineStep({
   description: "Does something useful.",
   additionalInput: z.object({ text: z.string() }),
   result: z.object({ summary: z.string(), score: z.number() }),
-  signals: [
-    {
-      sourcePath: "score",
-      key: "quality_score",
-      type: "number",
-      required: true,
-    },
-  ],
-  agentPrompt: ({ input, env, boboddy }) => `
+  errors: ["NoAccess"],
+  agentPrompt: ({ input, env, scarn }) => `
 Analyze the provided text from ${input.text}.
 Base URL: ${env.BASE_URL}
-Write any generated files to ${boboddy.artifactsDir}
+Write any generated files to ${scarn.artifactsDir}
 Return a summary and quality score.
 `,
   status: "active",
@@ -56,9 +49,10 @@ Return a summary and quality score.
 | `version`         | `number`                          | No       | Version (default: `1`)                                                    |
 | `description`     | `string`                          | No       | Short description                                                         |
 | `agentPrompt`     | `string \| ((context) => string)` | Yes      | AI instruction given to the executing agent                               |
-| `additionalInput` | `ZodType`                         | No       | Additional input payload schema; fields are bound via the pipeline mapper |
+| `additionalInput` | `ZodType`                         | No       | Additional input payload schema; the pipeline passes these fields as the step's args |
 | `result`          | `ZodType`                         | No       | Output payload schema                                                     |
-| `signals`         | `Signal[]`                        | No       | Values to extract from the result                                         |
+| `errors`          | `string[]`                        | No       | Error names the step can fail with; a pipeline can `.retry`/`.catch` them by name |
+| `retry`           | `{ on: string[]; maxAttempts: number }[]` | No | How a standalone Task of this step retries: a failure named in `on` (built-in or in `errors`) gets up to `maxAttempts` more runs. In a pipeline, the node's `.retry` applies instead. Compiled onto the handle as `retryJson` |
 | `mcps`            | `Record<string, McpHandle>`       | No       | MCP servers defined with [`defineMcp`](#definemcp), keyed by the name the step runs them under. The only way to give a step an MCP server |
 | `healthChecks`    | `StepHealthCheck[]`               | No       | `cli` checks and non-MCP `tool` checks forced against the environment before the agent is prompted. See [`healthChecks`](#healthchecks) |
 | `features`        | `StepFeature[]`                   | No       | Built-in feature plugins (e.g. `Features.notifications()`)                |
@@ -77,10 +71,10 @@ const browserReproStep = defineStep({
     title: z.string(),
     description: z.string(),
   }),
-  agentPrompt: ({ input, env, boboddy }) => `
+  agentPrompt: ({ input, env, scarn }) => `
 Open ${env.BASE_URL}.
 Reproduce the issue described in ${input.title}.
-Save traces to ${boboddy.artifactsDir}trace.zip.
+Save traces to ${scarn.artifactsDir}trace.zip.
 `,
 });
 ```
@@ -90,23 +84,23 @@ Save traces to ${boboddy.artifactsDir}trace.zip.
 | Scope     | Example                   | Source                                                   |
 | --------- | ------------------------- | -------------------------------------------------------- |
 | `input`   | `${input.title}`          | Task input bound through the pipeline                    |
-| `env`     | `${env.BASE_URL}`         | The worker's environment (`.boboddy/.env` over `process.env`); with declared [`environment.vars`](#env), only its non-secret keys |
-| `boboddy` | `${boboddy.artifactsDir}` | Boboddy-provided runtime values                          |
+| `env`     | `${env.BASE_URL}`         | The worker's environment (`.scarn/.env` over `process.env`); with declared [`environment.vars`](#env), only its non-secret keys |
+| `scarn` | `${scarn.artifactsDir}` | Scarn-provided runtime values                          |
 
-At runtime these become `{{input.title}}`, `{{env.BASE_URL}}`, and `{{boboddy.artifactsDir}}` inside the stored prompt template.
+At runtime these become `{{input.title}}`, `{{env.BASE_URL}}`, and `{{scarn.artifactsDir}}` inside the stored prompt template.
 
-Boboddy currently provides:
+Scarn currently provides:
 
-- `boboddy.artifactsDir` for files that should be uploaded as step artifacts.
+- `scarn.artifactsDir` for files that should be uploaded as step artifacts.
 
 Legacy raw prompt tokens such as `{{title}}` and `{{stepArtifactsDir}}` still resolve, but new steps should prefer the scoped form.
 
 ### `Runtime`
 
-`Runtime` builds the `environment.runtime` value: where the step runs. It is exported from `@boboddy/sdk`. Omit `runtime` for the default: `Runtime.devcontainer()` on `defineStep()`, `Runtime.managed.bun1()` on `codeStep()`.
+`Runtime` builds the `environment.runtime` value: where the step runs. It is exported from `@scarn/sdk`. Omit `runtime` for the default: `Runtime.devcontainer()` on `defineStep()`, `Runtime.managed.bun1()` on `codeStep()`.
 
 ```typescript
-import { defineStep, Runtime } from "@boboddy/sdk";
+import { defineStep, Runtime } from "@scarn/sdk";
 
 defineStep({
   key: "build-frontend",
@@ -146,7 +140,7 @@ Runtime.host(): HostRuntimeSpec;
 
 - The base name must be `devcontainer.json` or `.devcontainer.json`.
 - Repo-relative: no leading `/`, no drive letter, no backslashes, no `..` segment. A leading `./` is stripped. At most 255 characters.
-- There is no fallback search. If the file is missing on the branch the step is based on, the step fails with ``Devcontainer config "<path>" not found in the cloned repository (branch "<branch>")``. The work branch of the nearest earlier step that produced one can change the config a later step finds (see [Base branch](/boboddy/guides/workers/#base-branch)).
+- There is no fallback search. If the file is missing on the branch the step is based on, the step fails with ``Devcontainer config "<path>" not found in the cloned repository (branch "<branch>")``. The work branch of the nearest earlier step that produced one can change the config a later step finds (see [Base branch](/scarn/guides/workers/#base-branch)).
 
 `codeStep()` accepts the same `environment`, but `Runtime.host()` is a type error there and is rejected by validation: a code step runs repo code and needs a workspace. The container a code step's `config` selects must provide a JavaScript runtime for the runner script.
 
@@ -155,7 +149,7 @@ Runtime.host(): HostRuntimeSpec;
 `codeStep()` also accepts `Runtime.managed.<id>()`: a container the worker supplies (image, config and dependency install), so the step does not boot your project's devcontainer. `defineStep()` rejects it. It is the default for `codeStep()`: omit `runtime` and you get `Runtime.managed.bun1()`. Use `Runtime.devcontainer()` to run a code step in your project's devcontainer instead.
 
 ```typescript
-import { codeStep, Runtime } from "@boboddy/sdk/definitions/steps";
+import { codeStep, Runtime } from "@scarn/sdk/definitions/steps";
 
 codeStep({
   key: "lookup-criteria",
@@ -173,21 +167,21 @@ Runtime.managed: { [K in ManagedRuntimeId]: () => ManagedRuntimeSpec<K> };
 
 | Constructor                | Image                   | Behaviour                                                                                                                            |
 | -------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `Runtime.managed.bun1()`   | `oven/bun:1.4.0-debian` | The default for `codeStep()`. Runs `bun install --production` in `.boboddy/pipeline-builder`, then runs the step with Bun. Skips dependency `postinstall` scripts unless listed in `trustedDependencies`. |
+| `Runtime.managed.bun1()`   | `oven/bun:1.4.0-debian` | The default for `codeStep()`. Runs `bun install --production` in `.scarn/pipeline-builder`, then runs the step with Bun. Skips dependency `postinstall` scripts unless listed in `trustedDependencies`. |
 | `Runtime.managed.node24()` | `node:24-bookworm-slim` | Runs `npm install --omit=dev` (or `corepack pnpm install --prod` for `pnpm-lock.yaml`), then runs the step with Node 24. Runs `postinstall` scripts. Does not resolve extensionless relative imports. |
 
-`Runtime.managed.nope` is a type error: the identifiers come from `MANAGED_RUNTIME_IDS` in `@boboddy/sdk/managed-runtimes`. A managed step has no `config`. See [Runtime for code steps](/boboddy/guides/steps/#runtime-for-code-steps) for the lockfile handling and runtime differences, and [Running Workers](/boboddy/guides/workers/#managed-runtimes) for the worker side.
+`Runtime.managed.nope` is a type error: the identifiers come from `MANAGED_RUNTIME_IDS` in `@scarn/sdk/managed-runtimes`. A managed step has no `config`. See [Runtime for code steps](/scarn/guides/steps/#runtime-for-code-steps) for the lockfile handling and runtime differences, and [Running Workers](/scarn/guides/workers/#managed-runtimes) for the worker side.
 
-The wire form is derived from `runtime`: `executionMode` (`"workspace"` for the devcontainer and managed runtimes, `"no_workspace"` for host), `devcontainerConfigPath` (`config`, or `null`), and `managedRuntime` (the identifier for a managed runtime, otherwise `null`). The path schema is `devcontainerConfigPathSchema` from `@boboddy/sdk/devcontainer-config-path`.
+The wire form is derived from `runtime`: `executionMode` (`"workspace"` for the devcontainer and managed runtimes, `"no_workspace"` for host), `devcontainerConfigPath` (`config`, or `null`), and `managedRuntime` (the identifier for a managed runtime, otherwise `null`). The path schema is `devcontainerConfigPathSchema` from `@scarn/sdk/devcontainer-config-path`.
 
-See [Environment](/boboddy/guides/steps/#environment) and [Multiple configs](/boboddy/how-to/devcontainer/#multiple-configs) for the guides.
+See [Environment](/scarn/guides/steps/#environment) and [Multiple configs](/scarn/how-to/devcontainer/#multiple-configs) for the guides.
 
 ### `Env`
 
-`environment.vars` is a function of `{ input }`, run once at definition time, returning a record of variable name to an `EnvEntry`. Declare `environment` **before** `agentPrompt` so the keys are typed into the prompt's `env`, which is then strict (declared, non-secret keys only). `Env` is exported from `@boboddy/sdk`.
+`environment.vars` is a function of `{ input }`, run once at definition time, returning a record of variable name to an `EnvEntry`. Declare `environment` **before** `agentPrompt` so the keys are typed into the prompt's `env`, which is then strict (declared, non-secret keys only). `Env` is exported from `@scarn/sdk`.
 
 ```typescript
-import { defineStep, Env } from "@boboddy/sdk";
+import { defineStep, Env } from "@scarn/sdk";
 import { z } from "zod";
 
 defineStep({
@@ -225,22 +219,22 @@ Env.inherit(opts?: {
 }): EnvInherit;
 ```
 
-`applies` picks the process a variable reaches: `agent` (the agent or code step), `setup` (only `devcontainer up`, where `initializeCommand` runs), or `both`. Setup variables are not added to `containerEnv`; forward one with `${localEnv:NAME:default}` in `devcontainer.json`. `setup` and `both` are rejected on `Runtime.host()` and on MCP variables. See [Setup variables](/boboddy/guides/steps/#setup-variables).
+`applies` picks the process a variable reaches: `agent` (the agent or code step), `setup` (only `devcontainer up`, where `initializeCommand` runs), or `both`. Setup variables are not added to `containerEnv`; forward one with `${localEnv:NAME:default}` in `devcontainer.json`. `setup` and `both` are rejected on `Runtime.host()` and on MCP variables. See [Setup variables](/scarn/guides/steps/#setup-variables).
 
-`Env.inherit` reads from the worker (`.boboddy/.env`, then `process.env`), not from the devcontainer's `containerEnv`. A bare string and `Env.value` are stored in the definition in plaintext; `inherit` stores only the name (and `default`). See the [forms table](/boboddy/guides/steps/#the-three-forms) for what is stored and masked.
+`Env.inherit` reads from the worker (`.scarn/.env`, then `process.env`), not from the devcontainer's `containerEnv`. A bare string and `Env.value` are stored in the definition in plaintext; `inherit` stores only the name (and `default`). See the [forms table](/scarn/guides/steps/#the-three-forms) for what is stored and masked.
 
-`secret: true` together with `default` is a type error. Optional entries without a `default` are typed `string | undefined` in the prompt. The key must match `/^[A-Z_][A-Z0-9_]*$/`; `BOBODDY_*`, `HOME`, `XDG_CONFIG_HOME`, `XDG_DATA_HOME`, `OPENCODE_CONFIG_CONTENT`, and `npm_config_cache` are reserved, and `inherit` cannot read `BOBODDY_*` worker variables. A step may declare at most 64 variables of at most 4096 characters each.
+`secret: true` together with `default` is a type error. Optional entries without a `default` are typed `string | undefined` in the prompt. The key must match `/^[A-Z_][A-Z0-9_]*$/`; `SCARN_*`, `HOME`, `XDG_CONFIG_HOME`, `XDG_DATA_HOME`, `OPENCODE_CONFIG_CONTENT`, and `npm_config_cache` are reserved, and `inherit` cannot read `SCARN_*` worker variables. A step may declare at most 64 variables of at most 4096 characters each.
 
-Defining a step throws on a static secret, and on a bare static string whose key matches `/SECRET|TOKEN|PASSWORD|PASSWD|API_?KEY|PRIVATE/i`. The wire shape is `envJson`, validated by `envVarsSchema` from `@boboddy/sdk/env-vars`.
+Defining a step throws on a static secret, and on a bare static string whose key matches `/SECRET|TOKEN|PASSWORD|PASSWD|API_?KEY|PRIVATE/i`. The wire shape is `envJson`, validated by `envVarsSchema` from `@scarn/sdk/env-vars`.
 
-See [Environment variables](/boboddy/guides/steps/#environment-variables) for precedence, per-runtime behaviour, and caveats.
+See [Environment variables](/scarn/guides/steps/#environment-variables) for precedence, per-runtime behaviour, and caveats.
 
 ### `Repo`
 
-`Repo` builds the `environment.repo` value: what the worker does with the repository clone. It is exported from `@boboddy/sdk`. Omit `repo` for the runtime's default.
+`Repo` builds the `environment.repo` value: what the worker does with the repository clone. It is exported from `@scarn/sdk`. Omit `repo` for the runtime's default.
 
 ```typescript
-import { defineStep, Repo } from "@boboddy/sdk";
+import { defineStep, Repo } from "@scarn/sdk";
 import { z } from "zod";
 
 defineStep({
@@ -299,33 +293,20 @@ A pair the runtime rejects is a type error where TypeScript can express it, and 
 `message` rules:
 
 - Only `input` and `result` tokens are allowed. `{{env.…}}` is rejected so environment values cannot reach git history.
-- The rendered subject has whitespace collapsed and control characters stripped, is truncated to 200 characters, and falls back to `boboddy: task <taskId>` when empty.
+- The rendered subject has whitespace collapsed and control characters stripped, is truncated to 200 characters, and falls back to `scarn: task <taskId>` when empty.
 
-`onPushFailure` defaults to `"fail"`: a failed push of the work branch or of a submodule fails the step. `"warn"` logs the failure and lets the step finish, but the step reports no work branch, so later steps do not build on it. See [Work branches](/boboddy/guides/workers/#commit-message-and-push-failures) for the behavior change and its consequences.
+`onPushFailure` defaults to `"fail"`: a failed push of the work branch or of a submodule fails the step. `"warn"` logs the failure and lets the step finish, but the step reports no work branch, so later steps do not build on it. See [Work branches](/scarn/guides/workers/#commit-message-and-push-failures) for the behavior change and its consequences.
 
-The wire form is a nested `repo` object, `{ mode: "none" | "readOnly" | "readWrite", message?, onPushFailure? }`. The SDK emits it only when the author wrote a `repo`; the server resolves an omitted one to the runtime's default and stores it fully resolved (`message` is `null` for the default). The schemas are `repoConfigInputSchema` and `repoConfigSchema`, with `resolveRepoConfig`, from `@boboddy/sdk/repo-config`.
+The wire form is a nested `repo` object, `{ mode: "none" | "readOnly" | "readWrite", message?, onPushFailure? }`. The SDK emits it only when the author wrote a `repo`; the server resolves an omitted one to the runtime's default and stores it fully resolved (`message` is `null` for the default). The schemas are `repoConfigInputSchema` and `repoConfigSchema`, with `resolveRepoConfig`, from `@scarn/sdk/repo-config`.
 
-See [Repo access](/boboddy/guides/steps/#repo-access) for the guide.
-
-### `Signal`
-
-```typescript
-type Signal = {
-  sourcePath: string; // dot-notation path into result, e.g. "metrics.score"
-  key?: string; // signal name used in advancement rules (defaults to sourcePath)
-  type?: "number" | "string" | "boolean" | "object" | "array" | "artifact";
-  required?: boolean; // fail execution if signal is missing
-};
-```
-
-A signal whose `sourcePath` points at a [`z.artifact`](#zartifactoptions) field has type `"artifact"`. Its value is the stored file, or `null` with an `unavailableReason`. A required artifact signal fails only when the file was never reported. See [Attaching artifacts to comments](/boboddy/guides/steps/#attaching-artifacts-to-comments).
+See [Repo access](/scarn/guides/steps/#repo-access) for the guide.
 
 ### `z`
 
-`z` from `@boboddy/sdk` (and `@boboddy/sdk/definitions/steps`) is the whole of Zod plus `z.artifact`. Import it instead of `zod` in pipeline code.
+`z` from `@scarn/sdk` (and `@scarn/sdk/definitions/steps`) is the whole of Zod plus `z.artifact`. Import it instead of `zod` in pipeline code.
 
 ```typescript
-import { z } from "@boboddy/sdk/definitions/steps";
+import { z } from "@scarn/sdk/definitions/steps";
 ```
 
 ### `z.artifact(options?)`
@@ -356,13 +337,13 @@ Artifact.link(target, { label });      // [label](artifact:...)
 ```
 
 - `path` takes a path relative to the code step's `artifactsDir` and returns an `ArtifactPath`.
-- `embed` and `link` return a marker string for a notification `body` or a step prompt. `target` is `step.signals.<key>`, which gives a required marker (`artifact:signal/<stepKey>/<signalKey>`), or a file name or glob, which gives an optional one (`artifact:<glob>`).
+- `embed` and `link` return a marker string for a notification `body` or a step prompt. `target` is `{ step, path }`, an artifact field in that step's result, which gives a required marker, or a file name or glob, which gives an optional one (`artifact:<glob>`).
 
-See [Embedding and linking in a comment](/boboddy/guides/steps/#embedding-and-linking-in-a-comment) for the marker rules and what each platform shows.
+See [Embedding and linking in a comment](/scarn/guides/steps/#embedding-and-linking-in-a-comment) for the marker rules and what each platform shows.
 
 ### `defineMcp`
 
-`defineMcp`, from `@boboddy/sdk/definitions/steps` or `@boboddy/sdk`, defines an MCP server once with its environment variables and health checks. It is the only way to give a step an MCP server or an MCP health check. A step mounts the returned `McpHandle` under `mcps`; the key is the name the step runs it under.
+`defineMcp`, from `@scarn/sdk/definitions/steps` or `@scarn/sdk`, defines an MCP server once with its environment variables and health checks. It is the only way to give a step an MCP server or an MCP health check. A step mounts the returned `McpHandle` under `mcps`; the key is the name the step runs it under.
 
 ```typescript
 function defineMcp(config: DefineMcpConfig): McpHandle;
@@ -375,7 +356,7 @@ type DefineMcpConfig = (RefServer | LocalServer | RemoteServer) & {
 
 type SharedFields = {
   timeout?: { startup?: number; catalog?: number; execution?: number }; // milliseconds
-  codemode?: boolean; // Boboddy defaults step servers to false
+  codemode?: boolean; // Scarn defaults step servers to false
   protocol?: "legacy" | "auto" | "2026-07-28";
 };
 
@@ -429,9 +410,9 @@ type McpCheckPatch = Partial<
 >;
 ```
 
-`defineMcp` throws on an empty `name`, an unknown `type` or field, a literal (non-`{env:VAR}`) `environment` or `headers` value, a check name that is empty or contains `.`, and a variable name that is invalid, declared twice, or reserved (`BOBODDY_*`), including one read by a `{env:VAR}` placeholder.
+`defineMcp` throws on an empty `name`, an unknown `type` or field, a literal (non-`{env:VAR}`) `environment` or `headers` value, a check name that is empty or contains `.`, and a variable name that is invalid, declared twice, or reserved (`SCARN_*`), including one read by a `{env:VAR}` placeholder.
 
-Every `{env:VAR}` in a `local` server's `command`, `cwd` or `environment`, or a `remote` server's `url` or `headers`, compiles to a required worker variable tagged with the server's `mcps` key, unless it is listed in `optionalEnv`. See [Variables in inline servers](/boboddy/guides/steps/#variables-in-inline-servers).
+Every `{env:VAR}` in a `local` server's `command`, `cwd` or `environment`, or a `remote` server's `url` or `headers`, compiles to a required worker variable tagged with the server's `mcps` key, unless it is listed in `optionalEnv`. See [Variables in inline servers](/scarn/guides/steps/#variables-in-inline-servers).
 
 Every `McpHandle` method returns a new handle and leaves its receiver unchanged:
 
@@ -445,7 +426,7 @@ Every `McpHandle` method returns a new handle and leaves its receiver unchanged:
 
 `name` is typed from the handle's check names. A server has no severity of its own: each check has its own `severity` (default `"required"`), changed for one step with `overrideCheck(name, { severity })`. A handle also exposes its state as readonly fields: `type`, `name`, `server` (the OpenCode fields), `env`, `optionalEnv`, `checks` and `overrides` (the builder calls, in order). `isMcpHandle(value)` tells a handle from any other value, and `compileMcps(mcps, stepKey)` compiles a record of handles to the wire fields (`opencodeMcpJson`, health checks and env entries) the way `defineStep` does.
 
-See [MCP servers](/boboddy/guides/steps/#mcp-servers) for examples of each type, where refs are looked up, how checks are named and serialized, check severity, and what happens when a variable is missing, and [Secrets](/boboddy/guides/steps/#secrets) for where the real values live.
+See [MCP servers](/scarn/guides/steps/#mcp-servers) for examples of each type, where refs are looked up, how checks are named and serialized, check severity, and what happens when a variable is missing, and [Secrets](/scarn/guides/steps/#secrets) for where the real values live.
 
 ### `healthChecks`
 
@@ -474,22 +455,22 @@ type CliHealthCheck = Shared & {
 };
 ```
 
-The schema is `stepHealthChecksInputSchema` from `@boboddy/sdk/health-checks`. The stored wire shape (`healthChecksSchema`) also allows `mcp` on a tool check: that is what `defineMcp` checks compile to.
+The schema is `stepHealthChecksInputSchema` from `@scarn/sdk/health-checks`. The stored wire shape (`healthChecksSchema`) also allows `mcp` on a tool check: that is what `defineMcp` checks compile to.
 
 Every check runs in parallel by default, each in its own lane. Give two or more checks the same `serialGroup` to force them to run one at a time, in declaration order, against each other — while still running concurrently with every other check/group. `required` checks all run before any `warn` check; the first `required` failure stops every check that hasn't started yet, but one already in flight still finishes and reports its real outcome.
 
-See [Health checks](/boboddy/guides/steps/#health-checks) for a full example and the no-secrets-in-`args` guidance.
+See [Health checks](/scarn/guides/steps/#health-checks) for a full example and the no-secrets-in-`args` guidance.
 
 ### Plugins
 
-`defineStep` has no `plugins` option. Add OpenCode plugins to `.opencode/opencode.json` in your repo; the in-container OpenCode loads it for every step. See [Plugins](/boboddy/guides/steps/#plugins).
+`defineStep` has no `plugins` option. Add OpenCode plugins to `.opencode/opencode.json` in your repo; the in-container OpenCode loads it for every step. See [Plugins](/scarn/guides/steps/#plugins).
 
 ### `Features`
 
-`features` accepts built-in feature plugins from the `Features` namespace (imported from `@boboddy/sdk/definitions/steps`). A feature extends the step's `result` schema, appends signals, and injects prompt text.
+`features` accepts built-in feature plugins from the `Features` namespace (imported from `@scarn/sdk/definitions/steps`). A feature extends the step's `result` schema and injects prompt text.
 
 ```typescript
-import { defineStep, Features } from "@boboddy/sdk/definitions/steps";
+import { defineStep, Features } from "@scarn/sdk/definitions/steps";
 
 const step = defineStep({
   key: "repro",
@@ -501,10 +482,10 @@ const step = defineStep({
 
 | Feature                       | Effect                                                                                                                                            |
 | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `Features.notifications()`    | Adds a `$boboddy_notifications_v1` result array + signal (type `array`, not required) and prompt text for emitting user notifications.            |
-| `Features.feedbackRequests()` | A real specialization of `notifications()` (not an alias): narrows every emitted item to `kind: "feedback_request"`, backed by the same `$boboddy_notifications_v1` signal. |
+| `Features.notifications()`    | Adds an optional `$scarn_notifications_v1` result array and prompt text for emitting user notifications.                                     |
+| `Features.feedbackRequests()` | A real specialization of `notifications()` (not an alias): narrows every emitted item to `kind: "feedback_request"`, in the same `$scarn_notifications_v1` array. |
 
-`Features` is exclusively for `features: [...]` attachment — value construction (`Notify`) and signal reading (`NotificationSignal`) are separate exports, kept apart on purpose so `Features.` autocomplete only ever shows things you attach to a step.
+`Features` is exclusively for `features: [...]` attachment — value construction (`Notify`) is a separate export, kept apart on purpose so `Features.` autocomplete only ever shows things you attach to a step.
 
 Each notification item is:
 
@@ -521,13 +502,9 @@ type NotificationItem = {
 };
 ```
 
-### `NotificationSignal`
-
-`NotificationSignal.key` is the raw `$boboddy_notifications_v1` signal key. `NotificationSignal.find(signals)` parses a task's signals array back into `NotificationItem[] | undefined`.
-
 ### `Notify`
 
-A flat namespace of builder functions for constructing a notification result value at runtime — the same shape as `Rule`/`Computed` in `@boboddy/sdk/definitions/pipelines` — without hand-writing the object shape. Most useful inside a `codeStep()`'s `fn`, where there's no agent to follow the prompt instructions.
+A flat namespace of builder functions for constructing a notification result value at runtime without hand-writing the object shape. Most useful inside a `codeStep()`'s `fn`, where there's no agent to follow the prompt instructions.
 
 ```typescript
 Notify.create(item: NotificationItem);
@@ -539,19 +516,19 @@ Notify.merge(...fragments);
 - `create` is the one generic constructor — field names match `NotificationItem` exactly.
 - `inApp` is the only channel with dedicated sugar, because `in_app` is the only channel delivered without a human in the loop. `work_item_platform_comment` is delivered as a draft that a human approves before it is posted on Jira, GitHub or Bitbucket. `email` and `slack` are accepted by the schema but have no delivery adapter yet. Use `Notify.create({ ..., suggestedChannels: [...] })` directly to suggest any channel other than `in_app`.
 - `feedbackRequest` is the value-builder counterpart to `Features.feedbackRequests()`.
-- Each of `create`/`inApp`/`feedbackRequest` returns `{ $boboddy_notifications_v1: [item] }` — return it directly, or spread it into a larger result. `inApp`'s `options` is `{ kind?, payload? }`; `kind` defaults to `"status_update"`.
+- Each of `create`/`inApp`/`feedbackRequest` returns `{ $scarn_notifications_v1: [item] }` — return it directly, or spread it into a larger result. `inApp`'s `options` is `{ kind?, payload? }`; `kind` defaults to `"status_update"`.
 - `merge(...fragments)` combines multiple builder results into one.
 
-See [Features](/boboddy/guides/steps/#features) for the guide.
+See [Features](/scarn/guides/steps/#features) for the guide.
 
 ---
 
 ## `codeStep(options)`
 
-Defines a `kind: "code"` step: a plain function instead of an LLM prompt. Produces the same step shape `defineStep()` does, so it plugs into a `states[key].step` field unchanged.
+Defines a `kind: "code"` step: a plain function instead of an LLM prompt. Produces the same callable step handle `defineStep()` does, so a pipeline uses it the same way.
 
 ```typescript
-import { codeStep } from "@boboddy/sdk/definitions/steps";
+import { codeStep } from "@scarn/sdk/definitions/steps";
 import { z } from "zod";
 
 export const sumScores = codeStep({
@@ -560,7 +537,6 @@ export const sumScores = codeStep({
   inputSchema: z.object({ scores: z.array(z.number()) }),
   resultSchema: z.object({ total: z.number() }),
   fn: ({ scores }) => ({ total: scores.reduce((a, b) => a + b, 0) }),
-  signals: [{ sourcePath: "total", key: "total", type: "number" }],
   status: "active",
 });
 ```
@@ -573,15 +549,14 @@ export const sumScores = codeStep({
 | `name`         | `string`                                          | Yes      | Display name                                                        |
 | `version`      | `number`                                          | No       | Version (default: `1`)                                              |
 | `description`  | `string`                                          | No       | Short description                                                   |
-| `fn`           | `(input, context: CodeStepContext) => result \| Promise<result>` | Yes | The step's implementation; may be inline. The worker imports the module and finds the step by `key`, so the step can be exported by name, embedded in a pipeline, or both. See [Code steps](/boboddy/guides/steps/#code-steps) |
+| `fn`           | `(input, context: CodeStepContext) => result \| Promise<result>` | Yes | The step's implementation; may be inline. The worker imports the module and finds the step by `key`, so export the step by name. See [Code steps](/scarn/guides/steps/#code-steps) |
 | `inputSchema`  | `ZodType`                                         | No       | Zod schema for `fn`'s input                                          |
 | `resultSchema` | `ZodType`                                         | No       | Zod schema for `fn`'s return value                                   |
-| `signals`      | `CodeStepSignalSpec[]`                            | No       | Values to extract from the result; unlike `defineStep`, `type` is required (not inferred) |
-| `features`     | `AnyStepFeature[]`                                | No       | Feature plugins from `Features`; only each feature's result extension and signals apply (no prompt on a code step) |
+| `errors`       | `string[]`                                        | No       | Error names the step can fail with; a pipeline can `.retry`/`.catch` them by name |
+| `retry`        | `{ on: string[]; maxAttempts: number }[]`         | No       | As `defineStep`'s `retry`: how a standalone Task of this step retries |
+| `features`     | `AnyStepFeature[]`                                | No       | Feature plugins from `Features`; only each feature's result extension applies (no prompt on a code step) |
 | `environment`  | `{ runtime?: DevcontainerRuntimeSpec \| ManagedRuntimeSpec; vars?: ({ input }) => Record<string, string \| EnvEntry>; repo?: DevcontainerRepoSpec \| (({ input, result }) => DevcontainerRepoSpec) }` | No | `runtime` is `Runtime.managed.<id>()` or `Runtime.devcontainer({ config? })`; the default is `Runtime.managed.bun1()`. `Runtime.host()` is not supported. `vars` are environment variables for the runner process, read by `fn` through `process.env`. `repo` is `Repo.readWrite()` (default) or `Repo.readOnly()`. See [`Runtime`](#runtime), [`Env`](#env) and [`Repo`](#repo) |
 | `status`       | `"draft" \| "active"`                             | No       | Draft steps are not executed; defaults to `"active"`                |
-
-`CodeStepSignalSpec` is `{ sourcePath, key?, type: "string" | "number" | "boolean" | "object" | "array" | "artifact", required?, availableWhenResultStatusIn? }`.
 
 `CodeStepContext` is `{ artifactsDir: string }`, the absolute path of the step's artifacts folder, which already exists. Write a file there and return `Artifact.path(<relative path>)` in a [`z.artifact`](#zartifactoptions) field. The worker checks that the path stays inside the folder, exists, is non-empty and has an accepted extension.
 
@@ -589,143 +564,180 @@ export const sumScores = codeStep({
 
 ## `definePipeline(config)`
 
-Define a pipeline as a flat map of named states — see [Building Pipelines](/boboddy/guides/pipelines/) for the full guide.
+Exported from `@scarn/sdk/pipelines`. Write a pipeline in TypeScript; [`scarn pipelines build`](/scarn/reference/cli/#scarn-pipelines-build-file) compiles its default export to `<key>.json`, the document the server runs. See [Building Pipelines](/scarn/guides/pipelines/) for the JSON format each call compiles to.
 
 ```typescript
-import { definePipeline } from "@boboddy/sdk/definitions/pipelines";
-import { z } from "zod";
+import { decision, definePipeline, equal, fail, succeed } from "@scarn/sdk/pipelines";
+import { reproduce, writeFailingTest } from "./steps";
 
-const myPipeline = definePipeline({
-  key: "my-pipeline",
-  name: "My Pipeline",
-  status: "active",
-  input: z.object({ text: z.string() }),
-  startAt: "run",
-  states: {
-    run: {
-      kind: "step",
-      step: myStep,
-      input: (ctx) => ({ text: ctx.pipelineInput("text") }),
-      next: "done",
-    },
-    done: { kind: "succeed" },
-  },
+const review = decision("review", {
+  actions: { approve: { label: "Approve" }, reject: { label: "Reject" } },
+});
+const done = succeed("done");
+const rejected = fail("rejected", { error: "Rejected" });
+
+export default definePipeline({
+  key: "bug-repro",
+  title: "Bug repro",
+  start: reproduce({ appUrl: "http://localhost:3000" }),
+  flow: [
+    reproduce.next({
+      routes: [{ when: (r) => equal(r.result.reproduced, true), to: (r) => writeFailingTest({ observed: r.result.observed }) }],
+      otherwise: review,
+    }),
+    review.next({
+      routes: [{ when: (r) => equal(r.result.action, "approve"), to: (r) => writeFailingTest({ observed: r.node(reproduce).result.observed }) }],
+      otherwise: rejected,
+    }),
+    writeFailingTest.next(done),
+  ],
 });
 ```
 
-### `DefinePipelineInput` options
+| Field   | Type          | Required | Description                                                                 |
+| ------- | ------------- | -------- | --------------------------------------------------------------------------- |
+| `key`   | `string`      | Yes      | The pipeline key; `build` writes `<key>.json`                               |
+| `title` | `string`      | No       | Display name                                                                |
+| `start` | target        | Yes      | The first node. Only `workItem.*` refs and literals are available as args   |
+| `flow`  | `FlowChain[]` | Yes      | At most one finished chain (ending in `.next(...)`) per node. A step can be a target without a chain; its path ends after it runs |
 
-| Field       | Type                  | Required | Description                                                       |
-| ----------- | --------------------- | -------- | --------------------------------------------------------------------- |
-| `key`       | `string`              | Yes      | Unique pipeline key                                                |
-| `name`      | `string`              | No       | Display name (default: `key`)                                     |
-| `version`   | `number`              | No       | Version (default: `1`)                                             |
-| `description` | `string`            | No       | Short description                                                  |
-| `status`    | `"draft" \| "active"` | No       | Draft pipelines are not executed                                   |
-| `input`     | `ZodType`             | No       | The pipeline's own input schema; drives `ctx.pipelineInput(path)`'s typing |
-| `startAt`   | `string`              | Yes      | The entry state's key. Must not name a `choice`/`succeed`/`fail` state |
-| `states`    | `Record<string, PipelineState>` | Yes | Every state in the pipeline, keyed by its unique state key       |
+### Nodes and targets
 
-### `PipelineState`
+| API | Compiles to | Notes |
+| --- | --- | --- |
+| `step(args)` / bare `step` | A transition's `to` and `args` | A step handle from `defineStep`/`codeStep` is callable. Bare only when its input has no required fields. The node id is the step's `key` |
+| `step.as("id")` | A second node for the same step | The only way to use a step twice |
+| `decision("id", { input?, actions })` | `{ kind: "wait", for: "decision", actions: [{ key, label, body }] }` | Waits for a person in the dashboard to pick one of `actions`, each `{ label, body?: "optional" \| "required" }` (buttons in key order). Result is `{ action, body }`: `action` is one of the keys, `body` the trimmed text or `null`. `input` is a Zod schema typing the args shown to the person deciding |
+| `succeed("id", { title? })` / `fail("id", { error?, cause?, title? })` | Terminal nodes | No chain |
+| `reply("id")` | `{ kind: "wait", for: "reply" }` | Posts `questions: string[]` on the work item and waits for an answer. Result is `{ replied, body, commentId }` |
+| `workItem.title`, `workItemField(alias, label)` | `workItem.title`, `workItem.fields.<alias>` | Work-item values for args |
+| `stepRef<TInput, TResult>("key")` | `step: "key"` | A step that exists only on the server; checked against the server's catalog at build time |
 
-A discriminated union on `kind`, keyed by each state's own map key (there is no separate `dependsOn` — every incoming edge is derived from another state's own forward pointer):
+### Chains
 
-| Kind | Shape |
-| --- | --- |
-| `step` | `{ kind: "step", step, input?, timeout?, blockWhen?, next }` |
-| `choice` | `{ kind: "choice", choices?: [{ when, next }], default? }` |
-| `fanOut` | `{ kind: "fanOut", step, over, maxConcurrency?, input?, timeout?, advanceEach, advanceAll, next }` |
-| `parallel` | `{ kind: "parallel", branches: Record<string, { step, input?, timeout? }>, advanceAll?, next }` |
-| `loop` | `{ kind: "loop", step, maxIterations, input?, timeout?, until, next, onExhausted }` |
-| `split` | `{ kind: "split", branches: string[] }` |
-| `succeed` | `{ kind: "succeed" }` |
-| `fail` | `{ kind: "fail" }` |
+```
+step ─▶ .settings? ─▶ .retry* ─▶ .catch* ─▶ .next(t | { match?, routes, otherwise? })   finished
 
-`next` on a `step`/`fanOut`/`parallel`/loop-exit accepts either a state key (`string`) or `{ routeToPipeline: string, input?: Record<string, unknown> | null }` to hand execution off to a different pipeline. See [States](/boboddy/guides/pipelines/#states) for a field-by-field breakdown of each kind, and [Pipeline Advancement](/boboddy/guides/pipeline-advancement/) for `blockWhen`/`choices[].when`/`until` and `advanceEach`/`advanceAll`.
+decision ─▶ .settings? ─▶ .catch* ─▶ .next(…)          succeed / fail ─▶ no methods
 
-### `NodeInputCtx` — the `input` mapper's context
-
-Every `step`/`fanOut`/`parallel`-branch/`loop`'s `input` mapper receives:
-
-| Method                          | Description                                                              |
-| -------------------------------- | ------------------------------------------------------------------------- |
-| `ctx.pipelineInput(path)`        | Reads a dot-path out of the pipeline's own `input` schema                |
-| `ctx.workItem.<property>` / `.field(name)` | Reads a top-level work-item property (`id`, `platform`, `title`, `url`, etc.) or a `fields`-bag field directly |
-| `ctx.signal(nodeKey, signalKey)` | An earlier state's signal, addressed by that state's own key             |
-| `ctx.output(nodeKey)`            | An earlier state's whole result output                                   |
-| `ctx.signalsList(nodeKey)`       | A fan-out's whole cohort (every terminal branch's signals + output)      |
-| `ctx.literal(value)`             | A fixed value that doesn't come from anywhere at runtime                 |
-| `ctx.item`                       | **`fanOut` branches only** — the current branch's own item               |
-
-`workItemTitle` and `workItemDescription` are bound automatically on every state; there is no separate pipeline-level default-binding layer — every mapper must supply everything it needs itself.
-
-### `Rule` and `Computed`
-
-Exported from `@boboddy/sdk/definitions/pipelines`, used by `blockWhen`, a `choice` branch's `when`, and a `loop`'s `until`:
-
-```typescript
-Rule.when(signalKey, operator, value);   // bare condition
-Rule.signal(signalKey, operator, value); // leaf, for nesting in all/any
-Rule.all([condition, condition]);
-Rule.any([condition, condition]);
+route = { when?: (r) => Condition, to: t | (r) => t }
+t     = step | step(args) | step.partial(args) | each(over, options?, (item) => step(args))
 ```
 
-`operator` is one of `"equal" | "notEqual" | "lessThan" | "lessThanInclusive" | "greaterThan" | "greaterThanInclusive" | "in" | "notIn" | "contains" | "doesNotContain" | "exists" | "notExists"`. `exists` (non-null) and `notExists` (`null` or missing) take no value: `Rule.when("reproVideo", "exists")`. In cohort advancement the same checks are `signal(key).exists()` / `.notExists()`.
+`.next` ends the chain, and `flow` accepts only finished chains. `.next` twice, or `.retry` / `.catch` after `.next`, is a type error.
 
-`Computed.average` / `.weightedAverage` / `.sum` / `.min` / `.max` / `.count` / `.booleanAny` / `.booleanAll` each take an array of **two or more** signal keys and return a token that can be passed as `Rule.when`/`Rule.signal`'s `signal` argument in place of a bare key. See [Pipeline Advancement](/boboddy/guides/pipeline-advancement/) for the full reference and examples.
+| Method | Description |
+| --- | --- |
+| `.settings({ title?, timeoutSeconds?, heartbeatSeconds?, maxRuns? })` | Node settings. `maxRuns` caps a loop back to this node |
+| `.retry({ on, maxAttempts })` | Re-run the node when it fails with one of `on` |
+| `.catch(on, target)` | Go to `target` instead; its `r` has `error` and `input`, no `result` |
+| `.next(target)` | Always go to `target`. Compiles to `{ routes: [{ to, args }] }` |
+| `.next({ match?, routes, otherwise? })` | `match: "first"` (the default) takes the first route whose `when` matches; a route may omit `when` only when it is the only route. `match: "all"` takes every matching route, each as a lane; a route with no `when` always runs. `routes` needs at least one entry. `otherwise` runs when no route with a `when` matched; with nothing taken, the path ends. `match` is left out of the JSON when it's `"first"` |
+| `.partial(args)` | On step and decision handles, only as a target in `.next(...)`. Arrives at that node as a merge, with this lane's share of its args. `args` is a `Partial` of the node's input. Compiles to `{ to, args, partial: true }`. A `.catch` or `start` target can't be one (a type error), and nor can a `match: "all"` route's own target (a build error) |
 
----
+`on` lists the step's declared [`errors`](#stepdefinition-options) and the built-in errors `Scarn.All`, `Scarn.StepFailed`, `Scarn.HealthCheckFailed`, `Scarn.Timeout`, `Scarn.HeartbeatTimeout`, `Scarn.MaxRunsExceeded`, `Scarn.ConditionError` and `Scarn.ArgsError`. Anything else is a type error.
 
-## Fan-out and parallel cohort advancement
+A target is a node, a node called with args, or a callback `(r) => target`. In the callback, `r.result` and `r.input` are the node that just finished, and `r.node(step).result` / `.input` an earlier node that ran on every path to this one. Args are each a reference, a plain JSON value, or an array containing references (`[r.result]` compiles to `{ list: ["result"] }`; an array with no references stays `{ value: [...] }`). An object literal containing references is a type error. `{ ...r.input }` passes every field on.
 
-A `fanOut` state's `advanceEach`/`advanceAll` and a `parallel` state's `advanceAll` use a fluent, comparator-chain context distinct from the `Rule` DSL — see the [Fan-out guide](/boboddy/guides/pipelines/#fan-out-parallel-branches) for the state shapes and a full example.
+### Conditions
 
-### `advanceEach` context
+`equal`, `notEqual`, `lessThan`, `lessThanInclusive`, `greaterThan`, `greaterThanInclusive`, `exists`, `isEmpty`, `contains`, `startsWith`, `endsWith`, `matches`, `before`, `after`; `all`, `any`, `not`; `some`, `every`, `none` over a list (`(list, (x) => cond)`); and `sum`, `avg`, `min`, `max`, `count`, which take a list of references or a list and a field selector and go on the left of a comparison. The right side is typed against the left.
 
-Evaluated per-branch against that branch's own signals:
+Callbacks run once, at build time, with references. JavaScript logic on a reference (`r.result.ok ? a : b`, `r.result.score > 0.8`) doesn't branch at run time: use `.next({ routes })` and the helpers above. A comparison or template string on a reference throws at build time, and a field read but never used fails the build.
 
-- **`signal(key)`** / **`stepSignals.<key>`** — the branch's own signal, typed against the step's declared signals. Chain a comparator (`.eq`, `.gt`, `.gte`, `.lt`, `.lte`, `.ne`, `.in`, `.notIn`, `.contains`, `.doesNotContain`) then `.then(outcome)`.
-- **`all(...refs)` / `any(...refs)`** — group refs; terminate with `.then(outcome)`.
-- `outcome` is restricted to `"continue" | "block"` (no routing).
-- No computed-signal factories (`Computed.average`, etc.) — core has no mechanism yet to resolve a computed signal for a fan-out branch's policy.
+### Splits and merges
 
-### `advanceAll` context
+```typescript
+classify.next({
+  match: "all",
+  routes: [
+    { to: (r) => reproduce({ appUrl: r.result.appUrl }) },
+    { when: (r) => equal(r.result.category, "security"), to: notifySecurity },
+    {
+      when: (r) => not(isEmpty(r.result.pages)),
+      to: (r) => each(r.result.pages, { maxConcurrency: 3 }, (page) => screenshot({ url: page })),
+    },
+  ],
+}),
+reproduce.next((r) => summarise.partial({ observed: r.result.observed })),
+notifySecurity.next((r) => summarise.partial({ securityNotes: r.result.notes })),
+screenshot.next((r) => summarise.partial({ screenshots: [r.result.url] })),
+```
 
-Evaluated once per cohort, after every branch has settled:
+| API | Compiles to | Notes |
+| --- | --- | --- |
+| `.next({ match: "all", routes, otherwise? })` | `next: { match: "all", ... }` | One lane per taken route. With nothing taken, no lanes start and a closing merge runs straight away |
+| `each(over, options?, (item) => target)` | `each: { over, maxConcurrency?, toleratedFailures? }` on the route | One lane per item. Only a `next` target. `item` exists only as the callback's parameter, and the target can't be a `.partial(...)`. `toleratedFailures` is `{ count }` or `{ percent }`, default `{ count: 0 }` |
+| `step.partial(args)` | A route with `partial: true` | Ends the lane at the merge `step`, which runs once every lane that could reach it has arrived or can't any more |
 
-- **`branchOutcomes.total()`** — the cohort's total branch count (fact `branchCount`). Returns a comparator ref.
-- **`branchOutcomes.count(outcome)`** — a single outcome's count across the cohort (fact `${outcome}Count`). Returns a comparator ref.
-- **`branchOutcomes.every(outcome)`** / **`.some(outcome)`** — `true` iff every/any branch resolved to `outcome`. Already a rule leaf — go straight to `.then(outcome)`.
-- **`stepSignalsList.pluck(signalKey)`** — seeds an aggregation across every branch's `signalKey` value. Chain `.filter(operator, value)` / `.sortBy(direction?)` / `.unique()` to reshape, then exactly one reducer: `.count()`, `.sum()`, `.avg()`, `.min()`, `.max()`, `.booleanAll()`, `.booleanAny()`, `.join(separator?)`, `.first()`, or `.last()`. Returns a comparator ref.
-- **`all(...refs)` / `any(...refs)`** — group refs; terminate with `.then(outcome)`.
-- `outcome` in `.then(outcome)` is restricted to `"continue" | "block"`.
+At a merge, a field from item lanes is an array, every lane's array concatenated in item order (`[]` when no lane supplied it). Other fields are copied, and a field from a route that wasn't taken is left unset. A lane that ends without reaching a merge (no route taken, no chain, or `succeed`) is left out. A failed `all` lane fails the split's parent; failed item lanes count against `toleratedFailures`. See [Routes, splits and merges](/scarn/guides/pipelines/#routes-splits-and-merges).
 
-`BranchOutcome` (the `outcome` param to `branchOutcomes.count`/`.every`/`.some`) is `"continue" | "block" | "error" | "abandoned"` — the two additional values cover branches that failed or never ran.
+`partial` on `.catch`, `toleratedFailures` for `all` lanes, and a loop back into a merge from outside its split aren't supported.
+
+### Build errors
+
+`definePipeline` and the server's validator report these with the same message:
+
+| Build error | Fix |
+| --- | --- |
+| In `first` mode, a route with no `when` when there's more than one route | Add a `when`, or use `otherwise` |
+| A `.partial(...)` route outside any split | Remove `.partial`, or start lanes earlier |
+| A merge node with a plain (non-`partial`) incoming route | Make every route into it `.partial(...)` |
+| Lanes from two different routes meeting at a node without `partial` | Make it a merge, or use `.as(...)` for a second node |
+| A field supplied by two different routes | Supply it from one route |
+| A required merge field that no route supplies, or that might not arrive | Make it optional, or supply it on every path that doesn't end at `fail` |
+| A field from item lanes whose type isn't an array | Make it an array |
+| A node reached both inside and outside a split | Use `.as(...)`. `succeed` and `fail` nodes are exempt |
+| `r.node(x)` after a merge, where `x` ran in its lanes | Pass the value through the partial args |
+| A `match: "all"` route that is itself `.partial(...)` | Route to a step first, and make its route `.partial` |
+
+### Enable the ESLint rule
+
+`@scarn/sdk/eslint` has the rule `no-logic-in-pipeline-callbacks`, which flags JavaScript logic in your editor before you build. It reports `?:`, `&&`, `||`, `??`, `!`, comparisons and `if` statements written directly in a callback passed to `.next` (a target, or a route's `when`/`to` and `otherwise`), `.catch(on, target)` or `each`. Functions nested inside a callback, such as `some(list, (x) => ...)`, aren't checked. `scarn pipelines init` doesn't set up ESLint, so add it yourself (ESLint 9, flat config):
+
+```javascript
+// .scarn/pipeline-builder/eslint.config.js
+import tseslint from "typescript-eslint";
+import scarn from "@scarn/sdk/eslint";
+
+export default [
+  { files: ["**/*.ts"], languageOptions: { parser: tseslint.parser } },
+  scarn.configs.recommended,
+];
+```
+
+Install `eslint` and `typescript-eslint` as dev dependencies first. To pick the files yourself, register the plugin and turn the rule on:
+
+```javascript
+{
+  files: ["**/*.ts"],
+  plugins: { scarn },
+  rules: { "scarn/no-logic-in-pipeline-callbacks": "error" },
+}
+```
 
 ---
 
 ## `defaultPipelineAssignment(callback)`
 
-Define which pipeline is automatically started when a work item arrives. This goes in the reserved file `.boboddy/pipeline-builder/default-pipeline-assignment.ts`.
+Define which pipeline is automatically started when a work item arrives. This goes in the reserved file `.scarn/pipeline-builder/default-pipeline-assignment.ts`.
 
 ```typescript
-import { defaultPipelineAssignment } from "@boboddy/sdk/definitions/pipelines";
-import bugTriage from "./bug-triage";
-import regressionReview from "./regression-review";
+import { defaultPipelineAssignment } from "@scarn/sdk/definitions/pipelines";
 
 export default defaultPipelineAssignment(({ workItem, any, assign, skip }) => ({
-  default: assign(bugTriage),
+  default: assign("bug-triage"),
   rules: [
     any(
       workItem.field("status").eq("resolved"),
       workItem.field("status").eq("manual support"),
     ).then(skip()),
-    workItem.title.contains("[urgent]").then(assign(bugTriage)),
-    workItem.field("issueType").eq("bug").then(assign(bugTriage)),
+    workItem.title.contains("[urgent]").then(assign("bug-triage")),
+    workItem.field("issueType").eq("bug").then(assign("bug-triage")),
     workItem
       .field("labels")
       .contains("regression")
-      .then(assign(regressionReview)),
+      .then(assign("regression-review")),
   ],
 }));
 ```
@@ -739,23 +751,23 @@ The callback receives a context object. Only `defaultPipelineAssignment` needs t
 | `workItem.<property>`          | Comparator ref for a top-level work item property (`id`, `platform`, `title`, `url`, etc.)          |
 | `workItem.field(name)`         | Returns a comparator ref for the named work item field (`fields` bag), typed via `field<TName, TValue>` |
 | `context.isNew`                | Comparator ref; `true` when the work item is new             |
-| `assign(pipeline)`             | Outcome: start the given pipeline (`PipelineDefinitionSpec`) |
+| `assign(key)`                  | Outcome: start the published pipeline with that key. Also accepts the value a pipeline file's `definePipeline()` returns |
 | `skip()`                       | Outcome: do not assign any pipeline                          |
 | `all(...refs)`                 | All nested conditions must match                             |
 | `any(...refs)`                 | Any nested condition must match                              |
 
-`workItem`'s top-level properties are `id`, `projectId`, `platform`, `platformId`, `platformKey`, `url`, `title`, `description`, `sourceCreatedAt`, `sourceUpdatedAt`, `createdByUserId`, `parentWorkItemId`, `createdAt`, `updatedAt`. `platform` is typed to the real platform literal union; the date-like fields are ISO strings (or `null`), not `Date` objects. See the [pipeline assignment guide](/boboddy/guides/pipeline-assignment/#work-item-properties) for details.
+`workItem`'s top-level properties are `id`, `projectId`, `platform`, `platformId`, `platformKey`, `url`, `title`, `description`, `sourceCreatedAt`, `sourceUpdatedAt`, `createdByUserId`, `parentWorkItemId`, `createdAt`, `updatedAt`. `platform` is typed to the real platform literal union; the date-like fields are ISO strings (or `null`), not `Date` objects. See the [pipeline assignment guide](/scarn/guides/pipeline-assignment/#work-item-properties) for details.
 
 ### Return value shape
 
 | Field     | Type                           | Description                                                  |
 | --------- | ------------------------------ | ------------------------------------------------------------ |
-| `default` | `AssignOutcome \| SkipOutcome` | Outcome when no rule matches; `assign(pipeline)` or `skip()` |
+| `default` | `AssignOutcome \| SkipOutcome` | Outcome when no rule matches; `assign(key)` or `skip()`      |
 | `rules`   | `AssignmentRule[]`             | Ordered rules; first match wins                              |
 
 ### Comparators
 
-All comparators available on advancement `SignalRef`s are also available here: `.eq`, `.ne`, `.gt`, `.gte`, `.lt`, `.lte`, `.in`, `.notIn`, `.contains`, `.doesNotContain`. Not every comparator applies to every field — `.gt`/`.gte`/`.lt`/`.lte` only exist on numeric fields, so e.g. `workItem.title.gt(...)` is a compile error.
+Refs support `.eq`, `.ne`, `.gt`, `.gte`, `.lt`, `.lte`, `.in`, `.notIn`, `.contains`, `.doesNotContain`. Not every comparator applies to every field — `.gt`/`.gte`/`.lt`/`.lte` only exist on numeric fields, so e.g. `workItem.title.gt(...)` is a compile error.
 
 ---
 
@@ -764,17 +776,17 @@ All comparators available on advancement `SignalRef`s are also available here: `
 The SDK ships an auto-generated API client built from the OpenAPI spec.
 
 ```typescript
-import { createBoboddyClient } from "@boboddy/sdk";
+import { createScarnClient } from "@scarn/sdk";
 
-const client = createBoboddyClient("https://app.boboddy.dev");
+const client = createScarnClient("https://app.scarn.io");
 ```
 
 Use `createStepDefinitionsClient` for CRUD operations on step definitions:
 
 ```typescript
-import { createStepDefinitionsClient } from "@boboddy/sdk";
+import { createStepDefinitionsClient } from "@scarn/sdk";
 
-const stepClient = createStepDefinitionsClient("https://app.boboddy.dev");
+const stepClient = createStepDefinitionsClient("https://app.scarn.io");
 ```
 
 ---
@@ -783,20 +795,20 @@ const stepClient = createStepDefinitionsClient("https://app.boboddy.dev");
 
 ### JSONC parser
 
-Parse `.boboddy/boboddy.jsonc` files (JSON with comments):
+Parse `.scarn/scarn.jsonc` files (JSON with comments):
 
 ```typescript
-import { parseJsonc } from "@boboddy/sdk";
+import { parseJsonc } from "@scarn/sdk";
 
 const config = parseJsonc(rawString);
 ```
 
 ### Project config
 
-Read the Boboddy project config from disk. `readProjectConfig` is exported from `@boboddy/worker` (not the SDK):
+Read the Scarn project config from disk. `readProjectConfig` is exported from `@scarn/worker` (not the SDK):
 
 ```typescript
-import { readProjectConfig } from "@boboddy/worker";
+import { readProjectConfig } from "@scarn/worker";
 
 const { project } = await readProjectConfig(); // "owner/slug"
 ```

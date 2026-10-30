@@ -1,303 +1,426 @@
 import { describe, expect, test } from "bun:test";
 import type {
-  DependencyEdgeSpec,
-  NodeDefinitionSpec,
-  PipelineDefinitionSpec,
-} from "@boboddy/sdk/definitions/pipelines";
-import type { StepDefinitionSpec } from "@boboddy/sdk/definitions/steps";
-import type { DefinitionValidationIssue } from "@boboddy/sdk/definitions/validation";
-import { translatePipelineToSnapshot, translateSpecToGraph } from "./translate-spec-to-graph";
+  PipelineDocument,
+  StepCatalog,
+} from "@scarn/sdk/contracts/pipeline-document";
+import ROUTES_ALL from "../../../../apps/docs/src/content/catalog-fixtures/pipeline-graph/routes-all.json";
+import type { StudioIssue } from "./studio-graph-types";
+import {
+  nodeIdFromPath,
+  START_NODE_ID,
+  translateDocumentToGraph,
+  translatePipelineToSnapshot,
+} from "./translate-spec-to-graph";
 
-// Exported for `translate-spec-to-graph-shape.test.ts` (split out of this
-// file to stay under the repo's `max-lines` lint rule) to reuse rather than
-// duplicate.
-export function pipeline(
-  nodeDefinitions: NodeDefinitionSpec[],
-  dependencyEdges: DependencyEdgeSpec[],
-): PipelineDefinitionSpec {
-  return {
-    key: "review-pr",
-    name: "Review PR",
-    description: null,
-    version: 1,
-    status: "active",
-    entryNodeKey: nodeDefinitions[0]?.nodeKey ?? "review-pr",
-    nodeDefinitions,
-    dependencyEdges,
-  };
-}
-
-export const ADVANCEMENT_POLICY = {
-  rulesJson: { rules: [] },
-  defaultEventType: "continue" as const,
-  defaultEventParamsJson: null,
-  allowedEventTypes: ["continue" as const],
-};
-
-export function stepNode(
-  overrides: Partial<Extract<NodeDefinitionSpec, { kind: "step" }>> & {
-    nodeKey: string;
-    stepKey: string;
-    stepName: string;
-  },
-): NodeDefinitionSpec {
-  return {
-    kind: "step",
-    stepDescription: null,
-    inputBindingsJson: {},
-    timeoutSeconds: null,
-    advancementPolicyDefinition: ADVANCEMENT_POLICY,
-    computedSignalDefinitions: [],
-    ...overrides,
-  };
-}
-
-export const ANALYZE: NodeDefinitionSpec = stepNode({
-  nodeKey: "analyze",
-  stepKey: "analyze-step",
-  stepName: "Analyze",
-});
-export const ROUTE: NodeDefinitionSpec = {
-  nodeKey: "routeBySeverity",
-  kind: "choice",
-  choices: [{ conditionJson: { fact: "severity", operator: "equal", value: "critical" }, targetNodeKey: "pageOncall" }],
-  default: "summarize",
-};
-export const PAGE_ONCALL: NodeDefinitionSpec = stepNode({
-  nodeKey: "pageOncall",
-  stepKey: "page-oncall-step",
-  stepName: "Page Oncall",
-});
-export const SUMMARIZE: NodeDefinitionSpec = stepNode({
-  nodeKey: "summarize",
-  stepKey: "summarize-step",
-  stepName: "Summarize",
-  inputBindingsJson: {
-    diff: { source: "step_signal", stepKey: "analyze", signalKey: "diff" },
-  },
-});
-
-export const EDGES: DependencyEdgeSpec[] = [
-  { fromNodeKey: "analyze", toNodeKey: "routeBySeverity" },
-  { fromNodeKey: "routeBySeverity", toNodeKey: "pageOncall" },
-  { fromNodeKey: "routeBySeverity", toNodeKey: "summarize" },
-  { fromNodeKey: "pageOncall", toNodeKey: "summarize" },
-];
-
-export function stepSpec(
-  overrides: Partial<StepDefinitionSpec> & { key: string },
-): StepDefinitionSpec {
-  return {
-    name: overrides.key,
-    description: null,
-    version: 1,
-    kind: "user_defined",
-    status: "active",
-    prompt: null,
-    inputSchemaJson: null,
-    resultSchemaJson: null,
-    signalExtractorDefinitions: [],
-    opencodeMcpJson: null,
-    healthChecksJson: null,
-    ...overrides,
-  };
-}
-
-describe("translateSpecToGraph — mapping", () => {
-  test("maps every node and edge, with a stable label per kind", () => {
-    const spec = pipeline([ANALYZE, ROUTE, PAGE_ONCALL, SUMMARIZE], EDGES);
-
-    const { nodes, edges } = translateSpecToGraph(spec, []);
-
-    expect(nodes.map((n) => n.id).sort()).toEqual(
-      ["analyze", "pageOncall", "routeBySeverity", "summarize"].sort(),
-    );
-    expect(edges).toHaveLength(EDGES.length);
-    expect(edges.map((e) => `${e.source}->${e.target}`).sort()).toEqual(
-      EDGES.map((e) => `${e.fromNodeKey}->${e.toNodeKey}`).sort(),
-    );
-
-    const analyzeNode = nodes.find((n) => n.id === "analyze");
-    expect(analyzeNode?.data.label).toBe("Analyze");
-    expect(analyzeNode?.data.kind).toBe("step");
-
-    // A `choice` node has no `stepName` — falls back to its own node key.
-    const routeNode = nodes.find((n) => n.id === "routeBySeverity");
-    expect(routeNode?.data.label).toBe("routeBySeverity");
-  });
-
-  test("prefers a choice/fail/succeed node's display name over its key", () => {
-    const spec = pipeline(
-      [
-        ANALYZE,
-        { nodeKey: "routeBySeverity", kind: "choice", name: "Route by severity", choices: [], default: null },
-        { nodeKey: "needs_human", kind: "fail", name: "Needs a human" },
-        { nodeKey: "done", kind: "succeed", name: "Done" },
+const BUG_PIPELINE: PipelineDocument = {
+  schemaVersion: 1,
+  key: "fix-bug",
+  title: "Fix a bug",
+  start: { to: "triage" },
+  nodes: {
+    triage: {
+      kind: "step",
+      title: "Triage",
+      step: "triage",
+      next: {
+        routes: [
+          {
+            when: {
+              path: "result.score",
+              op: "greaterThanInclusive",
+              value: 7,
+            },
+            to: "fix",
+          },
+        ],
+        otherwise: { to: "rejected" },
+      },
+      catch: [{ on: ["Scarn.Timeout"], to: "failed" }],
+    },
+    fix: {
+      kind: "step",
+      step: "fix",
+      next: {
+        routes: [{ to: "review", each: { over: "result.files" } }],
+      },
+    },
+    review: {
+      kind: "wait",
+      for: "decision",
+      actions: [
+        { key: "approve", label: "Approve", body: "optional" },
+        { key: "reject", label: "Reject", body: "optional" },
       ],
-      [],
-    );
+      next: {
+        routes: [{ to: "done", partial: true }],
+      },
+    },
+    done: { kind: "succeed" },
+    rejected: { kind: "succeed", title: "Not worth fixing" },
+    failed: { kind: "fail", error: "Triage.TimedOut" },
+  },
+};
 
-    const { nodes } = translateSpecToGraph(spec, []);
-    const label = (id: string) => nodes.find((n) => n.id === id)?.data.label;
+const CATALOG: StepCatalog = {
+  triage: {
+    inputSchema: {
+      type: "object",
+      properties: { title: { type: "string" }, body: { type: "string" } },
+      required: ["title"],
+    },
+    resultSchema: {
+      type: "object",
+      properties: { score: { type: "number" }, files: { type: "array" } },
+    },
+    errors: ["Triage.Unclear"],
+  },
+};
 
-    expect(label("routeBySeverity")).toBe("Route by severity");
-    expect(label("needs_human")).toBe("Needs a human");
-    expect(label("done")).toBe("Done");
+function issue(overrides: Partial<StudioIssue>): StudioIssue {
+  return {
+    code: "unknown_path",
+    severity: "error",
+    message: "message",
+    pipelineKey: "fix-bug",
+    ...overrides,
+  };
+}
+
+describe("translateDocumentToGraph — mapping", () => {
+  const { nodes, edges } = translateDocumentToGraph(BUG_PIPELINE);
+
+  test("adds a start node plus one node per document node", () => {
+    expect(nodes.map((node) => [node.id, node.data.kind])).toEqual([
+      [START_NODE_ID, "start"],
+      ["triage", "step"],
+      ["fix", "step"],
+      ["review", "wait"],
+      ["done", "succeed"],
+      ["rejected", "succeed"],
+      ["failed", "fail"],
+    ]);
   });
 
-  test("labels choice edges from discriminantJson.label, and loop edges from loopExit", () => {
-    const spec = pipeline(
-      [ANALYZE, ROUTE, PAGE_ONCALL, SUMMARIZE],
-      [
-        { fromNodeKey: "analyze", toNodeKey: "routeBySeverity", discriminantJson: { label: "ignored" } },
-        {
-          fromNodeKey: "routeBySeverity",
-          toNodeKey: "pageOncall",
-          discriminantJson: { label: 'severity == "critical"' },
+  test("labels nodes by title, falling back to the node id", () => {
+    const labels = Object.fromEntries(
+      nodes.map((node) => [node.id, node.data.label]),
+    );
+    expect(labels["triage"]).toBe("Triage");
+    expect(labels["fix"]).toBe("fix");
+    expect(labels["rejected"]).toBe("Not worth fixing");
+  });
+
+  test("records the step key and wait kind", () => {
+    const fix = nodes.find((node) => node.id === "fix");
+    const review = nodes.find((node) => node.id === "review");
+    expect(fix?.data.stepKey).toBe("fix");
+    expect(review?.data.waitFor).toBe("decision");
+  });
+
+  test("builds start, route, otherwise and catch edges with lane markers", () => {
+    expect(
+      edges.map((edge) => [
+        edge.source,
+        edge.target,
+        edge.data?.kind,
+        edge.data?.lane,
+      ]),
+    ).toEqual([
+      [START_NODE_ID, "triage", "start", null],
+      ["triage", "fix", "route", null],
+      ["triage", "rejected", "otherwise", null],
+      ["triage", "failed", "catch", null],
+      ["fix", "review", "route", "each"],
+      ["review", "done", "route", "partial"],
+    ]);
+  });
+
+  test("labels conditions, fallbacks, lanes and catches", () => {
+    expect(edges.map((edge) => edge.label)).toEqual([
+      undefined,
+      "result.score >= 7",
+      "otherwise",
+      "catch Scarn.Timeout",
+      "each over result.files",
+      "partial",
+    ]);
+  });
+
+  test("marks first nodes and leaves a lone route unnumbered", () => {
+    const triage = nodes.find((node) => node.id === "triage");
+    expect(triage?.data.match).toBe("first");
+    expect(nodes.find((node) => node.id === "done")?.data.match).toBe(
+      undefined,
+    );
+    expect(edges.map((edge) => edge.data?.order)).toEqual([
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+    ]);
+  });
+
+  test("lists the partial routes a merge node waits for", () => {
+    const done = nodes.find((node) => node.id === "done");
+    expect(done?.data.mergeWaitsFor).toEqual(["review"]);
+    expect(
+      nodes.find((node) => node.id === "fix")?.data.mergeWaitsFor,
+    ).toBeUndefined();
+  });
+
+  test("gives every edge a unique id", () => {
+    expect(new Set(edges.map((edge) => edge.id)).size).toBe(edges.length);
+  });
+
+  test("lays out every node at a distinct position", () => {
+    const positions = new Set(
+      nodes.map(
+        (node) => `${String(node.position.x)},${String(node.position.y)}`,
+      ),
+    );
+    expect(positions.size).toBe(nodes.length);
+  });
+});
+
+describe("translateDocumentToGraph — route order", () => {
+  test("numbers the routes of a first node with several routes, not otherwise", () => {
+    const document: PipelineDocument = {
+      schemaVersion: 1,
+      key: "order",
+      start: { to: "a" },
+      nodes: {
+        a: {
+          kind: "step",
+          step: "a",
+          next: {
+            routes: [
+              { when: { path: "result.x", op: "equal", value: 1 }, to: "b" },
+              { when: { path: "result.x", op: "equal", value: 2 }, to: "c" },
+            ],
+            otherwise: { to: "c" },
+          },
         },
-        { fromNodeKey: "routeBySeverity", toNodeKey: "summarize", discriminantJson: { label: "otherwise" } },
-        { fromNodeKey: "pageOncall", toNodeKey: "summarize", discriminantJson: { loopExit: "next" } },
-      ],
-    );
-
-    const { edges } = translateSpecToGraph(spec, []);
-    const label = (id: string) => edges.find((e) => e.id === id)?.label;
-
-    expect(label("routeBySeverity->pageOncall")).toBe('severity == "critical"');
-    expect(label("routeBySeverity->summarize")).toBe("otherwise");
-    expect(label("pageOncall->summarize")).toBe("next");
-    expect(label("analyze->routeBySeverity")).toBeUndefined();
-  });
-
-  test("lays out every node with a distinct, non-origin position", () => {
-    const spec = pipeline([ANALYZE, ROUTE, PAGE_ONCALL, SUMMARIZE], EDGES);
-
-    const { nodes } = translateSpecToGraph(spec, []);
-
-    const positions = nodes.map(
-      (n) => `${String(n.position.x)},${String(n.position.y)}`,
-    );
-    expect(new Set(positions).size).toBe(nodes.length);
-
-    // Top-to-bottom layout: analyze (rank 0) sits strictly above summarize
-    // (a later rank), since dagre's `rankdir: "TB"` increases y with rank.
-    const analyzeY = nodes.find((n) => n.id === "analyze")?.position.y ?? 0;
-    const summarizeY = nodes.find((n) => n.id === "summarize")?.position.y ?? 0;
-    expect(summarizeY).toBeGreaterThan(analyzeY);
-  });
-
-  test("a pipeline with no edges still lays out without throwing", () => {
-    const spec = pipeline([ANALYZE], []);
-
-    const { nodes, edges } = translateSpecToGraph(spec, []);
-
-    expect(nodes).toHaveLength(1);
-    expect(edges).toHaveLength(0);
+        b: { kind: "succeed" },
+        c: { kind: "succeed" },
+      },
+    };
+    const { edges } = translateDocumentToGraph(document);
+    expect(
+      edges.map((edge) => [edge.target, edge.data?.kind, edge.data?.order]),
+    ).toEqual([
+      ["a", "start", null],
+      ["b", "route", 1],
+      ["c", "route", 2],
+      ["c", "otherwise", null],
+    ]);
   });
 });
 
-describe("translateSpecToGraph — issue attachment", () => {
-  test("attaches a node-scoped issue (route-target) to its node", () => {
-    const spec = pipeline([ANALYZE, ROUTE, PAGE_ONCALL, SUMMARIZE], EDGES);
-    const issue: DefinitionValidationIssue = {
-      check: "route-target",
-      severity: "error",
-      pipelineKey: "review-pr",
-      nodeKey: "pageOncall",
-      message: "routes to an unknown pipeline",
-    };
+describe("translateDocumentToGraph — routes-all catalog fixture", () => {
+  const { nodes, edges } = translateDocumentToGraph(
+    ROUTES_ALL as PipelineDocument,
+  );
+  const node = (id: string) => nodes.find((entry) => entry.id === id);
 
-    const { nodes, edges } = translateSpecToGraph(spec, [issue]);
-
-    expect(nodes.find((n) => n.id === "pageOncall")?.data.issues).toEqual([
-      issue,
+  test("marks the fork node as all and leaves its routes unordered", () => {
+    expect(node("classifyIssue")?.data.match).toBe("all");
+    expect(node("summariseFindings")?.data.match).toBe("first");
+    const forkEdges = edges.filter((edge) => edge.source === "classifyIssue");
+    expect(forkEdges.map((edge) => edge.data?.order)).toEqual([
+      null,
+      null,
+      null,
+      null,
     ]);
-    for (const edge of edges) {
-      expect(edge.data?.issues).toEqual([]);
-    }
   });
 
-  test("attaches a signal-binding issue to the direct edge it names", () => {
-    const spec = pipeline([ANALYZE, ROUTE, PAGE_ONCALL, SUMMARIZE], EDGES);
-    // pageOncall -> summarize IS a direct edge in this fixture.
-    const issue: DefinitionValidationIssue = {
-      check: "signal-binding",
-      severity: "error",
-      pipelineKey: "review-pr",
-      nodeKey: "summarize",
-      targetNodeKey: "pageOncall",
-      message: "binds a signal pageOncall never declares",
-    };
+  test("labels always, condition, each and otherwise routes of the fork", () => {
+    expect(
+      edges
+        .filter((edge) => edge.source === "classifyIssue")
+        .map((edge) => [edge.target, edge.label, edge.data?.lane]),
+    ).toEqual([
+      ["reproduceBug", "always", null],
+      ["notifySecurity", 'result.category == "security"', null],
+      [
+        "captureScreenshot",
+        "not (result.affectedPages isEmpty) · each over …",
+        "each",
+      ],
+      ["addToBacklog", "otherwise", null],
+    ]);
+  });
 
-    const { nodes, edges } = translateSpecToGraph(spec, [issue]);
+  test("badges the partial and closing merges with the routes they wait for", () => {
+    expect(node("writeFailingTest")?.data.mergeWaitsFor).toEqual([
+      "Reproduce bug",
+      "Notify security",
+    ]);
+    expect(node("summariseFindings")?.data.mergeWaitsFor).toEqual([
+      "Capture screenshot",
+      "Write failing test",
+    ]);
+    expect(node("addToBacklog")?.data.mergeWaitsFor).toBeUndefined();
+  });
 
-    const targetEdge = edges.find(
-      (e) => e.source === "pageOncall" && e.target === "summarize",
+  test("lays out every node at a distinct position", () => {
+    const positions = new Set(
+      nodes.map(
+        (entry) => `${String(entry.position.x)},${String(entry.position.y)}`,
+      ),
     );
-    expect(targetEdge?.data?.issues).toEqual([issue]);
-    expect(nodes.find((n) => n.id === "summarize")?.data.issues).toEqual([]);
+    expect(positions.size).toBe(nodes.length);
+  });
+});
+
+describe("translateDocumentToGraph — edge routes", () => {
+  const LOOPING: PipelineDocument = {
+    schemaVersion: 1,
+    key: "loop",
+    start: { to: "propose" },
+    nodes: {
+      propose: {
+        kind: "step",
+        step: "propose",
+        next: {
+          routes: [
+            { when: { path: "result.ok", op: "equal", value: true }, to: "review" },
+          ],
+          otherwise: { to: "propose" },
+        },
+      },
+      review: {
+        kind: "wait",
+        for: "decision",
+        actions: [{ key: "revise", label: "Revise", body: "optional" }],
+        next: {
+          routes: [
+            { when: { path: "result.action", op: "equal", value: "revise" }, to: "propose" },
+          ],
+          otherwise: { to: "done" },
+        },
+      },
+      done: { kind: "succeed" },
+    },
+  };
+  const { nodes, edges } = translateDocumentToGraph(LOOPING);
+  const route = (source: string, target: string) =>
+    edges.find((edge) => edge.source === source && edge.target === target)
+      ?.data?.route;
+
+  test("routes self loops and back edges as loops on the side handles", () => {
+    expect(route("propose", "propose")?.kind).toBe("loop");
+    expect(route("review", "propose")?.kind).toBe("loop");
+    const back = edges.find((edge) => edge.source === "review" && edge.target === "propose");
+    expect([back?.sourceHandle, back?.targetHandle]).toEqual(["loop-out", "loop-in"]);
   });
 
-  test("falls back to the consuming node when nodeKey/targetNodeKey aren't a direct edge", () => {
-    const spec = pipeline([ANALYZE, ROUTE, PAGE_ONCALL, SUMMARIZE], EDGES);
-    // analyze -> summarize is NOT a direct edge (analyze -> routeBySeverity -> ... -> summarize).
-    const issue: DefinitionValidationIssue = {
-      check: "signal-binding",
-      severity: "error",
-      pipelineKey: "review-pr",
-      nodeKey: "summarize",
-      targetNodeKey: "analyze",
-      message: "binds a signal analyze never declares",
-    };
+  test("keeps forward edges flowing down with their own label slot", () => {
+    const forward = route("propose", "review");
+    expect(forward?.kind).toBe("flow");
+    const propose = nodes.find((node) => node.id === "propose");
+    const review = nodes.find((node) => node.id === "review");
+    expect(review?.position.y).toBeGreaterThan(propose?.position.y ?? Infinity);
+    if (forward?.kind !== "flow") throw new Error("expected a flow route");
+    expect(forward.label).not.toBeNull();
+  });
 
-    const { nodes, edges } = translateSpecToGraph(spec, [issue]);
-
-    expect(nodes.find((n) => n.id === "summarize")?.data.issues).toEqual([
-      issue,
-    ]);
-    for (const edge of edges) {
-      expect(edge.data?.issues).toEqual([]);
+  test("nests the shorter loop inside the longer one, both clear of the nodes", () => {
+    const self = route("propose", "propose");
+    const back = route("review", "propose");
+    if (self?.kind !== "loop" || back?.kind !== "loop") {
+      throw new Error("expected loop routes");
     }
+    const rightmostNode = Math.max(
+      ...nodes
+        .filter((node) => node.id === "propose" || node.id === "review")
+        .map((node) => node.position.x + 240),
+    );
+    expect(self.laneX).toBeGreaterThan(rightmostNode);
+    expect(back.laneX).toBeGreaterThan(self.laneX);
+  });
+});
+
+describe("translateDocumentToGraph — shape", () => {
+  test("resolves a step node's input and result fields from the catalog", () => {
+    const { nodes } = translateDocumentToGraph(BUG_PIPELINE, [], CATALOG);
+    const triage = nodes.find((node) => node.id === "triage");
+    expect(triage?.data.shape).toEqual({
+      kind: "step",
+      inputFields: [
+        { name: "title", type: "string", required: true },
+        { name: "body", type: "string", required: false },
+      ],
+      resultFields: [
+        { name: "score", type: "number", required: false },
+        { name: "files", type: "array", required: false },
+      ],
+      resultSchemaJson: CATALOG["triage"]?.resultSchema as Record<
+        string,
+        unknown
+      >,
+      errors: ["Triage.Unclear"],
+    });
   });
 
-  test("ignores issues scoped to a different pipeline", () => {
-    const spec = pipeline([ANALYZE], []);
-    const issue: DefinitionValidationIssue = {
-      check: "route-target",
-      severity: "error",
-      pipelineKey: "some-other-pipeline",
-      nodeKey: "analyze",
-      message: "not about this pipeline",
-    };
+  test("falls back to 'none' for unknown steps and non-step nodes", () => {
+    const { nodes } = translateDocumentToGraph(BUG_PIPELINE, [], CATALOG);
+    expect(nodes.find((node) => node.id === "fix")?.data.shape).toEqual({
+      kind: "none",
+    });
+    expect(nodes.find((node) => node.id === "review")?.data.shape).toEqual({
+      kind: "none",
+    });
+  });
+});
 
-    const { nodes } = translateSpecToGraph(spec, [issue]);
-
-    expect(nodes[0]?.data.issues).toEqual([]);
+describe("translateDocumentToGraph — issue attachment", () => {
+  test("attaches an issue inside a transition to that edge", () => {
+    const { edges, nodes } = translateDocumentToGraph(BUG_PIPELINE, [
+      issue({ path: "/nodes/triage/next/routes/0/when/path" }),
+    ]);
+    const edge = edges.find((candidate) => candidate.target === "fix");
+    expect(edge?.data?.issues).toHaveLength(1);
+    expect(nodes.find((node) => node.id === "triage")?.data.issues).toEqual([]);
   });
 
-  test("ignores step-only issues, which carry no nodeKey to attach to", () => {
-    const spec = pipeline([ANALYZE], []);
-    const issue: DefinitionValidationIssue = {
-      check: "signal-source-path",
-      severity: "error",
-      message: "sourcePath never resolves",
-    };
+  test("attaches an issue on a node's own fields to the node", () => {
+    const { nodes } = translateDocumentToGraph(BUG_PIPELINE, [
+      issue({ path: "/nodes/fix/step", severity: "warning" }),
+    ]);
+    const fix = nodes.find((node) => node.id === "fix");
+    expect(fix?.data.issues.map((entry) => entry.severity)).toEqual([
+      "warning",
+    ]);
+  });
 
-    const { nodes } = translateSpecToGraph(spec, [issue]);
+  test("ignores issues for other pipelines and issues with no node", () => {
+    const { nodes, edges } = translateDocumentToGraph(BUG_PIPELINE, [
+      issue({ path: "/nodes/fix", pipelineKey: "other" }),
+      issue({ path: "/timeoutSeconds" }),
+      issue({ path: undefined }),
+    ]);
+    expect(nodes.flatMap((node) => node.data.issues)).toEqual([]);
+    expect(edges.flatMap((edge) => edge.data?.issues ?? [])).toEqual([]);
+  });
+});
 
-    expect(nodes[0]?.data.issues).toEqual([]);
+describe("nodeIdFromPath", () => {
+  test("reads the node id from a node pointer, unescaping it", () => {
+    expect(nodeIdFromPath("/nodes/fix/next/routes/0")).toBe("fix");
+    expect(nodeIdFromPath("/nodes/a~1b")).toBe("a/b");
+    expect(nodeIdFromPath("/start/to")).toBeUndefined();
+    expect(nodeIdFromPath(undefined)).toBeUndefined();
   });
 });
 
 describe("translatePipelineToSnapshot", () => {
-  test("carries the pipeline's own key and name alongside its graph", () => {
-    const spec = pipeline([ANALYZE], []);
-
-    const snapshot = translatePipelineToSnapshot(spec, []);
-
-    expect(snapshot.key).toBe("review-pr");
-    expect(snapshot.name).toBe("Review PR");
-    expect(snapshot.nodes).toHaveLength(1);
+  test("carries the pipeline's key and title alongside its graph", () => {
+    const snapshot = translatePipelineToSnapshot(BUG_PIPELINE);
+    expect(snapshot.key).toBe("fix-bug");
+    expect(snapshot.name).toBe("Fix a bug");
+    expect(snapshot.nodes).toHaveLength(7);
   });
 });
-

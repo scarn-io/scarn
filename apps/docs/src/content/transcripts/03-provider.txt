@@ -1,4 +1,4 @@
-# @boboddy/cli 0.0.0 — derived from reporter strings in apps/cli/src (lib/design-preflight.ts, lib/design-agent-tools.ts, lib/design-runtime.ts, lib/design-provider-connect.ts), rendered through ClackReporter; not a live capture. Re-derived for the repository tool discovery step.
+# @scarn/cli 0.0.0 — derived from reporter strings in apps/cli/src (lib/design-preflight.ts, lib/design-agent-tools.ts, lib/design-runtime.ts, lib/design-provider-connect.ts), rendered through ClackReporter; not a live capture. Re-derived for the repository tool discovery step.
 # Trimmed by hand: clack's blank "│" spacer lines are dropped. The repository shown defines one MCP server and two skills; the guidance line shown is the one for a machine with Claude Code installed.
 ◆  Scaffolded the pipeline builder directory
 ●  Installing pipeline builder dependencies…

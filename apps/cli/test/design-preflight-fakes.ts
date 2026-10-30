@@ -1,7 +1,7 @@
 import {
   OPENCODE_RUNTIME_VERSION,
   type OpencodeProviderCredentialCheck,
-} from "@boboddy/worker";
+} from "@scarn/worker";
 import {
   runDesignPreflight,
   type DesignPreflightPorts,
@@ -16,7 +16,7 @@ import { fakeAgentToolsPorts } from "./design-agent-tools-fakes";
  */
 
 export const BASE_URL = "https://app.example.com";
-export const LAUNCHER = `/home/u/.boboddy/runtimes/opencode/${OPENCODE_RUNTIME_VERSION}/launch.sh`;
+export const LAUNCHER = `/home/u/.scarn/runtimes/opencode/${OPENCODE_RUNTIME_VERSION}/launch.sh`;
 const OK_CREDENTIALS: OpencodeProviderCredentialCheck = {
   ok: true,
   providers: ["anthropic"],
@@ -33,7 +33,7 @@ export const CREATED_ITEM: DesignWorkItem = {
   id: "0197f000-0000-7000-8000-000000000002",
   title: "Flaky login test",
   description: "Fails one run in five.",
-  platform: "boboddy",
+  platform: "scarn",
 };
 
 type Calls = {

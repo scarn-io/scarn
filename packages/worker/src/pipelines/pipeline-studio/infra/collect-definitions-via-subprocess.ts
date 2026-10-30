@@ -1,14 +1,14 @@
 // The compiled-binary half of `computeStudioSnapshot`'s collection step. See
 // `collect-script.ts.tmpl`'s own doc comment for the full "why": a
-// `bun build --compile`d binary cannot resolve `@boboddy/sdk`'s
+// `bun build --compile`d binary cannot resolve `@scarn/sdk`'s
 // `exports`-map subpaths from the user's own real, external pipeline-builder
 // files, so this spawns a real `bun`/`tsx`/`deno` subprocess (found on the
 // user's PATH, never the compiled binary re-executing itself) to do that
-// import instead — the same pattern `boboddy pipelines push` already uses
+// import instead — the same pattern `scarn pipelines push` already uses
 // (`apps/cli/src/commands/pipelines.ts`'s `runPush`).
 import { existsSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import type { TolerantCollectedDefinitions } from "@boboddy/sdk/push";
+import type { TolerantCollectedDefinitions } from "@scarn/sdk/push";
 import { detectPipelineRuntime } from "../../pipeline-definitions/infra/detect-pipeline-runtime";
 import {
   COLLECT_SCRIPT_FILENAME,

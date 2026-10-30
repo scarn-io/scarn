@@ -65,14 +65,20 @@ export function extractCompilableSnippets(markdown: string): string[] {
 
 /**
  * The `steps.ts` the reference's section 0 documents, in the shape its own
- * snippets import: `investigate` with the one signal section 1 declares, and
- * `writeFix` with the required `investigate` input section 2 binds.
+ * snippets import: `investigate` as section 1 declares it, and `writeFix`
+ * with the required `investigate` arg section 2 passes.
  *
  * Snippets import shared steps rather than redefining them, which is both the
  * idiomatic layout for a real pipeline-builder directory and the reason those
  * snippets can be compiled at all.
  */
-export const SHARED_STEPS_FIXTURE = `import { defineStep, z } from "@boboddy/sdk/definitions/steps";
+export const SHARED_STEPS_FIXTURE = `import { defineStep, z } from "@scarn/sdk/definitions/steps";
+
+const investigation = z.object({
+  findings: z.string(),
+  rootCause: z.string(),
+  severity: z.enum(["low", "high", "critical"]),
+});
 
 export const investigate = defineStep({
   key: "investigate",
@@ -82,12 +88,8 @@ export const investigate = defineStep({
   additionalInput: z.object({
     accountRef: z.string().nullable().optional(),
   }),
-  result: z.object({
-    findings: z.string(),
-    rootCause: z.string(),
-    severity: z.enum(["low", "high", "critical"]),
-  }),
-  signals: [{ sourcePath: "severity" }],
+  result: investigation,
+  errors: ["NoAccess"],
 });
 
 export const writeFix = defineStep({
@@ -95,11 +97,8 @@ export const writeFix = defineStep({
   name: "Write Fix",
   status: "active",
   agentPrompt: "Implement the fix described in your input.",
-  additionalInput: z.object({
-    investigate: z.object({ findings: z.string(), rootCause: z.string() }),
-  }),
+  additionalInput: z.object({ investigate: investigation }),
   result: z.object({ summary: z.string() }),
-  signals: [{ sourcePath: "summary" }],
 });
 `;
 
@@ -125,7 +124,7 @@ export type WriteHarnessTsconfigInput = {
  * are verified under the exact compiler options the user will run, and so a
  * change to those options is reflected here automatically. Four deltas:
  *
- * - `paths` — resolve `@boboddy/sdk` to the SDK's real source under
+ * - `paths` — resolve `@scarn/sdk` to the SDK's real source under
  *   `packages/sdks/js/src`. `apps/cli/tsconfig.json` has no such mapping, and
  *   the point of the harness is to catch drift in source, not in a stale build.
  * - `lib` gains `DOM.Iterable` — the user compiles the SDK's `.d.ts` files with
@@ -152,8 +151,8 @@ export function writeHarnessTsconfig({
   parsed.compilerOptions["lib"] = [...new Set([...libs, "DOM.Iterable"])];
   parsed.compilerOptions["types"] = [];
   parsed.compilerOptions["paths"] = {
-    "@boboddy/sdk": [join(sdkSrc, "index.ts")],
-    "@boboddy/sdk/*": [join(sdkSrc, "*")],
+    "@scarn/sdk": [join(sdkSrc, "index.ts")],
+    "@scarn/sdk/*": [join(sdkSrc, "*")],
   };
   parsed.include = ["*.ts"];
   parsed.exclude = ["node_modules"];

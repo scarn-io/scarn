@@ -1,4 +1,4 @@
-import { stripGitUrlCredentials } from "@boboddy/sdk/git-url";
+import { stripGitUrlCredentials } from "@scarn/sdk/git-url";
 
 /**
  * Builds the `/projects/new` URL `init` opens for the browser hand-off (#141).

@@ -47,7 +47,7 @@ export function nonInteractiveHandoffMessage(url: string): string {
   return (
     "No project found for this repository, and this session has no " +
     `interactive terminal to hand off to a browser. Create one at ${url}, ` +
-    "then run `boboddy init` again."
+    "then run `scarn init` again."
   );
 }
 
@@ -55,7 +55,7 @@ export function handoffTimedOutMessage(url: string, timeoutMs: number): string {
   const minutes = Math.round(timeoutMs / 60_000);
   return (
     `Still no project found for this repository after ${String(minutes)} ` +
-    `minutes. Finish creating it at ${url}, then run \`boboddy init\` again.`
+    `minutes. Finish creating it at ${url}, then run \`scarn init\` again.`
   );
 }
 

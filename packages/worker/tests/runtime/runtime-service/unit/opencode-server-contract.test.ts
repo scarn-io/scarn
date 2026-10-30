@@ -8,7 +8,7 @@ import {
 } from "../../../../src/runtime/runtime-service/infra/opencode-server-contract";
 
 const PASSWORD = "test-password";
-const EXPECTED_VERSION = "2.0.28";
+const EXPECTED_VERSION = "2.1.4";
 
 type SeenRequest = { pathname: string; authorization: string | null };
 

@@ -1,12 +1,17 @@
 export { buildOpencodeContext } from "./build-opencode-context";
 export {
-  buildBoboddyOverrideConfig,
+  BUNDLED_SKILL_FILES,
+  BUNDLED_SKILLS_HOME_DIR,
+  type BundledSkillFile,
+} from "./bundled-skills";
+export {
+  buildScarnOverrideConfig,
   TASK_AGENT,
 } from "./build-task-opencode-config";
 export { default as BobodydPlugin } from "./plugin";
 export {
-  BOBODDY_LIST_TOOLS_METHOD,
-  BOBODDY_RPC_ID,
-  type BoboddyListToolsOutput,
-  type BoboddyRegisteredTool,
-} from "./boboddy-rpc";
+  SCARN_LIST_TOOLS_METHOD,
+  SCARN_RPC_ID,
+  type ScarnListToolsOutput,
+  type ScarnRegisteredTool,
+} from "./scarn-rpc";

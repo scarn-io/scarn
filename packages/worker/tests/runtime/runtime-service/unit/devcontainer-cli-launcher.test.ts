@@ -12,55 +12,55 @@ describe("devcontainer CLI launcher", () => {
     ).toEqual([process.execPath, "/tmp/devcontainer.js", "up", "--help"]);
   });
 
-  test.concurrent("resolves script path from BOBODDY_DEVCONTAINER_SCRIPT env var when set", () => {
-    const original = process.env["BOBODDY_DEVCONTAINER_SCRIPT"];
+  test.concurrent("resolves script path from SCARN_DEVCONTAINER_SCRIPT env var when set", () => {
+    const original = process.env["SCARN_DEVCONTAINER_SCRIPT"];
     // Must point at a real file: resolveDevcontainerCliScriptPath() verifies
     // existence (see the "throws when the configured script path does not
     // exist" test below), so this file itself stands in for the bundle.
-    process.env["BOBODDY_DEVCONTAINER_SCRIPT"] = import.meta.path;
+    process.env["SCARN_DEVCONTAINER_SCRIPT"] = import.meta.path;
     try {
       expect(resolveDevcontainerCliScriptPath()).toBe(import.meta.path);
     } finally {
       if (original === undefined) {
-        delete process.env["BOBODDY_DEVCONTAINER_SCRIPT"];
+        delete process.env["SCARN_DEVCONTAINER_SCRIPT"];
       } else {
-        process.env["BOBODDY_DEVCONTAINER_SCRIPT"] = original;
+        process.env["SCARN_DEVCONTAINER_SCRIPT"] = original;
       }
     }
   });
 
-  test.concurrent("throws a clear, actionable error when BOBODDY_DEVCONTAINER_SCRIPT is unset", () => {
-    const original = process.env["BOBODDY_DEVCONTAINER_SCRIPT"];
-    delete process.env["BOBODDY_DEVCONTAINER_SCRIPT"];
+  test.concurrent("throws a clear, actionable error when SCARN_DEVCONTAINER_SCRIPT is unset", () => {
+    const original = process.env["SCARN_DEVCONTAINER_SCRIPT"];
+    delete process.env["SCARN_DEVCONTAINER_SCRIPT"];
     try {
       expect(() => resolveDevcontainerCliScriptPath()).toThrow(
-        /BOBODDY_DEVCONTAINER_SCRIPT is not set/u,
+        /SCARN_DEVCONTAINER_SCRIPT is not set/u,
       );
     } finally {
       if (original !== undefined) {
-        process.env["BOBODDY_DEVCONTAINER_SCRIPT"] = original;
+        process.env["SCARN_DEVCONTAINER_SCRIPT"] = original;
       }
     }
   });
 
   test.concurrent("throws a clear, actionable error when the configured script path does not exist", () => {
     // Regression test: a corrupted/partial npm install (e.g. an interrupted
-    // extraction) can leave BOBODDY_DEVCONTAINER_SCRIPT pointing at a path
+    // extraction) can leave SCARN_DEVCONTAINER_SCRIPT pointing at a path
     // that was never written. Previously this surfaced 8+ seconds later as an
     // opaque "devcontainer CLI exited with a non-zero exit code" deep inside
     // a worker run; it must now fail immediately with the missing path and a
     // reinstall suggestion.
-    const original = process.env["BOBODDY_DEVCONTAINER_SCRIPT"];
-    process.env["BOBODDY_DEVCONTAINER_SCRIPT"] = "/nonexistent/devcontainer.js";
+    const original = process.env["SCARN_DEVCONTAINER_SCRIPT"];
+    process.env["SCARN_DEVCONTAINER_SCRIPT"] = "/nonexistent/devcontainer.js";
     try {
       expect(() => resolveDevcontainerCliScriptPath()).toThrow(
-        /Devcontainer CLI bundle not found.*\/nonexistent\/devcontainer\.js.*npm install -g @boboddy\/cli/su,
+        /Devcontainer CLI bundle not found.*\/nonexistent\/devcontainer\.js.*npm install -g @scarn\/cli/su,
       );
     } finally {
       if (original === undefined) {
-        delete process.env["BOBODDY_DEVCONTAINER_SCRIPT"];
+        delete process.env["SCARN_DEVCONTAINER_SCRIPT"];
       } else {
-        process.env["BOBODDY_DEVCONTAINER_SCRIPT"] = original;
+        process.env["SCARN_DEVCONTAINER_SCRIPT"] = original;
       }
     }
   });

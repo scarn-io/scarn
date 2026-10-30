@@ -54,7 +54,7 @@ export type EnsureHostOpencodePayloadOptions = {
 
 /**
  * Ensure the pinned OpenCode binary for the CURRENT host platform is present in
- * `~/.boboddy/runtimes/opencode/<version>`, downloading it if needed.
+ * `~/.scarn/runtimes/opencode/<version>`, downloading it if needed.
  *
  * Throws when the host OS/arch has no published standalone binary.
  */
@@ -218,7 +218,7 @@ export type LaunchOpencodeAuthLoginInput = {
  *
  * The interactive counterpart to {@link checkOpencodeProviderCredentials}
  * finding nothing: rather than printing an instructional "run this command"
- * message, `boboddy init` runs it for the user, in place. Shares the same
+ * message, `scarn init` runs it for the user, in place. Shares the same
  * attached-terminal signal handling as {@link launchOpencodeTui} — the login
  * prompt owns the tty for the duration of the run.
  */

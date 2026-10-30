@@ -5,11 +5,11 @@ description: Connect GitHub, Bitbucket or Jira so incoming issues become work it
 
 An integration keeps work items flowing into a project without anyone creating
 them by hand. You usually pick one on the **Issues** step when you
-[create a project](/boboddy/how-to/create-a-project/). You can also connect one
+[create a project](/scarn/how-to/create-a-project/). You can also connect one
 later from **Project → Settings → Integrations**, which every project has,
 including one created with **Skip for now**.
 
-The GitHub App is the recommended path: issue changes reach Boboddy instantly,
+The GitHub App is the recommended path: issue changes reach Scarn instantly,
 in the background, for as long as the integration is connected. Everything
 else (a GitHub token, Bitbucket, Jira) uses your own token, so it syncs only
 when you ask it to.
@@ -18,6 +18,13 @@ Every work item has a top-level `state`, either `open` or `closed`, that
 tracks whether the source issue is still open. Each integration maps its own
 lifecycle onto it (see the tables below). Work items you create by hand start
 `open`, and you can set `state` through the API.
+
+When creating a project with an issue tracker, choose issues **updated within
+the last 7, 30 or 180 days** for the first import (30 days by default). This
+filters by last update, not creation date or an exact ticket count. The create
+request waits for this import to finish. A smaller range can make setup faster,
+but older untouched issues won't be imported by later incremental syncs.
+Integrations connected later from Settings default to 180 days.
 
 ## GitHub
 
@@ -29,22 +36,22 @@ personal access token. Both create the same work items.
 Connecting GitHub installs a GitHub App on your account or organization,
 rather than an OAuth login. You'll be sent to GitHub to approve it, choosing
 **All repositories** or **Selected repositories** on GitHub's own installation
-screen. When you're creating a project, Boboddy links the repository you
-entered. From **Settings → Integrations → Connect GitHub**, Boboddy lets you
+screen. When you're creating a project, Scarn links the repository you
+entered. From **Settings → Integrations → Connect GitHub**, Scarn lets you
 pick which of the repos that installation covers to link into this project.
 
 Installing needs admin rights on the repository or organization. If you don't
 have them, ask an admin to install it, or
 [use a token](#connect-github-with-a-token).
 
-Once linked, GitHub sends Boboddy a webhook whenever an issue changes, so work
+Once linked, GitHub sends Scarn a webhook whenever an issue changes, so work
 items update within seconds:
 
 |                 |                                                                                                                                                       |
 | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Cadence         | Instant, via webhooks — an issue being opened, edited, closed, reopened, labeled, unlabeled, assigned, or unassigned updates its work item right away |
 | Backstop        | A daily sync catches anything a webhook missed                                                                                                        |
-| First sync      | Looks back 180 days                                                                                                                                   |
+| First sync      | Looks back 30 days when created in the wizard (7 or 180 selectable); 180 days when connected from Settings                                            |
 | What's ingested | Issues only — pull requests are filtered out                                                                                                          |
 
 Each GitHub issue maps to a work item like this:
@@ -71,7 +78,7 @@ with no App to install. Use it when you can't install the App. The trade-off:
 it's **manual only**. There are no webhooks or daily sync; issues arrive when
 someone clicks **Sync now**, and each sync asks for a token.
 
-1. Click **Create a GitHub token** in Boboddy. It opens GitHub's fine-grained
+1. Click **Create a GitHub token** in Scarn. It opens GitHub's fine-grained
    token form with the name, the longest expiry (366 days), the repository's
    owner, and **Metadata** read and **Issues** read & write already filled in:
    - Under **Repository access**, choose **Only select repositories** and pick
@@ -84,10 +91,10 @@ someone clicks **Sync now**, and each sync asks for a token.
 2. Choose **GitHub token** on the **Issues** step of a new project, or
    **Connect GitHub with a token** under **Settings → Integrations**.
 3. Paste the token, decide whether to
-   [save it](/boboddy/how-to/create-a-project/#save-the-token-or-not), and
+   [save it](/scarn/how-to/create-a-project/#save-the-token-or-not), and
    click **Check and continue** (or **Check and connect**).
 
-Boboddy checks the token against this repository only. If GitHub says no, the
+Scarn checks the token against this repository only. If GitHub says no, the
 error says whether the token was rejected or just can't see the repository,
 and nothing is created or saved. Issues map to work items the same way as
 with the App.
@@ -111,17 +118,17 @@ schedule.
 2. Choose **Bitbucket token** on the **Issues** step of a new project, or
    **Connect Bitbucket** under **Settings → Integrations**.
 3. Enter your Atlassian account email and the token, decide whether to
-   [save it](/boboddy/how-to/create-a-project/#save-the-token-or-not), and
+   [save it](/scarn/how-to/create-a-project/#save-the-token-or-not), and
    click **Check and continue** (or **Check and connect**).
 
-If the repository's issue tracker is turned off, Boboddy says so and offers
+If the repository's issue tracker is turned off, Scarn says so and offers
 Jira instead. Many Bitbucket teams track their work there.
 
-|             |                                    |
-| ----------- | ---------------------------------- |
-| Cadence     | Manual: **Sync now**               |
-| First sync  | Looks back 180 days                |
-| Later syncs | Issues updated since the last sync |
+|             |                                                                                |
+| ----------- | ------------------------------------------------------------------------------ |
+| Cadence     | Manual: **Sync now**                                                           |
+| First sync  | Looks back 30 days in the wizard (7 or 180 selectable); 180 days from Settings |
+| Later syncs | Issues updated since the last sync                                             |
 
 Each Bitbucket issue maps to a work item like this:
 
@@ -151,7 +158,7 @@ occasional pull.
 
 1. Create an API token on your
    [Atlassian API tokens page](https://id.atlassian.com/manage-profile/security/api-tokens).
-2. In Boboddy, open **Account settings → API keys** and fill in **Add Jira API
+2. In Scarn, open **Account settings → API keys** and fill in **Add Jira API
    key**: a name (for example `Work Jira`), your Atlassian email (for example
    `user@example.com`), the token, and an expiry date.
 3. Set the expiry date to the date Atlassian shows for the token, then click
@@ -168,7 +175,7 @@ from the token form when you connect.
 ### Use a key
 
 When you click **Sync now** on a Jira integration, or approve a comment that
-will be posted to Jira, Boboddy asks which key to use. GitHub token and
+will be posted to Jira, Scarn asks which key to use. GitHub token and
 Bitbucket integrations work the same way. The key you used most
 recently is picked by default, or your newest key if you haven't used any.
 
@@ -176,11 +183,11 @@ To use a key you haven't saved, choose **Paste a key instead** and enter your
 Atlassian email and API token. A pasted key is used only for that request and
 is never stored.
 
-When a comment you approve embeds a recording or screenshot, Boboddy uploads
+When a comment you approve embeds a recording or screenshot, Scarn uploads
 the file to the Jira issue as an attachment with the key you chose, so that
 key's account needs permission to add attachments to the issue. GitHub and
-Bitbucket comments link to files in Boboddy instead of uploading them. See
-[What each platform shows](/boboddy/guides/steps/#what-each-platform-shows).
+Bitbucket comments link to files in Scarn instead of uploading them. See
+[What each platform shows](/scarn/guides/steps/#what-each-platform-shows).
 
 ### Expiry
 
@@ -218,4 +225,4 @@ if that issue is already Done.
 
 Nothing stops you connecting more than one to the same project — issues from any
 land as work items and route through the same
-[default pipeline assignment](/boboddy/guides/pipeline-assignment/).
+[default pipeline assignment](/scarn/guides/pipeline-assignment/).

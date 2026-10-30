@@ -3,7 +3,7 @@ import { dirname, resolve } from "node:path";
 
 /**
  * Resolve an absolute, directly-executable path to the CLI the user is
- * currently running, for handing to a child process as `$BOBODDY_CLI`.
+ * currently running, for handing to a child process as `$SCARN_CLI`.
  *
  * The subtlety is that "the CLI" is not one thing:
  *
@@ -13,8 +13,8 @@ import { dirname, resolve } from "node:path";
  *     any real path. That embedded prefix is the reliable discriminator.
  *   - **Dev (`bun run src/index.ts`)** — `process.execPath` is the *bun* binary
  *     and `argv[1]` is the entry script, so neither is executable on its own
- *     ("bun run <script>" is two argv entries, and `$BOBODDY_CLI` has to be
- *     quotable as one). We fall back to the repo's `bin/boboddy` wrapper, which
+ *     ("bun run <script>" is two argv entries, and `$SCARN_CLI` has to be
+ *     quotable as one). We fall back to the repo's `bin/scarn` wrapper, which
  *     is a real executable with a shebang, and finally to the bare command name
  *     for a globally-linked install.
  *
@@ -34,8 +34,8 @@ const EMBEDDED_ENTRY_PREFIXES: readonly string[] = [
   "/~BUN/",
 ];
 
-/** Last-resort value: rely on `boboddy` being on the child's PATH. */
-export const BOBODDY_CLI_FALLBACK_COMMAND = "boboddy";
+/** Last-resort value: rely on `scarn` being on the child's PATH. */
+export const SCARN_CLI_FALLBACK_COMMAND = "scarn";
 
 /**
  * True when `entryPath` (i.e. `process.argv[1]`) lives in bun's embedded
@@ -50,13 +50,13 @@ export function isCompiledStandaloneEntry(
   return EMBEDDED_ENTRY_PREFIXES.some((prefix) => entryPath.startsWith(prefix));
 }
 
-export type ResolveBoboddyCliPathInput = {
+export type ResolveScarnCliPathInput = {
   /** `process.execPath`. */
   execPath: string;
   /** `process.argv[1]`. */
   entryPath: string | undefined;
   /**
-   * An explicit `BOBODDY_CLI` already in the environment. Honoured verbatim so
+   * An explicit `SCARN_CLI` already in the environment. Honoured verbatim so
    * an outer harness (or a nested design session) can pin the binary.
    */
   envOverride?: string | undefined;
@@ -64,9 +64,9 @@ export type ResolveBoboddyCliPathInput = {
   fileExists?: ((path: string) => boolean) | undefined;
 };
 
-/** Resolve the value to expose to child processes as `BOBODDY_CLI`. */
-export function resolveBoboddyCliPath(
-  input: ResolveBoboddyCliPathInput,
+/** Resolve the value to expose to child processes as `SCARN_CLI`. */
+export function resolveScarnCliPath(
+  input: ResolveScarnCliPathInput,
 ): string {
   const override = input.envOverride?.trim() ?? "";
   if (override.length > 0) {
@@ -80,23 +80,23 @@ export function resolveBoboddyCliPath(
   const fileExists = input.fileExists ?? existsSync;
   const entryPath = input.entryPath;
   if (entryPath !== undefined && entryPath.length > 0) {
-    // <repo>/apps/cli/src/index.ts → <repo>/apps/cli/bin/boboddy
-    const wrapper = resolve(dirname(entryPath), "..", "bin", "boboddy");
+    // <repo>/apps/cli/src/index.ts → <repo>/apps/cli/bin/scarn
+    const wrapper = resolve(dirname(entryPath), "..", "bin", "scarn");
     if (fileExists(wrapper)) {
       return wrapper;
     }
   }
 
-  return BOBODDY_CLI_FALLBACK_COMMAND;
+  return SCARN_CLI_FALLBACK_COMMAND;
 }
 
-/** Convenience wrapper around {@link resolveBoboddyCliPath} for the live process. */
-export function resolveCurrentBoboddyCliPath(
+/** Convenience wrapper around {@link resolveScarnCliPath} for the live process. */
+export function resolveCurrentScarnCliPath(
   env: NodeJS.ProcessEnv = process.env,
 ): string {
-  return resolveBoboddyCliPath({
+  return resolveScarnCliPath({
     execPath: process.execPath,
     entryPath: process.argv[1],
-    envOverride: env["BOBODDY_CLI"],
+    envOverride: env["SCARN_CLI"],
   });
 }

@@ -5,7 +5,7 @@ import {
   type AgentToolsManifest,
   type DiscoveredAgentTools,
   type McpToolLister,
-} from "@boboddy/worker";
+} from "@scarn/worker";
 import type { BaseReporter } from "./reporter-types";
 
 /**
@@ -22,7 +22,7 @@ import type { BaseReporter } from "./reporter-types";
 export interface AgentToolsPorts {
   /** Run repo discovery (`discoverRepoAgentTools`) on the project root. */
   discoverAgentTools(): Promise<DiscoveredAgentTools>;
-  /** `process.env` merged with `.boboddy/.env`, which wins. */
+  /** `process.env` merged with `.scarn/.env`, which wins. */
   readToolEnv(): Promise<Record<string, string>>;
   /** Starts, lists and stops one server. */
   mcpToolLister: McpToolLister;

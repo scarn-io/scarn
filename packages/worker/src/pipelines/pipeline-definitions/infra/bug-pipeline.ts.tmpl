@@ -9,29 +9,42 @@ import {
   Repo,
   Runtime,
   z,
-} from "@boboddy/sdk/definitions/steps";
-import { definePipeline, Rule } from "@boboddy/sdk/definitions/pipelines";
+} from "@scarn/sdk/definitions/steps";
+import {
+  all,
+  decision,
+  definePipeline,
+  equal,
+  exists,
+  fail,
+  greaterThanInclusive,
+  lessThan,
+  succeed,
+} from "@scarn/sdk/pipelines";
 
 // The default bug pipeline. An opinionated starting point: change any of it.
 //
-//   evaluate (host) → checkQuality ─ quality < 0.1 → requestDetails → insufficientDetail
-//                                  └ otherwise ──→ investigateAndReproduce
-//   investigateAndReproduce → checkReproduction ─ confidence ≥ 0.8 → checkRecording
-//                                               └ otherwise ──────→ notReproduced
-//   checkRecording ─ recording exists → reportReproduction → failingTest
-//                  └ otherwise ─────────────────────────→ failingTest
-//   failingTest → proposeFix (blocks for human approval) → fix → done
+//   evaluate ─ quality < 0.1 → requestDetails → insufficientDetail
+//            └ otherwise ──→ investigateAndReproduce
+//   investigateAndReproduce ─ confident, with a recording → reportReproduction → failingTest
+//                           ├ confident ────────────────────────────────────→ failingTest
+//                           └ otherwise ─────────────────────────────────────→ notReproduced
+//   failingTest → proposeFix → approveFix (a human) ─ approved → fix → done
+//                                                   └ rejected → fixRejected
 //
 // The bar to start investigating is deliberately low: anything with a
 // recognisable symptom goes on. The bar to write a test is high: only a
 // confident reproduction is worth encoding. The fix proposal always waits for
-// a human; releasing the block in the dashboard lets `fix` apply it.
+// a human at `approveFix`; approving it in the dashboard lets `fix` apply it.
 //
-// Every step receives the whole output of every step before it (bound with
-// `ctx.output(...)` in each state's `input`). Signals exist for the rules
-// (`quality`, `reproVideo`, `reproductionConfidence` and
-// `requiresHumanApproval`) and, for `reproVideo`, for the comment that embeds
-// the recording.
+// Each node's outgoing transitions are a chain on its step in `flow`, and
+// every step gets the earlier results it needs as typed args: `r.result` is
+// the step that just finished, `r.node(step).result` an earlier one.
+//
+// This file is the source; `bug-pipeline.json` next to it is what the server
+// runs. After changing it, run `scarn pipelines push` (steps), then
+// `scarn pipelines build` (writes the JSON), then `scarn pipelines
+// publish bug-pipeline.json`.
 //
 // Replace APP_URL, the sign-in instructions, the `defineMcp` servers and the
 // test runner with this repository's own. `investigateAndReproduce` is the step
@@ -86,7 +99,6 @@ const fixProposal = z.object({
   affectedFiles: z.array(z.string()),
   validationPlan: z.array(z.string()),
   risks: z.array(z.string()),
-  requiresHumanApproval: z.literal(true),
 });
 
 export const evaluate = defineStep({
@@ -115,8 +127,6 @@ or what is affected).
 `,
 
   result: evaluation,
-
-  signals: [{ sourcePath: "quality" }],
 });
 
 // A code step, not an agent: it only turns `missingDetails` into a comment.
@@ -214,7 +224,7 @@ Reproduce in this order exactly:
    way to lose the evidence.
 8. Collect console messages and network requests.
 9. Only now, stop the trace and the recording.
-10. Submit each file with \`boboddy-submit-artifact\`: the recording of the
+10. Submit each file with \`scarn-submit-artifact\`: the recording of the
     failure with \`field: "reproVideo"\` (an .mp4, .webm, .mov or .gif), and the
     trace with \`name: "trace.zip"\`. Submit a recording only if it shows the
     reported failure.
@@ -246,14 +256,9 @@ The next step turns this into a failing test, so be specific.
     evaluate: evaluation,
   }),
 
-  result: investigation,
-
   // `reproVideo` is optional: a run without a recording still goes on, and
-  // `checkRecording` skips the comment that would embed it.
-  signals: [
-    { sourcePath: "reproductionConfidence" },
-    { sourcePath: "reproVideo", required: false },
-  ],
+  // skips the comment that would embed it.
+  result: investigation,
 
   features: [Features.notifications()],
 });
@@ -280,9 +285,10 @@ export const reportReproduction = codeStep({
           "",
           ...steps.map((step, index) => `${String(index + 1)}. ${step}`),
           "",
-          Artifact.embed(investigateAndReproduce.signals.reproVideo, {
-            caption: "Recording of the failure",
-          }),
+          Artifact.embed(
+            { step: investigateAndReproduce, path: "reproVideo" },
+            { caption: "Recording of the failure" },
+          ),
         ].join("\n"),
         priority: "normal",
         suggestedChannels: ["work_item_platform_comment"],
@@ -365,7 +371,6 @@ Report:
 - \`affectedFiles\`: every file the fix would touch.
 - \`validationPlan\`: the tests and checks that would prove it works.
 - \`risks\`: what could break, and anything you could not verify.
-- \`requiresHumanApproval\`: always true.
 `,
 
   additionalInput: z.object({
@@ -375,8 +380,6 @@ Report:
   }),
 
   result: fixProposal,
-
-  signals: [{ sourcePath: "requiresHumanApproval", type: "boolean" }],
 
   features: [Features.notifications()],
 });
@@ -433,112 +436,98 @@ before the diff, and \`remainingRisks\`: anything you could not verify.
   features: [Features.notifications()],
 });
 
+const insufficientDetail = fail("insufficient-detail", {
+  error: "InsufficientDetail",
+});
+const notReproduced = fail("not-reproduced", { error: "NotReproduced" });
+// Every proposal waits here for a human to approve or reject it.
+const approveFix = decision("approve-fix", {
+  actions: {
+    approve: { label: "Approve" },
+    reject: { label: "Reject" },
+  },
+});
+const fixRejected = fail("fix-rejected", { error: "FixRejected" });
+const done = succeed("done");
+
 export default definePipeline({
   key: "bug-pipeline",
-  name: "Bug Pipeline",
-  description:
-    "Investigate and reproduce, write a failing test, propose a fix for approval, then apply it.",
-  status: "active",
-  startAt: "evaluate",
-  states: {
-    evaluate: {
-      kind: "step",
-      step: evaluate,
-      input: () => ({}),
-      next: "checkQuality",
-    },
-    checkQuality: {
-      kind: "choice",
-      choices: [
+  title: "Bug Pipeline",
+  start: evaluate,
+  flow: [
+    evaluate.next({
+      routes: [
         {
-          when: Rule.when("quality", "lessThan", 0.1),
-          next: "requestDetails",
+          when: (r) => lessThan(r.result.quality, 0.1),
+          to: (r) => requestDetails({ evaluate: r.result }),
         },
       ],
-      default: "investigateAndReproduce",
-    },
-    requestDetails: {
-      kind: "step",
-      step: requestDetails,
-      input: (ctx) => ({ evaluate: ctx.output("evaluate") }),
-      next: "insufficientDetail",
-    },
-    insufficientDetail: { kind: "fail" },
-    investigateAndReproduce: {
-      kind: "step",
-      step: investigateAndReproduce,
-      input: (ctx) => ({
-        appUrl: ctx.literal(APP_URL),
-        evaluate: ctx.output("evaluate"),
-      }),
-      next: "checkReproduction",
-    },
+      otherwise: (r) =>
+        investigateAndReproduce({ appUrl: APP_URL, evaluate: r.result }),
+    }),
+
+    requestDetails.next(insufficientDetail),
+
     // Only a confident reproduction goes on. Anything less stops here, with
-    // the investigation report as the run's result.
-    checkReproduction: {
-      kind: "choice",
-      choices: [
+    // the investigation report as the run's result. Only a run that recorded
+    // the failure has anything to show the reporter.
+    investigateAndReproduce.next({
+      routes: [
         {
-          when: Rule.when("reproductionConfidence", "greaterThanInclusive", 0.8),
-          next: "checkRecording",
+          when: (r) =>
+            all(
+              greaterThanInclusive(r.result.reproductionConfidence, 0.8),
+              exists(r.result.reproVideo),
+            ),
+          to: (r) => reportReproduction({ investigateAndReproduce: r.result }),
+        },
+        {
+          when: (r) =>
+            greaterThanInclusive(r.result.reproductionConfidence, 0.8),
+          to: (r) =>
+            failingTest({
+              evaluate: r.input.evaluate,
+              investigateAndReproduce: r.result,
+            }),
         },
       ],
-      default: "notReproduced",
-    },
-    notReproduced: { kind: "fail" },
-    // A choice reads the signals of the step before it, so both checks sit
-    // straight after `investigateAndReproduce`. Only a run that recorded the
-    // failure has anything to show the reporter.
-    checkRecording: {
-      kind: "choice",
-      choices: [
+      otherwise: notReproduced,
+    }),
+
+    reportReproduction.next((r) =>
+      failingTest({
+        evaluate: r.node(evaluate).result,
+        investigateAndReproduce: r.input.investigateAndReproduce,
+      }),
+    ),
+
+    failingTest.next((r) =>
+      proposeFix({
+        evaluate: r.input.evaluate,
+        investigateAndReproduce: r.input.investigateAndReproduce,
+        failingTest: r.result,
+      }),
+    ),
+
+    proposeFix.next((r) => approveFix({ proposal: r.result })),
+
+    approveFix.next({
+      routes: [
         {
-          when: Rule.when("reproVideo", "exists"),
-          next: "reportReproduction",
+          when: (r) => equal(r.result.action, "approve"),
+          to: (r) =>
+            fix({
+              evaluate: r.node(proposeFix).input.evaluate,
+              investigateAndReproduce:
+                r.node(proposeFix).input.investigateAndReproduce,
+              failingTest: r.node(proposeFix).input.failingTest,
+              proposeFix: r.node(proposeFix).result,
+            }),
         },
       ],
-      default: "failingTest",
-    },
-    reportReproduction: {
-      kind: "step",
-      step: reportReproduction,
-      input: (ctx) => ({
-        investigateAndReproduce: ctx.output("investigateAndReproduce"),
-      }),
-      next: "failingTest",
-    },
-    failingTest: {
-      kind: "step",
-      step: failingTest,
-      input: (ctx) => ({
-        evaluate: ctx.output("evaluate"),
-        investigateAndReproduce: ctx.output("investigateAndReproduce"),
-      }),
-      next: "proposeFix",
-    },
-    proposeFix: {
-      kind: "step",
-      step: proposeFix,
-      input: (ctx) => ({
-        evaluate: ctx.output("evaluate"),
-        investigateAndReproduce: ctx.output("investigateAndReproduce"),
-        failingTest: ctx.output("failingTest"),
-      }),
-      // Always true, so every proposal waits for a human to release it.
-      blockWhen: Rule.when("requiresHumanApproval", "equal", true),
-      next: "fix",
-    },
-    fix: {
-      kind: "step",
-      step: fix,
-      input: (ctx) => ({
-        evaluate: ctx.output("evaluate"),
-        investigateAndReproduce: ctx.output("investigateAndReproduce"),
-        failingTest: ctx.output("failingTest"),
-        proposeFix: ctx.output("proposeFix"),
-      }),
-      next: "done",
-    },
-    done: { kind: "succeed" },
-  },
+      otherwise: fixRejected,
+    }),
+
+    fix.next(done),
+  ],
 });

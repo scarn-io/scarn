@@ -2,6 +2,8 @@ export * as z from "../../z";
 export * from "../artifacts";
 export * from "./define-step";
 export * from "./define-code-step";
+export * from "./step-handle";
+export * from "./step-ref";
 export * from "./define-mcp";
 export { compileMcps, type CompiledMcps } from "./compile-mcps";
 export * from "./env";

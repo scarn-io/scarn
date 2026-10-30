@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
   OPENCODE_RUNTIME_VERSION,
   type OpencodeProviderCredentialCheck,
-} from "@boboddy/worker";
+} from "@scarn/worker";
 import {
   runDesignPreflight,
   type DesignPreflightPorts,
@@ -12,13 +12,13 @@ import { noopBaseReporter } from "../src/lib/reporter-types";
 import { fakeAgentToolsPorts } from "./design-agent-tools-fakes";
 
 /**
- * The preflight's two auth steps — signing in to Boboddy and connecting an AI
+ * The preflight's two auth steps — signing in to Scarn and connecting an AI
  * provider. Split from `design-preflight.test.ts` (which covers every other
  * precondition) purely to stay under this repo's per-file line budget.
  */
 
 const BASE_URL = "https://app.example.com";
-const LAUNCHER = `/home/u/.boboddy/runtimes/opencode/${OPENCODE_RUNTIME_VERSION}/launch.sh`;
+const LAUNCHER = `/home/u/.scarn/runtimes/opencode/${OPENCODE_RUNTIME_VERSION}/launch.sh`;
 const OK_CREDENTIALS: OpencodeProviderCredentialCheck = {
   ok: true,
   providers: ["anthropic"],

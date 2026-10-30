@@ -1,4 +1,4 @@
-import { describe, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { CliError } from "../src/lib/cli-error";
 import {
   ensureSignedIn,
@@ -6,7 +6,6 @@ import {
   type SignInPorts,
 } from "../src/lib/ensure-signed-in";
 import { noopBaseReporter } from "../src/lib/reporter-types";
-import { concurrentTest as test } from "./utils";
 
 const BASE_URL = "https://app.example.com";
 

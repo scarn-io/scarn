@@ -9,23 +9,23 @@
  * ({@link BAKED_POSTHOG_CLI_KEY_DEFINE}, {@link BAKED_POSTHOG_CLI_HOST_DEFINE}).
  */
 
-declare const __BOBODDY_POSTHOG_CLI_KEY__: string | undefined;
-declare const __BOBODDY_POSTHOG_CLI_HOST__: string | undefined;
+declare const __SCARN_POSTHOG_CLI_KEY__: string | undefined;
+declare const __SCARN_POSTHOG_CLI_HOST__: string | undefined;
 
-export const BAKED_POSTHOG_CLI_KEY_DEFINE = "__BOBODDY_POSTHOG_CLI_KEY__";
-export const BAKED_POSTHOG_CLI_HOST_DEFINE = "__BOBODDY_POSTHOG_CLI_HOST__";
+export const BAKED_POSTHOG_CLI_KEY_DEFINE = "__SCARN_POSTHOG_CLI_KEY__";
+export const BAKED_POSTHOG_CLI_HOST_DEFINE = "__SCARN_POSTHOG_CLI_HOST__";
 
 export type BakedTelemetryConfig = { key?: string; host?: string };
 
 export function bakedTelemetryConfig(): BakedTelemetryConfig {
   return {
     key:
-      typeof __BOBODDY_POSTHOG_CLI_KEY__ === "string"
-        ? __BOBODDY_POSTHOG_CLI_KEY__
+      typeof __SCARN_POSTHOG_CLI_KEY__ === "string"
+        ? __SCARN_POSTHOG_CLI_KEY__
         : undefined,
     host:
-      typeof __BOBODDY_POSTHOG_CLI_HOST__ === "string"
-        ? __BOBODDY_POSTHOG_CLI_HOST__
+      typeof __SCARN_POSTHOG_CLI_HOST__ === "string"
+        ? __SCARN_POSTHOG_CLI_HOST__
         : undefined,
   };
 }

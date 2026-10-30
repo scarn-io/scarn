@@ -10,7 +10,7 @@ import {
   readLegacyAuthJson,
   type RunExportInput,
 } from "../../../../src/runtime/runtime-service/infra/opencode-credential-source";
-import { SecretMasker } from "../../../../src/work/task/application/secret-masker";
+import { SecretMasker } from "../../../../src/work/task-run/application/secret-masker";
 
 /**
  * Credential source coverage. Every case uses a temp HOME and an injected

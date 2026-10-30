@@ -1,8 +1,8 @@
-// The local server behind `boboddy pipelines studio`: `Bun.serve` (this
+// The local server behind `scarn pipelines studio`: `Bun.serve` (this
 // repo's first real usage — see the phase report's judgment-call notes)
-// serving the built `@boboddy/pipeline-studio-ui` static assets, plus one SSE
+// serving the built `@scarn/pipeline-studio-ui` static assets, plus one SSE
 // endpoint (`/api/stream`) that pushes a fresh `StudioSnapshot` (see
-// `compute-studio-snapshot.ts`) every time `.boboddy/pipeline-builder`
+// `compute-studio-snapshot.ts`) every time `.scarn/pipeline-builder`
 // changes on disk.
 //
 // Watches with Node's built-in `fs.watch` rather than adding `chokidar` as a
@@ -16,7 +16,40 @@ import { existsSync, watch } from "node:fs";
 import { dirname, extname, join, resolve, sep } from "node:path";
 import { computeStudioSnapshot } from "./compute-studio-snapshot";
 import { COLLECT_SCRIPT_FILENAME } from "../infra/collect-script";
-import type { StudioSnapshot } from "@boboddy/pipeline-studio-ui";
+import type { StudioSnapshot } from "@scarn/pipeline-studio-ui";
+import { createLazyLogger } from "@scarn/observability/logging/host";
+import {
+  buildPipelineDocuments,
+  listPipelineSourceFiles,
+} from "../../pipeline-definitions/application/build-pipeline-documents";
+import { BUILD_SCRIPT_FILENAME } from "../../pipeline-definitions/infra/build-script";
+
+const logger = createLazyLogger({
+  name: "@scarn/worker",
+  scope: "pipeline-studio",
+});
+
+/**
+ * Rebuilds the JSON of the changed `.ts` pipeline sources. Build and
+ * validation errors aren't surfaced here: a source that fails to import is
+ * already shown as broken by the snapshot's own collection, and the written
+ * JSON is validated when it renders.
+ */
+async function rebuildPipelineSources(
+  builderDir: string,
+  filenames: readonly string[],
+): Promise<void> {
+  const candidates = new Set(listPipelineSourceFiles(builderDir));
+  const files = filenames
+    .map((file) => join(builderDir, file))
+    .filter((file) => candidates.has(file));
+  if (files.length === 0) return;
+  try {
+    await buildPipelineDocuments({ builderDir, files });
+  } catch (error) {
+    logger.warn({ err: error }, "Failed to rebuild pipeline JSON");
+  }
+}
 
 const DEBOUNCE_MS = 150;
 
@@ -34,19 +67,19 @@ export type PipelineStudioServerHandle = {
 };
 
 export type RunPipelineStudioServerOptions = {
-  /** Absolute path to `.boboddy/pipeline-builder`. */
+  /** Absolute path to `.scarn/pipeline-builder`. */
   builderDir: string;
   /** Fixed port, or omit to let the OS pick a free one. */
   port?: number;
-  /** Directory holding the built studio assets; defaults to `@boboddy/pipeline-studio-ui`'s `dist/`. */
+  /** Directory holding the built studio assets; defaults to `@scarn/pipeline-studio-ui`'s `dist/`. */
   staticDir?: string;
 };
 
 export const MISSING_STUDIO_ASSETS_MESSAGE =
-  "Pipeline studio assets are missing. Run `bun run --filter @boboddy/pipeline-studio-ui build`.";
+  "Pipeline studio assets are missing. Run `bun run --filter @scarn/pipeline-studio-ui build`.";
 
 /**
- * Resolves `@boboddy/pipeline-studio-ui`'s own `dist/` directory. Two cases:
+ * Resolves `@scarn/pipeline-studio-ui`'s own `dist/` directory. Two cases:
  *
  * - Inside a compiled binary (`Bun.isStandaloneExecutable`): there's no
  *   `node_modules` to resolve against. `apps/cli`'s `bun build --compile`
@@ -55,7 +88,7 @@ export const MISSING_STUDIO_ASSETS_MESSAGE =
  *   binary, not just the entrypoint — so `join(import.meta.dir, "dist")`
  *   finds it regardless of how deep this file lives inside `packages/worker`.
  * - Otherwise (source checkout / `bun run`): normal package resolution via
- *   `@boboddy/pipeline-studio-ui/package.json`, which requires that package
+ *   `@scarn/pipeline-studio-ui/package.json`, which requires that package
  *   to expose `"./package.json"` in its `exports` map — see its
  *   `package.json`.
  */
@@ -64,14 +97,17 @@ function resolveStaticDir(): string {
     return join(import.meta.dir, "dist");
   }
   const pkgJsonPath = Bun.resolveSync(
-    "@boboddy/pipeline-studio-ui/package.json",
+    "@scarn/pipeline-studio-ui/package.json",
     import.meta.dir,
   );
   return join(dirname(pkgJsonPath), "dist");
 }
 
 /** Guards against `../` escaping `staticDir`, however unlikely from a fixed asset set. */
-function resolveStaticAsset(staticDir: string, pathname: string): string | null {
+function resolveStaticAsset(
+  staticDir: string,
+  pathname: string,
+): string | null {
   const relative = pathname === "/" ? "index.html" : pathname.slice(1);
   const resolved = resolve(staticDir, relative);
   if (resolved !== staticDir && !resolved.startsWith(staticDir + sep)) {
@@ -84,12 +120,13 @@ function serveStaticAsset(staticDir: string, pathname: string): Response {
   const filePath = resolveStaticAsset(staticDir, pathname);
   if (!filePath || !existsSync(filePath)) {
     return new Response(
-      "Not found. Run `bun run --filter @boboddy/pipeline-studio-ui build` " +
+      "Not found. Run `bun run --filter @scarn/pipeline-studio-ui build` " +
         "first if you're running this from a source checkout.",
       { status: 404 },
     );
   }
-  const contentType = CONTENT_TYPES[extname(filePath)] ?? "application/octet-stream";
+  const contentType =
+    CONTENT_TYPES[extname(filePath)] ?? "application/octet-stream";
   return new Response(Bun.file(filePath), {
     headers: { "Content-Type": contentType },
   });
@@ -166,19 +203,37 @@ export async function runPipelineStudioServer(
   // but wasteful extra recompute; `filename === null` (platform-dependent)
   // is treated as "always recompute" rather than skipped, since it can't be
   // attributed to the collect script specifically.
-  const watcher = watch(builderDir, { persistent: true }, (_event, filename) => {
-    if (filename === COLLECT_SCRIPT_FILENAME) return;
-    if (debounceTimer) clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(() => {
-      void computeStudioSnapshot(builderDir).then((next) => {
-        snapshot = next;
-        broadcast();
-      });
-    }, DEBOUNCE_MS);
-  });
+  //
+  // A changed `.ts` file is rebuilt to its `<key>.json` first (see
+  // `rebuildPipelineSource`); the JSON write fires this watcher again, and
+  // that event renders it.
+  const changedSources = new Set<string>();
+  const watcher = watch(
+    builderDir,
+    { persistent: true },
+    (_event, filename) => {
+      if (filename === COLLECT_SCRIPT_FILENAME) return;
+      if (filename === BUILD_SCRIPT_FILENAME) return;
+      if (filename?.endsWith(".ts")) changedSources.add(filename);
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        const sources = [...changedSources];
+        changedSources.clear();
+        void rebuildPipelineSources(builderDir, sources)
+          .then(() => computeStudioSnapshot(builderDir))
+          .then((next) => {
+            snapshot = next;
+            broadcast();
+          });
+      }, DEBOUNCE_MS);
+    },
+  );
 
   const server = Bun.serve({
     port: options.port ?? 0,
+    // `/api/stream` is a long-lived SSE response that is silent between
+    // file changes; Bun's default 10s idle timeout would cut it.
+    idleTimeout: 0,
     fetch(request) {
       const { pathname } = new URL(request.url);
       if (pathname === "/api/stream") {

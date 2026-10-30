@@ -6,41 +6,41 @@ import { loadPushDefaults } from "../src/defaults/load-push-defaults";
 
 describe("loadPushDefaults", () => {
   const savedEnv = {
-    BOBODDY_BASE_URL: process.env["BOBODDY_BASE_URL"],
-    BOBODDY_PROJECT_ID: process.env["BOBODDY_PROJECT_ID"],
-    BOBODDY_ACCESS_TOKEN: process.env["BOBODDY_ACCESS_TOKEN"],
+    SCARN_BASE_URL: process.env["SCARN_BASE_URL"],
+    SCARN_PROJECT_ID: process.env["SCARN_PROJECT_ID"],
+    SCARN_ACCESS_TOKEN: process.env["SCARN_ACCESS_TOKEN"],
   };
 
   beforeEach(() => {
-    delete process.env["BOBODDY_BASE_URL"];
-    delete process.env["BOBODDY_PROJECT_ID"];
-    delete process.env["BOBODDY_ACCESS_TOKEN"];
+    delete process.env["SCARN_BASE_URL"];
+    delete process.env["SCARN_PROJECT_ID"];
+    delete process.env["SCARN_ACCESS_TOKEN"];
   });
 
   afterEach(() => {
-    if (savedEnv.BOBODDY_BASE_URL === undefined) {
-      delete process.env["BOBODDY_BASE_URL"];
+    if (savedEnv.SCARN_BASE_URL === undefined) {
+      delete process.env["SCARN_BASE_URL"];
     } else {
-      process.env["BOBODDY_BASE_URL"] = savedEnv.BOBODDY_BASE_URL;
+      process.env["SCARN_BASE_URL"] = savedEnv.SCARN_BASE_URL;
     }
-    if (savedEnv.BOBODDY_PROJECT_ID === undefined) {
-      delete process.env["BOBODDY_PROJECT_ID"];
+    if (savedEnv.SCARN_PROJECT_ID === undefined) {
+      delete process.env["SCARN_PROJECT_ID"];
     } else {
-      process.env["BOBODDY_PROJECT_ID"] = savedEnv.BOBODDY_PROJECT_ID;
+      process.env["SCARN_PROJECT_ID"] = savedEnv.SCARN_PROJECT_ID;
     }
-    if (savedEnv.BOBODDY_ACCESS_TOKEN === undefined) {
-      delete process.env["BOBODDY_ACCESS_TOKEN"];
+    if (savedEnv.SCARN_ACCESS_TOKEN === undefined) {
+      delete process.env["SCARN_ACCESS_TOKEN"];
     } else {
-      process.env["BOBODDY_ACCESS_TOKEN"] = savedEnv.BOBODDY_ACCESS_TOKEN;
+      process.env["SCARN_ACCESS_TOKEN"] = savedEnv.SCARN_ACCESS_TOKEN;
     }
   });
 
   test("env vars take precedence over discovered values", async () => {
-    process.env["BOBODDY_BASE_URL"] = "https://override.example.com";
-    process.env["BOBODDY_PROJECT_ID"] = "env-proj";
-    process.env["BOBODDY_ACCESS_TOKEN"] = "env-token";
+    process.env["SCARN_BASE_URL"] = "https://override.example.com";
+    process.env["SCARN_PROJECT_ID"] = "env-proj";
+    process.env["SCARN_ACCESS_TOKEN"] = "env-token";
 
-    const dir = mkdtempSync(join(tmpdir(), "boboddy-defaults-env-"));
+    const dir = mkdtempSync(join(tmpdir(), "scarn-defaults-env-"));
     try {
       const result = await loadPushDefaults({ dir });
       expect(result.baseUrl).toBe("https://override.example.com");
@@ -51,18 +51,18 @@ describe("loadPushDefaults", () => {
     }
   });
 
-  test("walks ancestor dirs to find .boboddy/boboddy.jsonc when env is unset", async () => {
-    const rootDir = mkdtempSync(join(tmpdir(), "boboddy-defaults-walk-"));
+  test("walks ancestor dirs to find .scarn/scarn.jsonc when env is unset", async () => {
+    const rootDir = mkdtempSync(join(tmpdir(), "scarn-defaults-walk-"));
     const childDir = join(rootDir, "deeply", "nested");
     mkdirSync(childDir, { recursive: true });
 
-    mkdirSync(join(rootDir, ".boboddy"), { recursive: true });
+    mkdirSync(join(rootDir, ".scarn"), { recursive: true });
     writeFileSync(
-      join(rootDir, ".boboddy", "boboddy.jsonc"),
+      join(rootDir, ".scarn", "scarn.jsonc"),
       JSON.stringify({ project: "acme/web-app" }),
     );
-    process.env["BOBODDY_BASE_URL"] = "https://boboddy.example.com";
-    process.env["BOBODDY_ACCESS_TOKEN"] = "env-token";
+    process.env["SCARN_BASE_URL"] = "https://scarn.example.com";
+    process.env["SCARN_ACCESS_TOKEN"] = "env-token";
 
     const requested: string[] = [];
     const previousFetch = globalThis.fetch;
@@ -76,7 +76,7 @@ describe("loadPushDefaults", () => {
       const result = await loadPushDefaults({ dir: childDir });
       expect(result.projectId).toBe("walked-proj");
       expect(requested).toEqual([
-        "https://boboddy.example.com/api/projects/resolve?username=acme&slug=web-app",
+        "https://scarn.example.com/api/projects/resolve?username=acme&slug=web-app",
       ]);
     } finally {
       globalThis.fetch = previousFetch;
@@ -85,13 +85,13 @@ describe("loadPushDefaults", () => {
   });
 
   test("names the ref and the action when the server forbids the configured project", async () => {
-    const rootDir = mkdtempSync(join(tmpdir(), "boboddy-defaults-forbidden-"));
-    mkdirSync(join(rootDir, ".boboddy"), { recursive: true });
+    const rootDir = mkdtempSync(join(tmpdir(), "scarn-defaults-forbidden-"));
+    mkdirSync(join(rootDir, ".scarn"), { recursive: true });
     writeFileSync(
-      join(rootDir, ".boboddy", "boboddy.jsonc"),
+      join(rootDir, ".scarn", "scarn.jsonc"),
       JSON.stringify({ project: "acme/web-app" }),
     );
-    process.env["BOBODDY_ACCESS_TOKEN"] = "env-token";
+    process.env["SCARN_ACCESS_TOKEN"] = "env-token";
 
     const previousFetch = globalThis.fetch;
     globalThis.fetch = (() =>
@@ -119,7 +119,7 @@ describe("loadPushDefaults", () => {
   });
 
   test("returns undefined projectId when no config is found and no env is set", async () => {
-    const dir = mkdtempSync(join(tmpdir(), "boboddy-defaults-empty-"));
+    const dir = mkdtempSync(join(tmpdir(), "scarn-defaults-empty-"));
     try {
       const result = await loadPushDefaults({ dir });
       expect(result.projectId).toBeUndefined();

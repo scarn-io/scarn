@@ -8,7 +8,7 @@ import { stepSpecWithOverrides } from "./definition-spec-fixtures";
  */
 describe("validateDefinitionSpecs — repo", () => {
   const validate = (steps: ReturnType<typeof stepSpecWithOverrides>[]) =>
-    validateDefinitionSpecs({ pipelines: [], steps });
+    validateDefinitionSpecs(steps);
 
   test.concurrent("accepts every valid pair", () => {
     expect(

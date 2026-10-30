@@ -13,7 +13,7 @@ import {
 /**
  * The user's OpenCode provider credentials, read from their REAL home.
  *
- * OpenCode 2.x keeps credentials in its SQLite store, not in a file Boboddy
+ * OpenCode 2.x keeps credentials in its SQLite store, not in a file Scarn
  * could copy, so the source is the pinned runtime's own
  * `auth export --standalone` (no background service is left running). Its
  * stdout is held in memory only — never written to disk, logged, or quoted in
@@ -348,7 +348,7 @@ function legacyOAuthMethod(integrationID: string): string {
  * status only — stdout and stderr may hold secrets.
  */
 export async function runAuthExport(input: RunExportInput): Promise<string> {
-  const cwd = await mkdtemp(path.join(os.tmpdir(), "boboddy-auth-export-"));
+  const cwd = await mkdtemp(path.join(os.tmpdir(), "scarn-auth-export-"));
   try {
     return await new Promise<string>((resolve, reject) => {
       const child = spawn(

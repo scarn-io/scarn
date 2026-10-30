@@ -10,7 +10,7 @@ import { concurrentTest } from "../../../utils";
 
 describe("hasDevcontainer", () => {
   concurrentTest("returns true for .devcontainer/devcontainer.json", async () => {
-    const tmpDir = mkdtempSync(join(tmpdir(), "boboddy-devcontainer-"));
+    const tmpDir = mkdtempSync(join(tmpdir(), "scarn-devcontainer-"));
     try {
       mkdirSync(join(tmpDir, ".devcontainer"));
       writeFileSync(join(tmpDir, ".devcontainer", "devcontainer.json"), "{}", "utf8");
@@ -21,7 +21,7 @@ describe("hasDevcontainer", () => {
   });
 
   concurrentTest("returns true for a root-level devcontainer.json", async () => {
-    const tmpDir = mkdtempSync(join(tmpdir(), "boboddy-devcontainer-"));
+    const tmpDir = mkdtempSync(join(tmpdir(), "scarn-devcontainer-"));
     try {
       writeFileSync(join(tmpDir, "devcontainer.json"), "{}", "utf8");
       expect(await hasDevcontainer(tmpDir)).toBe(true);
@@ -31,7 +31,7 @@ describe("hasDevcontainer", () => {
   });
 
   concurrentTest("returns false when neither config exists", async () => {
-    const tmpDir = mkdtempSync(join(tmpdir(), "boboddy-devcontainer-"));
+    const tmpDir = mkdtempSync(join(tmpdir(), "scarn-devcontainer-"));
     try {
       expect(await hasDevcontainer(tmpDir)).toBe(false);
     } finally {
@@ -43,7 +43,7 @@ describe("hasDevcontainer", () => {
     // `DEVCONTAINER_CONFIG_PATH` is what the designer is allowed to write. If
     // detection did not recognise it, init would keep reporting a missing
     // devcontainer after the agent had just authored one.
-    const tmpDir = mkdtempSync(join(tmpdir(), "boboddy-devcontainer-"));
+    const tmpDir = mkdtempSync(join(tmpdir(), "scarn-devcontainer-"));
     try {
       const target = join(tmpDir, DEVCONTAINER_CONFIG_PATH);
       mkdirSync(dirname(target), { recursive: true });

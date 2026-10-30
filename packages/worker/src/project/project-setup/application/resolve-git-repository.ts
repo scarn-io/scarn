@@ -36,7 +36,7 @@ export async function findGitRoot(startDir: string): Promise<string | null> {
 
 /** Shared so callers that gate on repo presence (see `verifyRequirements`) report the same wording. */
 export const NOT_IN_GIT_REPOSITORY_MESSAGE =
-  "Not inside a git repository. Run 'boboddy init' from inside your project's git repository.";
+  "Not inside a git repository. Run 'scarn init' from inside your project's git repository.";
 
 /**
  * Resolve the `origin` remote URL for the repo rooted at `repoRoot`. The
@@ -75,7 +75,7 @@ export interface ResolvedGitRepository {
  * `git rev-parse --show-toplevel` would. Submodule-safe by construction: see
  * {@link findGitRoot}.
  *
- * This is the single source of truth `boboddy init` uses to know what
+ * This is the single source of truth `scarn init` uses to know what
  * repository it is even operating on, resolved (and reported) before any
  * project-matching or auth logic runs.
  */

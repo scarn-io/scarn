@@ -8,7 +8,7 @@ import {
   createLogger,
   setDefaultLogDestination,
   type Logger,
-} from "@boboddy/observability/logging/host";
+} from "@scarn/observability/logging/host";
 
 export type { Logger };
 
@@ -18,7 +18,7 @@ export type { Logger };
  */
 export function isVerbose(): boolean {
   return (
-    process.env["BOBODDY_VERBOSE"] === "1" ||
+    process.env["SCARN_VERBOSE"] === "1" ||
     process.argv.includes("--verbose") ||
     process.argv.includes("-v")
   );
@@ -27,7 +27,7 @@ export function isVerbose(): boolean {
 /**
  * The directory where worker log files are written.
  */
-export const LOG_DIR = path.join(os.homedir(), ".boboddy", "logs");
+export const LOG_DIR = path.join(os.homedir(), ".scarn", "logs");
 
 const LOG_FILE_PATTERN = /^worker-.*\.log$/;
 const MAX_LOG_FILES = 20;
@@ -41,7 +41,7 @@ const MAX_LOG_AGE_MS = 7 * 24 * 60 * 60 * 1000;
  *
  * Routing strategy:
  *
- * - **File** (always): raw NDJSON appended to `~/.boboddy/logs/worker-<ts>.log`.
+ * - **File** (always): raw NDJSON appended to `~/.scarn/logs/worker-<ts>.log`.
  *   Written regardless of TTY state or log level, so there is always a file to
  *   inspect after a failure.
  * - **Non-TTY** (piped / CI): tee to stdout (machine-parseable NDJSON) AND the
@@ -185,7 +185,7 @@ export function createTransport(): DestinationStream | undefined {
     });
 
     // The per-stream `level` here acts as a floor for that individual stream.
-    // The parent logger must be at `trace` (set via BOBODDY_LOG_LEVEL below) for
+    // The parent logger must be at `trace` (set via SCARN_LOG_LEVEL below) for
     // records to reach multistream at all — a `silent` parent drops everything
     // before the streams ever see it.
     //
@@ -213,16 +213,16 @@ export function createTransport(): DestinationStream | undefined {
 
 /**
  * The effective log level for the CLI. By this point the bootstrap module has
- * already pinned `BOBODDY_LOG_LEVEL` for the interactive case, so we simply
+ * already pinned `SCARN_LOG_LEVEL` for the interactive case, so we simply
  * honor it (falling back to `info`).
  */
 export function resolveLogLevel(): string {
-  return process.env["BOBODDY_LOG_LEVEL"] ?? "info";
+  return process.env["SCARN_LOG_LEVEL"] ?? "info";
 }
 
 export const cliLogger: Logger = createLogger(
   {
-    name: "@boboddy/cli",
+    name: "@scarn/cli",
     level: resolveLogLevel(),
   },
   createTransport(),

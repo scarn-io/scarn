@@ -125,7 +125,7 @@ function assertInferredEnv(definition: McpServerDefinition): void {
     }
     if (isReservedEnvVarName(variable)) {
       throw new Error(
-        `defineMcp "${definition.name}": {env:${variable}} reads a variable reserved for Boboddy.`,
+        `defineMcp "${definition.name}": {env:${variable}} reads a variable reserved for Scarn.`,
       );
     }
   }

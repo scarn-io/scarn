@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "key": "catalog-loop-and-catch",
+  "title": "Fix until the tests pass",
+  "start": { "to": "fix", "args": { "title": "workItem.title" } },
+  "nodes": {
+    "fix": {
+      "kind": "step",
+      "title": "Fix and run tests",
+      "step": "fix",
+      "maxRuns": 5,
+      "heartbeatSeconds": 300,
+      "retry": [{ "on": ["Scarn.HeartbeatTimeout"], "maxAttempts": 2 }],
+      "catch": [
+        {
+          "on": ["Scarn.MaxRunsExceeded"],
+          "to": "gaveUp"
+        }
+      ],
+      "next": {
+        "routes": [
+          {
+            "when": {
+              "path": "result.testsPass",
+              "op": "equal",
+              "value": true
+            },
+            "to": "done"
+          }
+        ],
+        "otherwise": {
+          "to": "fix",
+          "args": { "title": "input.title", "previousAttempt": "result" }
+        }
+      }
+    },
+    "done": { "kind": "succeed" },
+    "gaveUp": { "kind": "fail", "error": "TestsStillFailing" }
+  }
+}

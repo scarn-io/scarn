@@ -1,10 +1,10 @@
 import type { ArgumentsCamelCase, Argv, CommandModule } from "yargs";
-import { AnalyticsEvents } from "@boboddy/observability/analytics/events";
+import { AnalyticsEvents } from "@scarn/observability/analytics/events";
 import {
-  resolveBoboddyBaseUrl,
+  resolveScarnBaseUrl,
   resolveSourceBranch,
   runProjectWork,
-} from "@boboddy/worker";
+} from "@scarn/worker";
 import {
   createCliLogger,
   createTransport,
@@ -28,7 +28,7 @@ import {
 } from "../lib/telemetry";
 
 export interface WorkArguments {
-  /** The project as `owner/slug`; defaults to `"project"` in `.boboddy/boboddy.jsonc`. */
+  /** The project as `owner/slug`; defaults to `"project"` in `.scarn/scarn.jsonc`. */
   project: string | undefined;
   baseUrl: string | undefined;
   batchSize: number | undefined;
@@ -85,7 +85,7 @@ export type WorkOptions = Partial<WorkArguments>;
 
 /**
  * The command body, callable without yargs' argv envelope so
- * `boboddy pipelines design` can run the worker in-process when the user accepts
+ * `scarn pipelines design` can run the worker in-process when the user accepts
  * its closing offer (see `lib/design-run-offer.ts`) instead of re-spawning the
  * CLI. It owns the terminal for as long as it polls, and throws only on failures
  * that stop the worker outright — a failing task is absorbed by the polling loop.
@@ -97,11 +97,11 @@ export async function runWork(arguments_: WorkOptions): Promise<void> {
   createTransport();
 
   const logger = createCliLogger("work-command");
-  const recordReportPath = process.env["BOBODDY_RECORD_REPORT"];
+  const recordReportPath = process.env["SCARN_RECORD_REPORT"];
   const reporter = recordReportPath
     ? createRecordingReporter(createReporter({ logFilePath }), recordReportPath)
     : createReporter({ logFilePath });
-  const baseUrl = resolveBoboddyBaseUrl(arguments_.baseUrl);
+  const baseUrl = resolveScarnBaseUrl(arguments_.baseUrl);
   const projectRef = await pickProjectRef(arguments_.project);
   // The two flag defaults yargs would have supplied, applied here so a
   // programmatic caller only has to name what it actually chose.
@@ -143,7 +143,7 @@ export async function runWork(arguments_: WorkOptions): Promise<void> {
     process.exit(1);
   }
 
-  reporter.start(dryRun ? "Boboddy worker (dry run)" : "Boboddy worker");
+  reporter.start(dryRun ? "Scarn worker (dry run)" : "Scarn worker");
   if (sourceBranch) {
     reporter.info(`Using source branch: ${sourceBranch}`);
   }
@@ -195,7 +195,7 @@ export async function runWork(arguments_: WorkOptions): Promise<void> {
       varCount: Object.keys(localEnvVars).length,
       varNames: Object.keys(localEnvVars),
     },
-    "Loaded .boboddy/.env",
+    "Loaded .scarn/.env",
   );
 
   try {
@@ -270,17 +270,17 @@ export async function runWork(arguments_: WorkOptions): Promise<void> {
 
 export const workCommand: CommandModule<object, WorkArguments> = {
   command: "work [project]",
-  describe: "Run the Boboddy host worker for a project",
+  describe: "Run the Scarn host worker for a project",
   builder: (argv: Argv<object>) =>
     argv
       .positional("project", {
         describe:
-          'The project to process work for, as owner/slug (defaults to "project" in .boboddy/boboddy.jsonc)',
+          'The project to process work for, as owner/slug (defaults to "project" in .scarn/scarn.jsonc)',
         type: "string",
       })
       .option("baseUrl", {
         alias: "base-url",
-        describe: "Boboddy app base URL",
+        describe: "Scarn app base URL",
         type: "string",
       })
       .option("batchSize", {

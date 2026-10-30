@@ -104,19 +104,19 @@ describe("buildOpencodeContext", () => {
     const { opencodeConfigContent } = await buildOpencodeContext({
       workspacePath,
       stepMcpServers: null,
-      agentPromptText: "Execute the Boboddy step.",
+      agentPromptText: "Execute the Scarn step.",
     });
 
     const config = JSON.parse(opencodeConfigContent) as {
       agents?: { build?: { system?: string } };
     };
 
-    expect(config.agents?.build?.system).toBe("Execute the Boboddy step.");
+    expect(config.agents?.build?.system).toBe("Execute the Scarn step.");
   });
 
   test("user's .opencode/opencode.json is NOT merged into opencodeConfigContent (loaded natively by OpenCode at #4)", async () => {
     // The project config is left for OpenCode to load natively via its own
-    // precedence chain. Boboddy's override layer (OPENCODE_CONFIG_CONTENT)
+    // precedence chain. Scarn's override layer (OPENCODE_CONFIG_CONTENT)
     // should NOT contain user-config keys like an MCP server declared only in
     // the project's opencode.json.
     const workspacePath = await mkdtemp(
@@ -180,7 +180,7 @@ describe("buildOpencodeContext", () => {
     });
   });
 
-  test("Boboddy permission rules are in opencodeConfigContent", async () => {
+  test("Scarn permission rules are in opencodeConfigContent", async () => {
     const workspacePath = await mkdtemp(
       path.join(os.tmpdir(), "build-opencode-context-test-"),
     );
@@ -198,7 +198,7 @@ describe("buildOpencodeContext", () => {
     // layer so they are appended last and win as the security boundary.
     expect(config.permissions).toEqual([
       { action: "*", resource: "*", effect: "allow" },
-      { action: "boboddy*", resource: "*", effect: "allow" },
+      { action: "scarn*", resource: "*", effect: "allow" },
       { action: "question", resource: "*", effect: "deny" },
     ]);
   });
@@ -268,11 +268,11 @@ describe("buildOpencodeContext", () => {
       .catch(() => false);
     expect(userPluginExists).toBe(true);
 
-    // boboddy.js (the embedded trusted plugin) is written alongside it.
-    const boboddyExists = await access(path.join(pluginsDir, "boboddy.js"))
+    // scarn.js (the embedded trusted plugin) is written alongside it.
+    const scarnExists = await access(path.join(pluginsDir, "scarn.js"))
       .then(() => true)
       .catch(() => false);
-    expect(boboddyExists).toBe(true);
+    expect(scarnExists).toBe(true);
   });
 
   test("pre-existing user .opencode/opencode.json is NOT overwritten", async () => {
@@ -316,11 +316,11 @@ describe("buildOpencodeContext", () => {
 
     const fakeProvider = {
       package: "aisdk:@ai-sdk/anthropic",
-      name: "Boboddy Health Checker (internal)",
+      name: "Scarn Health Checker (internal)",
       settings: { baseURL: "http://fake-ai:9999", apiKey: "fake-key" },
       models: {
-        "boboddy-healthchecker-model": {
-          name: "Boboddy Health Checker (internal)",
+        "scarn-healthchecker-model": {
+          name: "Scarn Health Checker (internal)",
         },
       },
     };
@@ -329,7 +329,7 @@ describe("buildOpencodeContext", () => {
       workspacePath,
       stepMcpServers: null,
       providerOverride: {
-        providers: { "boboddy-healthchecker": fakeProvider },
+        providers: { "scarn-healthchecker": fakeProvider },
       },
     });
 
@@ -337,7 +337,7 @@ describe("buildOpencodeContext", () => {
       providers?: Record<string, unknown>;
     };
 
-    expect(config.providers?.["boboddy-healthchecker"]).toEqual(fakeProvider);
+    expect(config.providers?.["scarn-healthchecker"]).toEqual(fakeProvider);
   });
 
   test("providerOverride of null/undefined leaves rest of config identical to omitting it", async () => {

@@ -1,0 +1,213 @@
+{
+  "schemaVersion": 1,
+  "key": "issue-triage",
+  "start": {
+    "to": "classify-issue",
+    "args": {
+      "title": "workItem.title"
+    }
+  },
+  "nodes": {
+    "classify-issue": {
+      "kind": "step",
+      "step": "classify-issue",
+      "next": {
+        "match": "all",
+        "routes": [
+          {
+            "to": "reproduce-in-browser",
+            "args": {
+              "appUrl": "result.appUrl"
+            }
+          },
+          {
+            "when": {
+              "path": "result.category",
+              "op": "equal",
+              "value": "security"
+            },
+            "to": "notify-security",
+            "args": {
+              "summary": "result.summary"
+            }
+          },
+          {
+            "when": {
+              "not": {
+                "path": "result.affectedPages",
+                "op": "isEmpty"
+              }
+            },
+            "to": "capture-screenshot",
+            "each": {
+              "over": "result.affectedPages",
+              "maxConcurrency": 3
+            },
+            "args": {
+              "url": "item"
+            }
+          },
+          {
+            "when": {
+              "path": "result.duplicateCount",
+              "op": "greaterThan",
+              "value": 0
+            },
+            "to": "link-duplicates",
+            "args": {
+              "ids": "result.duplicateIds"
+            }
+          }
+        ],
+        "otherwise": {
+          "to": "add-to-backlog",
+          "args": {
+            "summary": "result.summary"
+          }
+        }
+      }
+    },
+    "reproduce-in-browser": {
+      "kind": "step",
+      "step": "reproduce-in-browser",
+      "next": {
+        "routes": [
+          {
+            "when": {
+              "path": "result.reproduced",
+              "op": "equal",
+              "value": true
+            },
+            "to": "write-failing-test",
+            "args": {
+              "observedBehavior": "result.observedBehavior"
+            },
+            "partial": true
+          }
+        ],
+        "otherwise": {
+          "to": "not-reproduced"
+        }
+      }
+    },
+    "notify-security": {
+      "kind": "step",
+      "step": "notify-security",
+      "next": {
+        "routes": [
+          {
+            "to": "security-sign-off"
+          }
+        ]
+      }
+    },
+    "capture-screenshot": {
+      "kind": "step",
+      "step": "capture-screenshot",
+      "next": {
+        "routes": [
+          {
+            "to": "summarise",
+            "args": {
+              "screenshots": {
+                "list": [
+                  "result.url"
+                ]
+              }
+            },
+            "partial": true
+          }
+        ]
+      }
+    },
+    "link-duplicates": {
+      "kind": "step",
+      "step": "link-duplicates"
+    },
+    "add-to-backlog": {
+      "kind": "step",
+      "step": "add-to-backlog"
+    },
+    "write-failing-test": {
+      "kind": "step",
+      "step": "write-failing-test",
+      "next": {
+        "routes": [
+          {
+            "to": "summarise",
+            "args": {
+              "failingTest": "result.testPath"
+            },
+            "partial": true
+          }
+        ]
+      }
+    },
+    "security-sign-off": {
+      "kind": "wait",
+      "for": "decision",
+      "actions": [
+        {
+          "key": "approve",
+          "label": "Approve",
+          "body": "optional"
+        },
+        {
+          "key": "reject",
+          "label": "Reject",
+          "body": "optional"
+        }
+      ],
+      "next": {
+        "routes": [
+          {
+            "to": "write-failing-test",
+            "args": {
+              "securityNotes": "result.body"
+            },
+            "partial": true
+          }
+        ]
+      }
+    },
+    "summarise": {
+      "kind": "step",
+      "step": "summarise",
+      "next": {
+        "match": "all",
+        "routes": [
+          {
+            "to": "open-pr"
+          },
+          {
+            "when": {
+              "path": "result.urgent",
+              "op": "equal",
+              "value": true
+            },
+            "to": "post-to-slack"
+          },
+          {
+            "to": "update-tracker"
+          }
+        ]
+      }
+    },
+    "open-pr": {
+      "kind": "step",
+      "step": "open-pr"
+    },
+    "post-to-slack": {
+      "kind": "step",
+      "step": "post-to-slack"
+    },
+    "update-tracker": {
+      "kind": "step",
+      "step": "update-tracker"
+    },
+    "not-reproduced": {
+      "kind": "fail",
+      "error": "NotReproduced"
+    }
+  }
+}

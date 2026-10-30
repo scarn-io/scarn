@@ -1,14 +1,14 @@
 import type { ArgumentsCamelCase, Argv, CommandModule } from "yargs";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { AnalyticsEvents } from "@boboddy/observability/analytics/events";
+import { AnalyticsEvents } from "@scarn/observability/analytics/events";
 import {
   PIPELINE_BUILDER_DIR,
-  resolveBoboddyBaseUrl,
+  resolveScarnBaseUrl,
   runPipelineStudioServer,
   scaffoldPipelineBuilderDirectory,
   type PipelineStudioServerHandle,
-} from "@boboddy/worker";
+} from "@scarn/worker";
 import { version as CLI_VERSION } from "../../package.json";
 import { openBrowser } from "../auth/browser";
 import { withReporter } from "../lib/command-output";
@@ -22,10 +22,10 @@ import type { CommandContext } from "../lib/command-output";
 import type { BaseReporter } from "../lib/reporter-types";
 
 /**
- * `boboddy pipelines studio` — a read-only, local-only visual designer.
+ * `scarn pipelines studio` — a read-only, local-only visual designer.
  * Unlike `pipelines design`, this command's terminal handoff is NOT a TUI: it starts
  * a local HTTP server, opens the user's browser to it, then just watches
- * `.boboddy/pipeline-builder` until the user Ctrl-Cs.
+ * `.scarn/pipeline-builder` until the user Ctrl-Cs.
  */
 
 interface StudioArguments {
@@ -40,12 +40,12 @@ interface StudioArguments {
  * `lib/studio-preflight.ts`'s own doc comment on why).
  */
 function assertProjectRoot(cwd: string): void {
-  if (existsSync(join(cwd, ".git")) || existsSync(join(cwd, ".boboddy"))) {
+  if (existsSync(join(cwd, ".git")) || existsSync(join(cwd, ".scarn"))) {
     return;
   }
   throw new Error(
-    "Run `boboddy pipelines studio` from the root of your repository. " +
-      `No .git or .boboddy directory was found in ${cwd}.`,
+    "Run `scarn pipelines studio` from the root of your repository. " +
+      `No .git or .scarn directory was found in ${cwd}.`,
   );
 }
 
@@ -57,7 +57,7 @@ function buildPreflightPorts(builderDir: string): StudioPreflightPorts {
       scaffoldPipelineBuilderDirectory(builderDir, CLI_VERSION);
     },
     dependenciesInstalled: () =>
-      existsSync(join(builderDir, "node_modules", "@boboddy", "sdk")),
+      existsSync(join(builderDir, "node_modules", "@scarn", "sdk")),
   };
 }
 
@@ -139,8 +139,8 @@ function buildRealPorts(builderDir: string): StudioSessionPorts {
 export const runPipelineStudio = (args: StudioArguments): Promise<void> =>
   withReporter("pipelines-studio", async (ctx: CommandContext) => {
     const builderDir = join(process.cwd(), PIPELINE_BUILDER_DIR);
-    syncIdentityFromDisk(resolveBoboddyBaseUrl(undefined));
-    ctx.reporter.start("Boboddy pipeline studio");
+    syncIdentityFromDisk(resolveScarnBaseUrl(undefined));
+    ctx.reporter.start("Scarn pipeline studio");
 
     await runStudioSession({
       builderDir,

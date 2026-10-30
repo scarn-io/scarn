@@ -182,9 +182,9 @@ describe("compiled CLI binary — baked telemetry key", () => {
 
   beforeAll(async () => {
     sink = startSink();
-    bakedRoot = mkdtempSync(join(tmpdir(), "boboddy-telemetry-key-"));
-    bakedBinary = join(bakedRoot, "boboddy-baked");
-    keylessBinary = join(bakedRoot, "boboddy-keyless");
+    bakedRoot = mkdtempSync(join(tmpdir(), "scarn-telemetry-key-"));
+    bakedBinary = join(bakedRoot, "scarn-baked");
+    keylessBinary = join(bakedRoot, "scarn-keyless");
     await Promise.all([
       compileCli(
         bakedBinary,
@@ -241,7 +241,7 @@ describe("compiled CLI binary — baked telemetry key", () => {
     });
   });
 
-  test("a binary with BOBODDY_TELEMETRY_DISABLED=1 delivers nothing", async () => {
+  test("a binary with SCARN_TELEMETRY_DISABLED=1 delivers nothing", async () => {
     sink.requests.length = 0;
     const { home, cwd } = scratchRun();
 
@@ -249,7 +249,7 @@ describe("compiled CLI binary — baked telemetry key", () => {
       bakedBinary,
       home,
       cwd,
-      { POSTHOG_CLI_HOST: sink.url, BOBODDY_TELEMETRY_DISABLED: "1" },
+      { POSTHOG_CLI_HOST: sink.url, SCARN_TELEMETRY_DISABLED: "1" },
     );
 
     expect(exitCode, stderr).toBe(1);

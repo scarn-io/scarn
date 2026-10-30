@@ -32,7 +32,7 @@ export function buildOpencodeLaunchWrapper(): string {
   // version path does not need to be baked in. CONTAINER_RUNTIME_ROOT is only
   // referenced in a diagnostic to keep the wrapper self-describing.
   return `#!/bin/sh
-# Boboddy-managed OpenCode runtime launch wrapper.
+# Scarn-managed OpenCode runtime launch wrapper.
 # Mounted under ${CONTAINER_RUNTIME_ROOT}/opencode/<version> inside a container,
 # or invoked directly on the host for no_workspace runs. Selects the correct
 # standalone opencode binary for the current OS + arch (+ libc on Linux), then
@@ -48,7 +48,7 @@ case "$machine" in
   aarch64 | arm64) arch="arm64" ;;
   x86_64 | amd64) arch="x64" ;;
   *)
-    echo "boboddy: unsupported CPU architecture '$machine' for OpenCode runtime payload" >&2
+    echo "scarn: unsupported CPU architecture '$machine' for OpenCode runtime payload" >&2
     exit 97
     ;;
 esac
@@ -59,7 +59,7 @@ os=$(uname -s)
 if [ "$os" = "Darwin" ]; then
   candidate="$BIN_ROOT/darwin-\${arch}/opencode"
   if [ ! -x "$candidate" ]; then
-    echo "boboddy: no OpenCode binary for darwin-\${arch} in $BIN_ROOT" >&2
+    echo "scarn: no OpenCode binary for darwin-\${arch} in $BIN_ROOT" >&2
     exit 98
   fi
   exec "$candidate" "$@"
@@ -89,7 +89,7 @@ if [ ! -x "$candidate" ]; then
 fi
 
 if [ ! -x "$candidate" ]; then
-  echo "boboddy: no OpenCode binary for linux-\${arch}\${libc} in $BIN_ROOT" >&2
+  echo "scarn: no OpenCode binary for linux-\${arch}\${libc} in $BIN_ROOT" >&2
   exit 98
 fi
 
@@ -100,7 +100,7 @@ case "$candidate" in
   *-musl/opencode)
     for lib in libstdc++.so.6 libgcc_s.so.1; do
       if [ ! -e "/usr/lib/$lib" ] && [ ! -e "/lib/$lib" ] && [ ! -e "/usr/local/lib/$lib" ]; then
-        echo "boboddy: Alpine images need 'apk add libstdc++ libgcc' for OpenCode" >&2
+        echo "scarn: Alpine images need 'apk add libstdc++ libgcc' for OpenCode" >&2
         break
       fi
     done

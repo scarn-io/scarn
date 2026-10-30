@@ -1,8 +1,8 @@
 import * as clack from "@clack/prompts";
-import { ConfigurationError, listProjectStepDefinitionsForDryRun } from "@boboddy/worker";
+import { ConfigurationError, listProjectStepDefinitionsForDryRun } from "@scarn/worker";
 
 /** A sentinel `clack.select` value distinct from any real step definition id. */
-const GLOBAL_ONLY_CHOICE = "__boboddy_dry_run_global_only__";
+const GLOBAL_ONLY_CHOICE = "__scarn_dry_run_global_only__";
 
 export type DryRunStepSelection =
   | { kind: "step"; stepDefinitionId: string }

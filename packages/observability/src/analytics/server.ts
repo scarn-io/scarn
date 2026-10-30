@@ -78,7 +78,7 @@ export function identify(
 
 /**
  * Merge a prior anonymous distinct id into the real, now-known one — e.g. the
- * CLI's pre-auth machine id once a `boboddy auth login` completes. `userId` is
+ * CLI's pre-auth machine id once a `scarn auth login` completes. `userId` is
  * the current/real id; `previousId` is the id events were captured under
  * before it was known. A no-op when the two are already the same id.
  */

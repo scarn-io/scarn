@@ -1,10 +1,12 @@
 import * as clack from "@clack/prompts";
 import { z } from "zod";
-import { AnalyticsEvents } from "@boboddy/observability/analytics/events";
+import { AnalyticsEvents } from "@scarn/observability/analytics/events";
 import {
+  listPinnedStepDefinitionIds,
+  readActivePipelineVersion,
   resolveSourceBranch,
   runPipelineHealthChecksDryRun,
-} from "@boboddy/worker";
+} from "@scarn/worker";
 import { connectApi, describeApiError } from "./cli-api-client";
 import type { DryRunGateResult } from "./design-run-offer";
 import {
@@ -71,10 +73,6 @@ export async function resolveAssignedPipeline(input: {
   return assignment.success ? assignment.data.pipelineDefinitionId : undefined;
 }
 
-const pipelineStepRefsSchema = z.object({
-  stepDefinitions: z.array(z.object({ stepDefinitionId: z.string().min(1) })),
-});
-
 /**
  * The two step-definition fields that decide where a step executes. Parsed for
  * the same reason as {@link assignedPipelineSchema}: the generated type
@@ -90,7 +88,7 @@ export type StepRuntimeTarget = z.infer<typeof stepRuntimeTargetSchema>;
 /**
  * A step runs inside the project's devcontainer only when it needs a workspace
  * and no managed runtime supplies the container. `no_workspace` steps run on
- * the host; managed-runtime steps run in a Boboddy-provided image.
+ * the host; managed-runtime steps run in a Scarn-provided image.
  */
 export function stepNeedsProjectDevcontainer(step: StepRuntimeTarget): boolean {
   return step.executionMode === "workspace" && step.managedRuntime === null;
@@ -116,13 +114,9 @@ export async function pipelineNeedsProjectDevcontainer(input: {
     );
   }
 
-  const stepDefinitionIds = [
-    ...new Set(
-      pipelineStepRefsSchema
-        .parse(pipeline.data)
-        .stepDefinitions.map((step) => step.stepDefinitionId),
-    ),
-  ];
+  const stepDefinitionIds = listPinnedStepDefinitionIds(
+    readActivePipelineVersion(input.pipelineDefinitionId, pipeline.data),
+  );
 
   const steps = await Promise.all(
     stepDefinitionIds.map(async (stepDefinitionId) => {
@@ -178,7 +172,7 @@ export async function queueDesignRun(input: {
 
   // Milestone 8, "First run queued / worker run started" — scoped to the
   // queue side only. Whether a worker actually claims and starts THIS run
-  // is not observable from here: the `boboddy work` process that eventually
+  // is not observable from here: the `scarn work` process that eventually
   // claims it is very often a different process (often a different
   // machine) than the one that queued it, with no webhook or callback
   // connecting the two. Queueing is the CLI-observable half of the

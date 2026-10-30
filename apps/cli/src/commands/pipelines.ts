@@ -3,19 +3,28 @@ import { spawn } from "node:child_process";
 import { existsSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import * as clack from "@clack/prompts";
-import { AnalyticsEvents } from "@boboddy/observability/analytics/events";
+import { AnalyticsEvents } from "@scarn/observability/analytics/events";
 import {
   detectPipelineRuntime,
   listExistingPipelineBuilderFiles,
   loadAuthenticatedSession,
   PIPELINE_BUILDER_DIR,
   pullPipelineDefinitions,
-  resolveBoboddyBaseUrl,
+  resolveScarnBaseUrl,
   scaffoldPipelineBuilderDirectory,
   STARTER_PIPELINE_FILENAME,
-} from "@boboddy/worker";
+  STARTER_PIPELINE_JSON_FILENAME,
+} from "@scarn/worker";
 import { version as CLI_VERSION } from "../../package.json";
+import { buildCommand } from "./pipelines-build";
 import { designCommand } from "./pipelines-design";
+import {
+  activateCommand,
+  publishCommand,
+  runCommand,
+  runPullDocument,
+  validateCommand,
+} from "./pipelines-documents";
 import { studioCommand } from "./pipelines-studio";
 import { withReporter } from "../lib/command-output";
 import {
@@ -41,7 +50,7 @@ const runInit = (): Promise<void> =>
   withReporter("pipelines-init", ({ reporter, logger }) => {
     if (!existsSync(join(process.cwd(), ".git"))) {
       throw new Error(
-        "`boboddy pipelines init` must be run from the root of a git repository. Navigate to your repo root and try again.",
+        "`scarn pipelines init` must be run from the root of a git repository. Navigate to your repo root and try again.",
       );
     }
 
@@ -64,8 +73,10 @@ const runInit = (): Promise<void> =>
       `Pipeline builder scaffolded at ${PIPELINE_BUILDER_DIR}. Next steps:
   1. cd ${PIPELINE_BUILDER_DIR} && npm install   (or bun install)
   2. open ${STARTER_PIPELINE_FILENAME} — the default bug pipeline; adapt its URL, tools and test runner
-  3. boboddy pipelines push
-  4. create a work item, then run \`boboddy work\` and watch it advance`,
+  3. scarn pipelines push       (uploads the steps)
+  4. scarn pipelines build      (writes ${STARTER_PIPELINE_JSON_FILENAME})
+  5. scarn pipelines publish ${STARTER_PIPELINE_JSON_FILENAME}
+  6. create a work item, then run \`scarn work\` and watch it advance`,
     );
   });
 
@@ -85,7 +96,7 @@ interface PushArguments {
 
 const runPush = (args: ArgumentsCamelCase<PushArguments>): Promise<void> =>
   withReporter("pipelines-push", async ({ reporter, logger }) => {
-    const baseUrl = resolveBoboddyBaseUrl(args.baseUrl);
+    const baseUrl = resolveScarnBaseUrl(args.baseUrl);
 
     const projectRef = await pickProjectRef(args.project);
     if (!projectRef) {
@@ -96,7 +107,7 @@ const runPush = (args: ArgumentsCamelCase<PushArguments>): Promise<void> =>
     if (!authenticated) {
       throw new CliError(
         "not_signed_in_noninteractive",
-        `Not signed in to ${baseUrl}. Run \`boboddy auth login\` first.`,
+        `Not signed in to ${baseUrl}. Run \`scarn auth login\` first.`,
       );
     }
     syncIdentityFromDisk(baseUrl);
@@ -113,13 +124,13 @@ const runPush = (args: ArgumentsCamelCase<PushArguments>): Promise<void> =>
       throw new CliError(
         "push_failed",
         `Pipeline builder directory not found at ${PIPELINE_BUILDER_DIR}. ` +
-          "Run `boboddy pipelines init` first.",
+          "Run `scarn pipelines init` first.",
       );
     }
 
-    // Without node_modules, the user's pipeline files can't import @boboddy/sdk
+    // Without node_modules, the user's pipeline files can't import @scarn/sdk
     // (or anything else). Bail with a clear hint before we even pick a runtime.
-    if (!existsSync(join(dir, "node_modules", "@boboddy", "sdk"))) {
+    if (!existsSync(join(dir, "node_modules", "@scarn", "sdk"))) {
       throw new CliError(
         "push_failed",
         `Missing dependencies in ${PIPELINE_BUILDER_DIR}. ` +
@@ -144,14 +155,14 @@ const runPush = (args: ArgumentsCamelCase<PushArguments>): Promise<void> =>
     );
 
     // The script reads auth from the same file the CLI writes, and the project
-    // from .boboddy/boboddy.jsonc — both already resolved above to fail fast.
+    // from .scarn/scarn.jsonc — both already resolved above to fail fast.
     // We forward the resolved id via env vars so the script skips its own lookup
     // and a positional project still takes effect.
     const env: NodeJS.ProcessEnv = {
       ...process.env,
-      BOBODDY_PROJECT_ID: projectId,
-      BOBODDY_BASE_URL: baseUrl,
-      BOBODDY_ACCESS_TOKEN: authenticated.profile.accessToken,
+      SCARN_PROJECT_ID: projectId,
+      SCARN_BASE_URL: baseUrl,
+      SCARN_ACCESS_TOKEN: authenticated.profile.accessToken,
     };
 
     const task = reporter.startActivity(
@@ -187,24 +198,24 @@ const runPush = (args: ArgumentsCamelCase<PushArguments>): Promise<void> =>
       process.exit(exitCode);
     }
 
-    task.succeed("Pushed pipeline definitions");
+    task.succeed("Pushed steps, built pipelines and the assignment");
     captureMilestone(AnalyticsEvents.CliPipelinePushed);
   });
 
 const pushCommand: CommandModule<object, PushArguments> = {
   command: "push [project]",
-  describe: `Push pipeline definitions from ${PIPELINE_BUILDER_DIR} to the server`,
+  describe: `Push the steps, built pipeline JSON and default assignment in ${PIPELINE_BUILDER_DIR} to the server`,
   builder: (argv: Argv<object>) =>
     argv
       .positional("project", {
         describe:
-          'The project to push pipelines to, as owner/slug (defaults to "project" in .boboddy/boboddy.jsonc)',
+          'The project to push pipelines to, as owner/slug (defaults to "project" in .scarn/scarn.jsonc)',
         type: "string",
       })
       .option("baseUrl", {
         alias: "base-url",
         type: "string",
-        describe: "Boboddy app base URL",
+        describe: "Scarn app base URL",
       }),
   handler: runPush,
 };
@@ -232,11 +243,21 @@ async function confirmOverwrite(files: string[]): Promise<boolean> {
 interface PullArguments {
   project: string | undefined;
   baseUrl: string | undefined;
+  key: string | undefined;
+  version: number | undefined;
+  out: string | undefined;
 }
 
 const runPull = (args: ArgumentsCamelCase<PullArguments>): Promise<void> =>
+  args.key === undefined
+    ? runPullBuilderDirectory(args)
+    : runPullDocument({ ...args, key: args.key });
+
+const runPullBuilderDirectory = (
+  args: ArgumentsCamelCase<PullArguments>,
+): Promise<void> =>
   withReporter("pipelines-pull", async ({ reporter, logger }) => {
-    const baseUrl = resolveBoboddyBaseUrl(args.baseUrl);
+    const baseUrl = resolveScarnBaseUrl(args.baseUrl);
 
     const projectRef = await pickProjectRef(args.project);
     if (!projectRef) {
@@ -246,7 +267,7 @@ const runPull = (args: ArgumentsCamelCase<PullArguments>): Promise<void> =>
     const authenticated = await loadAuthenticatedSession(baseUrl);
     if (!authenticated) {
       throw new Error(
-        `Not signed in to ${baseUrl}. Run \`boboddy auth login\` first.`,
+        `Not signed in to ${baseUrl}. Run \`scarn auth login\` first.`,
       );
     }
 
@@ -296,25 +317,46 @@ const runPull = (args: ArgumentsCamelCase<PullArguments>): Promise<void> =>
       : "";
     const fieldsMsg = result.workItemFieldsFile ? ", work-item-fields.ts" : "";
     reporter.success(
-      `Pull complete. ${String(result.pipelineFiles)} pipeline file(s), ${String(result.stepFiles)} step file(s)${assignmentMsg}${fieldsMsg}.`,
+      `Pull complete. ${String(result.pipelineFiles)} pipeline document(s), ${String(result.stepFiles)} step file(s)${assignmentMsg}${fieldsMsg}.`,
     );
   });
 
 const pullCommand: CommandModule<object, PullArguments> = {
   command: "pull [project]",
-  describe: `Pull pipeline and step definitions from the server into ${PIPELINE_BUILDER_DIR}`,
+  describe: `Pull pipeline and step definitions from the server into ${PIPELINE_BUILDER_DIR}, or one pipeline document with --key`,
   builder: (argv: Argv<object>) =>
     argv
+      .version(false)
       .positional("project", {
         describe:
-          'The project to pull pipelines from, as owner/slug (defaults to "project" in .boboddy/boboddy.jsonc)',
+          'The project to pull pipelines from, as owner/slug (defaults to "project" in .scarn/scarn.jsonc)',
         type: "string",
       })
       .option("baseUrl", {
         alias: "base-url",
         type: "string",
-        describe: "Boboddy app base URL",
-      }),
+        describe: "Scarn app base URL",
+      })
+      .option("key", {
+        type: "string",
+        describe:
+          "Pull only this pipeline's JSON document, into <key>.json in the current directory",
+      })
+      .option("version", {
+        type: "number",
+        describe:
+          "With --key: pull this published version instead of the active one",
+      })
+      .option("out", {
+        type: "string",
+        describe: "With --key: the file to write (defaults to <key>.json)",
+      })
+      .check((argv) =>
+        argv.key === undefined &&
+        (argv.version !== undefined || argv.out !== undefined)
+          ? "--version and --out require --key."
+          : true,
+      ),
   handler: runPull,
 };
 
@@ -330,6 +372,11 @@ export const pipelinesCommand: CommandModule<object, object> = {
       .command(studioCommand)
       .command(pushCommand)
       .command(pullCommand)
+      .command(buildCommand)
+      .command(validateCommand)
+      .command(publishCommand)
+      .command(activateCommand)
+      .command(runCommand)
       .demandCommand(1, "A pipelines command is required."),
   handler: () => undefined,
 };

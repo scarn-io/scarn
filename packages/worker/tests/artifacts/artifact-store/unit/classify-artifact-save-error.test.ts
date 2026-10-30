@@ -5,11 +5,11 @@ describe("classifyArtifactSaveError", () => {
   test("classifies a plane-client problem-details error, preferring code/detail", () => {
     const error = new Error(
       JSON.stringify({
-        type: "urn:problem-type:boboddy:api:http-402",
+        type: "urn:problem-type:scarn:api:http-402",
         title: "Request Failed",
         status: 402,
         detail: "Usage limit exceeded for storage",
-        instance: "/api/tasks/abc/artifact-upload-url",
+        instance: "/api/task-runs/abc/artifact-upload-url",
         code: "USAGE_LIMIT_EXCEEDED_STORAGE",
       }),
     );
@@ -24,7 +24,7 @@ describe("classifyArtifactSaveError", () => {
   test("falls back to title when detail is missing", () => {
     const error = new Error(
       JSON.stringify({
-        type: "urn:problem-type:boboddy:api:http-404",
+        type: "urn:problem-type:scarn:api:http-404",
         title: "Not Found",
         status: 404,
         code: "TASK_NOT_FOUND",

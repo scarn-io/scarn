@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import type { FullLogSaver } from "@boboddy/platform-client";
+import type { FullLogSaver } from "@scarn/shared-core";
 
 /**
  * Where `execution view --log` saves a step's full, uncapped log. A sibling
@@ -9,7 +9,7 @@ import type { FullLogSaver } from "@boboddy/platform-client";
  * the CLI's own diagnostic pino output, a different concern.
  */
 function resolveExecutionLogCacheDir(homeDir: string = os.homedir()): string {
-  return path.join(homeDir, ".boboddy", "execution-logs");
+  return path.join(homeDir, ".scarn", "execution-logs");
 }
 
 export const EXECUTION_LOG_CACHE_DIR = resolveExecutionLogCacheDir();
@@ -23,15 +23,15 @@ export async function ensureExecutionLogCacheDir(
 /**
  * Builds the disk-backed `saveFullLog` callback for `investigateExecution`
  * (`apps/cli/src/commands/execution.ts`). Every call overwrites any existing
- * file for the same `taskId`/stream. Failures propagate: `investigateExecution`
+ * file for the same `taskRunId`/stream. Failures propagate: `investigateExecution`
  * turns a rejection into `full log: not saved (<reason>)` on the header line.
  */
 export function createFullLogSaver(
   cacheDir: string = EXECUTION_LOG_CACHE_DIR,
 ): FullLogSaver {
-  return async ({ taskId, requestedStream, fullText }) => {
+  return async ({ taskRunId, requestedStream, fullText }) => {
     await ensureExecutionLogCacheDir(cacheDir);
-    const filePath = path.join(cacheDir, `${taskId}-${requestedStream}.log`);
+    const filePath = path.join(cacheDir, `${taskRunId}-${requestedStream}.log`);
     await writeFile(filePath, fullText, "utf8");
     return filePath;
   };

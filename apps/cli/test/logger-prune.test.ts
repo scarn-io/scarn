@@ -17,7 +17,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 let dir: string;
 
 beforeEach(async () => {
-  dir = await mkdtemp(path.join(os.tmpdir(), "boboddy-log-prune-"));
+  dir = await mkdtemp(path.join(os.tmpdir(), "scarn-log-prune-"));
 });
 
 afterEach(async () => {

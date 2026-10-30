@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { RemoteArtifactStore } from "../../../../src/artifacts/artifact-store/infra/remote-artifact-store";
-import type { RemoteArtifactUploader } from "../../../../src/work/task/contracts/process-project-work-types";
+import type { RemoteArtifactUploader } from "../../../../src/work/task-run/contracts/process-project-work-types";
 
 type CreateArgs = Parameters<
   RemoteArtifactUploader["createArtifactUploadUrl"]
@@ -68,7 +68,7 @@ describe("RemoteArtifactStore", () => {
 
     const store = new RemoteArtifactStore(uploader);
     const result = await store.saveArtifact({
-      taskId: "step-1",
+      taskRunId: "step-1",
       sourcePath: sourceFile,
       relativeStorePath: "reports/report.json",
       claimToken: "claim-1",
@@ -82,7 +82,7 @@ describe("RemoteArtifactStore", () => {
     const expectedSizeBytes = '{"ok":true}'.length;
     expect(createCalls).toHaveLength(1);
     expect(createCalls[0]).toMatchObject({
-      taskId: "step-1",
+      taskRunId: "step-1",
       claimToken: "claim-1",
       relativeStorePath: "reports/report.json",
       contentType: "application/json",
@@ -101,7 +101,7 @@ describe("RemoteArtifactStore", () => {
     const sizeBytes = '{"ok":true}'.length;
     expect(recordCalls).toHaveLength(1);
     expect(recordCalls[0]).toMatchObject({
-      taskId: "step-1",
+      taskRunId: "step-1",
       claimToken: "claim-1",
       objectKey: "derived-key",
       relativeStorePath: "reports/report.json",
@@ -124,7 +124,7 @@ describe("RemoteArtifactStore", () => {
     const tracePath = path.join(dir, "trace.zip");
     await writeFile(tracePath, "trace-bytes");
     await store.saveArtifact({
-      taskId: "step-1",
+      taskRunId: "step-1",
       sourcePath: tracePath,
       relativeStorePath: "test-results/example/trace.zip",
       claimToken: "claim-1",
@@ -142,7 +142,7 @@ describe("RemoteArtifactStore", () => {
     let caught: unknown;
     try {
       await store.saveArtifact({
-        taskId: "step-1",
+        taskRunId: "step-1",
         sourcePath: sourceFile,
         relativeStorePath: "reports/report.json",
         kind: "generic",
@@ -168,7 +168,7 @@ describe("RemoteArtifactStore", () => {
     let caught: unknown;
     try {
       await store.saveArtifact({
-        taskId: "step-1",
+        taskRunId: "step-1",
         sourcePath: sourceFile,
         relativeStorePath: "reports/report.json",
         claimToken: "claim-1",
@@ -207,7 +207,7 @@ describe("RemoteArtifactStore", () => {
 
       const store = new RemoteArtifactStore(uploader);
       await store.saveArtifact({
-        taskId: "step-1",
+        taskRunId: "step-1",
         sourcePath: filePath,
         relativeStorePath: relative,
         claimToken: "claim-1",

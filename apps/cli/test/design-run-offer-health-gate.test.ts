@@ -1,4 +1,4 @@
-import { describe, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import {
   formatHealthFinding,
   HEALTH_DRY_RUN_FAILED_MESSAGE,
@@ -14,7 +14,6 @@ import {
   TARGET,
 } from "./design-run-offer-fixtures";
 import {
-  concurrentTest as test,
   createReporterRecorder as createRecorder,
   reportedMessages as messages,
 } from "./utils";

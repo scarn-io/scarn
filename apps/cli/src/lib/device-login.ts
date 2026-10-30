@@ -1,17 +1,17 @@
-import { AnalyticsEvents } from "@boboddy/observability/analytics/events";
+import { AnalyticsEvents } from "@scarn/observability/analytics/events";
 import {
   CLI_AUTH_CLIENT_ID,
   persistAuthenticatedSession,
   pollForAccessToken,
   requestDeviceAuthorization,
-} from "@boboddy/worker";
+} from "@scarn/worker";
 import { openBrowser } from "../auth/browser";
 import type { Logger } from "./logger";
 import type { BaseReporter } from "./reporter-types";
 import { captureMilestone, identifyAuthenticatedUser } from "./telemetry";
 
 /**
- * The OAuth device-authorization flow, factored out of `boboddy auth login` so
+ * The OAuth device-authorization flow, factored out of `scarn auth login` so
  * other commands can heal a missing session inline instead of telling the user
  * to go and run `auth login` themselves.
  *

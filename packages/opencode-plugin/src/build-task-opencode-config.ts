@@ -1,7 +1,7 @@
 import type {
   ResolvedOpenCodeMcpServerConfig,
   ResolvedOpenCodeMcpServers,
-} from "@boboddy/sdk/opencode-mcp";
+} from "@scarn/sdk/opencode-mcp";
 import type {
   OpenCodeOverlayAgent,
   OpenCodeOverlayConfig,
@@ -90,17 +90,17 @@ function mergeAgentsConfig(
 }
 
 /**
- * Build the Boboddy override config layer: the baseline permission boundary
+ * Build the Scarn override config layer: the baseline permission boundary
  * plus step-specific additions (MCP servers, their permission rules, the
  * task agent's system prompt and `AGENT_DEFAULT_MODEL`).
  *
  * The result is serialized into `OPENCODE_CONFIG_CONTENT`, OpenCode's
  * highest-precedence config source. The user's global and project configs are
  * left for OpenCode to load natively; its permission rules are appended after
- * theirs, so the Boboddy baseline wins on every action it names.
+ * theirs, so the Scarn baseline wins on every action it names.
  */
-export function buildBoboddyOverrideConfig(input: {
-  /** Boboddy's embedded baseline config (permission rules, empty `mcp`). */
+export function buildScarnOverrideConfig(input: {
+  /** Scarn's embedded baseline config (permission rules, empty `mcp`). */
   baseConfig: OpenCodeOverlayConfig;
   stepMcpServers?: ResolvedOpenCodeMcpServers | null | undefined;
   agentPromptText?: string | null | undefined;

@@ -1,31 +1,33 @@
 import type { Plugin } from "@opencode/plugin";
-import { createBoboddySubmitArtifactTool } from "./tools/boboddy-submit-artifact";
-import { createBoboddySubmitStepFindingsTool } from "./tools/boboddy-submit-step-findings";
+import { createScarnEndConversationTool } from "./tools/scarn-end-conversation";
+import { createScarnSubmitArtifactTool } from "./tools/scarn-submit-artifact";
+import { createScarnSubmitStepFindingsTool } from "./tools/scarn-submit-step-findings";
 import { createPlaywrightTraceAnalyzerTool } from "./tools/playwright-trace-analyzer";
-import { BOBODDY_RPC_DEFINITION, describeRegisteredTools } from "./boboddy-rpc";
+import { SCARN_RPC_DEFINITION, describeRegisteredTools } from "./scarn-rpc";
 
 /**
- * The Boboddy OpenCode plugin: registers Boboddy's tools, and exposes a
- * `boboddy.listTools` RPC so the worker can enumerate registered tool ids and
+ * The Scarn OpenCode plugin: registers Scarn's tools, and exposes a
+ * `scarn.listTools` RPC so the worker can enumerate registered tool ids and
  * input schemas (v2 has no server route for that).
  *
  * A plain object rather than `Plugin.define(...)`: `define` is an identity
  * function, and avoiding the runtime import keeps the bundled
- * `.opencode/plugins/boboddy.js` free of any module it would have to resolve
+ * `.opencode/plugins/scarn.js` free of any module it would have to resolve
  * from the user's workspace.
  */
-const BoboddyOpencodePlugin: Plugin.Plugin = {
-  id: "boboddy",
+const ScarnOpencodePlugin: Plugin.Plugin = {
+  id: "scarn",
   async setup(ctx) {
-    const submitArtifactTool = await createBoboddySubmitArtifactTool(
+    const submitArtifactTool = await createScarnSubmitArtifactTool(
       ctx.location.directory,
     );
     await ctx.tool.transform((editor) => {
-      editor.add(createBoboddySubmitStepFindingsTool(ctx.location.directory));
+      editor.add(createScarnSubmitStepFindingsTool(ctx.location.directory));
+      editor.add(createScarnEndConversationTool(ctx.location.directory));
       editor.add(submitArtifactTool);
       editor.add(createPlaywrightTraceAnalyzerTool());
     });
-    await ctx.rpc.register(BOBODDY_RPC_DEFINITION, {
+    await ctx.rpc.register(SCARN_RPC_DEFINITION, {
       listTools: async () => ({
         tools: describeRegisteredTools(await ctx.tool.list()),
       }),
@@ -33,4 +35,4 @@ const BoboddyOpencodePlugin: Plugin.Plugin = {
   },
 };
 
-export default BoboddyOpencodePlugin;
+export default ScarnOpencodePlugin;

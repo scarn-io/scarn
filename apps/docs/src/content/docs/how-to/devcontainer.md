@@ -3,20 +3,20 @@ title: Set up a dev container
 description: Generate a minimal .devcontainer/devcontainer.json for your project using an AI prompt
 ---
 
-`boboddy work` spins up a single Docker container from your project's `.devcontainer/devcontainer.json` for every task, and runs the OpenCode agent **inside that same container** (from a Boboddy-managed mounted runtime payload). So your devcontainer is the one and only runtime — it must contain the language toolchain your steps need, but it does **not** need OpenCode installed; Boboddy mounts and launches its own pinned OpenCode runtime.
+`scarn work` spins up a single Docker container from your project's `.devcontainer/devcontainer.json` for every task, and runs the OpenCode agent **inside that same container** (from a Scarn-managed mounted runtime payload). So your devcontainer is the one and only runtime — it must contain the language toolchain your steps need, but it does **not** need OpenCode installed; Scarn mounts and launches its own pinned OpenCode runtime.
 
 This page provides a prompt you can paste into any AI coding assistant (Claude, Copilot, etc.) to generate a minimal, project-appropriate devcontainer config.
 
 :::tip[You probably don't need this page]
-A design session writes this file for you when it's missing, and host-only pipelines never need one — see [Runtime](/boboddy/getting-started/concepts/#runtime). This page is for writing one by hand, or for understanding what the agent produced.
+A design session writes this file for you when it's missing, and host-only pipelines never need one — see [Runtime](/scarn/getting-started/concepts/#runtime). This page is for writing one by hand, or for understanding what the agent produced.
 :::
 
 ## AI prompt
 
-Prefer a design session. If you want to generate one outside Boboddy instead, copy the prompt below and run it in your project's root directory. The AI will inspect your codebase and output a `.devcontainer/devcontainer.json` (and a `Dockerfile` if needed).
+Prefer a design session. If you want to generate one outside Scarn instead, copy the prompt below and run it in your project's root directory. The AI will inspect your codebase and output a `.devcontainer/devcontainer.json` (and a `Dockerfile` if needed).
 
 `````
-You are helping me create a minimal `.devcontainer/devcontainer.json` for this project so it can be used as a Boboddy worker execution environment.
+You are helping me create a minimal `.devcontainer/devcontainer.json` for this project so it can be used as a Scarn worker execution environment.
 
 **Your goal:** produce the smallest devcontainer config that gives the execution environment everything it needs — nothing more.
 
@@ -84,7 +84,7 @@ After the file output, add a **"Why"** section (plain prose, ≤ 150 words) expl
 1. Create a `.devcontainer/` directory at your project root if it doesn't exist.
 2. Write the generated `devcontainer.json` (and optional `Dockerfile`) into that directory.
 3. Commit both files.
-4. Test locally by running `boboddy work --once` — the worker will pull the image and report any missing tools in its logs.
+4. Test locally by running `scarn work --once` — the worker will pull the image and report any missing tools in its logs.
 
 ## Multiple configs
 
@@ -100,7 +100,7 @@ A repository can keep more than one devcontainer config, for example a frontend 
 Steps use the default config unless they select another. The default is `.devcontainer/devcontainer.json`, then `devcontainer.json` at the repository root. To run a step in a different config, pass its full repo-relative path to `Runtime.devcontainer`:
 
 ```typescript
-import { defineStep, Runtime } from "@boboddy/sdk";
+import { defineStep, Runtime } from "@scarn/sdk";
 
 export const buildFrontend = defineStep({
   key: "build-frontend",
@@ -117,16 +117,16 @@ export const buildFrontend = defineStep({
 Things to know when you write an alternate config:
 
 - The file must be named `devcontainer.json` or `.devcontainer.json`, in any directory of the repository. The `config` value is the full path, not a name.
-- There is no fallback. If the file is missing on the branch the step starts from, the step fails and names the path and branch. A later step in a pipeline starts from the work branch of the nearest earlier step that produced one, so that branch must contain the config (see [Base branch](/boboddy/guides/workers/#base-branch)). See [Selecting a devcontainer config](/boboddy/guides/steps/#selecting-a-devcontainer-config).
+- There is no fallback. If the file is missing on the branch the step starts from, the step fails and names the path and branch. A later step in a pipeline starts from the work branch of the nearest earlier step that produced one, so that branch must contain the config (see [Base branch](/scarn/guides/workers/#base-branch)). See [Selecting a devcontainer config](/scarn/guides/steps/#selecting-a-devcontainer-config).
 - The workspace is still mounted from the repository root, whichever directory the config lives in. A relative `build.dockerfile` or `build.context` in a nested config resolves against **the config file's directory**, not the repository root.
 - A `workspaceFolder` that differs from `/workspaces/<repository-folder-name>` does not move the mount unless the config also sets `workspaceMount`. Keep `workspaceFolder` under the mount, or set `workspaceMount`, or the agent's working directory will not exist in the container.
-- A `codeStep` runs in a worker-supplied [managed runtime](/boboddy/guides/steps/#runtime-for-code-steps) by default, which needs no devcontainer config. A code step that opts into `Runtime.devcontainer({ config })` runs its runner script inside the selected container, so that alternate config must provide a JavaScript runtime (`bun` or `node`) and the pipeline-builder dependencies.
+- A `codeStep` runs in a worker-supplied [managed runtime](/scarn/guides/steps/#runtime-for-code-steps) by default, which needs no devcontainer config. A code step that opts into `Runtime.devcontainer({ config })` runs its runner script inside the selected container, so that alternate config must provide a JavaScript runtime (`bun` or `node`) and the pipeline-builder dependencies.
 
 ## Troubleshooting
 
 | Symptom | Likely cause |
 |---------|--------------|
-| `boboddy work` fails with "image not found" | Base image name is wrong or private — check `docker pull <image>` manually |
+| `scarn work` fails with "image not found" | Base image name is wrong or private — check `docker pull <image>` manually |
 | Agent can't find the package manager | Add an `onCreateCommand` to install deps, or use a `features` entry |
 | Container starts but step fails with missing binary | A system package or runtime tool is absent — add it via `features` or a custom `Dockerfile` |
 | Step fails with `Devcontainer config "..." not found in the cloned repository` | The path in `Runtime.devcontainer({ config })` does not exist on the branch the step starts from. Check the path and that the file is committed and pushed to that branch |

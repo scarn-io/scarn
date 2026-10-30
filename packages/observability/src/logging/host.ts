@@ -41,7 +41,7 @@ export function createLogger(
  * Build a logger lazily on first use rather than at module-import time.
  *
  * Module-level singletons that construct a logger eagerly capture both the
- * default destination and `BOBODDY_LOG_LEVEL` at *import* time — which is
+ * default destination and `SCARN_LOG_LEVEL` at *import* time — which is
  * typically before the CLI has had a chance to configure them. Deferring
  * construction until the first log call ensures the shared destination and the
  * effective level are both in place.
@@ -59,7 +59,7 @@ export function createLazyLogger(options: {
     if (!instance) {
       const base = createLogger({
         name: options.name,
-        level: options.level?.() ?? process.env["BOBODDY_LOG_LEVEL"] ?? "info",
+        level: options.level?.() ?? process.env["SCARN_LOG_LEVEL"] ?? "info",
       });
       instance = options.scope ? base.child({ scope: options.scope }) : base;
     }

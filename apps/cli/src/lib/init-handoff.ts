@@ -1,12 +1,12 @@
 import type { BaseReporter } from "./reporter-types";
 
 /**
- * The tail of `boboddy init`.
+ * The tail of `scarn init`.
  *
  * `init` used to end by creating a pipeline from a server-side template. That
  * was a second, web-app-biased way to author pipelines whose output never
- * landed in the user's `.boboddy/pipeline-builder`. It is gone; `init` now
- * hands straight over to `boboddy pipelines design`, which orients itself by
+ * landed in the user's `.scarn/pipeline-builder`. It is gone; `init` now
+ * hands straight over to `scarn pipelines design`, which orients itself by
  * reading the repository.
  *
  * The I/O sits behind {@link InitHandoffPorts} so the branching — accepted vs.
@@ -19,13 +19,13 @@ export interface InitHandoffPorts {
    * epilogue is past the point where anything can still fail.
    */
   confirmLaunch(): Promise<boolean>;
-  /** Run `boboddy pipelines design` in-process. Owns the terminal once called. */
+  /** Run `scarn pipelines design` in-process. Owns the terminal once called. */
   launchDesign(): Promise<void>;
 }
 
 /** The single next step, worded identically wherever `init` can end. */
 export const DESIGN_NEXT_STEP_MESSAGE =
-  "Next: run `boboddy pipelines design` to build your first pipeline.";
+  "Next: run `scarn pipelines design` to build your first pipeline.";
 
 /** Shown just before the designer takes over the terminal. */
 export const DESIGN_LAUNCH_MESSAGE = "Starting the pipeline designer…";

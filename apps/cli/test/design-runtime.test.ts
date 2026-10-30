@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { OPENCODE_RUNTIME_VERSION } from "@boboddy/worker";
+import { OPENCODE_RUNTIME_VERSION } from "@scarn/worker";
 import {
   createRuntimeProgressRenderer,
   describeRuntimeProvisionFailure,
@@ -121,7 +121,7 @@ describe("describeRuntimeProvisionFailure", () => {
 
     expect(message).toContain("ECONNREFUSED registry");
     expect(message).toContain("HTTPS_PROXY");
-    expect(message).toContain("BOBODDY_OPENCODE_RUNTIME_VERSION");
+    expect(message).toContain("SCARN_OPENCODE_RUNTIME_VERSION");
   });
 });
 
@@ -132,14 +132,14 @@ describe("ensureDesignRuntime", () => {
       ensurePayload: () =>
         Promise.resolve({
           version: OPENCODE_RUNTIME_VERSION,
-          hostPayloadDir: `/home/u/.boboddy/runtimes/opencode/${OPENCODE_RUNTIME_VERSION}`,
-          containerPayloadDir: `/opt/boboddy/runtimes/opencode/${OPENCODE_RUNTIME_VERSION}`,
-          containerLaunchWrapperPath: `/opt/boboddy/runtimes/opencode/${OPENCODE_RUNTIME_VERSION}/launch.sh`,
+          hostPayloadDir: `/home/u/.scarn/runtimes/opencode/${OPENCODE_RUNTIME_VERSION}`,
+          containerPayloadDir: `/opt/scarn/runtimes/opencode/${OPENCODE_RUNTIME_VERSION}`,
+          containerLaunchWrapperPath: `/opt/scarn/runtimes/opencode/${OPENCODE_RUNTIME_VERSION}/launch.sh`,
         }),
     });
 
     expect(launcher).toBe(
-      `/home/u/.boboddy/runtimes/opencode/${OPENCODE_RUNTIME_VERSION}/launch.sh`,
+      `/home/u/.scarn/runtimes/opencode/${OPENCODE_RUNTIME_VERSION}/launch.sh`,
     );
   });
 

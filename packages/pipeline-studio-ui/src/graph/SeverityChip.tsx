@@ -1,22 +1,16 @@
-import type { DefinitionValidationIssue } from "@boboddy/sdk/definitions/validation";
+import type { StudioIssue } from "./studio-graph-types";
 import { severityColor } from "./studio-graph-visuals";
 
 /**
  * A small colored pill labeling an issue's own severity ("ERROR"/"WARNING"/
- * "INFO", via CSS `text-transform: uppercase` — the value itself stays
- * lowercase, matching `DefinitionValidationIssue.severity`). Shown next to
- * every issue row in both the pipeline-level issues list (`App.tsx`'s
- * `IssueRow`) and the per-node detail panel (`NodeDetailPanel.tsx`'s
- * `IssueMessageRow`), so a reader can tell at a glance whether an issue
- * blocks a push (`error`) or is just worth awareness (`warning`/`info`)
- * without reading the message text. Reuses `severityColor` as the chip's
- * background, so its color always matches the issue's border/node-badge
- * color elsewhere in the studio.
+ * "INFO", via CSS `text-transform: uppercase`). Shown next to every issue
+ * row in both the pipeline-level issues list and the per-node detail panel.
+ * Reuses `severityColor`, so its color matches the issue's node/edge color.
  */
 export function SeverityChip({
   severity,
 }: {
-  severity: DefinitionValidationIssue["severity"];
+  severity: StudioIssue["severity"];
 }) {
   return (
     <span

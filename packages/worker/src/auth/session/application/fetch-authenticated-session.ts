@@ -16,7 +16,7 @@ export async function fetchAuthenticatedSession({
   if (result.error || !result.data) {
     throw new Error(
       (result.error?.message ?? "Authentication required.") +
-        " Run `boboddy auth login` to authenticate.",
+        " Run `scarn auth login` to authenticate.",
     );
   }
 

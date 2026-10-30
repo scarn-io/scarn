@@ -16,10 +16,10 @@ export const STUDIO_INDEX_HTML = `<!doctype html>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Boboddy Pipeline Studio</title>
+    <title>Scarn Pipeline Studio</title>
     <script>
       try {
-        var saved = localStorage.getItem("boboddy-studio-theme");
+        var saved = localStorage.getItem("scarn-studio-theme");
         if (saved === "light" || saved === "dark") {
           document.documentElement.dataset.theme = saved;
         }
@@ -176,7 +176,8 @@ export const STUDIO_INDEX_HTML = `<!doctype html>
       }
       .studio-node {
         position: relative;
-        width: 220px;
+        width: 240px;
+        box-sizing: border-box;
         padding: 8px 10px;
         border: 2px solid var(--studio-severity-none);
         border-radius: 6px;
@@ -195,6 +196,27 @@ export const STUDIO_INDEX_HTML = `<!doctype html>
         margin-top: 2px;
       }
       .studio-node-counts { color: var(--studio-text-subtle); margin-top: 4px; }
+      .studio-node[data-match="all"] { border-bottom-style: double; border-bottom-width: 4px; }
+      .studio-node-fork {
+        margin-top: 4px;
+        color: var(--studio-text-muted);
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+      }
+      .studio-node-merge {
+        display: inline-block;
+        max-width: 100%;
+        margin-bottom: 4px;
+        padding: 1px 6px;
+        border-radius: 3px;
+        background: var(--studio-surface-raised);
+        color: var(--studio-text-subtle);
+        font-size: 10px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
       .studio-node-badge {
         position: absolute;
         top: -8px;
@@ -246,7 +268,6 @@ export const STUDIO_INDEX_HTML = `<!doctype html>
         padding: 4px 6px 4px 0;
         border-bottom: 1px solid var(--studio-border-subtle);
       }
-      .studio-detail-unbound { font-style: italic; color: var(--studio-text-muted); }
       .studio-required-badge {
         display: inline-block;
         padding: 1px 6px;
@@ -267,13 +288,25 @@ export const STUDIO_INDEX_HTML = `<!doctype html>
         padding: 10px;
         margin: 6px 0 0;
       }
-      .studio-detail-branch {
-        margin-top: 12px;
-        padding: 8px 10px;
-        border: 1px solid var(--studio-border);
-        border-radius: 6px;
+      .studio-node-start {
+        width: 36px;
+        height: 36px;
+        margin: 0 38px;
+        border-radius: 50%;
+        background: var(--studio-text-muted);
+        box-shadow: 0 0 0 4px var(--studio-node-bg), 0 0 0 5px var(--studio-border);
       }
-      .studio-detail-branch h4 { margin: 0 0 6px; font-size: 12px; }
+      .studio-node[data-kind="succeed"],
+      .studio-node[data-kind="fail"] { border-radius: 18px; }
+      .studio-node[data-kind="wait"] { border-style: dashed; }
+      .studio-issue-hint { margin-top: 2px; color: var(--studio-text-muted); }
+      .studio-issue-path {
+        display: block;
+        margin-top: 2px;
+        font-size: 10px;
+        color: var(--studio-text-subtle);
+        word-break: break-all;
+      }
       .studio-detail-issue-list {
         list-style: none;
         margin: 6px 0 0;

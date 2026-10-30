@@ -1,4 +1,4 @@
-import { PIPELINE_BUILDER_DIR } from "@boboddy/sdk/push";
+import { PIPELINE_BUILDER_DIR } from "@scarn/sdk/push";
 import type { ManagedRuntimeDefinition } from "./managed-runtimes";
 import {
   selectPipelineBuilderLockfile,
@@ -7,7 +7,7 @@ import {
 
 /**
  * The shell command a managed runtime runs (as its `onCreateCommand`) to
- * install `.boboddy/pipeline-builder`'s production dependencies.
+ * install `.scarn/pipeline-builder`'s production dependencies.
  *
  * Never `ci` / `--frozen-lockfile`: the scaffold gitignores lockfiles, so one
  * may be absent or stale. A stale lockfile can make the install fail to
@@ -76,7 +76,7 @@ function planInstall(input: {
   return {
     install: NPM_INSTALL,
     notice: ignoresBunLockfile
-      ? `boboddy: npm does not read ${lockfile}; installing without it (use the bun1 managed runtime to honor it)`
+      ? `scarn: npm does not read ${lockfile}; installing without it (use the bun1 managed runtime to honor it)`
       : null,
     generatedLockfiles: ["package-lock.json"],
   };

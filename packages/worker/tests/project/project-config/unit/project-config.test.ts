@@ -16,7 +16,7 @@ import { writeProjectConfig } from "../../../../src/project/project-config/appli
 
 describe("project config helpers", () => {
   concurrentTest("readProjectConfig returns null when file does not exist", async () => {
-    const tmpDir = mkdtempSync(resolve(tmpdir(), "boboddy-init-config-"));
+    const tmpDir = mkdtempSync(resolve(tmpdir(), "scarn-init-config-"));
     try {
       const config = await readProjectConfig(tmpDir);
       expect(config).toBeNull();
@@ -26,10 +26,10 @@ describe("project config helpers", () => {
   });
 
   concurrentTest("readProjectConfig returns null when file has no project", async () => {
-    const tmpDir = mkdtempSync(resolve(tmpdir(), "boboddy-init-config-"));
+    const tmpDir = mkdtempSync(resolve(tmpdir(), "scarn-init-config-"));
     try {
-      mkdirSync(join(tmpDir, ".boboddy"));
-      writeFileSync(join(tmpDir, ".boboddy", "boboddy.jsonc"), '{ "other": "value" }', "utf8");
+      mkdirSync(join(tmpDir, ".scarn"));
+      writeFileSync(join(tmpDir, ".scarn", "scarn.jsonc"), '{ "other": "value" }', "utf8");
       const config = await readProjectConfig(tmpDir);
       expect(config).toBeNull();
     } finally {
@@ -38,7 +38,7 @@ describe("project config helpers", () => {
   });
 
   concurrentTest("writeProjectConfig then readProjectConfig round-trips project", async () => {
-    const tmpDir = mkdtempSync(resolve(tmpdir(), "boboddy-init-config-"));
+    const tmpDir = mkdtempSync(resolve(tmpdir(), "scarn-init-config-"));
     try {
       await writeProjectConfig("acme/web-app", tmpDir);
       const config = await readProjectConfig(tmpDir);
@@ -51,17 +51,17 @@ describe("project config helpers", () => {
   concurrentTest(
     "writeProjectConfig keeps the other keys and drops a retired projectId",
     async () => {
-      const tmpDir = mkdtempSync(resolve(tmpdir(), "boboddy-init-config-"));
+      const tmpDir = mkdtempSync(resolve(tmpdir(), "scarn-init-config-"));
       try {
-        mkdirSync(join(tmpDir, ".boboddy"));
+        mkdirSync(join(tmpDir, ".scarn"));
         writeFileSync(
-          join(tmpDir, ".boboddy", "boboddy.jsonc"),
+          join(tmpDir, ".scarn", "scarn.jsonc"),
           '// mine\n{ "projectId": "old-uuid", "branchPrefix": "team", "baseWorkBranch": "dev" }',
           "utf8",
         );
         await writeProjectConfig("acme/web-app", tmpDir);
         const written = JSON.parse(
-          readFileSync(join(tmpDir, ".boboddy", "boboddy.jsonc"), "utf8"),
+          readFileSync(join(tmpDir, ".scarn", "scarn.jsonc"), "utf8"),
         ) as unknown;
         expect(written).toEqual({
           project: "acme/web-app",
@@ -75,11 +75,11 @@ describe("project config helpers", () => {
   );
 
   concurrentTest("readProjectConfig handles JSONC with comments", async () => {
-    const tmpDir = mkdtempSync(resolve(tmpdir(), "boboddy-init-config-"));
+    const tmpDir = mkdtempSync(resolve(tmpdir(), "scarn-init-config-"));
     try {
-      mkdirSync(join(tmpDir, ".boboddy"));
+      mkdirSync(join(tmpDir, ".scarn"));
       writeFileSync(
-        join(tmpDir, ".boboddy", "boboddy.jsonc"),
+        join(tmpDir, ".scarn", "scarn.jsonc"),
         '// auto-generated\n{ "project": "acme/web-app" }',
         "utf8",
       );

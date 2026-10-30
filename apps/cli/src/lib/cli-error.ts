@@ -1,8 +1,8 @@
 import {
   ProjectRefError,
   type ProjectRefErrorKind,
-} from "@boboddy/sdk/defaults";
-import { CoreError, SetupErrorCodes } from "@boboddy/worker";
+} from "@scarn/sdk/defaults";
+import { CoreError, SetupErrorCodes } from "@scarn/worker";
 
 /**
  * Every early exit of the onboarding commands (`init`, `pipelines design`,
@@ -34,7 +34,14 @@ export const CLI_ERROR_CODES = [
   "builder_install_failed",
   "run_queue_failed",
   "push_failed",
+  "pipeline_file_unreadable",
+  "pipeline_invalid",
+  "pipeline_not_found",
+  "pipeline_publish_failed",
+  "build_failed",
+  "build_check_failed",
   "designer_exited_nonzero",
+  "invalid_usage",
 ] as const;
 
 export type CliErrorCode = (typeof CLI_ERROR_CODES)[number];
@@ -48,6 +55,21 @@ export class CliError extends Error {
   ) {
     super(message, options);
     this.name = "CliError";
+  }
+}
+
+/**
+ * A command line yargs rejected before any handler ran (unknown command or
+ * flag, missing argument). `command` is the matched command path, made only of
+ * declared command names, so it is safe to report.
+ */
+export class CliUsageError extends CliError {
+  public constructor(
+    public readonly command: string,
+    message: string,
+  ) {
+    super("invalid_usage", message);
+    this.name = "CliUsageError";
   }
 }
 

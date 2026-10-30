@@ -25,7 +25,7 @@ describe("composed prompt covers the required sections", () => {
     ...Object.values(PHASE),
     "One question at a time",
     "default-pipeline-assignment.ts",
-    "typecheck and push successfully",
+    "typecheck, push, build and publish",
   ])("agent-prompt section present: %s", (needle) => {
     expect(prompt).toContain(needle);
   });
@@ -44,8 +44,10 @@ describe("composed prompt covers the required sections", () => {
     "## 8. Writing a good `agentPrompt`",
     "## 9. Validate, then push",
     "bun run typecheck",
-    '"$BOBODDY_CLI" pipelines push',
-    "`sourcePath` is NOT type-checked",
+    '"$SCARN_CLI" pipelines push',
+    '"$SCARN_CLI" pipelines build',
+    '"$SCARN_CLI" pipelines publish',
+    "Never edit `<key>.json` by hand",
   ])("authoring section present: %s", (needle) => {
     expect(prompt).toContain(needle);
   });
@@ -84,7 +86,7 @@ describe("composed prompt covers the required sections", () => {
   });
 
   test("the orient phase points at the repository, not a persisted analysis", () => {
-    // `boboddy init` used to write `.boboddy/repo-analysis.json` for this agent
+    // `scarn init` used to write `.scarn/repo-analysis.json` for this agent
     // to read. Nothing writes it any more, so an instruction to read it would
     // send the agent after a file that never exists. The snapshot alone would
     // not catch a re-add — regenerating it accepts whatever the prompt says.
@@ -135,7 +137,10 @@ describe("the interview is anchored to the seeded work item", () => {
   test("the goal question offers tailored suggestions, the default first", () => {
     const goal = sectionBetween(prompt, PHASE.goal, PHASE.reachability);
     expectPhrase(goal, "Give two to four suggestions, tailored to this item");
-    expectPhrase(goal, "The first is always the default pipeline's deliverable");
+    expectPhrase(
+      goal,
+      "The first is always the default pipeline's deliverable",
+    );
     expectPhrase(goal, "Pick one, mix them, or tell me something else.");
   });
 
@@ -152,7 +157,10 @@ describe("the interview is anchored to the seeded work item", () => {
       prompt,
       "The item frames the interview; it does not define the pipeline.",
     );
-    expectPhrase(prompt, "never after this ticket's feature, customer, or symptom");
+    expectPhrase(
+      prompt,
+      "never after this ticket's feature, customer, or symptom",
+    );
     expectPhrase(prompt, "Never paste this ticket's feature names");
     expectPhrase(prompt, "turn it into the general rule");
     const build = sectionBetween(prompt, PHASE.build, PHASE.assignment);
@@ -228,7 +236,7 @@ describe("edit sessions gate file edits behind a confirmed verdict", () => {
 });
 
 describe("the devcontainer phase is write-only", () => {
-  // A repo without a devcontainer used to be blocked at `boboddy init`. It is
+  // A repo without a devcontainer used to be blocked at `scarn init`. It is
   // now the agent's job, mid-session — but authoring is all it is. Building the
   // image is minutes of silence in the middle of an interview, and the first
   // pipeline run verifies it for real, so no build may be attempted here.
@@ -287,7 +295,7 @@ describe("the devcontainer phase is write-only", () => {
   });
 
   test("does not install OpenCode into the container", () => {
-    // Boboddy mounts its own pinned runtime; installing another one is wasted
+    // Scarn mounts its own pinned runtime; installing another one is wasted
     // image layers and a version mismatch waiting to happen.
     expectPhrase(devcontainer, "Do not install OpenCode");
   });
@@ -325,7 +333,7 @@ describe("the assignment phase tells the truth about when it fires", () => {
     // or the agent sends half its users at a prompt they will never see.
     expectPhrase(assignment, "`design` offers to run this pipeline on the");
     expectPhrase(assignment, "executions drawer");
-    expectPhrase(assignment, "run `boboddy work`");
+    expectPhrase(assignment, "run `scarn work`");
   });
 
   test("a confirmed tweak does not also mandate rewriting the assignment", () => {
@@ -361,7 +369,10 @@ describe("the interview configures the default pipeline rather than choosing one
       reachability,
       "this phase only decides how its `investigateAndReproduce` step is configured",
     );
-    expectPhrase(build, "Keep the shape unless the user asks for a different one");
+    expectPhrase(
+      build,
+      "Keep the shape unless the user asks for a different one",
+    );
   });
 
   test("no reachable app means no trace, said out loud", () => {
@@ -383,15 +394,21 @@ describe("the interview configures the default pipeline rather than choosing one
   test("only the default pipeline's two stops, no other gates", () => {
     expectNoPhrase(build, "Gate on `block`");
     expectNoPhrase(build, "define what confidence means");
-    expectPhrase(build, "`proposeFix` blocks until a human approves");
     expectPhrase(
       build,
-      "add no other `blockWhen` gates unless they ask for one",
+      "`approveFix` waits for a human to approve the proposal",
+    );
+    expectPhrase(
+      build,
+      "add no other `decision` nodes unless they ask for one",
     );
   });
 
   test("the scaffolded starter is edited in place, not copied beside itself", () => {
-    expectPhrase(build, "edit that file in place, never a second copy beside it");
+    expectPhrase(
+      build,
+      "edit that file in place, never a second copy beside it",
+    );
     expectPhrase(build, "it is the step everything else depends on");
   });
 });
@@ -406,9 +423,9 @@ describe("secrets are named, never asked for or written as values", () => {
     expectPhrase(build, "never the value itself");
   });
 
-  test("phase 6 routes new secrets into .boboddy/.env.example, never .env", () => {
-    expectPhrase(build, "Add `VAR=` to `.boboddy/.env.example`");
-    expectPhrase(build, "never write to `.boboddy/.env` itself");
+  test("phase 6 routes new secrets into .scarn/.env.example, never .env", () => {
+    expectPhrase(build, "Add `VAR=` to `.scarn/.env.example`");
+    expectPhrase(build, "never write to `.scarn/.env` itself");
   });
 
   test("phase 9 tells the user by name that .env needs real values", () => {
@@ -420,7 +437,7 @@ describe("secrets are named, never asked for or written as values", () => {
     expectPhrase(prompt, "Never write a secret **value** into a step file");
     expectPhrase(
       prompt,
-      "`.boboddy/.env` itself is never a file you create or edit",
+      "`.scarn/.env` itself is never a file you create or edit",
     );
   });
 });

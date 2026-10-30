@@ -43,7 +43,7 @@ describe("createRecordingReporter", () => {
     const reporter = createRecordingReporter(createSpyReporter(forwarded), filePath);
 
     const before = Date.now();
-    reporter.start("Boboddy worker");
+    reporter.start("Scarn worker");
     reporter.info("hello");
     const event: WorkEvent = {
       type: "worker:claimed",
@@ -53,7 +53,7 @@ describe("createRecordingReporter", () => {
     reporter.finish("Done");
 
     expect(forwarded).toEqual([
-      "start:Boboddy worker",
+      "start:Scarn worker",
       "info:hello",
       "event:worker:claimed",
       "finish:Done",
@@ -66,7 +66,7 @@ describe("createRecordingReporter", () => {
       "event",
       "finish",
     ]);
-    expect(recorded[0]?.args).toEqual(["Boboddy worker"]);
+    expect(recorded[0]?.args).toEqual(["Scarn worker"]);
     expect(recorded[2]?.args).toEqual([{ type: "worker:claimed", count: 2 }]);
     for (const call of recorded) {
       expect(call.t).toBeGreaterThanOrEqual(before);

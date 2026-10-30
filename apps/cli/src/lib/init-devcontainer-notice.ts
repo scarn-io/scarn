@@ -1,9 +1,9 @@
 import type { BaseReporter } from "./reporter-types";
 
 /**
- * The devcontainer step of `boboddy init`.
+ * The devcontainer step of `scarn init`.
  *
- * Boboddy runs every step inside the project's devcontainer, so `init` used to
+ * Scarn runs every step inside the project's devcontainer, so `init` used to
  * require one and throw when it was absent. That inverted the onboarding order:
  * the abort landed before the designer handoff, and the design session is the one
  * thing that can author a devcontainer. A repo without one was told to go and
@@ -41,8 +41,8 @@ export const DEVCONTAINER_MISSING_LABEL = "No devcontainer yet";
  * a devcontainer by hand and re-run `init`.
  */
 export const DEVCONTAINER_NOTICE_MESSAGE =
-  "Boboddy runs every step inside your project's devcontainer, and this " +
-  "repository does not have one yet. Nothing to do: `boboddy pipelines design` " +
+  "Scarn runs every step inside your project's devcontainer, and this " +
+  "repository does not have one yet. Nothing to do: `scarn pipelines design` " +
   "will write a `.devcontainer/devcontainer.json` during the session, and your " +
   "first pipeline run is what verifies it builds.";
 

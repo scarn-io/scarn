@@ -100,12 +100,12 @@ describe("server analytics wrapper", () => {
   });
 
   test("init constructs PostHog with the supplied key and host", () => {
-    server.init({ key: "phc_server", host: "https://t.boboddy.dev" });
+    server.init({ key: "phc_server", host: "https://t.scarn.io" });
     expect(constructedWith).toEqual([
       {
         key: "phc_server",
         options: {
-          host: "https://t.boboddy.dev",
+          host: "https://t.scarn.io",
           // Batching must stay off: the API runs as a Vercel function that is
           // frozen once the response is returned, so queued events never ship.
           flushAt: 1,
@@ -116,7 +116,7 @@ describe("server analytics wrapper", () => {
   });
 
   test("captureSignup forwards distinctId, event, and properties", () => {
-    server.init({ key: "phc_server", host: "https://t.boboddy.dev" });
+    server.init({ key: "phc_server", host: "https://t.scarn.io" });
     server.captureSignup("user-1", {
       provider: "github",
       email_verified: true,
@@ -139,7 +139,7 @@ describe("server analytics wrapper", () => {
   });
 
   test("identify forwards distinctId and traits", () => {
-    server.init({ key: "phc_server", host: "https://t.boboddy.dev" });
+    server.init({ key: "phc_server", host: "https://t.scarn.io" });
     server.identify("user-1", { email: "x@example.test" });
     expect(identifyCalls).toEqual([
       { distinctId: "user-1", properties: { email: "x@example.test" } },
@@ -147,13 +147,13 @@ describe("server analytics wrapper", () => {
   });
 
   test("alias forwards the current id and the id it replaces", () => {
-    server.init({ key: "phc_server", host: "https://t.boboddy.dev" });
+    server.init({ key: "phc_server", host: "https://t.scarn.io" });
     server.alias("user-1", "anon-1");
     expect(aliasCalls).toEqual([{ distinctId: "user-1", alias: "anon-1" }]);
   });
 
   test("alias is a no-op when the ids are already the same", () => {
-    server.init({ key: "phc_server", host: "https://t.boboddy.dev" });
+    server.init({ key: "phc_server", host: "https://t.scarn.io" });
     server.alias("user-1", "user-1");
     expect(aliasCalls).toEqual([]);
   });
@@ -164,7 +164,7 @@ describe("server analytics wrapper", () => {
   });
 
   test("captureApiEndpointTiming forwards the timing event and properties", () => {
-    server.init({ key: "phc_server", host: "https://t.boboddy.dev" });
+    server.init({ key: "phc_server", host: "https://t.scarn.io" });
     server.captureApiEndpointTiming("user-1", {
       method: "GET",
       route: "/api/projects/:projectId",
@@ -192,7 +192,7 @@ describe("server analytics wrapper", () => {
   });
 
   test("captureException forwards error and identifiers", () => {
-    server.init({ key: "phc_server", host: "https://t.boboddy.dev" });
+    server.init({ key: "phc_server", host: "https://t.scarn.io" });
     const err = new Error("boom");
     server.captureException(err, "user-1", { tag: "x" });
     expect(captureExceptionCalls).toEqual([
@@ -201,12 +201,12 @@ describe("server analytics wrapper", () => {
   });
 
   test("init subscribes to delivery errors so they are not silent", () => {
-    server.init({ key: "phc_server", host: "https://t.boboddy.dev" });
+    server.init({ key: "phc_server", host: "https://t.scarn.io" });
     expect(registeredListeners).toContain("error");
   });
 
   test("flush drains the queue without tearing the client down", async () => {
-    server.init({ key: "phc_server", host: "https://t.boboddy.dev" });
+    server.init({ key: "phc_server", host: "https://t.scarn.io" });
     await server.flush();
     expect(flushCount).toBe(1);
     // Still usable afterwards — unlike shutdown(), which nulls the client.
@@ -220,7 +220,7 @@ describe("server analytics wrapper", () => {
   });
 
   test("flush swallows delivery errors", async () => {
-    server.init({ key: "phc_server", host: "https://t.boboddy.dev" });
+    server.init({ key: "phc_server", host: "https://t.scarn.io" });
     flushShouldReject = true;
     // A failed analytics delivery must never reject into the request path.
     await server.flush();
@@ -228,28 +228,28 @@ describe("server analytics wrapper", () => {
   });
 
   test("shutdown clears the client so re-init constructs a new one", async () => {
-    server.init({ key: "phc_server", host: "https://t.boboddy.dev" });
+    server.init({ key: "phc_server", host: "https://t.scarn.io" });
     await server.shutdown();
     expect(shutdownCount).toBe(1);
-    server.init({ key: "phc_server", host: "https://t.boboddy.dev" });
+    server.init({ key: "phc_server", host: "https://t.scarn.io" });
     expect(constructedWith).toHaveLength(2);
   });
 
   test("shutdown forwards the timeout to the client", async () => {
-    server.init({ key: "phc_server", host: "https://t.boboddy.dev" });
+    server.init({ key: "phc_server", host: "https://t.scarn.io" });
     await server.shutdown(1500);
     expect(shutdownArgs).toEqual([1500]);
   });
 
   test("shutdown swallows a rejection", async () => {
-    server.init({ key: "phc_server", host: "https://t.boboddy.dev" });
+    server.init({ key: "phc_server", host: "https://t.scarn.io" });
     shutdownShouldReject = true;
     await server.shutdown(1500);
     expect(shutdownCount).toBe(1);
   });
 
   test("shutdown clears the client even when it rejects", async () => {
-    server.init({ key: "phc_server", host: "https://t.boboddy.dev" });
+    server.init({ key: "phc_server", host: "https://t.scarn.io" });
     shutdownShouldReject = true;
     await server.shutdown(1500);
     expect(server.isInitialized()).toBe(false);

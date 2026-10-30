@@ -108,30 +108,30 @@ describe("hasPosthogCookie", () => {
 
 describe("buildBootstrapCookieDeletion", () => {
   test.concurrent(
-    "scopes to the parent domain on boboddy.dev over https",
+    "scopes to the parent domain on scarn.io over https",
     () => {
       expect(
         buildBootstrapCookieDeletion({
-          hostname: "boboddy.dev",
+          hostname: "scarn.io",
           protocol: "https:",
         }),
       ).toBe(
-        `${BOOTSTRAP_COOKIE_NAME}=; Domain=.boboddy.dev; Path=/; Max-Age=0; Secure; SameSite=Lax`,
+        `${BOOTSTRAP_COOKIE_NAME}=; Domain=.scarn.io; Path=/; Max-Age=0; Secure; SameSite=Lax`,
       );
     },
   );
 
   test.concurrent(
-    "uses the parent domain on every boboddy.dev subdomain",
+    "uses the parent domain on every scarn.io subdomain",
     () => {
       for (const hostname of [
-        "app.boboddy.dev",
-        "docs.boboddy.dev",
-        "A.Boboddy.Dev",
+        "app.scarn.io",
+        "docs.scarn.io",
+        "A.Scarn.Io",
       ]) {
         expect(
           buildBootstrapCookieDeletion({ hostname, protocol: "https:" }),
-        ).toContain("Domain=.boboddy.dev");
+        ).toContain("Domain=.scarn.io");
       }
     },
   );
@@ -149,9 +149,9 @@ describe("buildBootstrapCookieDeletion", () => {
     "is host-only on preview deployments and lookalike hosts",
     () => {
       for (const hostname of [
-        "boboddy-git-feat.vercel.app",
-        "evilboboddy.dev",
-        "boboddy.dev.example.com",
+        "scarn-git-feat.vercel.app",
+        "evilscarn.io",
+        "scarn.io.example.com",
       ]) {
         const cookie = buildBootstrapCookieDeletion({
           hostname,

@@ -9,7 +9,7 @@ import { setHomeDirForTests } from "../src/defaults/home-dir";
 /**
  * `getOrCreateAnonymousId`/`isTelemetryDisabled`/`setTelemetryDisabled`/
  * `getArtifactRetentionSettings` all read and write the SAME
- * `~/.boboddy/config.jsonc` file. See `auth-file.test.ts` for why this suite
+ * `~/.scarn/config.jsonc` file. See `auth-file.test.ts` for why this suite
  * uses `setHomeDirForTests` rather than mutating `process.env.HOME` or
  * mocking `node:os`. `afterEach` ALWAYS restores it to `undefined`, even if
  * a test throws.
@@ -18,7 +18,7 @@ import { setHomeDirForTests } from "../src/defaults/home-dir";
 let fakeHome: string;
 
 beforeEach(() => {
-  fakeHome = mkdtempSync(join(tmpdir(), "boboddy-config-file-"));
+  fakeHome = mkdtempSync(join(tmpdir(), "scarn-config-file-"));
   setHomeDirForTests(fakeHome);
 });
 

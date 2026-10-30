@@ -1,4 +1,4 @@
-import type { Logger } from "@boboddy/observability/logging/host";
+import type { Logger } from "@scarn/observability/logging/host";
 import type { GitCloneService } from "../application/git-clone-service";
 import { CachedGitCloneService } from "./cached-git-clone-service";
 import { resolveGitCacheConfig } from "./git-cache-config";
@@ -15,7 +15,7 @@ export type GitCloneServiceSetup = {
 
 /**
  * Builds the clone service from the env map: the plain `GitCliCloneService`
- * when `BOBODDY_GIT_CACHE=off`, otherwise a `CachedGitCloneService` over a
+ * when `SCARN_GIT_CACHE=off`, otherwise a `CachedGitCloneService` over a
  * `GitCliMirrorCache` that falls back to that plain service. Also returns the
  * resolved cache dir so callers can export it. Throws a `ConfigurationError`
  * for an invalid cache setting.

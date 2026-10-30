@@ -1,14 +1,24 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { validateDefinitionSpecs } from "@boboddy/sdk/definitions/validation";
-import { collectDefinitionsFromDirectory } from "@boboddy/sdk/push";
+import { collectDefinitionsFromDirectory } from "@scarn/sdk/push";
 import {
+  buildPipelineDocuments,
   PIPELINE_BUILDER_TSCONFIG,
   STARTER_PIPELINE_FILE,
+  STARTER_PIPELINE_JSON_FILE,
+  STARTER_PIPELINE_JSON_FILENAME,
   STARTER_PIPELINE_KEY,
-} from "@boboddy/worker";
+  type BuildPipelineDocumentsResult,
+} from "@scarn/worker";
 import {
   buildHealthCheckCatalogSection,
   buildPipelineAuthoringReference,
@@ -31,12 +41,14 @@ import {
 // rot the material the `pipeline-designer` agent copies from. This suite
 // compiles the default pipeline plus every non-fragment snippet in
 // `AUTHORING.md` against the real SDK source, in ONE `tsc` invocation, under the
-// same compiler options the user's `.boboddy/pipeline-builder/` directory uses.
+// same compiler options the user's `.scarn/pipeline-builder/` directory uses,
+// then builds the default pipeline the way `scarn pipelines build` does.
 
 const REPO_ROOT = resolve(import.meta.dir, "../../..");
 const CLI_NODE_MODULES = resolve(import.meta.dir, "../node_modules");
 const TSC = join(REPO_ROOT, "node_modules", ".bin", "tsc");
 const { name, source } = DEFAULT_PIPELINE_TEMPLATE;
+const RETIRED_PIPELINE_API = ["blockWhen", "signals:", "Rule.", "states:"];
 
 /** The section 7 prose, between its heading and section 8's. */
 function section7(): string {
@@ -47,23 +59,31 @@ function section7(): string {
 }
 
 describe("the default pipeline asset", () => {
-  test("is a complete, non-trivial pipeline file", () => {
+  test("is a complete, non-trivial pipeline file on the pipelines SDK", () => {
     expect(name).toBe("bug-pipeline");
     expect(source.length).toBeGreaterThan(1500);
-    expect(source).toContain('from "@boboddy/sdk/definitions/steps"');
-    expect(source).toContain('from "@boboddy/sdk/definitions/pipelines"');
+    expect(source).toContain('from "@scarn/sdk/definitions/steps"');
+    expect(source).toContain('from "@scarn/sdk/pipelines"');
+    expect(source).not.toContain('from "@scarn/sdk/definitions/pipelines"');
     expect(source).toContain("export default definePipeline({");
-    expect(source).toContain("states: {");
+    expect(source).toContain("flow: [");
     expect(source).toContain('status: "active"');
     // `buildDefaultPipelineSection` wraps the source in a three-backtick fence.
     expect(source).not.toContain("```");
   });
 
-  test("has exactly one approval gate, on proposeFix", () => {
-    expect(source.match(/blockWhen/g)?.length).toBe(1);
+  test("has exactly one decision, between proposeFix and fix", () => {
+    expect(source.match(/decision\("/g)?.length).toBe(1);
+    expect(source).toContain('decision("approve-fix", {');
     expect(source).toContain(
-      'blockWhen: Rule.when("requiresHumanApproval", "equal", true)',
+      "proposeFix.next((r) => approveFix({ proposal: r.result }))",
     );
+  });
+
+  test("uses none of the retired pipeline API", () => {
+    for (const retired of [...RETIRED_PIPELINE_API, "requiresHumanApproval"]) {
+      expect(source, retired).not.toContain(retired);
+    }
   });
 
   test("is the file the scaffold writes", () => {
@@ -75,6 +95,7 @@ describe("the default pipeline asset", () => {
     const prose = section7();
     expect(prose.length).toBeGreaterThan(500);
     expect(prose).toContain(`\`${name}.ts\``);
+    expect(prose).toContain(`\`${name}.json\``);
     expect(prose).not.toContain("defineStep(");
     expect(prose).not.toContain("definePipeline(");
     expect(prose).not.toContain("```");
@@ -109,6 +130,12 @@ describe("authoring reference fences", () => {
     expect(
       blocks.filter((b) => b.tag === "ts fragment").length,
     ).toBeGreaterThan(0);
+  });
+
+  test("no snippet uses the retired pipeline API", () => {
+    for (const retired of [...RETIRED_PIPELINE_API, "ctx."]) {
+      expect(PIPELINE_AUTHORING_REFERENCE, retired).not.toContain(retired);
+    }
   });
 });
 
@@ -217,7 +244,7 @@ describe("everything the agent is told to copy compiles against the SDK", () => 
 
   beforeAll(
     () => {
-      dir = mkdtempSync(join(tmpdir(), "boboddy-default-pipeline-"));
+      dir = mkdtempSync(join(tmpdir(), "scarn-default-pipeline-"));
 
       // The SDK is reached through `paths` (see writeHarnessTsconfig) but `zod` is
       // a real resolution: Bun installs it per workspace, so borrow the CLI's.
@@ -290,35 +317,85 @@ describe("everything the agent is told to copy compiles against the SDK", () => 
   });
 });
 
-// Compiling proves the default pipeline typechecks. It does not prove it would
-// survive `boboddy pipelines push`, because the interesting failures are not
-// type errors: a dead signal `sourcePath`, a binding reading a step that runs
-// later or on another branch, a bound field the consumer drops. So run it
-// through the same collection and the same validator a real push runs —
-// `collectDefinitionsFromDirectory` takes no token and `validateDefinitionSpecs`
-// makes no request, which is exactly why they were split out.
-describe("the default pipeline survives the real push validator", () => {
-  let dir = "";
+// Typechecking does not prove the default pipeline builds, so build it the way
+// `pipelines build --check` does against the scaffolded JSON, and collect its
+// steps the way `push` does.
+describe("the default pipeline builds to the scaffolded JSON", () => {
+  let root = "";
+  let builderDir = "";
+  let built: BuildPipelineDocumentsResult;
   let collected: Awaited<ReturnType<typeof collectDefinitionsFromDirectory>>;
 
-  beforeAll(async () => {
-    dir = mkdtempSync(join(tmpdir(), "boboddy-default-pipeline-validate-"));
-    // Importing the file needs `zod` and `@boboddy/sdk` resolvable from its own
-    // directory; Bun does not hoist, so borrow the CLI's.
-    symlinkSync(CLI_NODE_MODULES, join(dir, "node_modules"), "dir");
-    writeFileSync(join(dir, `${name}.ts`), source, "utf-8");
-    collected = await collectDefinitionsFromDirectory(dir);
-  });
+  beforeAll(
+    async () => {
+      root = mkdtempSync(join(tmpdir(), "scarn-default-pipeline-build-"));
+      builderDir = join(root, ".scarn", "pipeline-builder");
+      mkdirSync(builderDir, { recursive: true });
+      // Importing the file needs `zod` and `@scarn/sdk` resolvable from its
+      // own directory; Bun does not hoist, so borrow the CLI's. The lockfile
+      // is what selects bun as the build script's runtime.
+      symlinkSync(CLI_NODE_MODULES, join(builderDir, "node_modules"), "dir");
+      writeFileSync(join(builderDir, "bun.lock"), "", "utf-8");
+      writeFileSync(join(builderDir, `${name}.ts`), source, "utf-8");
+      writeFileSync(
+        join(builderDir, STARTER_PIPELINE_JSON_FILENAME),
+        STARTER_PIPELINE_JSON_FILE,
+        "utf-8",
+      );
+      built = await buildPipelineDocuments({ builderDir, check: true });
+      collected = await collectDefinitionsFromDirectory(builderDir);
+    },
+    { timeout: 30_000 },
+  );
 
   afterAll(() => {
-    if (dir) rmSync(dir, { recursive: true, force: true });
+    if (root) rmSync(root, { recursive: true, force: true });
   });
 
-  test("collection finds the pipeline and its seven steps", () => {
-    // Guards against a vacuous pass: an empty batch validates clean.
-    expect(collected.pipelines.map((pipeline) => pipeline.key)).toEqual([
-      "bug-pipeline",
+  test("the build is clean and the committed JSON is up to date", () => {
+    expect(built.files.map((file) => [file.key, file.status])).toEqual([
+      [STARTER_PIPELINE_KEY, "unchanged"],
     ]);
+    expect(built.files.flatMap((file) => file.errors)).toEqual([]);
+    expect(built.files.flatMap((file) => file.warnings)).toEqual([]);
+    expect(built.ok).toBe(true);
+    // `--check` wrote nothing.
+    expect(
+      readFileSync(join(builderDir, STARTER_PIPELINE_JSON_FILENAME), "utf-8"),
+    ).toBe(STARTER_PIPELINE_JSON_FILE);
+  });
+
+  test("the shape: low bar to investigate, confidence gates the test, a decision gates the fix", () => {
+    const document = JSON.parse(STARTER_PIPELINE_JSON_FILE) as {
+      start: { to: string };
+      nodes: Record<string, { kind: string; for?: string }>;
+    };
+    expect(document.start.to).toBe("evaluate");
+    expect(
+      Object.entries(document.nodes).map(([id, node]) => [
+        id,
+        node.for ?? node.kind,
+      ]),
+    ).toEqual([
+      ["evaluate", "step"],
+      ["request-details", "step"],
+      ["investigate-and-reproduce", "step"],
+      ["report-reproduction", "step"],
+      ["failing-test", "step"],
+      ["propose-fix", "step"],
+      ["approve-fix", "decision"],
+      ["fix", "step"],
+      ["insufficient-detail", "fail"],
+      ["not-reproduced", "fail"],
+      ["fix-rejected", "fail"],
+      ["done", "succeed"],
+    ]);
+    for (const path of ["quality", "reproductionConfidence", "reproVideo"]) {
+      expect(STARTER_PIPELINE_JSON_FILE).toContain(`"path": "result.${path}"`);
+    }
+  });
+
+  test("collection finds the seven steps", () => {
     expect(collected.steps.map((step) => step.key).sort()).toEqual([
       "evaluate",
       "failing-test",
@@ -330,60 +407,14 @@ describe("the default pipeline survives the real push validator", () => {
     ]);
   });
 
-  test("the only signals besides the notifications feature's are the four the rules read", () => {
-    const signalKeys = collected.steps
-      .flatMap((step) => step.signalExtractorDefinitions)
-      .map((signal) => signal.key)
-      .filter((key) => key !== "$boboddy_notifications_v1")
-      .sort();
-    expect(signalKeys).toEqual([
-      "quality",
-      "reproVideo",
-      "reproductionConfidence",
-      "requiresHumanApproval",
-    ]);
-  });
-
-  test("the recording is an optional artifact signal, routed on and embedded", () => {
-    const investigate = collected.steps.find(
-      (step) => step.key === "investigate-and-reproduce",
-    );
-    expect(
-      investigate?.signalExtractorDefinitions.find(
-        (signal) => signal.key === "reproVideo",
-      ),
-    ).toMatchObject({ type: "artifact", required: false });
-    expect(source).toContain('Rule.when("reproVideo", "exists")');
+  test("the recording is an optional artifact, routed on and embedded", () => {
+    expect(source).toContain("exists(r.result.reproVideo)");
     expect(source).toContain(
-      "Artifact.embed(investigateAndReproduce.signals.reproVideo",
+      '{ step: investigateAndReproduce, path: "reproVideo" }',
     );
     expect(source).toContain('field: "reproVideo"');
     expect(source).not.toContain('from "zod"');
-    expect(source).not.toContain("boboddy.artifactsDir");
-  });
-
-  test("the shape: low bar to investigate, confidence gates the test, approval gates the fix", () => {
-    const [pipeline] = collected.pipelines;
-    if (!pipeline) throw new Error("no pipeline collected");
-    const nodeKeys = pipeline.nodeDefinitions.map((node) => node.nodeKey);
-    for (const key of [
-      "evaluate",
-      "checkQuality",
-      "investigateAndReproduce",
-      "checkReproduction",
-      "notReproduced",
-      "checkRecording",
-      "reportReproduction",
-      "failingTest",
-      "proposeFix",
-      "fix",
-    ]) {
-      expect(nodeKeys).toContain(key);
-    }
-    expect(source).toContain('Rule.when("quality", "lessThan", 0.1)');
-    expect(source).toContain(
-      'Rule.when("reproductionConfidence", "greaterThanInclusive", 0.8)',
-    );
+    expect(source).not.toContain("scarn.artifactsDir");
   });
 
   test("demonstrates the health-check rules: a tool check per ref, cli checks for Playwright and the test runner", () => {
@@ -435,38 +466,21 @@ describe("the default pipeline survives the real push validator", () => {
     }
   });
 
-  test("the validator reports no issues at any severity", () => {
-    const issues = validateDefinitionSpecs(collected);
-    expect(issues.map((issue) => issue.message)).toEqual([]);
-  });
-
-  test("the binding check is live: a forward binding is rejected", () => {
+  test("the build check is live: a stale JSON is reported", async () => {
     // If this passed, the clean result above would prove nothing about
-    // whether the template's `ctx.output(...)` bindings are actually checked.
-    const [pipeline] = collected.pipelines;
-    if (!pipeline) throw new Error("no pipeline collected");
-    const broken = {
-      ...pipeline,
-      nodeDefinitions: pipeline.nodeDefinitions.map((node) =>
-        node.nodeKey === "investigateAndReproduce" &&
-        "inputBindingsJson" in node
-          ? {
-              ...node,
-              inputBindingsJson: {
-                ...node.inputBindingsJson,
-                failingTest: {
-                  source: "step_output" as const,
-                  stepKey: "failingTest",
-                },
-              },
-            }
-          : node,
-      ),
-    };
-    const issues = validateDefinitionSpecs({
-      pipelines: [broken],
-      steps: collected.steps,
-    });
-    expect(issues.some((issue) => issue.check === "signal-binding")).toBe(true);
+    // whether the committed JSON is actually compared.
+    const jsonPath = join(builderDir, STARTER_PIPELINE_JSON_FILENAME);
+    writeFileSync(
+      jsonPath,
+      STARTER_PIPELINE_JSON_FILE.replace('"done"', '"finished"'),
+      "utf-8",
+    );
+    try {
+      const stale = await buildPipelineDocuments({ builderDir, check: true });
+      expect(stale.files.map((file) => file.status)).toEqual(["stale"]);
+      expect(stale.ok).toBe(false);
+    } finally {
+      writeFileSync(jsonPath, STARTER_PIPELINE_JSON_FILE, "utf-8");
+    }
   });
 });

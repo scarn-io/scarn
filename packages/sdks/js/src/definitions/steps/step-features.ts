@@ -3,23 +3,12 @@ import type { ZodObject, ZodRawShape } from "zod";
 
 // ─── Core types ───────────────────────────────────────────────────────────────
 
-type FeatureSignalSpec = {
-  key: string;
-  sourcePath: string;
-  type: "string" | "number" | "boolean" | "object" | "array" | "artifact";
-  required?: boolean;
-  availableWhenResultStatusIn?: string[] | null;
-};
-
 export type StepFeature<
   TResultExtension extends Record<string, unknown> = Record<string, unknown>,
-  TSignalKeys extends string = string,
 > = {
   readonly _resultExtension: ZodObject<ZodRawShape>;
   readonly _promptAddition: string;
-  readonly _signals: FeatureSignalSpec[];
   readonly __resultExtension?: TResultExtension; // phantom
-  readonly __signalKeys?: TSignalKeys; // phantom
 };
 
 export type AnyStepFeature = StepFeature;
@@ -38,12 +27,6 @@ export type FeatureResultExtensions<
   : UnionToIntersection<
       TFeatures[number] extends StepFeature<infer R> ? R : never
     >;
-
-// Unions all signal keys contributed by features.
-// Uses phantom field access instead of infer to avoid disrupting const-literal inference
-// for sibling generics (a TypeScript inference quirk with distributive infer in return types).
-export type FeatureSignalKeys<TFeatures extends readonly AnyStepFeature[]> =
-  NonNullable<TFeatures[number]["__signalKeys"]>;
 
 // ─── Built-in: notifications (general user notification primitive) ─────────────
 //
@@ -77,8 +60,7 @@ export type NotificationChannel = z.infer<typeof notificationChannelSchema>;
 export type FeedbackRequestUrgency =
   "blocking" | "clarification" | "assumption" | "informational";
 
-const NOTIFICATION_SIGNAL_KEY = "$boboddy_notifications_v1" as const;
-const NOTIFICATION_RESULT_KEY = "$boboddy_notifications_v1" as const;
+const NOTIFICATION_RESULT_KEY = "$scarn_notifications_v1" as const;
 
 /** `kind` used by `Notify.inApp(...)` when the caller doesn't name one
  * explicitly — `status_update` is the closest thing this domain has to a
@@ -120,17 +102,16 @@ export type NotificationItem = z.infer<typeof notificationItemSchema>;
  * The shape `Notify.*` returns: a step result fragment carrying one or more
  * notifications. Spread it into a larger result object, or return it
  * directly if the notification *is* the step's whole result — either way it
- * slots into the same `$boboddy_notifications_v1` field `Features.notifications()`
- * wires a signal extractor for.
+ * slots into the same `$scarn_notifications_v1` field `Features.notifications()`
+ * adds to the step's result.
  */
 export type NotificationResultFragment = {
   readonly [NOTIFICATION_RESULT_KEY]: NotificationItem[];
 };
 
-type NotificationsFeature = StepFeature<
-  { [NOTIFICATION_RESULT_KEY]?: NotificationItem[] },
-  typeof NOTIFICATION_SIGNAL_KEY
->;
+type NotificationsFeature = StepFeature<{
+  [NOTIFICATION_RESULT_KEY]?: NotificationItem[];
+}>;
 
 const notificationsFeature: NotificationsFeature = {
   _resultExtension: z.object({
@@ -153,20 +134,12 @@ const notificationsFeature: NotificationsFeature = {
     "### Artifacts in comments",
     "",
     "A `work_item_platform_comment` body can show or link files this pipeline run produced, using artifact markers:",
-    "- `![caption](artifact:signal/<stepKey>/<signalKey>)` embeds a declared artifact signal where the platform can show it, and links to it otherwise. `[label](artifact:signal/<stepKey>/<signalKey>)` links to it. If that artifact is unavailable, the comment is not drafted.",
+    "- `![caption](artifact:signal/<stepKey>/<resultPath>)` embeds the artifact field at `<resultPath>` in that step's result where the platform can show it, and links to it otherwise. `[label](artifact:signal/<stepKey>/<resultPath>)` links to it. If that artifact is unavailable, the comment is not drafted.",
     "- `![caption](artifact:<name-or-glob>)` and `[label](artifact:<name-or-glob>)` do the same for any file under the artifacts folder, e.g. `artifact:screenshots/*.png`. If nothing matches, the marker's paragraph is left out.",
     "Rules:",
     "- One marker per paragraph: put each marker on its own line, with a blank line before and after. A marker inside a sentence is only linked.",
     '- Don\'t refer to an artifact outside its marker (no "see the video below"). Put any description in the caption or label, so the comment still reads correctly if the marker is left out.',
   ].join("\n"),
-  _signals: [
-    {
-      key: NOTIFICATION_SIGNAL_KEY,
-      sourcePath: NOTIFICATION_RESULT_KEY,
-      type: "array",
-      required: false,
-    },
-  ],
 };
 
 // ─── Built-in: feedbackRequests (a real specialization, not an alias) ──────────
@@ -202,14 +175,12 @@ const feedbackRequestsFeature: NotificationsFeature = {
     "- **priority**: One of `low`, `normal`, `high`, `urgent`.",
     '- **payload**: `{ "category": string, "urgency": "blocking"|"clarification"|"assumption"|"informational" }`.',
   ].join("\n"),
-  _signals: notificationsFeature._signals,
 };
 
 // ─── Features namespace — attach a capability to a step definition ────────────
 //
 // `Features.*` is exclusively for `features: [...]`. It never carries value
-// constructors or signal-reading helpers — see `Notify` and
-// `NotificationSignal` below for those, kept separate on purpose so
+// constructors — see `Notify` below for those, kept separate on purpose so
 // `Features.` autocomplete only ever shows things you attach to a step.
 
 export const Features = {
@@ -217,31 +188,16 @@ export const Features = {
   /**
    * A real specialization of `notifications()`, not an alias: narrows every
    * emitted item to `kind: "feedback_request"` and swaps in a
-   * feedback-request-specific prompt section. Backed by the same
-   * `$boboddy_notifications_v1` signal.
+   * feedback-request-specific prompt section. Writes the same
+   * `$scarn_notifications_v1` result field.
    */
   feedbackRequests: (): NotificationsFeature => feedbackRequestsFeature,
 } as const;
 
-// ─── NotificationSignal — read notifications back out of execution signals ────
-
-export const NotificationSignal = {
-  key: NOTIFICATION_SIGNAL_KEY,
-  find(
-    signals: Array<{ key: string; valueJson: unknown }>,
-  ): NotificationItem[] | undefined {
-    const match = signals.find((s) => s.key === NOTIFICATION_SIGNAL_KEY);
-    if (!match) return undefined;
-    const parsed = z.array(notificationItemSchema).safeParse(match.valueJson);
-    return parsed.success ? parsed.data : undefined;
-  },
-} as const;
-
 // ─── Notify — construct a notification result value at runtime ────────────────
 //
-// A flat namespace of pure builder functions, the same shape as `Rule`/
-// `Computed` in `@boboddy/sdk/definitions/pipelines` — nothing here attaches
-// a feature or reads a signal, it only builds the plain data value a step's
+// A flat namespace of pure builder functions — nothing here attaches a
+// feature, it only builds the plain data value a step's
 // `fn` (most useful in a `codeStep`, where there's no agent to follow a
 // prompt) or `agentPrompt`-driven result can return.
 //

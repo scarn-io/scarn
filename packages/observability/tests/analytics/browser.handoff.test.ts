@@ -7,7 +7,7 @@ type BrowserModule = typeof BrowserModuleNamespace;
 
 const ID = "0190f3a2-7c1e-7a4b-9d2e-3f5a6b7c8d9e";
 const KEY = "phc_handoff";
-const OPTIONS = { key: KEY, host: "https://t.boboddy.dev" };
+const OPTIONS = { key: KEY, host: "https://t.scarn.io" };
 const MODULE_PATH = "../../src/analytics/browser.ts";
 
 let moduleVersion = 0;
@@ -28,7 +28,7 @@ type FakeBrowser = { writes: string[]; setJar: (jar: string) => void };
 
 const installBrowser = ({
   jar,
-  hostname = "boboddy.dev",
+  hostname = "scarn.io",
   protocol = "https:",
 }: {
   jar: string;
@@ -107,7 +107,7 @@ describe("browser init share-link handoff", () => {
     init(OPTIONS);
 
     expect(browser.writes).toEqual([
-      "bb_ph_bootstrap=; Domain=.boboddy.dev; Path=/; Max-Age=0; Secure; SameSite=Lax",
+      "bb_ph_bootstrap=; Domain=.scarn.io; Path=/; Max-Age=0; Secure; SameSite=Lax",
     ]);
   });
 

@@ -13,8 +13,8 @@ for pkg in packages/sdks/js packages/opencode-plugin apps/cli; do
     const fs = require('fs');
     const p = JSON.parse(fs.readFileSync('${pkg}/package.json', 'utf8'));
     p.version = '${VERSION}';
-    if (p.dependencies?.['@boboddy/sdk']) p.dependencies['@boboddy/sdk'] = '^${VERSION}';
-    if (p.dependencies?.['@boboddy/opencode-plugin']) p.dependencies['@boboddy/opencode-plugin'] = '^${VERSION}';
+    if (p.dependencies?.['@scarn/sdk']) p.dependencies['@scarn/sdk'] = '^${VERSION}';
+    if (p.dependencies?.['@scarn/opencode-plugin']) p.dependencies['@scarn/opencode-plugin'] = '^${VERSION}';
     fs.writeFileSync('${pkg}/package.json', JSON.stringify(p, null, 2) + '\n');
     console.log('  bumped ' + p.name + ' → ${VERSION}');
   "

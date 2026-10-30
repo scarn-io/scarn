@@ -6,20 +6,17 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
-import { createStepDefinitionsClient } from "@boboddy/sdk/definitions/steps";
+import { createStepDefinitionsClient } from "@scarn/sdk/definitions/steps";
 import {
   createPipelineDefinitionsClient,
   DEFAULT_PIPELINE_ASSIGNMENT_FILENAME,
-} from "@boboddy/sdk/definitions/pipelines";
-import { createBoboddyClient } from "@boboddy/sdk/client";
+  type PipelineDefinition,
+} from "@scarn/sdk/definitions/pipelines";
+import { createScarnClient } from "@scarn/sdk/client";
 import {
   generateStepsFileContent,
   type StepDefContract,
 } from "../../../steps/step-definitions/infra/step-file-generator";
-import {
-  generatePipelineFileContent,
-  type PipelineContract,
-} from "../infra/pipeline-file-generator";
 import {
   generateDefaultPipelineAssignmentFileContent,
   UnsupportedRuleError,
@@ -53,6 +50,7 @@ export interface PullPipelineDefinitionsOptions {
 
 export interface PullPipelineDefinitionsResult {
   stepFiles: number;
+  /** `<key>.json` documents written, one per pipeline with an active version. */
   pipelineFiles: number;
   /** true if default-pipeline-assignment.ts was written. */
   defaultPipelineAssignmentFile: boolean;
@@ -79,7 +77,7 @@ function resolveOutputFiles(dir: string, pipelineKeys: string[]): string[] {
   const files: string[] = [];
   if (existsSync(join(dir, "steps.ts"))) files.push("steps.ts");
   for (const key of pipelineKeys) {
-    const name = `${key}.ts`;
+    const name = pipelineDocumentFileName(key);
     if (existsSync(join(dir, name))) files.push(name);
   }
   if (existsSync(join(dir, DEFAULT_PIPELINE_ASSIGNMENT_FILENAME))) {
@@ -91,6 +89,17 @@ function resolveOutputFiles(dir: string, pipelineKeys: string[]): string[] {
   return files;
 }
 
+export function pipelineDocumentFileName(key: string): string {
+  return `${key}.json`;
+}
+
+/** The pipeline document file content: the active version's definition. */
+export function serializePipelineDocument(
+  definition: Record<string, unknown>,
+): string {
+  return `${JSON.stringify(definition, null, 2)}\n`;
+}
+
 export async function pullPipelineDefinitions(
   options: PullPipelineDefinitionsOptions,
 ): Promise<PullPipelineDefinitionsResult> {
@@ -98,20 +107,20 @@ export async function pullPipelineDefinitions(
 
   const stepDefsClient = createStepDefinitionsClient(baseUrl);
   const pipelineDefsClient = createPipelineDefinitionsClient(baseUrl);
-  const boboddyClient = createBoboddyClient(baseUrl);
+  const scarnClient = createScarnClient(baseUrl);
 
   const [rawSteps, pipelines, projectResult, fieldOptionsResult] =
     (await Promise.all([
       stepDefsClient.listByProjectId(projectId, { headers }),
       pipelineDefsClient.listByProjectId(projectId, { headers }),
-      boboddyClient.projects.getProject({ path: { projectId }, headers }),
-      boboddyClient.projects.listProjectWorkItemFieldOptions({
+      scarnClient.projects.getProject({ path: { projectId }, headers }),
+      scarnClient.projects.listProjectWorkItemFieldOptions({
         path: { projectId },
         headers,
       }),
     ])) as unknown as [
       StepDefContract[],
-      PipelineContract[],
+      PipelineDefinition[],
       { data?: { defaultPipelineAssignment?: unknown }; error?: unknown },
       { data?: WorkItemFieldOption[]; error?: unknown },
     ];
@@ -140,20 +149,9 @@ export async function pullPipelineDefinitions(
   }
   const dedupedSteps = [...latestSteps.values()];
 
-  // Map stepDefinitionId → key for pipeline binding reconstruction
-  const stepIdToKey = new Map<string, string>();
-  for (const step of stepDefs) {
-    stepIdToKey.set((step as unknown as { id: string }).id, step.key);
-  }
-
-  // Map pipelineDefinitionId → pipeline key for assignment reconstruction
-  const pipelineIdToKey = new Map<string, string>();
-  for (const pipeline of pipelines) {
-    const pipelineWithId = pipeline as unknown as { id: string; key: string };
-    if (pipelineWithId.id) {
-      pipelineIdToKey.set(pipelineWithId.id, pipeline.key);
-    }
-  }
+  const pipelineIdToKey = new Map<string, string>(
+    pipelines.map((pipeline) => [pipeline.id, pipeline.key]),
+  );
 
   ensureScaffold(dir, sdkVersion);
 
@@ -171,11 +169,21 @@ export async function pullPipelineDefinitions(
     stepFiles = 1;
   }
 
-  // Write one file per pipeline
   for (const pipeline of pipelines) {
-    const fileName = `${pipeline.key}.ts`;
-    const content = generatePipelineFileContent(pipeline, stepIdToKey);
-    writeFileSync(join(dir, fileName), content, "utf-8");
+    const definition = activeDefinitionOf(pipeline);
+    if (!definition) {
+      logger.warn(
+        { pipeline: pipeline.key },
+        `Skipped pipeline ${pipeline.key}: it has no published version.`,
+      );
+      continue;
+    }
+    const fileName = pipelineDocumentFileName(pipeline.key);
+    writeFileSync(
+      join(dir, fileName),
+      serializePipelineDocument(definition),
+      "utf-8",
+    );
     logger.info({ file: fileName }, `✓ ${fileName}`);
     pipelineFiles++;
   }
@@ -249,6 +257,19 @@ export async function pullPipelineDefinitions(
     defaultPipelineAssignmentFile,
     workItemFieldsFile: true,
   };
+}
+
+/**
+ * The generated client types nullable objects as `T | unknown`, so the active
+ * version's `definition` is narrowed here.
+ */
+function activeDefinitionOf(
+  pipeline: PipelineDefinition,
+): Record<string, unknown> | null {
+  const current = pipeline.currentVersion as {
+    definition?: Record<string, unknown>;
+  } | null;
+  return current?.definition ?? null;
 }
 
 function isDefaultPipelineAssignmentContract(

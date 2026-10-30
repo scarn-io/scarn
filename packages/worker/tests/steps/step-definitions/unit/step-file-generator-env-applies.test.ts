@@ -5,8 +5,8 @@ import {
   envVarsSchema,
   type EnvVarSpec,
   type EnvVarsInput,
-} from "@boboddy/sdk/env-vars";
-import { resolveRepoConfig } from "@boboddy/sdk/repo-config";
+} from "@scarn/sdk/env-vars";
+import { resolveRepoConfig } from "@scarn/sdk/repo-config";
 import {
   generateStepsFileContent,
   type StepDefContract,
@@ -32,7 +32,6 @@ function makeStep(envJson: EnvVarSpec[]): StepDefContract {
     opencodeMcpJson: null,
     healthChecksJson: null,
     envJson,
-    signalExtractorDefinitions: [],
   };
 }
 

@@ -5,7 +5,7 @@ import {
   OpencodeOverlayConfigRejectedError,
   parseOpencodeConfigDiagnostics,
 } from "../../../../src/runtime/runtime-service/infra/opencode-config-diagnostics";
-import { SecretMasker } from "../../../../src/work/task/application/secret-masker";
+import { SecretMasker } from "../../../../src/work/task-run/application/secret-masker";
 
 const OVERLAY_INVALID =
   'timestamp=2026-10-13T10:00:00.000Z level=WARN run=abc http.span=1 message="configuration normalization diagnostic" source=OPENCODE_CONFIG_CONTENT path=model kind=invalid action=dropped detail="expected string, got sk-overlay-secret"';

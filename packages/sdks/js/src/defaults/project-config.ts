@@ -11,14 +11,14 @@ export interface ProjectConfig {
   /**
    * Optional prefix for the per-step work branch name. The worker creates
    * branches named `<branchPrefix>/<stepKey>-<taskId>`. Defaults to
-   * `boboddy` when omitted or invalid.
+   * `scarn` when omitted or invalid.
    */
   branchPrefix?: string;
   /**
    * Optional base branch the FIRST step's work branch is created off of. The
    * worker clones the repo's default HEAD, then checks out this branch before
-   * branching. Overridden by the `BOBODDY_BASE_WORK_BRANCH` env var in
-   * `.boboddy/.env`. Ignored for later steps, which are always created off the
+   * branching. Overridden by the `SCARN_BASE_WORK_BRANCH` env var in
+   * `.scarn/.env`. Ignored for later steps, which are always created off the
    * predecessor step's work branch. Defaults to the repo's default branch when
    * omitted or invalid.
    */
@@ -66,10 +66,10 @@ export function formatProjectRef(ref: ProjectRef): string {
   return `${ref.owner}/${ref.slug}`;
 }
 
-const BOBODDY_DIR = ".boboddy";
-const CONFIG_FILENAME = "boboddy.jsonc";
+const SCARN_DIR = ".scarn";
+const CONFIG_FILENAME = "scarn.jsonc";
 
-export const PROJECT_CONFIG_RELATIVE_PATH = path.join(BOBODDY_DIR, CONFIG_FILENAME);
+export const PROJECT_CONFIG_RELATIVE_PATH = path.join(SCARN_DIR, CONFIG_FILENAME);
 
 function getConfigPath(rootDir: string): string {
   return path.join(rootDir, PROJECT_CONFIG_RELATIVE_PATH);

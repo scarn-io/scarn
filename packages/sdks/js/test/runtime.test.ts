@@ -209,7 +209,7 @@ describe("defineStep — runtime", () => {
       // @ts-expect-error managed runtimes are for codeStep only
       environment: { runtime: Runtime.managed.bun1() },
     });
-    const issues = validateDefinitionSpecs({ pipelines: [], steps: [spec] });
+    const issues = validateDefinitionSpecs([spec]);
     expect(spec.managedRuntime).toBe("bun1");
     expect(issues).toHaveLength(1);
     expect(issues[0]?.check).toBe("runtime");
@@ -276,7 +276,7 @@ describe("codeStep — runtime", () => {
       // @ts-expect-error code steps need a workspace, so host is unsupported
       environment: { runtime: Runtime.host() },
     });
-    const issues = validateDefinitionSpecs({ pipelines: [], steps: [spec] });
+    const issues = validateDefinitionSpecs([spec]);
     expect(issues).toHaveLength(1);
     expect(issues[0]?.check).toBe("runtime");
     expect(issues[0]?.message).toContain("codeStep");
@@ -300,8 +300,6 @@ describe("codeStep — runtime", () => {
       ...base,
       environment: { runtime: Runtime.managed.bun1(), repo: Repo.readOnly() },
     });
-    expect(validateDefinitionSpecs({ pipelines: [], steps: [spec] })).toEqual(
-      [],
-    );
+    expect(validateDefinitionSpecs([spec])).toEqual([]);
   });
 });

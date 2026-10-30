@@ -1,7 +1,7 @@
 import { access, mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import type { ManagedRuntimeId } from "@boboddy/sdk/managed-runtimes";
-import { PIPELINE_BUILDER_DIR } from "@boboddy/sdk/push";
+import type { ManagedRuntimeId } from "@scarn/sdk/managed-runtimes";
+import { PIPELINE_BUILDER_DIR } from "@scarn/sdk/push";
 import {
   MANAGED_DEVCONTAINERS_DIR,
   MANAGED_RUNTIMES,
@@ -38,7 +38,7 @@ export function renderManagedRuntimeConfig(input: {
   const definition = MANAGED_RUNTIMES[input.id];
   const rendered = JSON.stringify(
     {
-      name: `boboddy-managed-${input.id}`,
+      name: `scarn-managed-${input.id}`,
       image: definition.image,
       remoteUser: definition.remoteUser,
       onCreateCommand: buildPipelineBuilderInstallCommand({

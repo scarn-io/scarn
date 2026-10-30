@@ -7,6 +7,7 @@ import importPlugin from "eslint-plugin-import";
 import unusedImports from "eslint-plugin-unused-imports";
 import tseslint from "typescript-eslint";
 import { localEslintPlugin } from "./eslint/rules/no-unknown-parameter-type.mjs";
+import scarnEslintPlugin from "./packages/sdks/js/src/eslint.ts";
 
 const maxFileLines = 400;
 
@@ -19,7 +20,15 @@ export default defineConfig(
       "**/dist/**",
       "**/coverage/**",
       "**/node_modules/**",
-      ".boboddy/**",
+      // Only the pipeline builder's TypeScript sources are linted.
+      ".scarn/*",
+      "!.scarn/pipeline-builder/",
+      ".scarn/pipeline-builder/*",
+      "!.scarn/pipeline-builder/*.ts",
+      ".scarn/pipeline-builder/push.ts",
+      "packages/local-dev/src/local-test-project/.scarn/pipeline-builder/*",
+      "!packages/local-dev/src/local-test-project/.scarn/pipeline-builder/*.ts",
+      "packages/local-dev/src/local-test-project/.scarn/pipeline-builder/push.ts",
       "scripts/**",
       "eslint/rules/**",
       "eslint.config.mjs",
@@ -117,7 +126,7 @@ export default defineConfig(
             {
               name: "posthog-js",
               message:
-                "Import from @boboddy/observability/analytics/browser (initialized in components/analytics-provider.tsx) instead of posthog-js directly.",
+                "Import from @scarn/observability/analytics/browser (initialized in components/analytics-provider.tsx) instead of posthog-js directly.",
             },
           ],
         },
@@ -154,7 +163,7 @@ export default defineConfig(
         {
           patterns: [
             {
-              group: ["@/*/application/*", "@boboddy/*/application/*"],
+              group: ["@/*/application/*", "@scarn/*/application/*"],
               message:
                 "Integration tests must exercise the public API client boundary. Move direct application-layer tests into non-integration test files.",
             },
@@ -207,6 +216,30 @@ export default defineConfig(
       ...tseslint.configs.disableTypeChecked.rules,
       // Plain CommonJS scripts (not compiled from TS) legitimately need require().
       "@typescript-eslint/no-require-imports": "off",
+    },
+  },
+  {
+    files: [
+      ".scarn/pipeline-builder/*.ts",
+      "packages/local-dev/src/local-test-project/.scarn/pipeline-builder/*.ts",
+      "packages/sdks/js/test/**/*.ts",
+    ],
+    plugins: { scarn: scarnEslintPlugin },
+    rules: {
+      "scarn/no-logic-in-pipeline-callbacks": "error",
+    },
+  },
+  {
+    // The pipeline builder installs its own dependencies (not part of the
+    // workspace), so it is linted without type information.
+    files: [
+      ".scarn/pipeline-builder/*.ts",
+      "packages/local-dev/src/local-test-project/.scarn/pipeline-builder/*.ts",
+    ],
+    ...tseslint.configs.disableTypeChecked,
+    languageOptions: {
+      ...tseslint.configs.disableTypeChecked.languageOptions,
+      parserOptions: { projectService: false, program: null },
     },
   },
   eslintConfigPrettier,

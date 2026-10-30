@@ -1,28 +1,28 @@
-import type { createBoboddyClient } from "@boboddy/sdk";
-import { createLazyLogger } from "@boboddy/observability/logging/host";
+import type { createScarnClient } from "@scarn/sdk";
+import { createLazyLogger } from "@scarn/observability/logging/host";
 import { projectConfigRef } from "../../project-config/domain/project-config";
 import { writeProjectConfig } from "../../project-config/application/write-project-config";
 import { findMatchingProject } from "./find-matching-project";
 
 const logger = createLazyLogger({
-  name: "@boboddy/worker",
+  name: "@scarn/worker",
   scope: "complete-project-handoff",
 });
 
 /**
  * The other half of the browser hand-off `localConfigSetup` starts (#141).
  *
- * While the user creates the project at `/projects/new`, `boboddy init` polls
+ * While the user creates the project at `/projects/new`, `scarn init` polls
  * this: each call is one check for a project matching the same remote and —
- * only once one exists — persists it to `.boboddy/boboddy.jsonc` at `rootDir`,
+ * only once one exists — persists it to `.scarn/scarn.jsonc` at `rootDir`,
  * exactly as the fast path does. Returns `undefined` while there is still no
  * match; the caller owns the polling cadence and the timeout.
  */
 export async function completeProjectHandoff(input: {
-  client: ReturnType<typeof createBoboddyClient>;
+  client: ReturnType<typeof createScarnClient>;
   headers: { Authorization: string };
   gitUrl: string;
-  /** The repo root to write `.boboddy/` into. Defaults to `process.cwd()`. */
+  /** The repo root to write `.scarn/` into. Defaults to `process.cwd()`. */
   rootDir?: string;
 }): Promise<{ projectId: string; project: string } | undefined> {
   const match = await findMatchingProject(input);

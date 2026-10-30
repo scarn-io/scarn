@@ -14,7 +14,7 @@ import { createReporterRecorder, reportedMessages } from "./utils";
  */
 
 const STUDIO_URL = "http://localhost:54321";
-const BUILDER_DIR = "/repo/.boboddy/pipeline-builder";
+const BUILDER_DIR = "/repo/.scarn/pipeline-builder";
 
 type Calls = {
   startServer: { builderDir: string } | undefined;
@@ -53,94 +53,83 @@ function createPorts(overrides: Partial<DesignStudioPorts> = {}): {
 }
 
 describe("startDesignStudio", () => {
-  test.concurrent(
-    "starts the server, opens the browser, and reports the URL",
-    async () => {
-      const { ports, calls } = createPorts();
-      const { reporter, tasks } = createReporterRecorder();
+  test("starts the server, opens the browser, and reports the URL", async () => {
+    const { ports, calls } = createPorts();
+    const { reporter, tasks } = createReporterRecorder();
 
-      const handle = await startDesignStudio({
-        builderDir: BUILDER_DIR,
-        reporter,
-        ports,
-      });
+    const handle = await startDesignStudio({
+      builderDir: BUILDER_DIR,
+      reporter,
+      ports,
+    });
 
-      expect(handle?.url).toBe(STUDIO_URL);
-      expect(handle?.browserOpened).toBe(true);
-      expect(calls.startServer).toEqual({ builderDir: BUILDER_DIR });
-      expect(calls.openBrowser).toBe(STUDIO_URL);
-      expect(tasks).toContainEqual({
-        method: "succeed",
-        message: `Studio running at ${STUDIO_URL}`,
-      });
+    expect(handle?.url).toBe(STUDIO_URL);
+    expect(handle?.browserOpened).toBe(true);
+    expect(calls.startServer).toEqual({ builderDir: BUILDER_DIR });
+    expect(calls.openBrowser).toBe(STUDIO_URL);
+    expect(tasks).toContainEqual({
+      method: "succeed",
+      message: `Studio running at ${STUDIO_URL}`,
+    });
 
-      await handle?.close();
-      expect(calls.close).toBe(1);
-    },
-  );
+    await handle?.close();
+    expect(calls.close).toBe(1);
+  });
 
-  test.concurrent(
-    "returns null and continues without the studio when the server fails to start",
-    async () => {
-      const { ports, calls } = createPorts({
-        startServer: () => Promise.reject(new Error("port in use")),
-      });
-      const { reporter, calls: reported, tasks } = createReporterRecorder();
+  test("returns null and continues without the studio when the server fails to start", async () => {
+    const { ports, calls } = createPorts({
+      startServer: () => Promise.reject(new Error("port in use")),
+    });
+    const { reporter, calls: reported, tasks } = createReporterRecorder();
 
-      const handle = await startDesignStudio({
-        builderDir: BUILDER_DIR,
-        reporter,
-        ports,
-      });
+    const handle = await startDesignStudio({
+      builderDir: BUILDER_DIR,
+      reporter,
+      ports,
+    });
 
-      expect(handle).toBeNull();
-      expect(calls.openBrowser).toBeUndefined();
-      expect(tasks).toContainEqual({
-        method: "fail",
-        message: "Could not start the pipeline studio",
-      });
-      expect(reported).toContainEqual({
-        method: "warn",
-        message: "port in use",
-      });
-      expect(reported).toContainEqual({
-        method: "info",
-        message: STUDIO_UNAVAILABLE_MESSAGE,
-      });
-    },
-  );
+    expect(handle).toBeNull();
+    expect(calls.openBrowser).toBeUndefined();
+    expect(tasks).toContainEqual({
+      method: "fail",
+      message: "Could not start the pipeline studio",
+    });
+    expect(reported).toContainEqual({
+      method: "warn",
+      message: "port in use",
+    });
+    expect(reported).toContainEqual({
+      method: "info",
+      message: STUDIO_UNAVAILABLE_MESSAGE,
+    });
+  });
 
-  test.concurrent(
-    "returns a handle with browserOpened false and points at the URL when the browser fails to open",
-    async () => {
-      const { ports } = createPorts({
-        openBrowser: () => Promise.reject(new Error("no display")),
-      });
-      const { reporter, calls: reported } = createReporterRecorder();
+  test("returns a handle with browserOpened false and points at the URL when the browser fails to open", async () => {
+    const { ports } = createPorts({
+      openBrowser: () => Promise.reject(new Error("no display")),
+    });
+    const { reporter, calls: reported } = createReporterRecorder();
 
-      const handle = await startDesignStudio({
-        builderDir: BUILDER_DIR,
-        reporter,
-        ports,
-      });
+    const handle = await startDesignStudio({
+      builderDir: BUILDER_DIR,
+      reporter,
+      ports,
+    });
 
-      expect(handle?.url).toBe(STUDIO_URL);
-      expect(handle?.browserOpened).toBe(false);
-      const warnings = reported
-        .filter((call) => call.method === "warn")
-        .map((call) => call.message);
-      expect(warnings.some((message) => message.includes(STUDIO_URL))).toBe(
-        true,
-      );
-      expect(
-        reportedMessages(reported).some((message) =>
-          message.includes("Could not open a browser"),
-        ),
-      ).toBe(true);
-    },
-  );
+    expect(handle?.url).toBe(STUDIO_URL);
+    expect(handle?.browserOpened).toBe(false);
+    const warnings = reported
+      .filter((call) => call.method === "warn")
+      .map((call) => call.message);
+    expect(warnings.some((message) => message.includes(STUDIO_URL))).toBe(true);
+    expect(
+      reportedMessages(reported).some((message) =>
+        message.includes("Could not open a browser"),
+      ),
+    ).toBe(true);
+  });
 
-  test.concurrent("close() swallows a failing server close", async () => {
+  test("close() swallows a failing server close", async () => {
     const { ports } = createPorts({
       startServer: () =>
         Promise.resolve({

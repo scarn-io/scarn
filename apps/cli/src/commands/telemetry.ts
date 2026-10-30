@@ -1,5 +1,5 @@
 import type { CommandModule } from "yargs";
-import { isTelemetryDisabled, setTelemetryDisabled } from "@boboddy/worker";
+import { isTelemetryDisabled, setTelemetryDisabled } from "@scarn/worker";
 import { withReporter } from "../lib/command-output";
 import {
   POSTHOG_KEY_ENV_VAR,
@@ -12,9 +12,9 @@ import {
 import { version as CLI_VERSION } from "../../package.json";
 
 /**
- * `boboddy telemetry` — the documented opt-out surface for #147's CLI
- * onboarding-funnel reporting. `BOBODDY_TELEMETRY_DISABLED=1` does the same
- * thing for a single invocation without touching `~/.boboddy/config.jsonc`; this
+ * `scarn telemetry` — the documented opt-out surface for #147's CLI
+ * onboarding-funnel reporting. `SCARN_TELEMETRY_DISABLED=1` does the same
+ * thing for a single invocation without touching `~/.scarn/config.jsonc`; this
  * command is for turning it off (or back on) for every future invocation.
  */
 

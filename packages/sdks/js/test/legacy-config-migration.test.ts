@@ -25,7 +25,7 @@ import { setHomeDirForTests } from "../src/defaults/home-dir";
 let fakeHome: string;
 
 beforeEach(() => {
-  fakeHome = mkdtempSync(join(tmpdir(), "boboddy-legacy-migration-"));
+  fakeHome = mkdtempSync(join(tmpdir(), "scarn-legacy-migration-"));
   setHomeDirForTests(fakeHome);
 });
 
@@ -34,8 +34,8 @@ afterEach(() => {
   rmSync(fakeHome, { recursive: true, force: true });
 });
 
-const legacyJsonPath = () => join(fakeHome, ".boboddy.json");
-const legacyBarePath = () => join(fakeHome, ".boboddy");
+const legacyJsonPath = () => join(fakeHome, ".scarn.json");
+const legacyBarePath = () => join(fakeHome, ".scarn");
 
 const LEGACY_MERGED_FILE = {
   profiles: {
@@ -81,7 +81,7 @@ function assertSplitCorrectly(): void {
   });
 
   expect(existsSync(legacyJsonPath())).toBe(false);
-  // `.boboddy` (the bare legacy path) is also the new `.boboddy/` directory
+  // `.scarn` (the bare legacy path) is also the new `.scarn/` directory
   // that `auth.jsonc`/`config.jsonc` live under, so it's expected to exist as
   // a directory after the split — only assert the legacy *file* is gone.
   if (existsSync(legacyBarePath())) {
@@ -89,7 +89,7 @@ function assertSplitCorrectly(): void {
   }
 }
 
-describe("migrating a legacy .boboddy.json", () => {
+describe("migrating a legacy .scarn.json", () => {
   test("loadAuthFile() splits it into auth.jsonc + config.jsonc with artifact defaults", () => {
     writeLegacyJsonFile();
 
@@ -107,10 +107,10 @@ describe("migrating a legacy .boboddy.json", () => {
   });
 });
 
-describe("migrating a legacy bare .boboddy file", () => {
+describe("migrating a legacy bare .scarn file", () => {
   /**
-   * Regression case: the bare `.boboddy` legacy path is the exact same path
-   * as the new `.boboddy/` directory that `auth.jsonc`/`config.jsonc` live
+   * Regression case: the bare `.scarn` legacy path is the exact same path
+   * as the new `.scarn/` directory that `auth.jsonc`/`config.jsonc` live
    * under, so the legacy file must be removed BEFORE the new files are
    * written (see the matching comment in `legacy-config-migration.ts`) —
    * otherwise writing collides with the still-present legacy file (`ENOTDIR`).

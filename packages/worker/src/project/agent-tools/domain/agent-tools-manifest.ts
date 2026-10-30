@@ -11,7 +11,7 @@ import type {
  * `discovered-tools.json`: everything the pipeline designer needs to know
  * about the MCP servers and skills a repository defines, written by the
  * `pipelines design` preflight outside the repository at
- * `~/.boboddy/projects/<owner>/<slug>/discovered-tools.json`.
+ * `~/.scarn/projects/<owner>/<slug>/discovered-tools.json`.
  *
  * It carries names only. No env, header or argument value is ever written:
  * a server lists the variable names it reads, and its tools as the server
@@ -78,7 +78,7 @@ export function agentToolsManifestPath(input: {
 }): string {
   return path.join(
     input.homeDir,
-    ".boboddy",
+    ".scarn",
     "projects",
     input.owner,
     input.slug,

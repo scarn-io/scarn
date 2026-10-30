@@ -10,7 +10,7 @@ import { stepSpecWithOverrides } from "./definition-spec-fixtures";
  */
 describe("validateDefinitionSpecs — runtime", () => {
   const validate = (steps: ReturnType<typeof stepSpecWithOverrides>[]) =>
-    validateDefinitionSpecs({ pipelines: [], steps });
+    validateDefinitionSpecs(steps);
 
   test.concurrent("accepts a workspace step with a valid config path", () => {
     expect(
@@ -147,7 +147,7 @@ describe("validateDefinitionSpecs — runtime", () => {
 
 describe("validateDefinitionSpecs — managed runtime", () => {
   const validate = (steps: ReturnType<typeof stepSpecWithOverrides>[]) =>
-    validateDefinitionSpecs({ pipelines: [], steps });
+    validateDefinitionSpecs(steps);
 
   test.concurrent.each(["bun1", "node24"])(
     "accepts a workspace code step on %s",

@@ -7,9 +7,8 @@ import {
   buildArtifactMarker,
   type ArtifactMarkerRef,
 } from "../../contracts/artifact-markers";
-import type { StepSignalHandle } from "../steps/signal-handles";
 
-export const ARTIFACT_BRAND = "BoboddyArtifact";
+export const ARTIFACT_BRAND = "ScarnArtifact";
 export type ArtifactBrand = typeof ARTIFACT_BRAND;
 
 /** The value an artifact field holds: a path relative to `artifactsDir`. */
@@ -87,9 +86,9 @@ export function normalizeArtifactAccept(
 /**
  * A result field holding a file the step produced. The field's value is the
  * file's path relative to `artifactsDir`; agents fill it with
- * `boboddy-submit-artifact` and code steps return `Artifact.path(...)`.
+ * `scarn-submit-artifact` and code steps return `Artifact.path(...)`.
  *
- * Serialises to `{ "type": "string", "x-boboddy-artifact": { "accept": [...] } }`.
+ * Serialises to `{ "type": "string", "x-scarn-artifact": { "accept": [...] } }`.
  */
 export function artifact(options: ArtifactOptions = {}): ArtifactSchema {
   const keyword: ArtifactSchemaKeyword = {
@@ -101,20 +100,25 @@ export function artifact(options: ArtifactOptions = {}): ArtifactSchema {
     .meta({ [ARTIFACT_SCHEMA_KEYWORD]: keyword });
 }
 
+/** An artifact field in a step's result: `path` is its dotted result path. */
+export type StepArtifactRef = {
+  readonly step: { readonly key: string };
+  readonly path: string;
+};
+
 /**
- * What an artifact marker points at: a declared artifact signal
- * (`step.signals.<key>`, required) or a name/glob relative to `artifactsDir`
- * (optional).
+ * What an artifact marker points at: an artifact field in a step's result
+ * (required) or a name/glob relative to `artifactsDir` (optional).
  */
-export type ArtifactMarkerTarget = StepSignalHandle | string;
+export type ArtifactMarkerTarget = StepArtifactRef | string;
 
 const toMarkerRef = (target: ArtifactMarkerTarget): ArtifactMarkerRef =>
   typeof target === "string"
     ? { type: "path", pattern: target }
     : {
         type: "signal",
-        stepKey: target.stepKey,
-        signalKey: target.signalKey,
+        stepKey: target.step.key,
+        signalKey: target.path,
       };
 
 export const Artifact = {

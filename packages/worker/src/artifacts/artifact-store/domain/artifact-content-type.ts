@@ -1,5 +1,5 @@
 import path from "node:path";
-import type { ArtifactKind } from "@boboddy/sdk/contracts/artifacts";
+import type { ArtifactKind } from "@scarn/sdk/contracts/artifacts";
 
 /**
  * Best-effort MIME type lookup keyed by lowercase file extension (without the

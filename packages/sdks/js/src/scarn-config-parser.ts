@@ -1,0 +1,262 @@
+import { access, readFile } from "node:fs/promises";
+import path from "node:path";
+
+export const SCARN_CONFIG_RELATIVE_PATH = ".scarn/scarn.jsonc";
+
+const stripJsoncComments = (content: string): string => {
+  let result = "";
+  let inString = false;
+  let escapeNextCharacter = false;
+  let lineComment = false;
+  let blockComment = false;
+
+  for (let index = 0; index < content.length; index += 1) {
+    const character = content.charAt(index);
+    const nextCharacter = content.charAt(index + 1);
+
+    if (lineComment) {
+      if (character === "\n") {
+        lineComment = false;
+        result += character;
+      }
+      continue;
+    }
+
+    if (blockComment) {
+      if (character === "*" && nextCharacter === "/") {
+        blockComment = false;
+        index += 1;
+      }
+      continue;
+    }
+
+    if (inString) {
+      result += character;
+
+      if (escapeNextCharacter) {
+        escapeNextCharacter = false;
+        continue;
+      }
+
+      if (character === "\\") {
+        escapeNextCharacter = true;
+        continue;
+      }
+
+      if (character === '"') {
+        inString = false;
+      }
+
+      continue;
+    }
+
+    if (character === '"') {
+      inString = true;
+      result += character;
+      continue;
+    }
+
+    if (character === "/" && nextCharacter === "/") {
+      lineComment = true;
+      index += 1;
+      continue;
+    }
+
+    if (character === "/" && nextCharacter === "*") {
+      blockComment = true;
+      index += 1;
+      continue;
+    }
+
+    result += character;
+  }
+
+  return result;
+};
+
+const stripTrailingCommas = (content: string): string => {
+  let result = "";
+  let inString = false;
+  let escapeNextCharacter = false;
+
+  for (let index = 0; index < content.length; index += 1) {
+    const character = content.charAt(index);
+
+    if (inString) {
+      result += character;
+
+      if (escapeNextCharacter) {
+        escapeNextCharacter = false;
+        continue;
+      }
+
+      if (character === "\\") {
+        escapeNextCharacter = true;
+        continue;
+      }
+
+      if (character === '"') {
+        inString = false;
+      }
+
+      continue;
+    }
+
+    if (character === '"') {
+      inString = true;
+      result += character;
+      continue;
+    }
+
+    if (character === ",") {
+      let lookaheadIndex = index + 1;
+      while (lookaheadIndex < content.length) {
+        const lookaheadCharacter = content.charAt(lookaheadIndex);
+        if (/\s/u.test(lookaheadCharacter)) {
+          lookaheadIndex += 1;
+          continue;
+        }
+
+        if (lookaheadCharacter === "}" || lookaheadCharacter === "]") {
+          break;
+        }
+
+        result += character;
+        break;
+      }
+
+      if (lookaheadIndex >= content.length) {
+        continue;
+      }
+
+      const lookaheadCharacter = content.charAt(lookaheadIndex);
+      if (lookaheadCharacter === "}" || lookaheadCharacter === "]") {
+        continue;
+      }
+
+      continue;
+    }
+
+    result += character;
+  }
+
+  return result;
+};
+
+const parseJsonc = (content: string): unknown =>
+  JSON.parse(stripTrailingCommas(stripJsoncComments(content)));
+
+type RawCommandEntry = {
+  description?: unknown;
+  run?: unknown;
+  cwd?: unknown;
+};
+
+type RawServiceEntry = {
+  description?: unknown;
+  run?: unknown;
+  cwd?: unknown;
+  dependsOn?: unknown;
+  expose?: { targetPort?: unknown; protocol?: unknown };
+};
+
+type RawScarnConfig = {
+  version?: unknown;
+  commands?: Record<string, RawCommandEntry>;
+  services?: Record<string, RawServiceEntry>;
+};
+
+export type ScarnCommandDefinition = {
+  name: string;
+  description: string;
+  run: string;
+  cwd: string | null;
+};
+
+export type ScarnServiceDefinition = {
+  name: string;
+  description: string;
+  run: string;
+  cwd: string | null;
+  dependsOn: string[];
+  expose: {
+    targetPort: number;
+    protocol: string;
+  };
+};
+
+export type ScarnConfig = {
+  commands: ScarnCommandDefinition[];
+  services: ScarnServiceDefinition[];
+};
+
+export type ParseScarnConfigResult =
+  | { found: false }
+  | { found: true; config: ScarnConfig };
+
+// eslint-disable-next-line local/no-unknown-parameter-type
+const asString = (value: unknown): string | null =>
+  typeof value === "string" ? value : null;
+
+// eslint-disable-next-line local/no-unknown-parameter-type
+const asNumber = (value: unknown): number | null =>
+  typeof value === "number" ? value : null;
+
+const parseCommands = (
+  raw: Record<string, RawCommandEntry> | undefined,
+): ScarnCommandDefinition[] => {
+  if (!raw) return [];
+  return Object.entries(raw).map(([name, entry]) => ({
+    name,
+    description: asString(entry.description) ?? "",
+    run: asString(entry.run) ?? "",
+    cwd: asString(entry.cwd) ?? null,
+  }));
+};
+
+const parseServices = (
+  raw: Record<string, RawServiceEntry> | undefined,
+): ScarnServiceDefinition[] => {
+  if (!raw) return [];
+  return Object.entries(raw).map(([name, entry]) => {
+    const expose = entry.expose ?? {};
+    const dependsOn = Array.isArray(entry.dependsOn)
+      ? entry.dependsOn.filter((d): d is string => typeof d === "string")
+      : [];
+    return {
+      name,
+      description: asString(entry.description) ?? "",
+      run: asString(entry.run) ?? "",
+      cwd: asString(entry.cwd) ?? null,
+      dependsOn,
+      expose: {
+        targetPort: asNumber(expose.targetPort) ?? 0,
+        protocol: asString(expose.protocol) ?? "http",
+      },
+    };
+  });
+};
+
+export async function parseScarnConfig(
+  workspacePath: string,
+): Promise<ParseScarnConfigResult> {
+  const filePath = path.join(workspacePath, SCARN_CONFIG_RELATIVE_PATH);
+  const exists = await access(filePath)
+    .then(() => true)
+    .catch(() => false);
+
+  if (!exists) {
+    return { found: false };
+  }
+
+  const content = await readFile(filePath, "utf8");
+  const raw = parseJsonc(content) as RawScarnConfig;
+
+  return {
+    found: true,
+    config: {
+      commands: parseCommands(raw.commands),
+      services: parseServices(raw.services),
+    },
+  };
+}

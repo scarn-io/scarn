@@ -3,7 +3,7 @@ import type {
   AgentToolsManifest,
   DiscoveredAgentTools,
   DiscoveredMcpServer,
-} from "@boboddy/worker";
+} from "@scarn/worker";
 import {
   announceMcpToolListing,
   ensureAgentToolsManifest,

@@ -1,16 +1,16 @@
 import {
   resolveProjectRef,
   type ResolvedProjectRef,
-} from "@boboddy/sdk/defaults";
-import { readProjectConfig } from "@boboddy/worker";
+} from "@scarn/sdk/defaults";
+import { readProjectConfig } from "@scarn/worker";
 import { connectApi } from "./cli-api-client";
 
 /**
  * Every command that takes a project — `work`, `pipelines push`/`pull`/`design`
  * — accepts it as `owner/slug` (positional, or `"project"` in
- * `.boboddy/boboddy.jsonc`) and resolves it to the project id here, once, before
+ * `.scarn/scarn.jsonc`) and resolves it to the project id here, once, before
  * doing anything else. Failures throw a `ProjectRefError` that names the ref
- * and the denied action (see `resolveProjectRef` in `@boboddy/sdk/defaults`).
+ * and the denied action (see `resolveProjectRef` in `@scarn/sdk/defaults`).
  */
 
 /** Completes "You don't have permission to …" for each command. */
@@ -19,15 +19,20 @@ export const PROJECT_ACTIONS = {
   push: "push pipelines to",
   pull: "pull pipelines from",
   design: "design pipelines for",
+  validate: "validate pipelines for",
+  build: "build pipelines for",
+  publish: "publish pipelines to",
+  activate: "activate pipelines in",
+  run: "run pipelines in",
 } as const;
 
 export type ProjectAction =
   (typeof PROJECT_ACTIONS)[keyof typeof PROJECT_ACTIONS];
 
 export const NO_PROJECT_MESSAGE =
-  'No project provided. Pass one as `owner/slug` or run `boboddy init` to write "project" to .boboddy/boboddy.jsonc.';
+  'No project provided. Pass one as `owner/slug` or run `scarn init` to write "project" to .scarn/scarn.jsonc.';
 
-/** The positional ref when given, else `"project"` from `.boboddy/boboddy.jsonc`. */
+/** The positional ref when given, else `"project"` from `.scarn/scarn.jsonc`. */
 export async function pickProjectRef(
   argument: string | undefined,
   rootDir?: string,

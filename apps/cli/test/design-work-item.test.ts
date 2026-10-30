@@ -1,4 +1,4 @@
-import { describe, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import {
   buildCreateWorkItemBody,
   buildWorkItemPlatformKey,
@@ -8,7 +8,6 @@ import {
   parseWorkItemReference,
   WORK_ITEM_PICKER_LIMIT,
 } from "../src/lib/design-work-item";
-import { concurrentTest as test } from "./utils";
 
 /**
  * The free-text rung is the only place in the flow where a work item is
@@ -187,12 +186,12 @@ describe("formatWorkItemChoiceLabel", () => {
 describe("buildCreateWorkItemBody", () => {
   const draft = { title: "Flaky login test", description: "One in five." };
 
-  test("marks the item as authored in Boboddy, with no upstream record", () => {
+  test("marks the item as authored in Scarn, with no upstream record", () => {
     const body = buildCreateWorkItemBody({ projectId: "p1", draft });
 
     expect(body).toMatchObject({
       projectId: "p1",
-      platform: "boboddy",
+      platform: "scarn",
       platformId: null,
       url: null,
       title: "Flaky login test",
@@ -231,7 +230,7 @@ describe("picker constants", () => {
     expect(WORK_ITEM_PICKER_LIMIT).toBe(15);
   });
 
-  test("items authored in the CLI belong to the boboddy platform", () => {
-    expect(DESIGN_WORK_ITEM_PLATFORM).toBe("boboddy");
+  test("items authored in the CLI belong to the scarn platform", () => {
+    expect(DESIGN_WORK_ITEM_PLATFORM).toBe("scarn");
   });
 });

@@ -1,23 +1,11 @@
 import { toJSONSchema } from "zod/v4/core";
 import type { $ZodType } from "zod/v4/core";
 import type { ZodObject, ZodRawShape, ZodType } from "zod";
-import type {
-  AnyStepFeature,
-  FeatureResultExtensions,
-  FeatureSignalKeys,
-} from "./step-features";
+import type { AnyStepFeature, FeatureResultExtensions } from "./step-features";
 import {
   createPromptTemplateContext,
   type PromptTemplateContext,
 } from "./prompt-template";
-// `import type` only, so this doesn't create a runtime circular dependency
-// with `../pipelines/define-pipeline.ts` (which itself `import type`s
-// `StepDefinitionSpec`/`TypedStepDefinitionSpec` from this file) — both
-// directions are erased at compile time.
-import type {
-  LiteralBinding,
-  WorkItemBinding,
-} from "../pipelines/define-pipeline";
 import {
   stepHealthChecksInputSchema,
   type HealthChecksInput,
@@ -30,11 +18,13 @@ import type { EnvRecord, PromptEnvContext } from "./env";
 import { compileEnvironment, type StepEnvironment } from "./runtime";
 import { mergeStepMcps } from "./compile-mcps";
 import type { McpHandle } from "./define-mcp";
-import type { ArtifactPath } from "../artifacts/artifact";
-import { attachSignalHandles, type StepSignalHandles } from "./signal-handles";
-import { inferSignalType, type SignalTypeStr } from "./infer-signal-type";
-
-export { inferSignalType, type SignalTypeStr } from "./infer-signal-type";
+import type { BuiltInError, ConversationResult } from "../../pipelines/types";
+import {
+  compileStepErrors,
+  compileStepRetry,
+  toStepHandle,
+  type StepHandle,
+} from "./step-handle";
 
 // Forces TS to eagerly resolve a computed object type (mapped type,
 // conditional, or generic alias application) into its final resolved shape
@@ -43,82 +33,6 @@ export { inferSignalType, type SignalTypeStr } from "./infer-signal-type";
 // intersection members (e.g. `T & Record<never, never>`) since it recomputes
 // the combined key set rather than preserving the intersection structurally.
 type Prettify<T> = { [K in keyof T]: T[K] } & {};
-
-// Produces dot-notation paths for an object type up to 4 levels deep.
-// Falls back to `string` for any, unknown, arrays, or primitives.
-export type DotPaths<
-  T,
-  D extends readonly unknown[] = [],
-> = D["length"] extends 4
-  ? string
-  : unknown extends T
-    ? string
-    : T extends readonly unknown[]
-      ? string
-      : T extends object
-        ? {
-            [K in keyof T & string]:
-              | K
-              | (NonNullable<T[K]> extends object
-                  ? `${K}.${DotPaths<NonNullable<T[K]>, [...D, unknown]> & string}`
-                  : never);
-          }[keyof T & string]
-        : string;
-
-// Resolves the TypeScript type at a dot-notation path within T.
-export type TypeAtPath<
-  T,
-  P extends string,
-> = P extends `${infer K}.${infer Rest}`
-  ? K extends keyof NonNullable<T>
-    ? TypeAtPath<NonNullable<NonNullable<T>[K]>, Rest>
-    : unknown
-  : P extends keyof NonNullable<T>
-    ? NonNullable<T>[P]
-    : unknown;
-
-// Maps a TypeScript type to its signal type string. A plain string may also
-// be declared `"artifact"`, for schemas that hand-write the
-// `x-boboddy-artifact` keyword; validation checks the schema agrees.
-type ToSignalType<T> = string extends T
-  ? SignalTypeStr
-  : [NonNullable<T>] extends [never]
-    ? SignalTypeStr
-    : [NonNullable<T>] extends [ArtifactPath]
-      ? "artifact"
-      : ToPlainSignalType<T>;
-
-type ToPlainSignalType<T> = [T] extends [string]
-  ? "string" | "artifact"
-  : [T] extends [number]
-    ? "number"
-    : [T] extends [boolean]
-      ? "boolean"
-      : [T] extends [readonly unknown[]]
-        ? "array"
-        : [T] extends [object]
-          ? "object"
-          : SignalTypeStr;
-
-// A union of valid signal spec shapes keyed by sourcePath.
-// When `type` is provided it must match the actual type at that path.
-type SignalSpecInput<TOutput> = {
-  [P in DotPaths<TOutput>]: {
-    key?: string;
-    sourcePath: P;
-    type?: ToSignalType<TypeAtPath<TOutput, P>>;
-    required?: boolean;
-    availableWhenResultStatusIn?: string[] | null;
-  };
-}[DotPaths<TOutput>];
-
-export type StepSignalSpec = {
-  key?: string;
-  sourcePath: string;
-  type: SignalTypeStr;
-  required?: boolean;
-  availableWhenResultStatusIn?: string[] | null;
-};
 
 export type DefineStepInput<
   TInput extends ZodType = ZodType,
@@ -146,7 +60,6 @@ export type DefineStepInput<
       ) => string);
   additionalInput?: TInput;
   result?: TResult;
-  signals?: SignalSpecInput<TResult["_output"]>[];
   features?: AnyStepFeature[];
   /**
    * The step's MCP servers, built with `defineMcp` and keyed by the step's
@@ -161,27 +74,24 @@ export type DefineStepInput<
    */
   healthChecks?: StepHealthChecksInput | null;
   status?: "draft" | "active";
+  /**
+   * Error names this step can fail with, beyond the built-in ones. A
+   * pipeline's `retry.on` and `catch.on` may name them.
+   */
+  errors?: readonly string[];
+  /**
+   * How a standalone Task of this step retries: errors named in `on` (built-in
+   * or declared in `errors`) get up to `maxAttempts` more runs. A pipeline
+   * step uses its node's `.retry(...)` instead.
+   */
+  retry?: readonly StepRetryEntry[];
 };
 
-/**
- * @deprecated Alias for `LiteralBinding` (`define-pipeline.ts`) — the two
- * used to be independently declared, structurally-identical types. Kept
- * only so existing imports of this name keep working.
- */
-export type AdditionalStepInputLiteralBinding = LiteralBinding;
-
-/**
- * The binding sources available to `PipelineMeta.additionalStepInput`'s
- * `bindings` callback (`workItemField(...)`/`literal(...)` in
- * `builder-helpers.ts`'s `resolveAdditionalStepInputBindings`) — the same
- * `WorkItemBinding`/`LiteralBinding` shapes `.step()`'s own `input` mapper
- * uses (`define-pipeline.ts`'s `AnyBinding`), restricted to the subset
- * `resolveAdditionalStepInputBindings` can actually produce. Previously an
- * independently-declared `{ source: "work_item"; field: string }` union
- * member that had drifted apart from `WorkItemBinding` in shape only by
- * coincidence, not by design.
- */
-export type AdditionalStepInputBinding = WorkItemBinding | LiteralBinding;
+/** One `retry` entry: the same shape as a pipeline node's `retry`. */
+export type StepRetryEntry = {
+  on: readonly string[];
+  maxAttempts: number;
+};
 
 /**
  * A `kind: "code"` step's portable entrypoint, once resolved by
@@ -219,16 +129,16 @@ export type StepDefinitionSpec = {
   prompt: string | null;
   inputSchemaJson: Record<string, unknown> | null;
   resultSchemaJson: Record<string, unknown> | null;
-  signalExtractorDefinitions: Array<{
-    key: string;
-    sourcePath: string;
-    type: SignalTypeStr;
-    required: boolean;
-    availableWhenResultStatusIn: string[] | null;
-  }>;
   opencodeMcpJson: OpenCodeMcpServers | null;
   healthChecksJson: HealthChecksInput | null;
   envJson?: EnvVarsInput | null;
+  /** Error names the step declares besides the built-in ones. */
+  errors?: readonly string[];
+  /**
+   * The step's `retry` policy for standalone Tasks. Not `retry`: that name is
+   * the handle's pipeline chain method.
+   */
+  retryJson?: StepRetryEntry[];
   /**
    * `kind === "code"` only: the live function of a spec produced by
    * `codeStep()`. Code-step discovery (`findCodeStepInModule`) reads it to
@@ -237,9 +147,8 @@ export type StepDefinitionSpec = {
    * request; the original spec keeps it.
    */
   // A live function reference, deliberately untyped at this boundary — its
-  // real input/result types live on the phantom `TypedStepDefinitionSpec`
-  // this spec gets cast to (see `codeStep()`), not on the plain
-  // `StepDefinitionSpec` wire shape itself.
+  // real input/result types live on the `StepHandle` `codeStep()` returns,
+  // not on the plain `StepDefinitionSpec` wire shape itself.
   entrypoint?: {
     // eslint-disable-next-line local/no-unknown-parameter-type
     fn: (input: unknown, context: { artifactsDir: string }) => unknown;
@@ -247,39 +156,6 @@ export type StepDefinitionSpec = {
   /** `kind === "code"` only, present after `collect-definitions.ts` has run. */
   entrypointJson?: StepDefinitionEntrypointJson | null;
 };
-
-// Maps a signal type string literal to its TypeScript type.
-export type SignalTypeStrToTs<T extends SignalTypeStr> = T extends "string"
-  ? string
-  : T extends "number"
-    ? number
-    : T extends "boolean"
-      ? boolean
-      : T extends "array"
-        ? unknown[]
-        : T extends "object"
-          ? object
-          : T extends "artifact"
-            ? ArtifactPath
-            : unknown;
-
-// Builds a map from signal key → TypeScript value type.
-// Uses the explicit `type` field when present, otherwise resolves via TypeAtPath.
-// Wrapped in `Prettify` so hovers show the resolved `{ signalKey: valueType }`
-// shape directly instead of the unreduced `SignalTypeMapOf<readonly [...], ...>`
-// alias application.
-export type SignalTypeMapOf<
-  TSignals extends readonly unknown[],
-  TResult,
-> = Prettify<{
-  [S in TSignals[number] as ExtractSignalKey<S>]: S extends {
-    type: infer T extends SignalTypeStr;
-  }
-    ? SignalTypeStrToTs<T>
-    : S extends { sourcePath: infer P extends string }
-      ? TypeAtPath<TResult, P>
-      : unknown;
-}>;
 
 // A step's effective result type: its own `result` schema's output merged
 // with whatever its features contribute. `Prettify` collapses the
@@ -293,45 +169,19 @@ export type EffectiveResult<
   TFeatures extends ReadonlyArray<AnyStepFeature>,
 > = Prettify<TResult & FeatureResultExtensions<TFeatures>>;
 
-// false when TInput is `unknown` (no additionalInput), true for concrete types, boolean for `any`.
-type HasAdditionalInput<T> = 0 extends 1 & T
-  ? boolean
-  : [unknown] extends [T]
-    ? false
-    : true;
-
-// Phantom-typed extension of StepDefinitionSpec carrying input/result/signal-key types.
-// The phantom fields are never present at runtime — they exist only to thread type information
-// into definePipeline. __hasAdditionalInput drives mapper-required vs optional overload selection.
-export type TypedStepDefinitionSpec<
-  TInput = unknown,
-  TResult = unknown,
-  TSignalKeys extends string = string,
-  TSignalTypeMap extends Partial<Record<string, unknown>> = Record<
-    string,
-    unknown
-  >,
-> = StepDefinitionSpec & {
-  readonly __inputType: TInput;
-  readonly __hasAdditionalInput: HasAdditionalInput<TInput>;
-  readonly __resultType: TResult;
-  readonly __signalKeys: TSignalKeys;
-  readonly __signalTypeMap: TSignalTypeMap;
-  /** Typed handles to this step's signals, keyed by signal key. */
-  readonly signals: StepSignalHandles<TSignalKeys, TSignalTypeMap>;
-};
-
-// Infers the signal key from a single signal spec object:
-// uses the explicit `key` if provided, otherwise falls back to `sourcePath`.
-type ExtractSignalKey<T> = T extends { key: infer K extends string }
-  ? K
-  : T extends { sourcePath: infer S extends string }
-    ? S
-    : string;
-
-// Unions all signal keys across a const-inferred signals tuple.
-export type SignalKeysOf<TSignals extends readonly unknown[]> =
-  TSignals extends readonly (infer S)[] ? ExtractSignalKey<S> : string;
+/**
+ * A `defineStep` handle's result type: `ConversationResult` when the step has
+ * no `result` and no features (a conversation step), else its effective
+ * result.
+ */
+export type DefineStepResult<
+  TResult extends ZodType,
+  TFeatures extends ReadonlyArray<AnyStepFeature>,
+> = ZodType extends TResult
+  ? [TFeatures[number]] extends [never]
+    ? ConversationResult
+    : EffectiveResult<TResult["_output"], TFeatures>
+  : EffectiveResult<TResult["_output"], TFeatures>;
 
 /**
  * Rejects the removed MCP authoring paths for JS callers the types don't
@@ -364,29 +214,25 @@ function assertStepMcpInput(config: {
 export function defineStep<
   TInput extends ZodType = ZodType,
   TResult extends ZodType = ZodType,
-  // The loose `sourcePath: string` constraint is what lets TypeScript infer and
-  // preserve string literal types for `key` and `sourcePath`; narrowing it here
-  // would widen them back to `string` and lose the signal-key typing that
-  // `definePipeline` depends on. Validity against the result schema is enforced
-  // instead by the intersection on `config.signals` below, which re-applies
-  // `SignalSpecInput` — the constraint `Omit` strips off `DefineStepInput`.
-  const TSignals extends ReadonlyArray<{ sourcePath: string; key?: string }> =
-    never[],
   const TFeatures extends ReadonlyArray<AnyStepFeature> = never[],
   TEnv extends EnvRecord = EnvRecord,
+  const TErrors extends string = never,
 >(
   config: Omit<
     DefineStepInput<TInput, TResult, TEnv>,
-    "signals" | "features"
+    "features" | "errors" | "retry"
   > & {
-    signals?: TSignals & readonly SignalSpecInput<TResult["_output"]>[];
     features?: TFeatures;
+    errors?: readonly TErrors[];
+    retry?: readonly {
+      on: readonly (BuiltInError | TErrors)[];
+      maxAttempts: number;
+    }[];
   },
-): TypedStepDefinitionSpec<
+): StepHandle<
   TInput["_output"],
-  EffectiveResult<TResult["_output"], TFeatures>,
-  SignalKeysOf<TSignals> | FeatureSignalKeys<TFeatures>,
-  SignalTypeMapOf<TSignals, TResult["_output"]>
+  DefineStepResult<TResult, TFeatures>,
+  TErrors
 > {
   const features = (config.features ?? []) as AnyStepFeature[];
 
@@ -419,9 +265,6 @@ export function defineStep<
         : feature._promptAddition;
     }
   }
-
-  // Collect user-defined signals, then append feature signals.
-  const featureSignals = features.flatMap((f) => f._signals);
 
   const {
     executionMode,
@@ -456,42 +299,16 @@ export function defineStep<
       ? toJSONSchema(config.additionalInput as unknown as $ZodType)
       : null,
     resultSchemaJson,
-    signalExtractorDefinitions: [
-      ...(
-        (config.signals ?? []) as Array<{
-          key?: string;
-          sourcePath: string;
-          type?: SignalTypeStr;
-          required?: boolean;
-          availableWhenResultStatusIn?: string[] | null;
-        }>
-      ).map((s) => ({
-        key: s.key ?? s.sourcePath,
-        sourcePath: s.sourcePath,
-        type:
-          s.type ??
-          inferSignalType(effectiveResult, resultSchemaJson, s.sourcePath) ??
-          "string",
-        required: s.required ?? true,
-        availableWhenResultStatusIn: s.availableWhenResultStatusIn ?? null,
-      })),
-      ...featureSignals.map((s) => ({
-        key: s.key,
-        sourcePath: s.sourcePath,
-        type: s.type,
-        required: s.required ?? true,
-        availableWhenResultStatusIn: s.availableWhenResultStatusIn ?? null,
-      })),
-    ],
     opencodeMcpJson: mcpFields.opencodeMcpJson,
     healthChecksJson: mcpFields.healthChecksJson,
     envJson: mcpFields.envJson,
     ...(repo !== undefined ? { repo } : {}),
+    errors: compileStepErrors(config.key, config.errors),
+    retryJson: compileStepRetry(config.key, config.retry, config.errors ?? []),
   };
-  return attachSignalHandles(spec) as TypedStepDefinitionSpec<
+  return toStepHandle(spec) as StepHandle<
     TInput["_output"],
-    EffectiveResult<TResult["_output"], TFeatures>,
-    SignalKeysOf<TSignals> | FeatureSignalKeys<TFeatures>,
-    SignalTypeMapOf<TSignals, TResult["_output"]>
+    DefineStepResult<TResult, TFeatures>,
+    TErrors
   >;
 }

@@ -2,7 +2,7 @@ import {
   ensureHostOpencodePayload,
   resolveHostOpencodeBinary,
   type OpencodePayloadProvisionProgress,
-} from "@boboddy/worker";
+} from "@scarn/worker";
 import type { BaseReporter, WorkActivity } from "./reporter-types";
 import { CliError } from "./cli-error";
 
@@ -19,7 +19,7 @@ import { CliError } from "./cli-error";
 const BYTES_PER_MIB = 1024 * 1024;
 
 /** Env var that pins the runtime version, surfaced in the failure message. */
-const RUNTIME_VERSION_ENV = "BOBODDY_OPENCODE_RUNTIME_VERSION";
+const RUNTIME_VERSION_ENV = "SCARN_OPENCODE_RUNTIME_VERSION";
 
 function formatMib(bytes: number): string {
   return (bytes / BYTES_PER_MIB).toFixed(0);

@@ -46,7 +46,7 @@ const template = new GitFixtureTemplate("git-mirror-cache", async (dir) => {
 
   const seed = path.join(dir, "seed");
   await git(dir, ["clone", remote, seed]);
-  await git(seed, ["config", "user.email", "seed@boboddy.dev"]);
+  await git(seed, ["config", "user.email", "seed@scarn.io"]);
   await git(seed, ["config", "user.name", "Seed"]);
   await writeRepoFile(seed, "README.md", "hello\n");
   await git(seed, ["add", "-A"]);

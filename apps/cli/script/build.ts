@@ -80,7 +80,7 @@ async function main(): Promise<void> {
   await rm(distDirectory, { recursive: true, force: true });
   await mkdir(distDirectory, { recursive: true });
 
-  // Build @boboddy/pipeline-studio-ui's static assets (dist/index.html,
+  // Build @scarn/pipeline-studio-ui's static assets (dist/index.html,
   // dist/main.js, dist/main.css) so buildTarget() can embed them into every
   // compiled binary via `--asset=`. Compiled binaries have no node_modules,
   // so `pipelines studio` can't resolve these assets on disk at runtime the
@@ -90,7 +90,7 @@ async function main(): Promise<void> {
     "../../packages/pipeline-studio-ui",
   );
   process.stdout.write(
-    "Building @boboddy/pipeline-studio-ui static assets...\n",
+    "Building @scarn/pipeline-studio-ui static assets...\n",
   );
   const uiBuild = Bun.spawn(["bun", "run", "build.ts"], {
     cwd: pipelineStudioUiDir,
@@ -99,7 +99,7 @@ async function main(): Promise<void> {
   });
   if ((await uiBuild.exited) !== 0) {
     throw new Error(
-      "Failed to build @boboddy/pipeline-studio-ui static assets.",
+      "Failed to build @scarn/pipeline-studio-ui static assets.",
     );
   }
 
@@ -124,7 +124,7 @@ async function main(): Promise<void> {
   //       extensionPath    = dist/devcontainer/        (join(__dirname,"..",".."))
   //   dist/devcontainer/scripts/updateUID.Dockerfile         ← resolved asset
   //
-  // BOBODDY_DEVCONTAINER_SCRIPT (set by publish.ts and the dev shim) points at
+  // SCARN_DEVCONTAINER_SCRIPT (set by publish.ts and the dev shim) points at
   // the nested dist/devcontainer/dist/spec-node/devcontainers-cli.js path.
   const devcontainerSrc = require.resolve(
     "@devcontainers/cli/dist/spec-node/devContainersSpecCLI.js",
@@ -157,7 +157,7 @@ async function main(): Promise<void> {
   }
 
   if (isDev) {
-    const artifactPath = process.env["BOBODDY_SDK_ARTIFACT_PATH"] ?? "";
+    const artifactPath = process.env["SCARN_SDK_ARTIFACT_PATH"] ?? "";
     await writeFile(resolve(distDirectory, ".dev"), artifactPath, "utf8");
   }
 }

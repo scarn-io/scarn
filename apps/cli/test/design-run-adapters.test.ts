@@ -1,10 +1,9 @@
-import { describe, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import {
   assignedPipelineSchema,
   stepRuntimeTargetSchema,
   stepNeedsProjectDevcontainer,
 } from "../src/lib/design-run-adapters";
-import { concurrentTest as test } from "./utils";
 
 /**
  * `assignedPipelineSchema` is the only thing pinning how the run offer finds the

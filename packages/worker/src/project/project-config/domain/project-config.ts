@@ -1,10 +1,10 @@
-import { formatProjectRef } from "@boboddy/sdk/defaults";
+import { formatProjectRef } from "@scarn/sdk/defaults";
 import { ConfigurationError, SetupErrorCodes } from "../../../lib/errors";
 
-export type { ProjectConfig } from "@boboddy/sdk/defaults";
+export type { ProjectConfig } from "@scarn/sdk/defaults";
 
 /**
- * The `owner/slug` ref `.boboddy/boboddy.jsonc` stores for a project. Throws
+ * The `owner/slug` ref `.scarn/scarn.jsonc` stores for a project. Throws
  * when the owner has no username yet: there is no ref to write until they
  * finish username onboarding.
  */
@@ -15,8 +15,8 @@ export function projectConfigRef(project: {
 }): string {
   if (!project.ownerUsername) {
     throw new ConfigurationError(
-      `Project "${project.name}" has no owner username yet, so it can't be written to .boboddy/boboddy.jsonc. ` +
-        "Finish choosing a username in the Boboddy web app, then run `boboddy init` again.",
+      `Project "${project.name}" has no owner username yet, so it can't be written to .scarn/scarn.jsonc. ` +
+        "Finish choosing a username in the Scarn web app, then run `scarn init` again.",
       SetupErrorCodes.NoOwnerUsername,
     );
   }

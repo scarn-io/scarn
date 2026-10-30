@@ -144,7 +144,7 @@ export type ExpectedCoreError =
   | CoreValidationError;
 
 /**
- * Stable codes for the setup failures `boboddy init` / `pipelines design`
+ * Stable codes for the setup failures `scarn init` / `pipelines design`
  * report as `cli_command_failed`. Thrown errors carry one as their `code`, so
  * the CLI classifies them by code rather than by matching message text.
  */

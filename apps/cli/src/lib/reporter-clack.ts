@@ -55,7 +55,7 @@ const TASK_REASON_MAX_LENGTH = 500;
  * through pino. The two are deliberately separate sinks.
  */
 export class ClackReporter implements WorkReporter {
-  /** Live spinner state, keyed by taskId. At most one is active. */
+  /** Live spinner state, keyed by taskRunId. At most one is active. */
   private readonly activeTasks = new Map<string, ActiveTask>();
 
   /**
@@ -98,9 +98,15 @@ export class ClackReporter implements WorkReporter {
     const task = clack.spinner({ indicator: "timer" });
     task.start(message);
     return {
-      update: (next) => { task.message(next); },
-      succeed: (next) => { task.stop(next ? pc.green(next) : undefined); },
-      fail: (next) => { task.error(next ? pc.red(next) : undefined); },
+      update: (next) => {
+        task.message(next);
+      },
+      succeed: (next) => {
+        task.stop(next ? pc.green(next) : undefined);
+      },
+      fail: (next) => {
+        task.error(next ? pc.red(next) : undefined);
+      },
     };
   }
 
@@ -153,8 +159,8 @@ export class ClackReporter implements WorkReporter {
         // the new task can take over the live spinner slot.
         this.parkAllSpinners();
         const spin = clack.spinner({ indicator: "timer" });
-        spin.start(this.taskLabel(event.taskId, "starting"));
-        this.activeTasks.set(event.taskId, {
+        spin.start(this.taskLabel(event.taskRunId, "starting"));
+        this.activeTasks.set(event.taskRunId, {
           spinner: spin,
           startedAt: this.now(),
           phase: "starting",
@@ -163,18 +169,18 @@ export class ClackReporter implements WorkReporter {
       }
 
       case "task:runtime-launching":
-        this.updateSpinner(event.taskId, "launching runtime…");
+        this.updateSpinner(event.taskRunId, "launching runtime…");
         return;
       case "task:runtime-cloning":
-        this.updateSpinner(event.taskId, "cloning repository…");
+        this.updateSpinner(event.taskRunId, "cloning repository…");
         return;
       case "task:runtime-container-starting":
         // Enter taskLog mode: a fixed title line with rolling sub-logs beneath.
-        this.beginDevcontainerLog(event.taskId);
+        this.beginDevcontainerLog(event.taskRunId);
         return;
       case "task:runtime-container-progress":
         this.appendDevcontainerLog(
-          event.taskId,
+          event.taskRunId,
           event.kind,
           event.phase,
           event.level ?? "info",
@@ -182,33 +188,47 @@ export class ClackReporter implements WorkReporter {
         return;
       case "task:runtime-ai-starting":
         // Devcontainer is up; close its log region and resume the spinner.
-        this.endDevcontainerLog(event.taskId, true);
-        this.updateSpinner(event.taskId, "starting AI container…");
+        this.endDevcontainerLog(event.taskRunId, true);
+        this.updateSpinner(event.taskRunId, "starting AI container…");
         return;
       case "task:runtime-ready":
-        this.endDevcontainerLog(event.taskId, true);
-        this.updateSpinner(event.taskId, "runtime ready");
+        this.endDevcontainerLog(event.taskRunId, true);
+        this.updateSpinner(event.taskRunId, "runtime ready");
         return;
       case "task:health-checks-running":
-        this.updateSpinner(event.taskId, "running health checks…");
+        this.updateSpinner(event.taskRunId, "running health checks…");
         return;
       case "task:agent-running":
-        this.updateSpinner(event.taskId, "agent running");
+        this.updateSpinner(event.taskRunId, "agent running");
         return;
 
       case "task:succeeded": {
         // If the devcontainer log region is still open, close it cleanly first.
-        this.endDevcontainerLog(event.taskId, true);
-        const task = this.activeTasks.get(event.taskId);
+        this.endDevcontainerLog(event.taskRunId, true);
+        const task = this.activeTasks.get(event.taskRunId);
         if (task) {
           const duration = formatElapsed(this.now() - task.startedAt);
           task.spinner.stop(
-            pc.green(`Task ${pc.dim(shortId(event.taskId))} succeeded`) +
+            pc.green(`Task ${pc.dim(shortId(event.taskRunId))} succeeded`) +
               pc.dim(` (${duration})`),
           );
-          this.activeTasks.delete(event.taskId);
+          this.activeTasks.delete(event.taskRunId);
         } else {
-          this.success(`Task ${pc.dim(shortId(event.taskId))} succeeded`);
+          this.success(`Task ${pc.dim(shortId(event.taskRunId))} succeeded`);
+        }
+        return;
+      }
+
+      case "task:yielded": {
+        this.endDevcontainerLog(event.taskRunId, true);
+        const label = `Task ${pc.dim(shortId(event.taskRunId))} is waiting for a reply`;
+        const task = this.activeTasks.get(event.taskRunId);
+        if (task) {
+          const duration = formatElapsed(this.now() - task.startedAt);
+          task.spinner.stop(pc.cyan(label) + pc.dim(` (${duration})`));
+          this.activeTasks.delete(event.taskRunId);
+        } else {
+          this.info(label);
         }
         return;
       }
@@ -225,19 +245,19 @@ export class ClackReporter implements WorkReporter {
           : "";
         // Retain the devcontainer sub-logs on failure (showLog: true) so the
         // user can see the last lifecycle phase where it broke.
-        this.endDevcontainerLog(event.taskId, false);
-        const task = this.activeTasks.get(event.taskId);
+        this.endDevcontainerLog(event.taskRunId, false);
+        const task = this.activeTasks.get(event.taskRunId);
         if (task) {
           const duration = formatElapsed(this.now() - task.startedAt);
           task.spinner.error(
-            pc.red(`Task ${pc.dim(shortId(event.taskId))} failed`) +
+            pc.red(`Task ${pc.dim(shortId(event.taskRunId))} failed`) +
               pc.dim(` (${duration})`) +
               `\n  ${pc.yellow(reason)}${logHint}`,
           );
-          this.activeTasks.delete(event.taskId);
+          this.activeTasks.delete(event.taskRunId);
         } else {
           this.error(
-            `Task ${pc.dim(shortId(event.taskId))} failed` +
+            `Task ${pc.dim(shortId(event.taskRunId))} failed` +
               `\n  ${pc.yellow(reason)}${logHint}`,
           );
         }
@@ -257,19 +277,24 @@ export class ClackReporter implements WorkReporter {
    * When `startedAt` is provided the elapsed is appended so the parked line
    * captures the final duration at park time.
    */
-  private taskLabel(taskId: string, phase: string, startedAt?: number): string {
-    const elapsed = startedAt !== undefined
-      ? pc.dim(` · ${formatElapsed(this.now() - startedAt)}`)
-      : "";
-    return `task ${pc.cyan(shortId(taskId))} ${pc.dim(phase)}${elapsed}`;
+  private taskLabel(
+    taskRunId: string,
+    phase: string,
+    startedAt?: number,
+  ): string {
+    const elapsed =
+      startedAt !== undefined
+        ? pc.dim(` · ${formatElapsed(this.now() - startedAt)}`)
+        : "";
+    return `task ${pc.cyan(shortId(taskRunId))} ${pc.dim(phase)}${elapsed}`;
   }
 
   /** Update the live spinner message for a task. No-op if the task has no spinner. */
-  private updateSpinner(taskId: string, phase: string): void {
-    const task = this.activeTasks.get(taskId);
+  private updateSpinner(taskRunId: string, phase: string): void {
+    const task = this.activeTasks.get(taskRunId);
     if (!task) return;
     task.phase = phase;
-    task.spinner.message(this.taskLabel(taskId, phase));
+    task.spinner.message(this.taskLabel(taskRunId, phase));
   }
 
   /**
@@ -278,14 +303,14 @@ export class ClackReporter implements WorkReporter {
    * of streamed devcontainer log lines. No-op if the task is unknown or already
    * in this mode.
    */
-  private beginDevcontainerLog(taskId: string): void {
-    const task = this.activeTasks.get(taskId);
+  private beginDevcontainerLog(taskRunId: string): void {
+    const task = this.activeTasks.get(taskRunId);
     if (!task || task.taskLog) return;
     task.phase = "starting devcontainer…";
     // Hand the live region from the spinner to the taskLog.
-    task.spinner.stop(this.taskLabel(taskId, task.phase));
+    task.spinner.stop(this.taskLabel(taskRunId, task.phase));
     task.taskLog = clack.taskLog({
-      title: this.taskLabel(taskId, task.phase),
+      title: this.taskLabel(taskRunId, task.phase),
       limit: DEVCONTAINER_LOG_WINDOW,
       retainLog: false,
     });
@@ -297,12 +322,12 @@ export class ClackReporter implements WorkReporter {
    * No-op if the task has no open taskLog.
    */
   private appendDevcontainerLog(
-    taskId: string,
+    taskRunId: string,
     kind: "milestone" | "detail",
     phase: string,
     level: "info" | "warn" | "error",
   ): void {
-    const task = this.activeTasks.get(taskId);
+    const task = this.activeTasks.get(taskRunId);
     if (!task?.taskLog) return;
     if (kind === "milestone") {
       task.phase = phase;
@@ -321,7 +346,8 @@ export class ClackReporter implements WorkReporter {
     } else if (level === "warn") {
       line = pc.yellow(displayPhase);
     } else {
-      line = kind === "milestone" ? pc.cyan(displayPhase) : pc.dim(displayPhase);
+      line =
+        kind === "milestone" ? pc.cyan(displayPhase) : pc.dim(displayPhase);
     }
     task.taskLog.message(line);
   }
@@ -332,10 +358,10 @@ export class ClackReporter implements WorkReporter {
    * is cleared; on failure (`success=false`) it is retained for debugging.
    * No-op if the task has no open taskLog.
    */
-  private endDevcontainerLog(taskId: string, success: boolean): void {
-    const task = this.activeTasks.get(taskId);
+  private endDevcontainerLog(taskRunId: string, success: boolean): void {
+    const task = this.activeTasks.get(taskRunId);
     if (!task?.taskLog) return;
-    const title = this.taskLabel(taskId, task.phase, task.startedAt);
+    const title = this.taskLabel(taskRunId, task.phase, task.startedAt);
     if (success) {
       task.taskLog.success(title, { showLog: false });
     } else {
@@ -344,7 +370,7 @@ export class ClackReporter implements WorkReporter {
     task.taskLog = undefined;
     // Resume a live spinner for the post-devcontainer phases.
     const spin = clack.spinner({ indicator: "timer" });
-    spin.start(this.taskLabel(taskId, task.phase));
+    spin.start(this.taskLabel(taskRunId, task.phase));
     task.spinner = spin;
   }
 

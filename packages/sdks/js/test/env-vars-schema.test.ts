@@ -117,7 +117,7 @@ describe("envVarsSchema", () => {
 
   test.concurrent("rejects reserved names", () => {
     for (const name of [
-      "BOBODDY_API_TOKEN",
+      "SCARN_API_TOKEN",
       "HOME",
       "XDG_CONFIG_HOME",
       "XDG_DATA_HOME",
@@ -129,22 +129,22 @@ describe("envVarsSchema", () => {
   });
 
   test.concurrent(
-    "rejects an inherit that reads a BOBODDY_* worker variable",
+    "rejects an inherit that reads a SCARN_* worker variable",
     () => {
       for (const from of [
-        "BOBODDY_API_TOKEN",
-        "BOBODDY_",
-        "boboddy_api_token",
+        "SCARN_API_TOKEN",
+        "SCARN_",
+        "scarn_api_token",
       ]) {
         const result = parseOne({ ...inheritEntry, from });
         expect(result.success).toBe(false);
-        expect(String(result.error)).toContain("BOBODDY_");
+        expect(String(result.error)).toContain("SCARN_");
       }
     },
   );
 
   test.concurrent(
-    "accepts an inherit that renames a non-BOBODDY source",
+    "accepts an inherit that renames a non-SCARN source",
     () => {
       expect(
         parseOne({ ...inheritEntry, name: "DB_PASSWORD", from: "STAGING_DB" })

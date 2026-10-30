@@ -1,4 +1,4 @@
-import { describe, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import {
   PROVIDER_MISSING_LABEL,
   PROVIDER_NOTICE_MESSAGE,
@@ -7,14 +7,13 @@ import {
   reportProviderStatus,
 } from "../src/lib/init-provider-notice";
 import {
-  concurrentTest as test,
   createReporterRecorder as createRecorder,
   reportedMessages as messages,
   reportedMethods as methods,
 } from "./utils";
 
 /**
- * The AI-provider step of `boboddy init`: a notice, never a gate. Connecting a
+ * The AI-provider step of `scarn init`: a notice, never a gate. Connecting a
  * provider is the designer preflight's job, so a missing one must resolve the
  * step and let `init` carry on.
  */

@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import type { RemoteArtifactUploader } from "../../../work/task/contracts/process-project-work-types";
+import type { RemoteArtifactUploader } from "../../../work/task-run/contracts/process-project-work-types";
 import { detectArtifactContentType } from "../domain/artifact-content-type";
 import type {
   ArtifactStore,
@@ -28,7 +28,7 @@ export class RemoteArtifactStore implements ArtifactStore {
   async saveArtifact(input: SaveArtifactInput): Promise<SaveArtifactResult> {
     if (!input.claimToken) {
       throw new Error(
-        `RemoteArtifactStore requires a claimToken to upload artifact '${input.relativeStorePath}' for task ${input.taskId}.`,
+        `RemoteArtifactStore requires a claimToken to upload artifact '${input.relativeStorePath}' for task ${input.taskRunId}.`,
       );
     }
     const claimToken = input.claimToken;
@@ -39,7 +39,7 @@ export class RemoteArtifactStore implements ArtifactStore {
 
     const { uploadUrl, storeRef, objectKey } =
       await this.uploader.createArtifactUploadUrl({
-        taskId: input.taskId,
+        taskRunId: input.taskRunId,
         claimToken,
         relativeStorePath: input.relativeStorePath,
         contentType,
@@ -60,7 +60,7 @@ export class RemoteArtifactStore implements ArtifactStore {
     }
 
     await this.uploader.recordArtifact({
-      taskId: input.taskId,
+      taskRunId: input.taskRunId,
       claimToken,
       objectKey,
       relativeStorePath: input.relativeStorePath,

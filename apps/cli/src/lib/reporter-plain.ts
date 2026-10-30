@@ -26,9 +26,15 @@ export class PlainReporter implements WorkReporter {
   startActivity(message: string): WorkActivity {
     this.line(`… ${message}`);
     return {
-      update: (next) => { this.line(`… ${next}`); },
-      succeed: (next) => { this.line(`✓ ${next ?? message}`); },
-      fail: (next) => { this.line(`✗ ${next ?? message}`); },
+      update: (next) => {
+        this.line(`… ${next}`);
+      },
+      succeed: (next) => {
+        this.line(`✓ ${next ?? message}`);
+      },
+      fail: (next) => {
+        this.line(`✗ ${next ?? message}`);
+      },
     };
   }
 
@@ -67,13 +73,16 @@ export class PlainReporter implements WorkReporter {
         );
         return;
       case "task:starting":
-        this.info(`task ${event.taskId} started`);
+        this.info(`task ${event.taskRunId} started`);
         return;
       case "task:succeeded":
-        this.success(`task ${event.taskId} succeeded`);
+        this.success(`task ${event.taskRunId} succeeded`);
+        return;
+      case "task:yielded":
+        this.info(`task ${event.taskRunId} is waiting for a reply`);
         return;
       case "task:failed":
-        this.error(`task ${event.taskId} failed: ${event.reason}`);
+        this.error(`task ${event.taskRunId} failed: ${event.reason}`);
         if (this.logFilePath) {
           this.line(`· full logs: ${this.logFilePath}`);
         }

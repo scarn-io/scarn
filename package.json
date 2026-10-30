@@ -1,5 +1,5 @@
 {
-  "name": "boboddy",
+  "name": "scarn",
   "private": true,
   "workspaces": [
     "apps/*",
@@ -8,12 +8,12 @@
   ],
   "packageManager": "bun@1.4.0",
   "catalog": {
-    "@boboddy/sdk": "workspace:*",
+    "@scarn/sdk": "workspace:*",
     "@devcontainers/cli": "0.86.0"
   },
   "overrides": {
-    "@opencode/client": "2.0.28",
-    "@opencode/plugin": "2.0.28"
+    "@opencode/client": "2.1.4",
+    "@opencode/plugin": "2.1.4"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -24,14 +24,14 @@
     "typescript-eslint": "^8.59.4"
   },
   "scripts": {
-    "clientGen:ts": "bun run --filter @boboddy/sdk generate",
+    "clientGen:ts": "bun run --filter @scarn/sdk generate",
     "build": "bun run --filter '*' build",
-    "typecheck": "bun run --filter '@boboddy/containers' --filter '@boboddy/opencode-plugin' declarations && bun run --filter '*' typecheck",
+    "typecheck": "bun run --filter '@scarn/containers' --filter '@scarn/opencode-plugin' declarations && bun run --filter '*' typecheck",
     "lint": "eslint .",
     "test": "bun run --filter '*' test",
     "validate": "bash scripts/validate.sh",
     "release": "bash scripts/release.sh",
-    "cli:link": "bun run --filter @boboddy/cli build && bun run --filter @boboddy/cli link",
+    "cli:link": "bun run --filter @scarn/cli build && bun run --filter @scarn/cli link",
     "cli:link:dev": "bash scripts/cli-link-dev.sh",
     "cli:unlink": "cd apps/cli && npm unlink"
   }

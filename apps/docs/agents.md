@@ -1,6 +1,6 @@
 # Agent Instructions: Keeping Docs Up to Date
 
-This file tells AI agents (Claude Code, Codex, etc.) when and how to update the Boboddy documentation site in this app, `apps/docs` (package `boboddy-docs`). All paths below are relative to this app's root (`apps/docs/`) unless stated otherwise.
+This file tells AI agents (Claude Code, Codex, etc.) when and how to update the Scarn documentation site in this app, `apps/docs` (package `scarn-docs`). All paths below are relative to this app's root (`apps/docs/`) unless stated otherwise.
 
 ## When to update docs
 
@@ -10,19 +10,18 @@ Update the documentation whenever you make changes in these areas:
 | ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | New CLI command or flag                                                      | `src/content/docs/reference/cli.md`                                                                                                                                     |
 | Changed CLI command name, flag, or default                                   | `src/content/docs/reference/cli.md`                                                                                                                                     |
-| New `defineStep`/`codeStep` option or `definePipeline` state kind            | `src/content/docs/reference/sdk.mdx` + relevant guide                                                                                                                   |
+| New `defineStep`/`codeStep` option or `definePipeline` node kind             | `src/content/docs/reference/sdk.mdx` + relevant guide                                                                                                                   |
 | New SDK export or helper                                                     | `src/content/docs/reference/sdk.mdx`                                                                                                                                    |
 | New auth flow or credential storage behavior                                 | `src/content/docs/getting-started/installation.md`                                                                                                                      |
-| Product pitch, the loop, or who Boboddy is for                               | `src/content/docs/index.mdx`                                                                                                                                            |
-| New or renamed core term (project, step, signal, runtime, …)                 | `src/content/docs/getting-started/concepts.md`                                                                                                                          |
+| Product pitch, the loop, or who Scarn is for                               | `src/content/docs/index.mdx`                                                                                                                                            |
+| New or renamed core term (project, step, transition, runtime, …)             | `src/content/docs/getting-started/concepts.md`                                                                                                                          |
 | A new task a user does after the Quickstart                                  | A page in `src/content/docs/how-to/` (≤ 500 words, links to `guides/` for depth)                                                                                        |
-| New telemetry event, opt-out mechanism, or `boboddy telemetry` flag          | `src/content/docs/reference/observability.md`                                                                                                                           |
-| Changes to project init flow                                                 | `src/content/docs/reference/cli.md#boboddy-init` first, then `src/content/docs/getting-started/quickstart.mdx` — the Quickstart shows only what the user types and sees |
-| New step concepts (signals, computed signals, MCP)                           | `src/content/docs/guides/steps.md`                                                                                                                                      |
-| New `definePipeline()` concepts (state kinds, bindings, pipeline input)      | `src/content/docs/guides/pipelines.md`                                                                                                                                  |
-| New `Rule`/`Computed` DSL or fan-out cohort-advancement concepts             | `src/content/docs/guides/pipeline-advancement.md`                                                                                                                       |
+| New telemetry event, opt-out mechanism, or `scarn telemetry` flag          | `src/content/docs/reference/observability.md`                                                                                                                           |
+| Changes to project init flow                                                 | `src/content/docs/reference/cli.md#scarn-init` first, then `src/content/docs/getting-started/quickstart.mdx` — the Quickstart shows only what the user types and sees |
+| New step concepts (declared errors, artifacts, MCP)                          | `src/content/docs/guides/steps.md`                                                                                                                                      |
+| New `definePipeline()` concepts (node kinds, conditions, lanes, JSON format) | `src/content/docs/guides/pipelines.mdx`                                                                                                                                 |
 | New default-pipeline-assignment concepts                                     | `src/content/docs/guides/pipeline-assignment.md`                                                                                                                        |
-| New worker flags                                                             | `src/content/docs/reference/cli.md#boboddy-work-project`                                                                                                                |
+| New worker flags                                                             | `src/content/docs/reference/cli.md#scarn-work-project`                                                                                                                |
 | New worker execution behavior                                                | `src/content/docs/guides/workers.md`                                                                                                                                    |
 | New dev container guidance                                                   | `src/content/docs/how-to/devcontainer.md`                                                                                                                               |
 | New GitHub/Bitbucket/Jira integration or sync behavior                       | `src/content/docs/how-to/integrations.md`                                                                                                                               |
@@ -34,19 +33,19 @@ Update the documentation whenever you make changes in these areas:
 
 Each fact below has one canonical page. Mention it elsewhere in one sentence and link; never copy the table.
 
-| Fact                                                                                                                                                                                                                                 | Canonical home                                                                        |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------- |
-| Provider table (which OpenCode menu entry for which AI tool)                                                                                                                                                                         | `getting-started/quickstart.mdx` step 4 (`#connect-your-ai-tool`)                     |
-| OpenCode is downloaded and pinned by the CLI, ~100 MB, not installed by you                                                                                                                                                          | `getting-started/installation.md#requirements`                                        |
-| Environment requirements (Docker, provider, login)                                                                                                                                                                                   | `getting-started/installation.md#requirements`                                        |
-| Devcontainer: the designer writes `.devcontainer/devcontainer.json` when missing (it doesn't build it); `Runtime.devcontainer()` for steps that need the code, `Runtime.host()` for steps that don't, so a first run can need Docker | `getting-started/concepts.md#runtime`                                                 |
-| `.env` / `.env.example` secrets                                                                                                                                                                                                      | `guides/steps.md#secrets`                                                             |
-| `.opencode/` tools auto-load                                                                                                                                                                                                         | `guides/steps.md#tools-already-available-to-every-step`                               |
-| Worker flags                                                                                                                                                                                                                         | `reference/cli.md#boboddy-work-project`                                               |
-| `pull → install → typecheck → push` loop                                                                                                                                                                                             | `reference/cli.md#boboddy-pipelines-pull-project` / `#boboddy-pipelines-push-project` |
-| `choice` and `routeToPipeline`                                                                                                                                                                                                       | `guides/pipeline-advancement.md`                                                      |
-| "Use `design` unless you want to write it yourself"                                                                                                                                                                                  | `reference/cli.md#boboddy-pipelines-init`                                             |
-| `CliError` failure codes and their meanings                                                                                                                                                                                          | `reference/cli.md#failure-codes` (`reference/observability.md` links to it)           |
+| Fact                                                                                                                                                                                                                                 | Canonical home                                                              |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------- |
+| Provider table (which OpenCode menu entry for which AI tool)                                                                                                                                                                         | `getting-started/quickstart.mdx` step 4 (`#connect-your-ai-tool`)           |
+| OpenCode is downloaded and pinned by the CLI, ~100 MB, not installed by you                                                                                                                                                          | `getting-started/installation.md#requirements`                              |
+| Environment requirements (Docker, provider, login)                                                                                                                                                                                   | `getting-started/installation.md#requirements`                              |
+| Devcontainer: the designer writes `.devcontainer/devcontainer.json` when missing (it doesn't build it); `Runtime.devcontainer()` for steps that need the code, `Runtime.host()` for steps that don't, so a first run can need Docker | `getting-started/concepts.md#runtime`                                       |
+| `.env` / `.env.example` secrets                                                                                                                                                                                                      | `guides/steps.md#secrets`                                                   |
+| `.opencode/` tools auto-load                                                                                                                                                                                                         | `guides/steps.md#tools-already-available-to-every-step`                     |
+| Worker flags                                                                                                                                                                                                                         | `reference/cli.md#scarn-work-project`                                     |
+| `typecheck → push → build → publish` loop                                                                                                                                                                                            | `guides/pipelines.mdx#writing-and-publishing`                               |
+| Conditions and branching (`.next({ routes, otherwise })`)                                                                                                                                                                            | `guides/pipelines.mdx#transitions`                                          |
+| "Use `design` unless you want to write it yourself"                                                                                                                                                                                  | `reference/cli.md#scarn-pipelines-init`                                   |
+| `CliError` failure codes and their meanings                                                                                                                                                                                          | `reference/cli.md#failure-codes` (`reference/observability.md` links to it) |
 
 To check a fact has one home, search the published pages only — `rg <pattern> apps/docs/src/content/docs`. Transcripts under `src/content/transcripts/` legitimately repeat CLI output.
 
@@ -55,7 +54,7 @@ To check a fact has one home, search the published pages only — `rg <pattern> 
 - The Quickstart (`getting-started/quickstart.mdx`) is a tutorial: command → what you see → the one decision → link. Budget: ≤ 900 prose words, enforced by `bun run test` (`bun scripts/prose-words.ts <file> --max 900`). Internals belong in `reference/cli.md`.
 - A new term used on a getting-started page must be defined on `concepts.md` or linked on first use.
 - Quickstart transcripts (`src/content/transcripts/*.txt`) are captured, not written. Never paraphrase a reporter string; if one is wrong, fix the CLI. Each file's leading `#` lines record the CLI version and source, and `Transcript.astro` strips them when rendering.
-- Today `01`–`05` are derived from the reporter strings in the `apps/cli/src` files named in their headers (not live captures); `06` replays a recorded `boboddy work` run. When you change a string in one of those files, update the transcript from the source in the same change and bump its version header. Replace a derived transcript with a live capture (e2e harness, `packages/e2e-tests/tests/setup-helpers.ts`) whenever you can.
+- Today `01`–`05` are derived from the reporter strings in the `apps/cli/src` files named in their headers (not live captures); `06` replays a recorded `scarn work` run. When you change a string in one of those files, update the transcript from the source in the same change and bump its version header. Replace a derived transcript with a live capture (e2e harness, `packages/e2e-tests/tests/setup-helpers.ts`) whenever you can.
 
 ## How to update docs
 
@@ -64,7 +63,7 @@ To check a fact has one home, search the published pages only — `rg <pattern> 
 3. **Update tables, not prose blobs** — CLI flags and SDK options are in Markdown tables; add/remove rows rather than rewriting paragraphs.
 4. **Keep examples minimal** — show the minimum code needed to illustrate the concept; avoid large copy-pasteable boilerplate blocks.
 5. **Add new pages to the sidebar** — if you create a new page, add it to the relevant `items` array in `astro.config.mjs`.
-6. **Run the checks** — `bun run --filter boboddy-docs test` parses every `boboddy …` line in a `bash`/`sh`/`shell`/`zsh`/`console` block with the real CLI parser (`scripts/check-commands.ts`) and enforces the Quickstart word budget. `bun run --filter boboddy-docs build` fails on a broken internal link or `#anchor` (`starlight-links-validator`). Link with absolute `/boboddy/...` paths; moving or renaming a heading changes its anchor, so the build tells you what to fix.
+6. **Run the checks** — `bun run --filter scarn-docs test` parses every `scarn …` line in a `bash`/`sh`/`shell`/`zsh`/`console` block with the real CLI parser (`scripts/check-commands.ts`) and enforces the Quickstart word budget. `bun run --filter scarn-docs build` fails on a broken internal link or `#anchor` (`starlight-links-validator`). Link with absolute `/scarn/...` paths; moving or renaming a heading changes its anchor, so the build tells you what to fix.
 
 ## File map
 
@@ -72,7 +71,7 @@ To check a fact has one home, search the published pages only — `rg <pattern> 
 apps/docs/
 ├── astro.config.mjs                        ← sidebar structure, site metadata, redirects, plugins (links validator, llms.txt)
 ├── scripts/
-│   ├── check-commands.ts                   ← `test`: every docs `boboddy …` command must parse with the CLI's yargs tree
+│   ├── check-commands.ts                   ← `test`: every docs `scarn …` command must parse with the CLI's yargs tree
 │   └── prose-words.ts                      ← `test`: Quickstart prose word count, `--max 900`
 ├── src/
 │   ├── content.config.ts                   ← Astro content collection config (rarely edited)
@@ -83,7 +82,7 @@ apps/docs/
 │   │   └── Transcript.astro                ← renders a `src/content/transcripts/` file as a terminal block
 │   └── content/
 │       ├── docs/
-│       │   ├── index.mdx                   ← Introduction, served at the site root /boboddy/
+│       │   ├── index.mdx                   ← Introduction, served at the site root /scarn/
 │       │   ├── getting-started/
 │       │   │   ├── concepts.md             ← Core concepts: one definition per term
 │       │   │   ├── installation.md         ← install the CLI, requirements
@@ -92,21 +91,20 @@ apps/docs/
 │       │   │   ├── change-a-pipeline.md    ← re-run the designer: tweak / route / new pipeline
 │       │   │   ├── let-a-step-read-your-repo.md ← host → devcontainer runtime
 │       │   │   ├── connect-a-tool-to-a-step.md  ← MCP servers and their secrets via the designer
-│       │   │   ├── run-on-a-work-item.md   ← queue a run, then `boboddy work`
+│       │   │   ├── run-on-a-work-item.md   ← queue a run, then `scarn work`
 │       │   │   ├── commit-your-pipeline.mdx ← what to commit, what's ignored, teammates
 │       │   │   ├── devcontainer.md         ← writing a .devcontainer/devcontainer.json by hand
 │       │   │   ├── create-a-project.md     ← URL-first project creation, issue tracker choice, saving tokens
 │       │   │   └── integrations.md         ← connecting GitHub (App/token), Bitbucket, Jira, sync cadence, field mapping
 │       │   ├── guides/                     ← the "SDK" sidebar group
 │       │   │   ├── steps.md                ← defineStep()/codeStep() deep dive
-│       │   │   ├── pipelines.md            ← definePipeline() state graph deep dive
-│       │   │   ├── pipeline-advancement.md ← Rule/Computed DSL and fan-out cohort advancement
+│       │   │   ├── pipelines.mdx           ← definePipeline() node graph and its JSON format
 │       │   │   ├── pipeline-assignment.md  ← default-pipeline-assignment.ts routing
-│       │   │   └── workers.md              ← boboddy work and worker options
+│       │   │   └── workers.md              ← scarn work and worker options
 │       │   ├── reference/
 │       │   │   ├── cli.md                  ← complete CLI command reference
 │       │   │   ├── sdk.mdx                 ← TypeScript SDK types and helpers
-│       │   │   └── observability.md        ← what's collected, why, and the `boboddy telemetry` command
+│       │   │   └── observability.md        ← what's collected, why, and the `scarn telemetry` command
 │       │   └── catalog/
 │       │       ├── index.md                ← catalog landing page, links to every entry
 │       │       └── pipeline-graph.mdx      ← pipeline graph entry (React Flow view over static fixtures)
@@ -132,9 +130,9 @@ apps/docs/
 
 ## Adding a catalog entry
 
-The catalog (`src/content/docs/catalog/`) renders real Boboddy building blocks as interactive, embedded examples, driven by hand-authored fixtures rather than a live server. Use `catalog/pipeline-graph.mdx` (plus its fixtures under `src/content/catalog-fixtures/pipeline-graph/`) as the worked reference example — read it before adding a new entry.
+The catalog (`src/content/docs/catalog/`) renders real Scarn building blocks as interactive, embedded examples, driven by hand-authored fixtures rather than a live server. Use `catalog/pipeline-graph.mdx` (plus its fixtures under `src/content/catalog-fixtures/pipeline-graph/`) as the worked reference example — read it before adding a new entry.
 
-1. **Author fixtures** — add one or more fixture files under `src/content/catalog-fixtures/<entry-name>/`, written the way a real user would write that code (e.g. pipeline fixtures call `definePipeline()`/`defineStep()`, not the compiled `PipelineDefinitionSpec` wire-format object it produces — see `pipeline-graph/linear-chain.ts`). This directory is a sibling of `content/docs/`, not a Starlight content collection, so fixtures are plain `.ts` modules, not Markdown.
+1. **Author fixtures** — add one or more fixture files under `src/content/catalog-fixtures/<entry-name>/`, in the format the real code consumes (e.g. pipeline fixtures are pipeline JSON documents, the output of `scarn pipelines build` — see `pipeline-graph/linear-chain.json`). This directory is a sibling of `content/docs/`, not a Starlight content collection, so fixtures are plain data files, not Markdown.
 2. **Create the entry page** — `src/content/docs/catalog/<entry-name>.mdx`. It must be `.mdx`: fixtures are translated into render-ready data at build time via top-level `import`/`export const` statements, which the YAML frontmatter block (`title`/`description` only) can't hold.
 3. **Wrap each example in `CatalogExample`** — import `CatalogExample` from `../../../components/CatalogExample.astro` and, for each example, pass `title`/`description` props with the interactive island as its default-slot child. Never put a React component directly in the MDX: `starlight-llms-txt` renders every page for `llms-full.txt` without a React renderer, so the build fails. Wrap it in an `.astro` component that skips the island when `Astro.url.pathname` ends in `.txt` — `PipelineGraphIsland.astro` is the pattern. Optionally add a `<pre slot="source">{fixtureSource}</pre>` sourced via a Vite `?raw` import of the fixture file, to give readers a "view fixture source" disclosure.
 4. **List the entry** — add a link to `catalog/index.md`.
@@ -146,9 +144,9 @@ Run these from the monorepo root:
 
 ```bash
 bun install                            # first time only
-bun run docs                           # live preview at http://localhost:4321/boboddy/
-bun run --filter boboddy-docs build    # production build (outputs to apps/docs/dist/)
-bun run --filter boboddy-docs test     # command check + Quickstart word budget
+bun run docs                           # live preview at http://localhost:4321/scarn/
+bun run --filter scarn-docs build    # production build (outputs to apps/docs/dist/)
+bun run --filter scarn-docs test     # command check + Quickstart word budget
 ```
 
 ## Analytics
@@ -157,4 +155,4 @@ bun run --filter boboddy-docs test     # command check + Quickstart word budget
 
 ## Deployment
 
-This app has no CI job of its own that deploys it, and no `deploy-docs` job exists anywhere in this repo. Instead, `apps/docs` is part of the "public surface" that `scripts/publish-public.ts` rsyncs into the public mirror repo (`boboddy-dev/boboddy`), invoked by the `sync-public-mirror` job in `.github/workflows/release.yml` (via `.github/workflows/_sync-public-mirror.yml`) on every monorepo release. That job pushes the release tag to the public repo; it's the **public repo's own** `release.yml` (not present in this monorepo) that actually builds and deploys the docs site to GitHub Pages. The sync from this repo is fire-and-forget — watch the `boboddy-dev/boboddy` repo's Actions tab for the real deploy outcome, and re-run `sync-public-mirror.yml` (workflow_dispatch) to retry a failed public release.
+This app has no CI job of its own that deploys it, and no `deploy-docs` job exists anywhere in this repo. Instead, `apps/docs` is part of the "public surface" that `scripts/publish-public.ts` rsyncs into the public mirror repo (`scarn-io/scarn`), invoked by the `sync-public-mirror` job in `.github/workflows/release.yml` (via `.github/workflows/_sync-public-mirror.yml`) on every monorepo release. That job pushes the release tag to the public repo; it's the **public repo's own** `release.yml` (not present in this monorepo) that actually builds and deploys the docs site to GitHub Pages. The sync from this repo is fire-and-forget — watch the `scarn-io/scarn` repo's Actions tab for the real deploy outcome, and re-run `sync-public-mirror.yml` (workflow_dispatch) to retry a failed public release.

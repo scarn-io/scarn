@@ -9,16 +9,17 @@ import starlightLlmsTxt from "starlight-llms-txt";
 // resolved against `base` automatically — they need the prefix spelled out.
 // Kept as a constant, not a second hardcoded literal, so a future `base`
 // change only needs one edit. Site structure: docs/plans/docs-onboarding-clarity.md.
-const base = "/boboddy";
+const base = "/scarn";
 
 export default defineConfig({
-  site: "https://boboddy-dev.github.io",
+  site: "https://scarn-io.github.io",
   base,
   redirects: {
     "/getting-started/": `${base}/`,
     "/reference/telemetry/": `${base}/reference/observability/`,
     "/guides/devcontainer/": `${base}/how-to/devcontainer/`,
     "/guides/integrations/": `${base}/how-to/integrations/`,
+    "/guides/pipeline-advancement/": `${base}/guides/pipelines/`,
   },
   vite: {
     plugins: [tailwindcss()],
@@ -26,23 +27,23 @@ export default defineConfig({
   integrations: [
     react(),
     starlight({
-      title: "Boboddy",
+      title: "Scarn",
       description: "Distributed AI workflows with type-safe pipelines",
       social: [
         {
           icon: "github",
           label: "GitHub",
-          href: "https://github.com/boboddy-dev/boboddy",
+          href: "https://github.com/scarn-io/scarn",
         },
       ],
       logo: {
         src: "./src/assets/brand-icon.svg",
-        alt: "boboddy",
+        alt: "scarn",
       },
       favicon: "/brand-icon.svg",
       editLink: {
         baseUrl:
-          "https://github.com/boboddy-dev/boboddy-platform/edit/main/apps/docs/",
+          "https://github.com/scarn-io/scarn-platform/edit/main/apps/docs/",
       },
       lastUpdated: true,
       /*
@@ -56,7 +57,7 @@ export default defineConfig({
         starlightLinksValidator(),
         starlightLlmsTxt({
           description:
-            "Boboddy runs AI agents over your backlog, on your machines. You describe a pipeline — a few steps, each one an agent with a prompt and a rule for what counts as done — and a worker on your laptop or CI box runs it against each work item that arrives, pausing for a human when the rules say so.",
+            "Scarn runs AI agents over your backlog, on your machines. You describe a pipeline — a few steps, each one an agent with a prompt and a rule for what counts as done — and a worker on your laptop or CI box runs it against each work item that arrives, pausing for a human when the rules say so.",
           promote: [
             "index",
             "getting-started/quickstart",
@@ -75,7 +76,7 @@ export default defineConfig({
        * product's palette lineage (see design-tokens' Primer-derived
        * surfaces). Everything else here is FRAME CHROME (title bars,
        * borders, backgrounds, the copy button), authored directly from
-       * `@boboddy/design-tokens` via `var(--color-*)` references — these
+       * `@scarn/design-tokens` via `var(--color-*)` references — these
        * resolve at render time against the tokens imported in global.css,
        * the same "derive from tokens, don't hand-roll a palette" approach
        * used for the `@theme` ramps above.
@@ -204,10 +205,6 @@ export default defineConfig({
           items: [
             { label: "Defining Steps", slug: "guides/steps" },
             { label: "Building Pipelines", slug: "guides/pipelines" },
-            {
-              label: "Pipeline Advancement",
-              slug: "guides/pipeline-advancement",
-            },
             {
               label: "Default Pipeline Assignment",
               slug: "guides/pipeline-assignment",

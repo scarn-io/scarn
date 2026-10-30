@@ -1,6 +1,5 @@
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
-import { definePipeline } from "../src/definitions/pipelines/define-pipeline";
 import {
   defaultPipelineAssignment,
   serializeDefaultPipelineAssignment,
@@ -11,44 +10,54 @@ import {
   WORK_ITEM_TOP_LEVEL_FIELDS,
   type WorkItemTopLevelField,
 } from "../src/definitions/pipelines/work-item-fields";
-import { defineStep } from "../src/definitions/steps/define-step";
+import { codeStep } from "../src/definitions/steps/define-code-step";
+import { definePipeline, succeed } from "../src/pipelines";
 
-const triageStep = defineStep({
+const triageStep = codeStep({
   key: "triage",
   name: "Triage",
-  agentPrompt: "Triage the incoming work item.",
-  result: z.object({ ok: z.boolean() }),
-  signals: [{ sourcePath: "ok" }],
+  resultSchema: z.object({ ok: z.boolean() }),
+  fn: () => ({ ok: true }),
 });
 
 const triagePipeline = definePipeline({
   key: "triage-and-plan",
-  name: "Triage and Plan",
-  startAt: "triage",
-  states: {
-    triage: { kind: "step", step: triageStep, next: "done" },
-    done: { kind: "succeed" },
-  },
+  start: triageStep,
+  flow: [triageStep.next(succeed("done"))],
 });
 
 describe("defaultPipelineAssignment / assign()", () => {
-  test.concurrent("assign() accepts a real definePipeline() output", () => {
+  test.concurrent("assign() accepts a definePipeline() value", () => {
     const spec = defaultPipelineAssignment(({ assign }) => ({
       default: assign(triagePipeline),
       rules: [],
     }));
 
-    expect(spec.default).toEqual({ _tag: "assign", pipeline: triagePipeline });
+    expect(spec.default).toEqual({
+      _tag: "assign",
+      pipelineKey: "triage-and-plan",
+    });
   });
 
-  test.concurrent("assign() rejects a non-pipeline value", () => {
+  test.concurrent("assign() accepts a pipeline key", () => {
+    const spec = defaultPipelineAssignment(({ assign }) => ({
+      default: assign("investigation"),
+      rules: [],
+    }));
+
+    expect(spec.default).toEqual({
+      _tag: "assign",
+      pipelineKey: "investigation",
+    });
+  });
+
+  test.concurrent("assign() rejects an empty key", () => {
     expect(() =>
       defaultPipelineAssignment(({ assign }) => ({
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
-        default: assign({ key: "not-a-pipeline" } as any),
+        default: assign(""),
         rules: [],
       })),
-    ).toThrow(/assign\(\) requires a pipeline spec produced by definePipeline\(\)/);
+    ).toThrow(/assign\(\) requires a pipeline key/);
   });
 
   test.concurrent("assign() works inside a rule's .then()", () => {
@@ -61,7 +70,7 @@ describe("defaultPipelineAssignment / assign()", () => {
 
     expect(spec.rules[0]?.outcome).toEqual({
       _tag: "assign",
-      pipeline: triagePipeline,
+      pipelineKey: "triage-and-plan",
     });
   });
 });
@@ -303,7 +312,7 @@ describe("defaultPipelineAssignment / per-field typing (AssignmentFieldRef<T>)",
     },
   );
 
-  // Proves the mechanism `boboddy pipelines pull`'s generated
+  // Proves the mechanism `scarn pipelines pull`'s generated
   // `WorkItemFieldName` (see `work-item-fields-file-generator.ts`) relies on:
   // `.field<TName>(name)`'s FIRST type parameter constrains the `name`
   // argument itself, not the comparator value — so passing a project-specific

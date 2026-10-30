@@ -1,5 +1,5 @@
-import { createBoboddyClient } from "@boboddy/sdk/client";
-import { loadAuthenticatedSession } from "@boboddy/worker";
+import { createScarnClient } from "@scarn/sdk/client";
+import { loadAuthenticatedSession } from "@scarn/worker";
 
 /**
  * The two things a CLI adapter that talks to the API needs: an authenticated
@@ -12,7 +12,7 @@ import { loadAuthenticatedSession } from "@boboddy/worker";
  */
 
 export type AuthenticatedApi = {
-  client: ReturnType<typeof createBoboddyClient>;
+  client: ReturnType<typeof createScarnClient>;
   /**
    * Passed per call, as a sibling of `path`/`query`/`body` — the generated
    * client does not bind headers to the instance.
@@ -25,11 +25,11 @@ export async function connectApi(baseUrl: string): Promise<AuthenticatedApi> {
   const authenticated = await loadAuthenticatedSession(baseUrl);
   if (!authenticated) {
     throw new Error(
-      `Not signed in to ${baseUrl}. Run \`boboddy auth login\` first.`,
+      `Not signed in to ${baseUrl}. Run \`scarn auth login\` first.`,
     );
   }
   return {
-    client: createBoboddyClient(baseUrl),
+    client: createScarnClient(baseUrl),
     headers: { Authorization: `Bearer ${authenticated.profile.accessToken}` },
   };
 }

@@ -1,4 +1,4 @@
-import { createBoboddyClient } from "@boboddy/sdk";
+import { createScarnClient } from "@scarn/sdk";
 import { loadAuthenticatedSession } from "../../../auth/session/application/load-authenticated-session";
 import { ConfigurationError, SetupErrorCodes } from "../../../lib/errors";
 import {
@@ -8,7 +8,7 @@ import {
 
 export async function verifyRequirements(input: { baseUrl: string }): Promise<{
   headers: { Authorization: string };
-  client: ReturnType<typeof createBoboddyClient>;
+  client: ReturnType<typeof createScarnClient>;
 }> {
   let session: Awaited<ReturnType<typeof loadAuthenticatedSession>>;
   try {
@@ -18,7 +18,7 @@ export async function verifyRequirements(input: { baseUrl: string }): Promise<{
   }
   if (!session) {
     throw new ConfigurationError(
-      `Not signed in to ${input.baseUrl}. Run 'boboddy auth login' in an ` +
+      `Not signed in to ${input.baseUrl}. Run 'scarn auth login' in an ` +
         "interactive terminal, then re-run this command.",
       SetupErrorCodes.NotSignedIn,
     );
@@ -38,6 +38,6 @@ export async function verifyRequirements(input: { baseUrl: string }): Promise<{
 
   return {
     headers: { Authorization: `Bearer ${session.profile.accessToken}` },
-    client: createBoboddyClient(input.baseUrl),
+    client: createScarnClient(input.baseUrl),
   };
 }

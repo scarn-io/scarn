@@ -1,9 +1,9 @@
-import { DEFAULT_PIPELINE_ASSIGNMENT_FILENAME } from "@boboddy/sdk/definitions/pipelines";
+import { DEFAULT_PIPELINE_ASSIGNMENT_FILENAME } from "@scarn/sdk/definitions/pipelines";
 import {
   STARTER_DEFAULT_PIPELINE_ASSIGNMENT_FILE,
   STARTER_PIPELINE_FILE,
   STARTER_PIPELINE_FILENAME,
-} from "@boboddy/worker";
+} from "@scarn/worker";
 import type { RunOfferGateFailure } from "./design-run-offer-gate-marker";
 import type { DesignWorkItem } from "./design-work-item";
 
@@ -28,7 +28,7 @@ export const MAX_SEED_DESCRIPTION_LENGTH = 4_000;
 
 export type DesignSeedPromptInput = {
   workItem: DesignWorkItem;
-  /** Does `.boboddy/pipeline-builder` already contain authored definitions? */
+  /** Does `.scarn/pipeline-builder` already contain authored definitions? */
   hasExistingDefinitions: boolean;
   /**
    * The prior session's post-push run-offer gate failure (#146), if the last
@@ -109,7 +109,7 @@ function describePriorRunOfferFailure(
 const describeDescription = (description: string): string =>
   description.length <= MAX_SEED_DESCRIPTION_LENGTH
     ? description
-    : `${description.slice(0, MAX_SEED_DESCRIPTION_LENGTH)}\n[truncated — read the full description from the work item in the Boboddy dashboard]`;
+    : `${description.slice(0, MAX_SEED_DESCRIPTION_LENGTH)}\n[truncated — read the full description from the work item in the Scarn dashboard]`;
 
 /** Build the seed prompt for `workItem`. Pure: same input, same string. */
 export function buildDesignSeedPrompt(input: DesignSeedPromptInput): string {
@@ -130,7 +130,7 @@ export function buildDesignSeedPrompt(input: DesignSeedPromptInput): string {
       : `The repository's MCP servers (with their listed tools) and skills are recorded in the discovered-tools manifest at ${manifestPath} — read it in phase 1.`;
 
   return [
-    "Design a Boboddy pipeline for this project. Use this work item to frame the interview; the pipeline you write must handle any item of its kind, so keep its names and prompts free of this item's specifics.",
+    "Design a Scarn pipeline for this project. Use this work item to frame the interview; the pipeline you write must handle any item of its kind, so keep its names and prompts free of this item's specifics.",
     "",
     "## Work item",
     "",

@@ -1,4 +1,4 @@
-import type { createBoboddyClient } from "@boboddy/sdk";
+import type { createScarnClient } from "@scarn/sdk";
 import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -39,7 +39,7 @@ function fakeClient(projects: ProjectRow[]) {
     projects: {
       listProjects: () => Promise.resolve({ data: projects }),
     },
-  } as unknown as ReturnType<typeof createBoboddyClient>;
+  } as unknown as ReturnType<typeof createScarnClient>;
 }
 
 describe("findMatchingProject", () => {
@@ -156,7 +156,7 @@ describe("findMatchingProject", () => {
   concurrentTest("treats a null/missing data list as no projects", async () => {
     const client = {
       projects: { listProjects: () => Promise.resolve({ data: null }) },
-    } as unknown as ReturnType<typeof createBoboddyClient>;
+    } as unknown as ReturnType<typeof createScarnClient>;
 
     const result = await findMatchingProject({
       client,
@@ -179,7 +179,7 @@ describe("findMatchingProject", () => {
               response: { status: 401 },
             }),
         },
-      } as unknown as ReturnType<typeof createBoboddyClient>;
+      } as unknown as ReturnType<typeof createScarnClient>;
 
       let caught: unknown;
       try {
@@ -259,7 +259,7 @@ describe("localConfigSetup", () => {
           return Promise.resolve({ data: { id: "should-not-be-created" } });
         },
       },
-    } as unknown as ReturnType<typeof createBoboddyClient>;
+    } as unknown as ReturnType<typeof createScarnClient>;
 
     const result = await localConfigSetup({ client, headers, rootDir: repo });
 

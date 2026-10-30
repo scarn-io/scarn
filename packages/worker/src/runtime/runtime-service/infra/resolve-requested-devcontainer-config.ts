@@ -1,6 +1,6 @@
 import { access, realpath } from "node:fs/promises";
 import path from "node:path";
-import { devcontainerConfigPathSchema } from "@boboddy/sdk/devcontainer-config-path";
+import { devcontainerConfigPathSchema } from "@scarn/sdk/devcontainer-config-path";
 
 /**
  * Resolves a step's explicitly requested devcontainer config inside a cloned

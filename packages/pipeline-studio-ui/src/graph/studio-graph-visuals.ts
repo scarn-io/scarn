@@ -1,20 +1,21 @@
 // Pure, React-free presentation logic shared by `StudioGraphNode.tsx` and
 // `StudioGraphEdge.tsx` — kept in a plain `.ts` file (rather than inside
 // either component) so `bun:test` can import and exercise it directly,
-// without a JSX/React-DOM test environment. See this package's `package.json`
-// (`"test": "bun test src"`) and Phase 4's plan note re: not adding a new
-// test framework to this package.
-import type { DefinitionValidationIssue } from "@boboddy/sdk/definitions/validation";
-import type { StudioNodeShape } from "./studio-graph-types";
+// without a JSX/React-DOM test environment.
+import type {
+  StudioEdgeData,
+  StudioIssue,
+  StudioNodeData,
+  StudioNodeShape,
+} from "./studio-graph-types";
 
 /**
  * The highest-severity issue among `issues`, or `null` when there are none —
  * `"error"` wins over `"warning"` wins over `"info"`, regardless of
- * order/count. Shared by node border color, edge color, and (indirectly) the
- * issue-count badge's own color.
+ * order/count.
  */
 export function highestSeverity(
-  issues: readonly DefinitionValidationIssue[],
+  issues: readonly Pick<StudioIssue, "severity">[],
 ): "error" | "warning" | "info" | null {
   let sawWarning = false;
   let sawInfo = false;
@@ -30,8 +31,7 @@ export function highestSeverity(
 /**
  * The color for a given severity (or `null`, meaning "no issues"), as a
  * `--studio-severity-*` CSS variable reference. The actual values live in
- * `index-html-template.ts`'s per-theme palettes, so nodes, edges, chips, and
- * badges all follow the active light/dark theme without re-rendering.
+ * `index-html-template.ts`'s per-theme palettes.
  */
 export function severityColor(
   severity: "error" | "warning" | "info" | null,
@@ -40,41 +40,110 @@ export function severityColor(
 }
 
 /**
- * "N in · M out" counts for a node's `shape` — `null` when the shape carries
- * no meaningful counts to show (`kind: "none"`: `choice`/`succeed`/`fail`/
- * `cohortGate` nodes, or a `step`/`parallel` node whose `stepKey` didn't
- * resolve against the `steps` batch). Showing "0 in · 0 out" for those would
- * read as "this step declares zero fields," which is a different, false
- * claim from "this node has no step-derived shape at all" — see
- * `StudioNodeShape`'s own doc comment in `studio-graph-types.ts`.
- *
- * For `"parallel"`, `in` sums every branch's own `inputFields.length` (a
- * branch with `inputFields: null` — its own `stepKey` unresolved — 
- * contributes 0, not a fallback that would silently miscount); `"parallel"`
- * nodes have no `out` count of their own (only single-step nodes carry
- * `outputSignals` — see `StudioNodeShape`'s doc comment), so `out` is always
- * `0` for that kind.
+ * "N in · M out" counts for a node's `shape` (input schema fields and result
+ * schema fields) — `null` when the node has no step-derived shape, since
+ * "0 in · 0 out" would falsely read as a step that declares zero fields.
  */
 export function nodeInOutCounts(
   shape: StudioNodeShape,
 ): { inCount: number; outCount: number } | null {
-  switch (shape.kind) {
-    case "step":
-      return { inCount: shape.inputFields.length, outCount: shape.outputSignals.length };
-    case "parallel":
-      return {
-        inCount: shape.branches.reduce(
-          (sum, branch) => sum + (branch.inputFields?.length ?? 0),
-          0,
-        ),
-        outCount: 0,
-      };
-    case "none":
-      return null;
-  }
+  if (shape.kind === "none") return null;
+  return {
+    inCount: shape.inputFields.length,
+    outCount: shape.resultFields.length,
+  };
 }
 
 /** Formats `nodeInOutCounts`'s result as the literal "N in · M out" string. */
-export function formatInOutCounts(counts: { inCount: number; outCount: number }): string {
+export function formatInOutCounts(counts: {
+  inCount: number;
+  outCount: number;
+}): string {
   return `${String(counts.inCount)} in · ${String(counts.outCount)} out`;
+}
+
+const KIND_CAPTION: Record<StudioNodeData["kind"], string> = {
+  start: "start",
+  step: "step",
+  wait: "wait",
+  succeed: "succeed",
+  fail: "fail",
+};
+
+/** The subtitle under a node's label, e.g. `step · triage` or `wait · decision`. */
+export function nodeCaption(data: StudioNodeData): string {
+  const detail = data.stepKey ?? data.waitFor;
+  return detail
+    ? `${KIND_CAPTION[data.kind]} · ${detail}`
+    : KIND_CAPTION[data.kind];
+}
+
+/**
+ * The fork marker on a `match: "all"` node, whose matching routes all run
+ * at once as lanes; `null` for every other node.
+ */
+export function forkMarker(data: Pick<StudioNodeData, "match">): string | null {
+  return data.match === "all" ? "fork · all routes" : null;
+}
+
+/** The badge on a merge node listing the routes it waits for, e.g. `merges: Review, Test`. */
+export function mergeBadge(
+  data: Pick<StudioNodeData, "mergeWaitsFor">,
+): string | null {
+  const waitsFor = data.mergeWaitsFor ?? [];
+  return waitsFor.length > 0 ? `merges: ${waitsFor.join(", ")}` : null;
+}
+
+/**
+ * An edge's label with its route order number in front (`1. x > 3`), for
+ * `first` nodes that check their routes in order. Unordered edges keep their
+ * label as is.
+ */
+export function orderedEdgeLabel(
+  label: string | undefined,
+  order: number | null,
+): string | undefined {
+  if (order === null) return label;
+  return label === undefined
+    ? `${String(order)}.`
+    : `${String(order)}. ${label}`;
+}
+
+const START_SIZE = { width: 112, height: 36 };
+const TERMINAL_SIZE = { width: 176, height: 44 };
+const CARD_WIDTH = 240;
+const CARD_BASE_HEIGHT = 56;
+const CARD_EXTRA_LINE_HEIGHT = 16;
+
+/**
+ * The size the layout reserves for a node, which the node renderers also
+ * draw at so edges meet the card exactly: a compact pill for the synthetic
+ * start node, a smaller card for `succeed`/`fail`, and a step/wait card one
+ * line taller for each fork marker or merge badge it shows.
+ */
+export function nodeLayoutSize(
+  data: Pick<StudioNodeData, "kind" | "match" | "mergeWaitsFor">,
+): { width: number; height: number } {
+  if (data.kind === "start") return { ...START_SIZE };
+  if (data.kind === "succeed" || data.kind === "fail") {
+    return { ...TERMINAL_SIZE };
+  }
+  const extraLines =
+    (forkMarker(data) ? 1 : 0) + (mergeBadge(data) ? 1 : 0);
+  return {
+    width: CARD_WIDTH,
+    height: CARD_BASE_HEIGHT + extraLines * CARD_EXTRA_LINE_HEIGHT,
+  };
+}
+
+/**
+ * Edge stroke dash pattern: catch edges are dashed so error paths read
+ * differently from normal flow; `each` (fan-out into lanes) edges are dotted.
+ */
+export function edgeDashArray(
+  data: Pick<StudioEdgeData, "kind" | "lane"> | undefined,
+): string | undefined {
+  if (data?.kind === "catch") return "6 4";
+  if (data?.lane === "each") return "2 4";
+  return undefined;
 }

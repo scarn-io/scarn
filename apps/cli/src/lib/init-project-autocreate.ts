@@ -1,7 +1,7 @@
 import * as clack from "@clack/prompts";
-import type { createBoboddyClient } from "@boboddy/sdk";
-import { parseGitHubRepo } from "@boboddy/sdk/git-url";
-import { projectConfigRef, writeProjectConfig } from "@boboddy/worker";
+import type { createScarnClient } from "@scarn/sdk";
+import { parseGitHubRepo } from "@scarn/sdk/git-url";
+import { projectConfigRef, writeProjectConfig } from "@scarn/worker";
 import { describeApiError } from "./cli-api-client";
 import type { BaseReporter } from "./reporter-types";
 
@@ -14,7 +14,7 @@ import type { BaseReporter } from "./reporter-types";
  * project from that repo — `POST /projects` with a `github_app` issue
  * tracker, as the web picker does, so issues are imported and the
  * integration is linked — and
- * writes `.boboddy/boboddy.jsonc`. Every other outcome is a `skipped` result,
+ * writes `.scarn/scarn.jsonc`. Every other outcome is a `skipped` result,
  * and `init` falls back to the browser hand-off (`init-project-handoff.ts`).
  *
  * Installations another org member made are invisible here
@@ -63,7 +63,7 @@ export interface ProjectAutocreatePorts {
     repo: GitHubRepoRef;
     name: string;
   }): Promise<CreateGitHubProjectResult>;
-  /** Persist the new project's `owner/slug` ref to `.boboddy/boboddy.jsonc` at the repo root. */
+  /** Persist the new project's `owner/slug` ref to `.scarn/scarn.jsonc` at the repo root. */
   writeConfig(project: string): Promise<void>;
 }
 
@@ -84,7 +84,7 @@ export const REFRESH_TASK_LABEL = "Checking your GitHub installations…";
 export const CREATE_TASK_LABEL = "Creating project and importing issues…";
 
 export function confirmCreateMessage(name: string, fullName: string): string {
-  return `Create Boboddy project “${name}” from GitHub ${fullName}?`;
+  return `Create Scarn project “${name}” from GitHub ${fullName}?`;
 }
 
 export function initialSyncFailedMessage(settingsUrl: string): string {
@@ -220,7 +220,7 @@ export async function tryAutocreateGitHubProject(input: {
   return { status: "created", projectId: project.projectId, project: ref };
 }
 
-type BoboddyClient = ReturnType<typeof createBoboddyClient>;
+type ScarnClient = ReturnType<typeof createScarnClient>;
 
 function httpReason(
   status: number,
@@ -231,7 +231,7 @@ function httpReason(
 
 /** Wire the autocreate ports to the SDK, a `clack` confirm, and the repo root. */
 export function buildProjectAutocreatePorts(input: {
-  client: BoboddyClient;
+  client: ScarnClient;
   headers: { Authorization: string };
   repoRoot: string;
 }): ProjectAutocreatePorts {

@@ -1,4 +1,4 @@
-import type { BoboddyClient } from "../generated";
+import type { ScarnClient } from "../generated";
 import { parseProjectRef } from "./project-config";
 
 export interface ResolvedProjectRef {
@@ -44,7 +44,7 @@ export const PROJECT_REF_FORMAT_HINT =
  * once, up front, and passes the id downstream.
  */
 export async function resolveProjectRef(
-  client: BoboddyClient,
+  client: ScarnClient,
   ref: string,
   { headers, action = "view" }: ResolveProjectRefOptions,
 ): Promise<ResolvedProjectRef> {
@@ -71,7 +71,7 @@ export async function resolveProjectRef(
     throw new ProjectRefError(
       "not_found",
       ref,
-      `No project ${ref}. Check "project" in .boboddy/boboddy.jsonc — the owner may have renamed their username.`,
+      `No project ${ref}. Check "project" in .scarn/scarn.jsonc — the owner may have renamed their username.`,
     );
   }
   if (status === 403) {
@@ -85,7 +85,7 @@ export async function resolveProjectRef(
     throw new ProjectRefError(
       "unauthenticated",
       ref,
-      `Not signed in, so ${ref} can't be looked up. Run \`boboddy auth login\` first.`,
+      `Not signed in, so ${ref} can't be looked up. Run \`scarn auth login\` first.`,
     );
   }
   const detail =

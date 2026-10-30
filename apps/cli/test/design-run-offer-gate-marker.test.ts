@@ -1,4 +1,4 @@
-import { describe, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -8,7 +8,6 @@ import {
   RUN_OFFER_GATE_FAILURE_FILENAME,
   writeRunOfferGateFailure,
 } from "../src/lib/design-run-offer-gate-marker";
-import { concurrentTest as test } from "./utils";
 
 /**
  * The one channel carrying "the post-push run-offer gate (#146) failed" from
@@ -18,7 +17,7 @@ import { concurrentTest as test } from "./utils";
  */
 
 function makeBuilderDir(): string {
-  return mkdtempSync(join(tmpdir(), "boboddy-run-offer-marker-"));
+  return mkdtempSync(join(tmpdir(), "scarn-run-offer-marker-"));
 }
 
 describe("writeRunOfferGateFailure / readAndConsumeRunOfferGateFailure", () => {

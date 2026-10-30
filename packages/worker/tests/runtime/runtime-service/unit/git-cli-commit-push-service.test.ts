@@ -15,7 +15,7 @@ import os from "node:os";
 import path from "node:path";
 import { describe, expect, test } from "bun:test";
 import { GitCliCommitPushService } from "../../../../src/runtime/runtime-service/infra/git-cli-commit-push-service";
-import { WORK_BRANCH_EXCLUDE_PATHS } from "../../../../src/work/task/infra/work-branch-manager";
+import { WORK_BRANCH_EXCLUDE_PATHS } from "../../../../src/work/task-run/infra/work-branch-manager";
 import { git, writeRepoFile } from "./git-test-fixtures";
 
 const TEST_TIMEOUT_MS = 15_000;
@@ -36,7 +36,7 @@ async function setupFixture(): Promise<{
   // Seed the remote by cloning, committing, and pushing an initial file.
   const seed = path.join(root, "seed");
   await git(root, ["clone", remote, seed]);
-  await git(seed, ["config", "user.email", "seed@boboddy.dev"]);
+  await git(seed, ["config", "user.email", "seed@scarn.io"]);
   await git(seed, ["config", "user.name", "Seed"]);
   await writeRepoFile(seed, "README.md", "hello\n");
   await git(seed, ["add", "-A"]);
@@ -48,7 +48,7 @@ async function setupFixture(): Promise<{
   // global identity exists. (The service itself injects identity per-invocation
   // via `-c user.name/-c user.email`, so it does not rely on this.)
   await git(root, ["clone", remote, workspace]);
-  await git(workspace, ["config", "user.email", "workspace@boboddy.dev"]);
+  await git(workspace, ["config", "user.email", "workspace@scarn.io"]);
   await git(workspace, ["config", "user.name", "Workspace"]);
 
   return { root, remote, workspace };
@@ -64,10 +64,10 @@ describe("GitCliCommitPushService", () => {
       try {
         await service.createBranch({
           workspacePath: workspace,
-          branchName: "boboddy/step-1",
+          branchName: "scarn/step-1",
         });
         expect(await git(workspace, ["branch", "--show-current"])).toBe(
-          "boboddy/step-1",
+          "scarn/step-1",
         );
       } finally {
         await rm(root, { recursive: true, force: true });
@@ -84,9 +84,9 @@ describe("GitCliCommitPushService", () => {
         // Publish a prior work branch to the remote from a separate clone.
         const prior = path.join(root, "prior");
         await git(root, ["clone", remote, prior]);
-        await git(prior, ["config", "user.email", "prior@boboddy.dev"]);
+        await git(prior, ["config", "user.email", "prior@scarn.io"]);
         await git(prior, ["config", "user.name", "Prior"]);
-        await git(prior, ["checkout", "-b", "boboddy/prev-step"]);
+        await git(prior, ["checkout", "-b", "scarn/prev-step"]);
         await writeRepoFile(prior, "prev.txt", "prev\n");
         await git(prior, ["add", "-A"]);
         await git(prior, ["commit", "--no-gpg-sign", "-m", "prev"]);
@@ -94,16 +94,16 @@ describe("GitCliCommitPushService", () => {
           "push",
           "--set-upstream",
           "origin",
-          "boboddy/prev-step",
+          "scarn/prev-step",
         ]);
 
         await service.checkoutBase({
           workspacePath: workspace,
-          baseWorkBranch: "boboddy/prev-step",
+          baseWorkBranch: "scarn/prev-step",
         });
 
         expect(await git(workspace, ["branch", "--show-current"])).toBe(
-          "boboddy/prev-step",
+          "scarn/prev-step",
         );
         // The prior step's file is present on the checked-out base.
         expect(await git(workspace, ["log", "--oneline"])).toContain("prev");
@@ -115,13 +115,13 @@ describe("GitCliCommitPushService", () => {
   );
 
   test.concurrent(
-    "commitAll excludes the Boboddy runtime files (untracked)",
+    "commitAll excludes the Scarn runtime files (untracked)",
     async () => {
       const { root, workspace } = await setupFixture();
       try {
         await service.createBranch({
           workspacePath: workspace,
-          branchName: "boboddy/step-2",
+          branchName: "scarn/step-2",
         });
 
         await writeRepoFile(workspace, "src/app.ts", "export const x = 1;\n");
@@ -131,7 +131,7 @@ describe("GitCliCommitPushService", () => {
 
         const result = await service.commitAll({
           workspacePath: workspace,
-          message: "boboddy: task 2",
+          message: "scarn: task 2",
           excludePaths: WORK_BRANCH_EXCLUDE_PATHS,
         });
         expect(result.committed).toBe(true);
@@ -154,7 +154,7 @@ describe("GitCliCommitPushService", () => {
   );
 
   test.concurrent(
-    "commitAll excludes the Boboddy runtime files even when tracked+modified",
+    "commitAll excludes the Scarn runtime files even when tracked+modified",
     async () => {
       const { root, workspace } = await setupFixture();
       try {
@@ -167,12 +167,12 @@ describe("GitCliCommitPushService", () => {
           "commit",
           "--no-gpg-sign",
           "-m",
-          "track boboddy files",
+          "track scarn files",
         ]);
 
         await service.createBranch({
           workspacePath: workspace,
-          branchName: "boboddy/step-3",
+          branchName: "scarn/step-3",
         });
 
         // Now MODIFY the tracked exclude paths + add a real change.
@@ -187,7 +187,7 @@ describe("GitCliCommitPushService", () => {
 
         const result = await service.commitAll({
           workspacePath: workspace,
-          message: "boboddy: task 3",
+          message: "scarn: task 3",
           excludePaths: WORK_BRANCH_EXCLUDE_PATHS,
         });
         expect(result.committed).toBe(true);
@@ -227,7 +227,7 @@ describe("GitCliCommitPushService", () => {
         ]);
         await service.createBranch({
           workspacePath: workspace,
-          branchName: "boboddy/step-alt",
+          branchName: "scarn/step-alt",
         });
 
         await writeRepoFile(workspace, customConfig, "PATCHED BY WORKER\n");
@@ -235,7 +235,7 @@ describe("GitCliCommitPushService", () => {
 
         const result = await service.commitAll({
           workspacePath: workspace,
-          message: "boboddy: task alt",
+          message: "scarn: task alt",
           excludePaths: [...WORK_BRANCH_EXCLUDE_PATHS, customConfig],
         });
         expect(result.committed).toBe(true);
@@ -263,14 +263,14 @@ describe("GitCliCommitPushService", () => {
       try {
         await service.createBranch({
           workspacePath: workspace,
-          branchName: "boboddy/step-missing",
+          branchName: "scarn/step-missing",
         });
         await writeRepoFile(workspace, "src/real.ts", "export const r = 1;\n");
         await writeRepoFile(workspace, "devcontainer.json", "untracked\n");
 
         const result = await service.commitAll({
           workspacePath: workspace,
-          message: "boboddy: task missing",
+          message: "scarn: task missing",
           excludePaths: [
             ...WORK_BRANCH_EXCLUDE_PATHS,
             "devcontainer.json",
@@ -298,11 +298,11 @@ describe("GitCliCommitPushService", () => {
     "commitAll tolerates excluded paths that are gitignored (e.g. node_modules)",
     async () => {
       const { root, workspace } = await setupFixture();
-      const ignoredDir = ".boboddy/pipeline-builder/node_modules";
+      const ignoredDir = ".scarn/pipeline-builder/node_modules";
       try {
         await writeRepoFile(
           workspace,
-          ".boboddy/pipeline-builder/.gitignore",
+          ".scarn/pipeline-builder/.gitignore",
           "node_modules/\n",
         );
         await git(workspace, ["add", "-A"]);
@@ -314,7 +314,7 @@ describe("GitCliCommitPushService", () => {
         ]);
         await service.createBranch({
           workspacePath: workspace,
-          branchName: "boboddy/step-ignored",
+          branchName: "scarn/step-ignored",
         });
 
         await writeRepoFile(workspace, `${ignoredDir}/pkg/index.js`, "x\n");
@@ -322,7 +322,7 @@ describe("GitCliCommitPushService", () => {
 
         const result = await service.commitAll({
           workspacePath: workspace,
-          message: "boboddy: task ignored",
+          message: "scarn: task ignored",
           excludePaths: [...WORK_BRANCH_EXCLUDE_PATHS, ignoredDir],
         });
         expect(result.committed).toBe(true);
@@ -349,7 +349,7 @@ describe("GitCliCommitPushService", () => {
       try {
         await service.createBranch({
           workspacePath: workspace,
-          branchName: "boboddy/step-4",
+          branchName: "scarn/step-4",
         });
         // Only runtime files present — all excluded, so nothing to commit.
         for (const excluded of WORK_BRANCH_EXCLUDE_PATHS) {
@@ -358,7 +358,7 @@ describe("GitCliCommitPushService", () => {
 
         const result = await service.commitAll({
           workspacePath: workspace,
-          message: "boboddy: task 4",
+          message: "scarn: task 4",
           excludePaths: WORK_BRANCH_EXCLUDE_PATHS,
         });
         expect(result.committed).toBe(false);
@@ -376,18 +376,18 @@ describe("GitCliCommitPushService", () => {
       try {
         await service.createBranch({
           workspacePath: workspace,
-          branchName: "boboddy/step-5",
+          branchName: "scarn/step-5",
         });
         await writeRepoFile(workspace, "src/push.ts", "export const z = 3;\n");
         await service.commitAll({
           workspacePath: workspace,
-          message: "boboddy: task 5",
+          message: "scarn: task 5",
           excludePaths: WORK_BRANCH_EXCLUDE_PATHS,
         });
 
         await service.push({
           workspacePath: workspace,
-          branchName: "boboddy/step-5",
+          branchName: "scarn/step-5",
         });
 
         // Upstream is configured.
@@ -395,13 +395,13 @@ describe("GitCliCommitPushService", () => {
           await git(workspace, [
             "rev-parse",
             "--abbrev-ref",
-            "boboddy/step-5@{upstream}",
+            "scarn/step-5@{upstream}",
           ]),
-        ).toBe("origin/boboddy/step-5");
+        ).toBe("origin/scarn/step-5");
 
         // The branch exists on the remote with the same tip.
-        const localTip = await git(workspace, ["rev-parse", "boboddy/step-5"]);
-        const remoteTip = await git(remote, ["rev-parse", "boboddy/step-5"]);
+        const localTip = await git(workspace, ["rev-parse", "scarn/step-5"]);
+        const remoteTip = await git(remote, ["rev-parse", "scarn/step-5"]);
         expect(remoteTip).toBe(localTip);
       } finally {
         await rm(root, { recursive: true, force: true });
@@ -450,13 +450,13 @@ describe("GitCliCommitPushService", () => {
 
         await probe.createBranch({
           workspacePath: workspace,
-          branchName: "boboddy/step-6",
+          branchName: "scarn/step-6",
         });
         await writeRepoFile(workspace, "src/retry.ts", "export const r = 4;\n");
 
         const result = await probe.commitAll({
           workspacePath: workspace,
-          message: "boboddy: task 6",
+          message: "scarn: task 6",
           excludePaths: WORK_BRANCH_EXCLUDE_PATHS,
         });
 

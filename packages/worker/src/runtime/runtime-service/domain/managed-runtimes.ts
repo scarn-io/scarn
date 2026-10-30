@@ -2,8 +2,8 @@ import {
   isManagedRuntimeId,
   MANAGED_RUNTIME_IDS,
   type ManagedRuntimeId,
-} from "@boboddy/sdk/managed-runtimes";
-import { PIPELINE_BUILDER_DIR } from "@boboddy/sdk/push";
+} from "@scarn/sdk/managed-runtimes";
+import { PIPELINE_BUILDER_DIR } from "@scarn/sdk/push";
 
 /**
  * Worker-side registry of managed runtimes: the containers a `codeStep` can run
@@ -50,7 +50,7 @@ export class UnknownManagedRuntimeError extends Error {
     super(
       `Managed runtime "${managedRuntime}" is not supported by this worker. ` +
         `Supported managed runtimes: ${MANAGED_RUNTIME_IDS.join(", ")}. ` +
-        "Upgrade the Boboddy CLI to a version that supports it.",
+        "Upgrade the Scarn CLI to a version that supports it.",
     );
     this.name = "UnknownManagedRuntimeError";
     this.managedRuntime = managedRuntime;
@@ -67,10 +67,10 @@ export function resolveManagedRuntime(id: string): ResolvedManagedRuntime {
 /**
  * Repo-relative directory the synthesized managed devcontainer configs are
  * written under, as `<dir>/<id>/devcontainer.json`. Distinct from the
- * host-side `~/.boboddy/runtimes/` OpenCode payload cache: it holds configs
+ * host-side `~/.scarn/runtimes/` OpenCode payload cache: it holds configs
  * that reference an image by tag, and it is never committed.
  */
-export const MANAGED_DEVCONTAINERS_DIR = ".boboddy/managed-devcontainers";
+export const MANAGED_DEVCONTAINERS_DIR = ".scarn/managed-devcontainers";
 
 /**
  * Paths a managed install can leave in the clone, relative to the repo root:

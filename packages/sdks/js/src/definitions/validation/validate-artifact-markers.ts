@@ -1,101 +1,52 @@
 import {
   artifactPlatforms,
   EMBEDDABLE_ARTIFACT_EXTENSIONS,
-  matchArtifactNode,
+  findArtifactFields,
 } from "../../contracts/artifacts";
 import { findArtifactMarkers } from "../../contracts/artifact-markers";
-import {
-  isWorkingNodeDefinition,
-  type NodeDefinitionSpec,
-  type PipelineDefinitionSpec,
-} from "../pipelines/define-pipeline";
 import type { StepDefinitionSpec } from "../steps/define-step";
-import { resolveSourcePathNode } from "./json-schema-paths";
 import { listPaths, type DefinitionValidationIssue } from "./validation-issue";
 
-type SignalMarker = {
+type StepMarker = {
   readonly kind: "embed" | "link";
   readonly stepKey: string;
-  readonly signalKey: string;
+  readonly resultPath: string;
 };
 
 const isPlaceholder = (key: string): boolean => /^<[^<>]*>$/.test(key);
 
 /**
- * Signal markers (`artifact:signal/<stepKey>/<signalKey>`) in a step's
+ * Step markers (`artifact:signal/<stepKey>/<resultPath>`) in a step's
  * prompt. `Artifact.embed` / `Artifact.link` produce marker strings, and the
  * prompt is the only place a definition carries them. A marker whose keys are
  * `<...>` placeholders documents the format (the notifications feature's
  * prompt does) and points at nothing.
  */
-function signalMarkers(step: StepDefinitionSpec): SignalMarker[] {
+function stepMarkers(step: StepDefinitionSpec): StepMarker[] {
   if (!step.prompt) return [];
   return findArtifactMarkers(step.prompt).flatMap((marker) =>
     marker.ref.type === "signal" &&
     !isPlaceholder(marker.ref.stepKey) &&
     !isPlaceholder(marker.ref.signalKey)
-      ? [{ kind: marker.kind, ...marker.ref }]
+      ? [
+          {
+            kind: marker.kind,
+            stepKey: marker.ref.stepKey,
+            resultPath: marker.ref.signalKey,
+          },
+        ]
       : [],
   );
 }
 
-function nodeStepKeys(node: NodeDefinitionSpec): string[] {
-  if (isWorkingNodeDefinition(node)) return [node.stepKey];
-  if (node.kind === "parallel") {
-    return Object.values(node.branches).map((branch) => branch.stepKey);
-  }
-  return [];
-}
-
-const markerLabel = (marker: SignalMarker): string =>
+const markerLabel = (marker: StepMarker): string =>
   `${marker.kind === "embed" ? "Artifact.embed" : "Artifact.link"}(` +
-  `"signal/${marker.stepKey}/${marker.signalKey}")`;
+  `"signal/${marker.stepKey}/${marker.resultPath}")`;
 
 /**
- * Check: every signal marker in a pipeline's step prompts names a step that
- * runs in that pipeline. A marker for a step outside the pipeline can never
- * resolve, so its comment would always be suppressed.
- */
-function checkMarkerStepsInPipeline(
-  pipelines: readonly PipelineDefinitionSpec[],
-  stepsByKey: Map<string, readonly StepDefinitionSpec[]>,
-): DefinitionValidationIssue[] {
-  const issues: DefinitionValidationIssue[] = [];
-
-  for (const pipeline of pipelines) {
-    const pipelineStepKeys = new Set(
-      pipeline.nodeDefinitions.flatMap(nodeStepKeys),
-    );
-
-    for (const node of pipeline.nodeDefinitions) {
-      for (const stepKey of new Set(nodeStepKeys(node))) {
-        for (const step of stepsByKey.get(stepKey) ?? []) {
-          for (const marker of signalMarkers(step)) {
-            if (pipelineStepKeys.has(marker.stepKey)) continue;
-            issues.push({
-              check: "artifact-marker",
-              severity: "error",
-              pipelineKey: pipeline.key,
-              nodeKey: node.nodeKey,
-              message:
-                `Pipeline "${pipeline.key}" node "${node.nodeKey}" uses ` +
-                `${markerLabel(marker)}, but step "${marker.stepKey}" is not ` +
-                `in the pipeline, so the artifact can never resolve. Steps in ` +
-                `"${pipeline.key}": ${listPaths([...pipelineStepKeys].sort())}.`,
-            });
-          }
-        }
-      }
-    }
-  }
-
-  return issues;
-}
-
-/**
- * Check: a signal marker names a declared artifact signal, and an embed
- * marker points at a field some platform can show inline. Only steps in this
- * batch can be checked.
+ * Check: a step marker names an artifact field in that step's result, and an
+ * embed marker points at a field some platform can show inline. Only steps in
+ * this batch that declare a result schema can be checked.
  */
 function checkMarkerTargets(
   steps: readonly StepDefinitionSpec[],
@@ -109,37 +60,33 @@ function checkMarkerTargets(
   );
 
   for (const step of steps) {
-    for (const marker of signalMarkers(step)) {
+    for (const marker of stepMarkers(step)) {
       const targets = stepsByKey.get(marker.stepKey);
       if (!targets) continue;
       const where = `Step "${step.key}" uses ${markerLabel(marker)}`;
 
       for (const target of targets) {
-        const signal = target.signalExtractorDefinitions.find(
-          (candidate) => candidate.key === marker.signalKey,
+        if (!target.resultSchemaJson) continue;
+        const fields = findArtifactFields(target.resultSchemaJson);
+        const field = fields.find(
+          (candidate) => candidate.path === marker.resultPath,
         );
-        if (!signal || signal.type !== "artifact") {
-          const declared = target.signalExtractorDefinitions
-            .filter((candidate) => candidate.type === "artifact")
-            .map((candidate) => candidate.key);
+        if (!field) {
+          const declared = fields.map((candidate) => candidate.path);
           issues.push({
             check: "artifact-marker",
             severity: "error",
             message:
-              `${where}, but step "${target.key}" declares no artifact signal ` +
-              `"${marker.signalKey}". Artifact signals on "${target.key}": ` +
+              `${where}, but step "${target.key}" has no artifact field at ` +
+              `"${marker.resultPath}". Artifact fields on "${target.key}": ` +
               `${declared.length > 0 ? listPaths(declared) : "(none)"}.`,
           });
           continue;
         }
 
-        if (marker.kind !== "embed" || !target.resultSchemaJson) continue;
-        const node = resolveSourcePathNode(
-          target.resultSchemaJson,
-          signal.sourcePath,
-        );
-        const accept = node ? matchArtifactNode(node)?.accept : undefined;
-        if (!accept || accept.length === 0) continue;
+        if (marker.kind !== "embed") continue;
+        const { accept } = field;
+        if (accept.length === 0) continue;
         if (accept.some((extension) => embeddable.has(extension))) continue;
         issues.push({
           check: "artifact-marker",
@@ -157,12 +104,8 @@ function checkMarkerTargets(
 }
 
 export function checkArtifactMarkers(
-  pipelines: readonly PipelineDefinitionSpec[],
   steps: readonly StepDefinitionSpec[],
   stepsByKey: Map<string, readonly StepDefinitionSpec[]>,
 ): DefinitionValidationIssue[] {
-  return [
-    ...checkMarkerTargets(steps, stepsByKey),
-    ...checkMarkerStepsInPipeline(pipelines, stepsByKey),
-  ];
+  return checkMarkerTargets(steps, stepsByKey);
 }

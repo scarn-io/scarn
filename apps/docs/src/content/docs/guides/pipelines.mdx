@@ -1,0 +1,841 @@
+---
+title: Building Pipelines
+description: Write a pipeline in TypeScript, build it into a JSON document of nodes and transitions, and publish it as a version
+---
+
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
+A **pipeline** is a JSON document. You write it in TypeScript with `definePipeline()` from `@scarn/sdk/pipelines`, and [`scarn pipelines build`](/scarn/reference/cli/#scarn-pipelines-build-file) compiles it to that document. Each example below shows both; the [SDK reference](/scarn/reference/sdk/#definepipelineconfig) lists the TypeScript API. It names a set of **nodes** (steps, decisions, and terminal outcomes) and, on each node, the **transitions** that can follow it. Every transition says which node runs next and fills in that node's inputs with **args**. No data is passed implicitly.
+
+The document is the whole definition. The server validates it against the steps it uses, then stores it unchanged as a numbered **version**. See the [Pipeline Graph catalog entry](/scarn/catalog/pipeline-graph/) for interactive renders of the examples on this page.
+
+## Basic pipeline
+
+<Tabs syncKey="pipeline-format">
+<TabItem label="TypeScript">
+
+```ts
+import { definePipeline, succeed, workItem } from "@scarn/sdk/pipelines";
+import { reviewCode } from "./steps";
+
+// The node id is the step's key unless you rename it with `.as(...)`.
+const review = reviewCode.as("review");
+const done = succeed("done");
+
+export default definePipeline({
+  key: "code-quality-pipeline",
+  title: "Code Quality Pipeline",
+  start: review({ title: workItem.title }),
+  flow: [review.next(done)],
+});
+```
+
+</TabItem>
+<TabItem label="JSON">
+
+```json
+{
+  "schemaVersion": 1,
+  "key": "code-quality-pipeline",
+  "title": "Code Quality Pipeline",
+  "start": {
+    "to": "review",
+    "args": { "title": "workItem.title" }
+  },
+  "nodes": {
+    "review": {
+      "kind": "step",
+      "step": "review-code",
+      "next": { "routes": [{ "to": "done" }] }
+    },
+    "done": { "kind": "succeed" }
+  }
+}
+```
+
+</TabItem>
+</Tabs>
+
+- `start` is the first transition. It names the first node and gives it args.
+- `nodes` is keyed by node id. A node's id is separate from the step it runs (`review` runs the step `review-code`), so one step can appear at several nodes.
+- A path ends at a `succeed` or `fail` node, or at a node whose `next` takes no route.
+- In TypeScript, `flow` holds at most one chain per node, and only finished chains: ones that end in `.next(...)`. A node doesn't need a chain. A step can be a route's target without its own entry in `flow`; its path then ends after it runs. Terminal nodes never have one.
+
+## Writing and publishing
+
+Steps are written in TypeScript with `defineStep()` / `codeStep()` (see [Defining Steps](/scarn/guides/steps/)). Pipelines are TypeScript files next to them in `.scarn/pipeline-builder/`; `scarn pipelines build` writes each one's `<key>.json` next to it, and that JSON is what gets published. Don't edit the JSON by hand: change the `.ts` and build again. [`scarn pipelines studio`](/scarn/reference/cli/#scarn-pipelines-studio) renders every `.json` file in that directory as a live graph, with validation issues attached to the node or edge they're about.
+
+```bash
+scarn pipelines build                                  # compile every pipeline .ts into <key>.json, and check it
+scarn pipelines push                                   # push the steps, publish every <key>.json, sync the assignment
+scarn pipelines run code-quality-pipeline --work-item-id <work-item-id>
+```
+
+| Command                                   | What it does                                                                                                                                                                      |
+| ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pipelines build [file]`                  | Compiles each pipeline `.ts` file to `<key>.json` and validates it against the local steps. `--check` writes nothing and fails on a missing or stale JSON                         |
+| `pipelines push`                          | Upserts the steps, then publishes every built `<key>.json` in the directory like `publish` does, then syncs `default-pipeline-assignment.ts`. Unchanged documents publish nothing |
+| `pipelines validate <file>`               | Runs the same validator the server runs on publish, against the project's active step definitions. Changes nothing                                                                |
+| `pipelines publish <file>`                | Creates the pipeline if its `key` is new, otherwise publishes the next version and makes it active. Publishing content identical to the latest version does nothing               |
+| `pipelines activate <key> <version>`      | Makes an earlier version active again, to roll back                                                                                                                               |
+| `pipelines run <key> --work-item-id <id>` | Queues a run on a work item. `--version <n>` runs a specific version instead of the active one                                                                                    |
+| `pipelines pull --key <key>`              | Writes the active version (or `--version <n>`) to `<key>.json`, or to `--out <file>`                                                                                              |
+| `pipelines pull`                          | Writes every pipeline's active version as JSON, plus the step files, into `.scarn/pipeline-builder/`. It doesn't write TypeScript pipelines                                     |
+
+### Versions pin their steps
+
+When a version is published, each step it uses is pinned to that step's latest **active** version. A run of that pipeline version always uses those step versions, so a pipeline that passed validation can't break because a step changed later. Pushing a new step version doesn't affect existing pipeline versions. To pick it up, publish the pipeline again: the version hash covers the pinned steps, so the same JSON becomes a new version once a step it uses has changed.
+
+Publishing fails if a step the document names has no active version.
+
+## Top-level fields
+
+| Field            | Type                   | Required | Description                                                                        |
+| ---------------- | ---------------------- | -------- | ---------------------------------------------------------------------------------- |
+| `schemaVersion`  | `1`                    | Yes      | The format version                                                                 |
+| `key`            | `string`               | Yes      | The pipeline's unique key in the project. `publish` uses it to find the pipeline   |
+| `title`          | `string`               | No       | Display name, used when `publish` creates the pipeline (overridable with `--name`) |
+| `workItemFields` | `Record<alias, label>` | No       | Short aliases for work-item form fields. See [Work-item fields](#work-item-fields) |
+| `start`          | transition             | Yes      | The first transition. Its args may only use `workItem.*` references and literals   |
+| `nodes`          | `Record<id, node>`     | Yes      | Every node, keyed by id. Ids may contain letters, digits, `_` and `-`              |
+| `$schema`        | `string`               | No       | Ignored by the server. Use it to point an editor at a JSON Schema                  |
+
+## Nodes
+
+| Kind      | What it does                                                                                      | Fields                                                                                                 |
+| --------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `step`    | Runs a step on a worker                                                                           | `step`, `next`, `catch`, `retry`, `timeoutSeconds`, `heartbeatSeconds`, `maxRuns`, `maxTurns`, `title` |
+| `wait`    | Pauses until a person makes a decision. See [Decisions](#decisions)                               | `for`, `actions`, `next`, `title`                                                                      |
+| `succeed` | Ends its path. The run succeeds once no lane is still running. Inside a lane, ends only that lane | `title`                                                                                                |
+| `fail`    | Ends the run as failed. Inside a lane, fails that lane                                            | `error`, `cause`, `title`                                                                              |
+
+### `step`
+
+<Tabs syncKey="pipeline-format">
+<TabItem label="TypeScript">
+
+```ts
+fix
+  .settings({ timeoutSeconds: 3600, heartbeatSeconds: 300, maxRuns: 5 })
+  .retry({ on: ["Scarn.HeartbeatTimeout"], maxAttempts: 2 })
+  .catch(["Scarn.All"], (r) => fixFailed({ reason: r.error.message }))
+  .next(done),
+```
+
+</TabItem>
+<TabItem label="JSON">
+
+```json
+"fix": {
+  "kind": "step",
+  "step": "fix",
+  "timeoutSeconds": 3600,
+  "heartbeatSeconds": 300,
+  "maxRuns": 5,
+  "retry": [{ "on": ["Scarn.HeartbeatTimeout"], "maxAttempts": 2 }],
+  "catch": [{ "on": ["Scarn.All"], "to": "fix-failed", "args": { "reason": "error.message" } }],
+  "next": { "routes": [{ "to": "done" }] }
+}
+```
+
+</TabItem>
+</Tabs>
+
+| Field              | Type      | Required | Description                                                                                                                                                                        |
+| ------------------ | --------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `step`             | `string`  | Yes      | The step definition key                                                                                                                                                            |
+| `next`             | `next`    | No       | Where to go when the step succeeds. Without it, the path ends. See [Transitions](#transitions)                                                                                     |
+| `catch`            | catch[]   | No       | Where to go when the step fails. See [Errors, retries and timeouts](#errors-retries-and-timeouts)                                                                                  |
+| `retry`            | retry[]   | No       | Which errors to retry, and how many times                                                                                                                                          |
+| `timeoutSeconds`   | `integer` | No       | How long a worker may spend on the step, counted from when it's claimed. Raises `Scarn.Timeout`                                                                                  |
+| `heartbeatSeconds` | `integer` | No       | How often a running step must report progress. Raises `Scarn.HeartbeatTimeout` when the worker goes quiet                                                                        |
+| `maxRuns`          | `integer` | No       | Caps how many times this node runs in one lane, which guards loops. Raises `Scarn.MaxRunsExceeded`                                                                               |
+| `maxTurns`         | `integer` | No       | How many times the step may hand the conversation to a person in one run of the node. Defaults to 2; 0 turns hand-offs off. Handing over past it raises `Scarn.MaxTurnsExceeded` |
+| `title`            | `string`  | No       | Display name in the graph and run view                                                                                                                                             |
+
+### `succeed` / `fail`
+
+<Tabs syncKey="pipeline-format">
+<TabItem label="TypeScript">
+
+```ts
+const done = succeed("done");
+const notReproduced = fail("not-reproduced", {
+  error: "NotReproduced",
+  cause: "No reproduction above 0.8 confidence",
+});
+```
+
+</TabItem>
+<TabItem label="JSON">
+
+```json
+"done": { "kind": "succeed" },
+"not-reproduced": { "kind": "fail", "error": "NotReproduced", "cause": "No reproduction above 0.8 confidence" }
+```
+
+</TabItem>
+</Tabs>
+
+A `fail` node's `error` and `cause` are recorded on the run. Terminal nodes take no args.
+
+## Transitions
+
+`next` is an object: `{ "match"?, "routes", "otherwise"? }`. After the step succeeds, `routes` are checked in order and the first whose `when` matches is taken. If none matches, `otherwise` is taken. If there is no `otherwise` either, the path ends: at the top level the run finishes once any other lanes have, and inside a lane, the lane ends. A node with no `next` ends its path the same way. When a missing match should fail the run, point `otherwise` at a `fail` node.
+
+With `"match": "all"`, every matching route is taken instead, each in its own lane. See [Routes, splits and merges](#routes-splits-and-merges).
+
+<Tabs syncKey="pipeline-format">
+<TabItem label="TypeScript">
+
+```ts
+triage.next({
+  routes: [
+    {
+      when: (r) => equal(r.result.severity, "critical"),
+      to: (r) => pageOncall({ incident: r.result }),
+    },
+  ],
+  otherwise: (r) => fileTicket({ incident: r.result }),
+}),
+```
+
+</TabItem>
+<TabItem label="JSON">
+
+```json
+"next": {
+  "routes": [
+    {
+      "when": { "path": "result.severity", "op": "equal", "value": "critical" },
+      "to": "page-oncall",
+      "args": { "incident": "result" }
+    }
+  ],
+  "otherwise": { "to": "file-ticket", "args": { "incident": "result" } }
+}
+```
+
+</TabItem>
+</Tabs>
+
+In TypeScript, `.next(target)` compiles to a single route with no `when`, and `.next({ match, routes, otherwise })` writes the object directly. `match` is left out of the JSON when it's `"first"`.
+
+| Field       | Type                 | Required | Description                                                                                                                                                             |
+| ----------- | -------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `match`     | `"first" \| "all"`   | No       | `"first"` (the default) takes the first route that matches. `"all"` takes every route that matches, each as a lane                                                      |
+| `routes`    | route[]              | Yes      | At least one. In `"first"` mode a route may leave out `when` only when it is the only route. In `"all"` mode a route with no `when` is allowed anywhere and always runs |
+| `otherwise` | route without `when` | No       | Taken when no route _with_ a `when` matched. In `"all"` mode, routes without `when` don't count, so `otherwise` can run alongside them                                  |
+
+Each route, and `otherwise`, has these fields:
+
+| Field     | Type                                                     | Required | Description                                                                                                 |
+| --------- | -------------------------------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------- |
+| `to`      | `string`                                                 | Yes      | The node to run next                                                                                        |
+| `args`    | `Record<name, ref \| { "value": … } \| { "list": […] }>` | No       | The target node's inputs. See [Args and references](#args-and-references)                                   |
+| `when`    | condition                                                | No       | Take this route only if the condition matches. Not allowed on `otherwise`                                   |
+| `each`    | `{ over, maxConcurrency?, toleratedFailures? }`          | No       | Start one lane per item. See [Routes, splits and merges](#routes-splits-and-merges)                         |
+| `partial` | `true`                                                   | No       | Arrive at the merge `to` with this lane's share of its args. Not with `each`. See [Merges](#merges-partial) |
+
+A transition can point back at the node it leaves from (`fix → fix`). Each pass is a separate run of the node with its own args and result. Set `maxRuns` to bound the loop.
+
+## Args and references
+
+Args fill in the target step's inputs, which come from its `additionalInput` schema. The validator checks args against that schema: no required input missing, no unknown names unless the schema allows extra properties, and every value's type compatible with the input.
+
+An arg value is a **reference string**, a **literal**, or a **list** of either:
+
+<Tabs syncKey="pipeline-format">
+<TabItem label="TypeScript">
+
+```ts
+(r) =>
+  investigate({
+    evaluation: r.result,
+    companyNames: r.input.companyNames,
+    plan: r.node(proposeFix).result,
+    model: "gpt-4o",
+    reviews: [r.result],
+  });
+```
+
+</TabItem>
+<TabItem label="JSON">
+
+```json
+"args": {
+  "evaluation": "result",
+  "companyNames": "input.companyNames",
+  "plan": "nodes.propose-fix.result",
+  "model": { "value": "gpt-4o" },
+  "reviews": { "list": ["result"] }
+}
+```
+
+</TabItem>
+</Tabs>
+
+Every literal is written as `{ "value": … }`. Any bare string is a reference, so a typo is a validation error rather than being treated as a string. An array literal that contains a reference compiles to `{ "list": […] }`, whose elements are references or `{ "value": … }` literals. In TypeScript, a plain value is a literal and `r.…` is a reference; args are type-checked against the step's `additionalInput`.
+
+| Reference                                             | Meaning                                       | Allowed in                                                                                 |
+| ----------------------------------------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `result[.path]`                                       | The result of the node this transition leaves | `next`                                                                                     |
+| `input[.path]`                                        | The args the node was called with             | `next`, `catch`                                                                            |
+| `item[.path]`                                         | The current list item                         | `args` of a transition with `each`                                                         |
+| `error`, `error.name`, `error.message`, `error.cause` | The error being handled                       | `catch`                                                                                    |
+| `nodes.<id>.result[.path]`, `nodes.<id>.input[.path]` | An earlier node's result or args              | Anywhere it's guaranteed to have run. See [Reaching back](#reaching-back-to-earlier-nodes) |
+| `workItem.title`                                      | The work item's title                         | Anywhere, including `start`                                                                |
+| `workItem.fields.<alias>[.path]`                      | A work-item field, by its alias               | Anywhere, including `start`                                                                |
+| `{ "value": … }`                                      | A literal                                     | Anywhere                                                                                   |
+
+Paths are dot-separated, and `.length` works on arrays and strings. Every path is checked against the source's schema, and a wrong one comes with a suggestion (`Did you mean "result.summary"?`).
+
+### Reaching back to earlier nodes
+
+`nodes.<id>.result` reads the result of a node that ran earlier. It's allowed only where `<id>` ran on **every** path to this point. That's what makes it safe in a loop or after branches that meet again: the run follows its own history back and always finds the right visit.
+
+When two branches feed the same node, read the shared value back from the node where they meet, not from either branch:
+
+<Tabs syncKey="pipeline-format">
+<TabItem label="TypeScript">
+
+```ts
+failingTest.next((r) =>
+  proposeFix({
+    investigation: r.input.investigation,
+    evaluation: r.node(evaluate).result,
+    failingTest: r.result,
+  }),
+),
+```
+
+</TabItem>
+<TabItem label="JSON">
+
+```json
+"failing-test": {
+  "kind": "step",
+  "step": "failing-test",
+  "next": {
+    "routes": [{
+      "to": "propose-fix",
+      "args": {
+        "investigation": "input.investigation",
+        "evaluation": "nodes.evaluate.result",
+        "failingTest": "result"
+      }
+    }]
+  }
+}
+```
+
+</TabItem>
+</Tabs>
+
+Here `investigation` reached `failing-test` from either `reproduce-from-session` or `reproduce-from-logs`. Later nodes read it as `nodes.failing-test.input.investigation`.
+
+After a [merge](#merges-partial), references can't reach into nodes that ran in the merged lanes. Pass what you need through the `partial` route's args instead.
+
+### Work-item fields
+
+Work-item form labels contain spaces and punctuation, so the document declares an alias for each field it reads:
+
+<Tabs syncKey="pipeline-format">
+<TabItem label="TypeScript">
+
+```ts
+start: evaluate({
+  companyNames: workItemField("companyNames", "What are the Company Name(s):"),
+  employeeEmails: workItemField("employeeEmails", "What are the Employee Email(s):"),
+}),
+```
+
+</TabItem>
+<TabItem label="JSON">
+
+```json
+"workItemFields": {
+  "companyNames": "What are the Company Name(s):",
+  "employeeEmails": "What are the Employee Email(s):"
+},
+"start": {
+  "to": "evaluate",
+  "args": {
+    "companyNames": "workItem.fields.companyNames",
+    "employeeEmails": "workItem.fields.employeeEmails"
+  }
+}
+```
+
+</TabItem>
+</Tabs>
+
+`build` collects `workItemFields` from the `workItemField(alias, label)` calls; the same alias with two labels is a build error.
+
+The pipeline has no separate input schema. A run starts from the work item, and `start.args` is where its fields enter the pipeline. Every step Task also gets the work item's comment thread as `workItemComments`, alongside its args: the newest comments, oldest first, each with its author, body, and whether it is pinned, a question, or a reply.
+
+## Conditions
+
+A `when` compares one value with a literal (`value`) or with another reference (`ref`):
+
+<Tabs syncKey="pipeline-format">
+<TabItem label="TypeScript">
+
+```ts
+lessThan(r.result.quality, 0.1)
+greaterThan(r.result.attempts, r.node(evaluate).result.maxAttempts)
+all(…)   any(…)   not(…)
+```
+
+</TabItem>
+<TabItem label="JSON">
+
+```json
+{ "path": "result.quality", "op": "lessThan", "value": 0.1 }
+{ "path": "result.attempts", "op": "greaterThan", "ref": "nodes.evaluate.result.maxAttempts" }
+{ "all": [ … ] }   { "any": [ … ] }   { "not": { … } }
+```
+
+</TabItem>
+</Tabs>
+
+In TypeScript each operator is a helper of the same name from `@scarn/sdk/pipelines`. A JavaScript comparison (`r.result.quality < 0.1`) is a type error, and JavaScript logic on a reference throws at build time: callbacks run once, when the pipeline is built, not when it runs.
+
+| Operators                                                              | Applies to                                               |
+| ---------------------------------------------------------------------- | -------------------------------------------------------- |
+| `equal`, `notEqual`                                                    | Any value                                                |
+| `lessThan`, `lessThanInclusive`, `greaterThan`, `greaterThanInclusive` | Numbers                                                  |
+| `exists`, `isEmpty`                                                    | Any value / strings, arrays and objects. Take no `value` |
+| `contains`                                                             | Strings and arrays                                       |
+| `startsWith`, `endsWith`, `matches` (regular expression)               | Strings                                                  |
+| `before`, `after`                                                      | Dates                                                    |
+| `some`, `every`, `none`                                                | Arrays. Take a nested `where` instead of `value`         |
+
+The validator checks that each operator fits the type of the field it's applied to.
+
+### Conditions over lists
+
+`some`, `every` and `none` test a nested condition against each element. Paths inside `where` are relative to the element. They're most useful on a list a [merge](#merges-partial) collected:
+
+<Tabs syncKey="pipeline-format">
+<TabItem label="TypeScript">
+
+```ts
+some(r.input.reviews, (x) => equal(x.approved, false));
+```
+
+</TabItem>
+<TabItem label="JSON">
+
+```json
+{
+  "path": "input.reviews",
+  "op": "some",
+  "where": { "path": "approved", "op": "equal", "value": false }
+}
+```
+
+</TabItem>
+</Tabs>
+
+### Computed values
+
+The left side of a condition can be one of `sum`, `avg`, `min`, `max` or `count` instead of `path`. The number it produces is compared with a normal number operator.
+
+<Tabs syncKey="pipeline-format">
+<TabItem label="TypeScript">
+
+```ts
+greaterThan(
+  avg([r.result.correctness, r.result.clarity], { weights: [2, 1] }),
+  0.7,
+);
+lessThan(
+  avg(r.input.reviews, (x) => x.confidence),
+  0.8,
+);
+greaterThan(
+  count(r.input.reviews, (x) => equal(x.approved, false)),
+  2,
+);
+```
+
+</TabItem>
+<TabItem label="JSON">
+
+```json
+{ "avg": ["result.correctness", "result.clarity"], "weights": [2, 1], "op": "greaterThan", "value": 0.7 }
+{ "avg": { "path": "input.reviews", "field": "confidence" }, "op": "lessThan", "value": 0.8 }
+{ "count": { "path": "input.reviews", "where": { "path": "approved", "op": "equal", "value": false } }, "op": "greaterThan", "value": 2 }
+```
+
+</TabItem>
+</Tabs>
+
+- **A list of references** combines separate values, including reach-backs. `weights` is only allowed with `avg`. `count` over a list counts the values that exist and aren't null.
+- **`{ path, field }`** reads `field` from each element of an array. `count` takes an optional `where` instead of `field`.
+- An empty array gives `0` for `sum` and `count`. For `avg`, `min` and `max` it raises `Scarn.ConditionError`, which a `catch` can handle.
+
+## Errors, retries and timeouts
+
+When a step fails, the engine raises a named error, then:
+
+1. tries the first `retry` entry whose `on` matches, while it has attempts left;
+2. otherwise takes the first `catch` entry whose `on` matches;
+3. otherwise fails the run, or, inside a lane, just that lane.
+
+<Tabs syncKey="pipeline-format">
+<TabItem label="TypeScript">
+
+```ts
+reproduce
+  .retry({ on: ["Scarn.HeartbeatTimeout"], maxAttempts: 2 })
+  .catch(["Scarn.All"], (r) => notReproduced({ reason: r.error.message }))
+  .next(done),
+```
+
+</TabItem>
+<TabItem label="JSON">
+
+```json
+"retry": [{ "on": ["Scarn.HeartbeatTimeout"], "maxAttempts": 2 }],
+"catch": [{ "on": ["Scarn.All"], "to": "not-reproduced", "args": { "reason": "error.message" } }]
+```
+
+</TabItem>
+</Tabs>
+
+A retry queues a new attempt straight away, and the next worker poll picks it up. `maxAttempts` is the number of extra attempts. The step's Task owns its retries: the run only moves on, through `catch` or by failing, once the Task stops retrying. A `catch` entry is a transition without `when`, `each` or `partial`, and its args can use `error` and `input`.
+
+| Built-in error             | Raised when                                                                              |
+| -------------------------- | ---------------------------------------------------------------------------------------- |
+| `Scarn.All`              | Matches every error. Use it as a catch-all                                               |
+| `Scarn.StepFailed`       | The step failed and reported no error name of its own                                    |
+| `Scarn.HealthCheckFailed` | A `required` health check failed before the agent was prompted                          |
+| `Scarn.Timeout`          | The step ran past `timeoutSeconds`                                                       |
+| `Scarn.HeartbeatTimeout` | The worker stopped heartbeating, for example because it died                             |
+| `Scarn.MaxRunsExceeded`  | The node would run more than `maxRuns` times in the same lane                            |
+| `Scarn.MaxTurnsExceeded` | The step handed over more than `maxTurns` times in one run of the node. It isn't retried |
+| `Scarn.ConditionError`   | A computed value had no inputs (`avg`, `min` or `max` of an empty array)                 |
+
+Names in `on` must be built-in or declared in the step's `errors`; anything else is a validation error, and in TypeScript a type error.
+
+There's no background sweeper. A timed-out or abandoned step is failed the next time any worker for the project polls or heartbeats, so a run whose worker died stays `active` until a worker comes back.
+
+## Decisions
+
+A `wait` node with `"for": "decision"` pauses its lane until someone with write access to the project's executions picks one of its `actions` in the run view. Each action is a button, in order, with a `label`. The person can write a body; an action with `"body": "required"` can't be picked without one (the default is `"optional"`). The result is `{ action, body }`: `action` is the picked key and `body` is the trimmed text, or `null`. Its `next` branches on `result.action`:
+
+<Tabs syncKey="pipeline-format">
+<TabItem label="TypeScript">
+
+```ts
+const reviewFix = decision("review-fix", {
+  actions: {
+    approve: { label: "Approve" },
+    revise: { label: "Request changes", body: "required" },
+    reject: { label: "Reject" },
+  },
+});
+
+proposeFix.next({
+  routes: [{ when: (r) => equal(r.result.requiresHumanApproval, true), to: (r) => reviewFix({ plan: r.result }) }],
+  otherwise: (r) => fix({ plan: r.result }),
+}),
+
+reviewFix.next({
+  routes: [
+    {
+      when: (r) => equal(r.result.action, "approve"),
+      to: (r) => fix({ plan: r.node(proposeFix).result }),
+    },
+    {
+      when: (r) => equal(r.result.action, "revise"),
+      to: (r) => proposeFix({ title: workItem.title, feedback: r.result.body }),
+    },
+  ],
+  otherwise: fixRejected,
+}),
+```
+
+</TabItem>
+<TabItem label="JSON">
+
+```json
+"propose-fix": {
+  "kind": "step",
+  "step": "propose-fix",
+  "next": {
+    "routes": [
+      { "when": { "path": "result.requiresHumanApproval", "op": "equal", "value": true }, "to": "review-fix", "args": { "plan": "result" } }
+    ],
+    "otherwise": { "to": "fix", "args": { "plan": "result" } }
+  }
+},
+"review-fix": {
+  "kind": "wait",
+  "for": "decision",
+  "actions": [
+    { "key": "approve", "label": "Approve", "body": "optional" },
+    { "key": "revise", "label": "Request changes", "body": "required" },
+    { "key": "reject", "label": "Reject", "body": "optional" }
+  ],
+  "next": {
+    "routes": [
+      { "when": { "path": "result.action", "op": "equal", "value": "approve" }, "to": "fix", "args": { "plan": "nodes.propose-fix.result" } },
+      { "when": { "path": "result.action", "op": "equal", "value": "revise" }, "to": "propose-fix", "args": { "title": "workItem.title", "feedback": "result.body" } }
+    ],
+    "otherwise": { "to": "fix-rejected" }
+  }
+}
+```
+
+</TabItem>
+</Tabs>
+
+- A `decision` wait needs at least one action, and action keys are unique. Comparing `result.action` with a key the node doesn't have is a validation error.
+- `input` is what the person is deciding about, and the run view shows it next to the buttons. A `wait` node declares no inputs of its own: its `input` is whatever every incoming transition passes in `args`.
+- After the decision, read the step's result back with `nodes.<step>.result`. That's always valid, because the step ran on every path to its `wait`.
+- A route can go anywhere, including back to an earlier step with `result.body` as an arg, as `revise` does above. A loop like that has no default limit; set `maxRuns` on the node and catch `Scarn.MaxRunsExceeded` to cap it.
+- The run shows **waiting** only when waits are the only open work. If other lanes are still running, it stays **active**.
+
+## Routes, splits and merges
+
+A **split** runs work side by side, each part in its own **lane**. There are two kinds:
+
+- `"match": "all"` starts one lane per route taken.
+- A route with `each` starts one lane per item of an array.
+
+A plain route inside a lane continues that lane, so nodes reached from an `each` route run once per item. A lane ends at a **merge**, a node whose incoming routes are marked `partial`, or when its path ends. The merge node runs once, with the arrived lanes' args combined. The [Pipeline Graph catalog](/scarn/catalog/pipeline-graph/#every-matching-route) renders the example below.
+
+### Every matching route (`"match": "all"`)
+
+<Tabs syncKey="pipeline-format">
+<TabItem label="TypeScript">
+
+```ts
+classifyIssue.next({
+  match: "all",
+  routes: [
+    { to: (r) => reproduceBug({ appUrl: r.result.appUrl }) },
+    {
+      when: (r) => equal(r.result.category, "security"),
+      to: (r) => notifySecurity({ summary: r.result.summary }),
+    },
+    {
+      when: (r) => not(isEmpty(r.result.affectedPages)),
+      to: (r) =>
+        each(r.result.affectedPages, { maxConcurrency: 3 }, (page) =>
+          captureScreenshot({ url: page }),
+        ),
+    },
+  ],
+  otherwise: (r) => addToBacklog({ summary: r.result.summary }),
+}),
+reproduceBug.next((r) =>
+  writeFailingTest.partial({ observedBehavior: r.result.observedBehavior }),
+),
+notifySecurity.next((r) => writeFailingTest.partial({ securityNotes: r.result.notes })),
+writeFailingTest.next((r) => summariseFindings.partial({ failingTest: r.result.testPath })),
+captureScreenshot.next((r) => summariseFindings.partial({ screenshots: [r.result.url] })),
+summariseFindings.next(done),
+```
+
+</TabItem>
+<TabItem label="JSON">
+
+```json
+"classify-issue": {
+  "kind": "step",
+  "step": "classify-issue",
+  "next": {
+    "match": "all",
+    "routes": [
+      { "to": "reproduce-bug", "args": { "appUrl": "result.appUrl" } },
+      {
+        "when": { "path": "result.category", "op": "equal", "value": "security" },
+        "to": "notify-security",
+        "args": { "summary": "result.summary" }
+      },
+      {
+        "when": { "not": { "path": "result.affectedPages", "op": "isEmpty" } },
+        "to": "capture-screenshot",
+        "each": { "over": "result.affectedPages", "maxConcurrency": 3 },
+        "args": { "url": "item" }
+      }
+    ],
+    "otherwise": { "to": "add-to-backlog", "args": { "summary": "result.summary" } }
+  }
+},
+"capture-screenshot": {
+  "kind": "step",
+  "step": "capture-screenshot",
+  "next": {
+    "routes": [{ "to": "summarise-findings", "args": { "screenshots": { "list": ["result.url"] } }, "partial": true }]
+  }
+}
+```
+
+</TabItem>
+</Tabs>
+
+- `reproduceBug` has no `when`, so it always runs. `notifySecurity` and the screenshot lanes run only when their conditions match.
+- `otherwise` runs only when neither conditional route matched. It runs alongside `reproduceBug`, because routes without `when` don't count.
+- `addToBacklog` has no chain, so its lane ends there. A step with no chain doesn't need an entry in `flow`; its path just ends after it runs.
+- The lanes run at the same time, so nothing should depend on which finishes first.
+
+| Rule                   | `"first"`                                        | `"all"`                                                                                  |
+| ---------------------- | ------------------------------------------------ | ---------------------------------------------------------------------------------------- |
+| Routes taken           | The first that matches                           | Every one that matches, each as a lane                                                   |
+| A route with no `when` | Allowed only as the only route (`.next(target)`) | Allowed anywhere. It always runs                                                         |
+| `otherwise`            | Taken when no route matched                      | Taken when no route _with_ a `when` matched                                              |
+| Nothing taken          | The path ends                                    | No lanes start. The split is finished at once, and a closing merge runs with what it has |
+
+A route of an `"all"` node starts a lane, so it can't be `partial` itself. Route to a step first and make that step's route `partial`.
+
+### Per-item lanes (`each`)
+
+<Tabs syncKey="pipeline-format">
+<TabItem label="TypeScript">
+
+```ts
+planChanges.next((r) =>
+  each(r.result.files, { maxConcurrency: 5, toleratedFailures: { count: 1 } }, (file) =>
+    editFile({ file, planSummary: r.result.summary }),
+  ),
+),
+editFile.next((r) => reviewEdit({ path: r.result.path, diff: r.result.diff })),
+reviewEdit.next((r) => approveReviews.partial({ reviews: [r.result] })),
+```
+
+</TabItem>
+<TabItem label="JSON">
+
+```json
+"plan-changes": {
+  "kind": "step",
+  "step": "plan-changes",
+  "next": {
+    "routes": [{
+      "to": "edit-file",
+      "each": { "over": "result.files", "maxConcurrency": 5, "toleratedFailures": { "count": 1 } },
+      "args": { "file": "item", "planSummary": "result.summary" }
+    }]
+  }
+},
+"edit-file": {
+  "kind": "step",
+  "step": "edit-file",
+  "next": { "routes": [{ "to": "review-edit", "args": { "path": "result.path", "diff": "result.diff" } }] }
+},
+"review-edit": {
+  "kind": "step",
+  "step": "review-edit",
+  "next": {
+    "routes": [{ "to": "approve-reviews", "args": { "reviews": { "list": ["result"] } }, "partial": true }]
+  }
+}
+```
+
+</TabItem>
+</Tabs>
+
+In TypeScript, `each(list, options?, (item) => target)` is the `each` route. The callback gets the item (the only place `item` exists) and returns the lane's first node, which can't be a `.partial(...)`. The lane's other nodes are wired in `flow` like any other. `each` is only a `next` target: not `start`, and not a `catch` target.
+
+| Field                    | Description                                                                                                                                        |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `each.over`              | A reference to an array. Each element becomes `item` in that route's args                                                                          |
+| `each.maxConcurrency`    | How many lanes run at once. The rest wait and start in item order as lanes finish. Unlimited if omitted                                            |
+| `each.toleratedFailures` | `{ "count": n }` or `{ "percent": n }`, default `0`. Once more lanes fail than this, the group fails at once and the remaining lanes are cancelled |
+
+An `each` split's merge must close it: every path of its lanes either reaches the merge or ends. Splits can be nested. A merge inside an outer lane runs once per outer lane, and a merge that every inner and outer lane reaches closes both levels at once.
+
+### Merges (`partial`)
+
+`step.partial(args)` (`"partial": true` in JSON) ends the lane by arriving at `step` with some of its args. `.partial` exists on step and decision handles, only as a target in `.next(...)`. The merge node waits until every lane of the split that could still reach it has either arrived or can no longer reach it, then runs once.
+
+- **A closing merge** is the only way out of the split for every lane that reaches it. After it runs, the run carries on from it on the split's parent lane, or at the top level. In the example, `summariseFindings` closes both the `all` split and the screenshot lanes nested inside it.
+- **A partial merge** is any other merge, which is possible only in an `all` split. The lanes that arrive become one lane, which carries on in the same split. In the example, `writeFailingTest` combines the reproduce and security lanes, and then arrives at `summariseFindings` itself.
+- **Lanes that can't reach a merge** keep running after it fires. `addToBacklog` above is fire-and-forget: the run finishes when it does, even if `summariseFindings` has already run.
+
+Every incoming route of a merge node must be `partial`, so the step before a merge always supplies its args; the merge never builds its own input. The merge node's `next` runs once, so its conditions can branch on the whole set (`some(r.input.reviews, ...)`).
+
+#### How args combine
+
+| Field comes from               | The merge gets                                                                                                                                                                                             |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| An `"all"` lane (not per item) | The value, copied. Each field may be supplied by only one route's lanes                                                                                                                                    |
+| Item lanes (`each`)            | An array, the lanes' arrays concatenated in item order. Supply `[r.result.url]` for one element per lane, `r.result.urls` for many, or `[]` for none. The merge's input must declare the field as an array |
+| A route that wasn't taken      | Left unset, or `[]` for a field from item lanes                                                                                                                                                            |
+| An `each` with no items        | `[]`                                                                                                                                                                                                       |
+
+A required field must be **guaranteed**: supplied on every path from a route that always runs (one with no `when`) to the merge. Paths that end at a `fail` node don't count, because a failed lane never reaches the merge. A path that ends quietly without supplying the field (no route taken, no `next`, or `succeed`) means the field might not arrive, which is a build error: make the field optional, or supply it on every path. Fields from item lanes are always guaranteed, since they default to `[]`. In the example, `writeFailingTest`'s `securityNotes` must be optional, because `notifySecurity` runs only when its `when` matches. `summariseFindings`' `failingTest` could be required, because `reproduceBug` always runs and always reaches `summariseFindings` through `writeFailingTest`. If `reproduceBug` also had a route to a `fail` node, that path wouldn't change this.
+
+When lanes each change the repository, the step after the merge starts from their branch only if every arrived lane that has a branch ended on the same one. Otherwise it gets no base branch, and the visit is marked `branch_ambiguous`.
+
+### How lanes end and fail
+
+| What happens in a lane                       | Effect                                                                                                                                          |
+| -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| A `partial` route is taken                   | The lane arrives at the merge                                                                                                                   |
+| No route is taken, or the node has no `next` | The lane ends quietly. It's left out of any merge, which works as a filter                                                                      |
+| A `succeed` node                             | The lane ends quietly. Only that lane: the run doesn't finish                                                                                   |
+| A `fail` node, or an uncaught error          | The lane fails. An `"all"` lane failing fails the split's parent (the enclosing lane, or the run). Item lanes count against `toleratedFailures` |
+
+`.catch` works inside a lane as it does anywhere, and the caught route stays in the lane. At the top level, the run succeeds once its own path has ended and no lane is still running; a top-level `fail` fails the run straight away and cancels the running lanes. `succeed` and `fail` nodes can be shared: one `done` node can be reached from any lane and from the top level.
+
+### Rules the validator enforces
+
+| Build error                                                             | Fix                                                                      |
+| ----------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| In `"first"` mode, a route with no `when` alongside other routes        | Add a `when`, or move it to `otherwise`                                  |
+| A `partial` route outside any split                                     | Remove `partial`, or start lanes earlier with `each` or `"match": "all"` |
+| A plain route into a merge node                                         | Make every route into it `partial`                                       |
+| Lanes from two routes meeting at a node without `partial`               | Make the node a merge, or use a second node with `.as(...)`              |
+| A field supplied by two different routes' lanes                         | Supply it from one route only                                            |
+| A required merge field that no route supplies, or that might not arrive | Make it optional, or supply it on every path                             |
+| A field from item lanes whose input type isn't an array                 | Make it an array                                                         |
+| A node reached both inside and outside a split                          | Use a second node with `.as(...)`. `succeed` and `fail` nodes are exempt |
+| `r.node(x)` after a merge, where `x` ran in its lanes                   | Pass the value through the `partial` route's args                        |
+| A route of an `"all"` node that is itself `partial`                     | Route to a step first, and make that step's route `partial`              |
+
+### Not supported
+
+- `partial` on a `catch` entry. A caught error inside a lane stays in the lane; send it to a step whose `.next` is `partial`.
+- A loop back into a merge node from outside its split. Use a second node with `.as(...)`.
+- `toleratedFailures` for `"all"` lanes. Use `.catch` on the step instead.
+- Combining fields other than by copying values and concatenating arrays.
+
+## Validation
+
+Every problem is reported with a JSON pointer into the document, a message, and usually a fix hint:
+
+```text
+/nodes/fix/next/otherwise/args/plan: missing; "fix" requires plan (ProposeFixResult). Did you mean "input.plan"?
+/nodes/evaluate/next/routes/0/to: "request-detail" is not a node in this pipeline. Did you mean "request-details"?
+```
+
+`build` prints the TypeScript line next to the pointer (`bug-repro.ts:42 (/nodes/fix/next/otherwise/args/plan): …`). `build`, `validate`, `publish`, the studio and the server all run the same validator, so a document that passes locally passes on publish (as long as the steps it uses haven't changed in between).
+
+### Not supported yet
+
+These are part of the format, but the validator rejects them for now, and the TypeScript API has no way to write them:
+
+- Retry delays: `intervalSeconds`, `backoffRate`, `maxDelaySeconds`
+- `timeoutSeconds` on a `wait` node, or at the top level of the document
+- `wait` nodes with `"for": "event"` or `"for": "timer"`
+- `pipeline` on a transition (routing to another pipeline)
+
+## Reruns
+
+From the run view, any finished step can be rerun, optionally with a message to the agent. The rerun replaces that visit and everything after it. Its args are resolved again from the current history, and work in unaffected lanes keeps running. Rerunning a step inside a lane after its merge reopens the group; when the lane arrives again, the merge fires again with the other lanes' stored args.
+
+## Plugins in pipeline steps
+
+Pipelines and steps don't configure OpenCode plugins. Add plugins to `.opencode/opencode.json` in your repo; the OpenCode that runs each pipeline step loads that file. See [Plugins](/scarn/guides/steps/#plugins).
+
+## See also
+
+- [Pipeline Graph catalog](/scarn/catalog/pipeline-graph/): interactive graphs of branching, decisions, loops and lanes.
+- [Defining Steps](/scarn/guides/steps/): the input and result schemas the validator checks args against.
+- [Default Pipeline Assignment](/scarn/guides/pipeline-assignment/): routing incoming work items to a pipeline automatically.

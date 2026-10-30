@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { DeleteApiAuth__Data, DeleteApiMeSecretsBySecretIdData, DeleteApiMeSecretsBySecretIdErrors, DeleteApiMeSecretsBySecretIdResponses, DeleteApiProjectsByProjectIdArtifactsBatchData, DeleteApiProjectsByProjectIdArtifactsBatchErrors, DeleteApiProjectsByProjectIdArtifactsBatchResponses, DeleteApiProjectsByProjectIdArtifactsByArtifactIdData, DeleteApiProjectsByProjectIdArtifactsByArtifactIdErrors, DeleteApiProjectsByProjectIdArtifactsByArtifactIdResponses, DeleteApiProjectsByProjectIdIntegrationsByIntegrationIdData, DeleteApiProjectsByProjectIdIntegrationsByIntegrationIdErrors, DeleteApiProjectsByProjectIdIntegrationsByIntegrationIdResponses, DeleteApiWorkItemBlocksByBlockIdData, DeleteApiWorkItemBlocksByBlockIdErrors, DeleteApiWorkItemBlocksByBlockIdResponses, DeleteApiWorkItemCommentsByCommentIdData, DeleteApiWorkItemCommentsByCommentIdErrors, DeleteApiWorkItemCommentsByCommentIdResponses, DeleteApiWorkItemsBatchData, DeleteApiWorkItemsBatchErrors, DeleteApiWorkItemsBatchResponses, DeleteApiWorkItemsByWorkItemIdData, DeleteApiWorkItemsByWorkItemIdErrors, DeleteApiWorkItemsByWorkItemIdResponses, GetApiAuth__Data, GetApiIntegrationsGithubCallbackData, GetApiIntegrationsGithubInstallData, GetApiIntegrationsGithubReposData, GetApiIntegrationsGithubReposErrors, GetApiIntegrationsGithubReposResponses, GetApiMeSecretsData, GetApiMeSecretsErrors, GetApiMeSecretsResponses, GetApiOrgsByOrgIdUsageData, GetApiOrgsByOrgIdUsageErrors, GetApiOrgsByOrgIdUsageResponses, GetApiPipelineDefinitionsByPipelineDefinitionIdData, GetApiPipelineDefinitionsByPipelineDefinitionIdErrors, GetApiPipelineDefinitionsByPipelineDefinitionIdResponses, GetApiPipelineDefinitionsByPipelineDefinitionIdVersionsByPipelineDefinitionVersionIdGraphSpecData, GetApiPipelineDefinitionsByPipelineDefinitionIdVersionsByPipelineDefinitionVersionIdGraphSpecErrors, GetApiPipelineDefinitionsByPipelineDefinitionIdVersionsByPipelineDefinitionVersionIdGraphSpecResponses, GetApiPipelineExecutionsByPipelineExecutionIdData, GetApiPipelineExecutionsByPipelineExecutionIdErrors, GetApiPipelineExecutionsByPipelineExecutionIdResponses, GetApiPipelineExecutionsByPipelineExecutionIdRoutedChainData, GetApiPipelineExecutionsByPipelineExecutionIdRoutedChainErrors, GetApiPipelineExecutionsByPipelineExecutionIdRoutedChainResponses, GetApiPipelineExecutionsByPipelineExecutionIdStepsByStepKeyThreadData, GetApiPipelineExecutionsByPipelineExecutionIdStepsByStepKeyThreadErrors, GetApiPipelineExecutionsByPipelineExecutionIdStepsByStepKeyThreadResponses, GetApiPipelineExecutionsCountsByPipelineData, GetApiPipelineExecutionsCountsByPipelineErrors, GetApiPipelineExecutionsCountsByPipelineResponses, GetApiPipelineExecutionsData, GetApiPipelineExecutionsErrors, GetApiPipelineExecutionsResponses, GetApiPipelineExecutionsStepRollupsByDefinitionByPipelineDefinitionIdData, GetApiPipelineExecutionsStepRollupsByDefinitionByPipelineDefinitionIdErrors, GetApiPipelineExecutionsStepRollupsByDefinitionByPipelineDefinitionIdResponses, GetApiPipelineExecutionsStepRunsByDefinitionByPipelineDefinitionIdData, GetApiPipelineExecutionsStepRunsByDefinitionByPipelineDefinitionIdErrors, GetApiPipelineExecutionsStepRunsByDefinitionByPipelineDefinitionIdResponses, GetApiProjectInvitesByTokenData, GetApiProjectInvitesByTokenErrors, GetApiProjectInvitesByTokenResponses, GetApiProjectsByProjectIdArtifactsByArtifactIdData, GetApiProjectsByProjectIdArtifactsByArtifactIdErrors, GetApiProjectsByProjectIdArtifactsByArtifactIdResponses, GetApiProjectsByProjectIdArtifactsData, GetApiProjectsByProjectIdArtifactsErrors, GetApiProjectsByProjectIdArtifactsResponses, GetApiProjectsByProjectIdData, GetApiProjectsByProjectIdErrors, GetApiProjectsByProjectIdIntegrationsData, GetApiProjectsByProjectIdIntegrationsErrors, GetApiProjectsByProjectIdIntegrationsResponses, GetApiProjectsByProjectIdInvitesData, GetApiProjectsByProjectIdInvitesErrors, GetApiProjectsByProjectIdInvitesResponses, GetApiProjectsByProjectIdNotificationRulesData, GetApiProjectsByProjectIdNotificationRulesErrors, GetApiProjectsByProjectIdNotificationRulesResponses, GetApiProjectsByProjectIdNotificationsByNotificationIdData, GetApiProjectsByProjectIdNotificationsByNotificationIdErrors, GetApiProjectsByProjectIdNotificationsByNotificationIdResponses, GetApiProjectsByProjectIdNotificationsData, GetApiProjectsByProjectIdNotificationsErrors, GetApiProjectsByProjectIdNotificationsResponses, GetApiProjectsByProjectIdPipelineDefinitionsData, GetApiProjectsByProjectIdPipelineDefinitionsErrors, GetApiProjectsByProjectIdPipelineDefinitionsResponses, GetApiProjectsByProjectIdResponses, GetApiProjectsByProjectIdWorkItemFieldOptionsData, GetApiProjectsByProjectIdWorkItemFieldOptionsErrors, GetApiProjectsByProjectIdWorkItemFieldOptionsResponses, GetApiProjectsByProjectIdWorkItemsData, GetApiProjectsByProjectIdWorkItemsErrors, GetApiProjectsByProjectIdWorkItemsResponses, GetApiProjectsData, GetApiProjectsErrors, GetApiProjectsResolveData, GetApiProjectsResolveErrors, GetApiProjectsResolveResponses, GetApiProjectsResponses, GetApiStepDefinitionsByStepDefinitionIdData, GetApiStepDefinitionsByStepDefinitionIdErrors, GetApiStepDefinitionsByStepDefinitionIdResponses, GetApiStepDefinitionsData, GetApiStepDefinitionsErrors, GetApiStepDefinitionsResponses, GetApiStepDefinitionTemplatesByStepDefinitionTemplateIdData, GetApiStepDefinitionTemplatesByStepDefinitionTemplateIdErrors, GetApiStepDefinitionTemplatesByStepDefinitionTemplateIdResponses, GetApiStepDefinitionTemplatesData, GetApiStepDefinitionTemplatesErrors, GetApiStepDefinitionTemplatesResponses, GetApiTasksByTaskIdArtifactFailuresData, GetApiTasksByTaskIdArtifactFailuresErrors, GetApiTasksByTaskIdArtifactFailuresResponses, GetApiTasksByTaskIdArtifactsByArtifactIdDownloadUrlData, GetApiTasksByTaskIdArtifactsByArtifactIdDownloadUrlErrors, GetApiTasksByTaskIdArtifactsByArtifactIdDownloadUrlResponses, GetApiTasksByTaskIdArtifactsData, GetApiTasksByTaskIdArtifactsErrors, GetApiTasksByTaskIdArtifactsResponses, GetApiTasksByTaskIdData, GetApiTasksByTaskIdErrors, GetApiTasksByTaskIdHistoryData, GetApiTasksByTaskIdHistoryErrors, GetApiTasksByTaskIdHistoryResponses, GetApiTasksByTaskIdLogsArchiveData, GetApiTasksByTaskIdLogsArchiveErrors, GetApiTasksByTaskIdLogsArchiveResponses, GetApiTasksByTaskIdLogsData, GetApiTasksByTaskIdLogsErrors, GetApiTasksByTaskIdLogsResponses, GetApiTasksByTaskIdResponses, GetApiTasksData, GetApiTasksErrors, GetApiTasksResponses, GetApiUsernameAvailableData, GetApiUsernameAvailableErrors, GetApiUsernameAvailableResponses, GetApiWorkItemBlocksData, GetApiWorkItemBlocksErrors, GetApiWorkItemBlocksResponses, GetApiWorkItemCommentDraftsData, GetApiWorkItemCommentDraftsErrors, GetApiWorkItemCommentDraftsResponses, GetApiWorkItemCommentsData, GetApiWorkItemCommentsErrors, GetApiWorkItemCommentsResponses, GetApiWorkItemsByWorkItemIdChildrenData, GetApiWorkItemsByWorkItemIdChildrenErrors, GetApiWorkItemsByWorkItemIdChildrenResponses, GetApiWorkItemsByWorkItemIdData, GetApiWorkItemsByWorkItemIdErrors, GetApiWorkItemsByWorkItemIdResponses, HeadApiAuth__Data, OptionsApiAuth__Data, PatchApiAuth__Data, PatchApiMeSecretsBySecretIdData, PatchApiMeSecretsBySecretIdErrors, PatchApiMeSecretsBySecretIdResponses, PatchApiWorkItemCommentsByCommentIdData, PatchApiWorkItemCommentsByCommentIdErrors, PatchApiWorkItemCommentsByCommentIdResponses, PatchApiWorkItemsByWorkItemIdData, PatchApiWorkItemsByWorkItemIdErrors, PatchApiWorkItemsByWorkItemIdParentData, PatchApiWorkItemsByWorkItemIdParentErrors, PatchApiWorkItemsByWorkItemIdParentResponses, PatchApiWorkItemsByWorkItemIdResponses, PostApiAuth__Data, PostApiIntegrationsGithubInstallationsByInstallationIdRefreshData, PostApiIntegrationsGithubInstallationsByInstallationIdRefreshErrors, PostApiIntegrationsGithubInstallationsByInstallationIdRefreshResponses, PostApiIntegrationsGithubWebhookData, PostApiMeSecretsData, PostApiMeSecretsErrors, PostApiMeSecretsResponses, PostApiPipelineDefinitionsData, PostApiPipelineDefinitionsErrors, PostApiPipelineDefinitionsResponses, PostApiPipelineExecutionsByPipelineExecutionIdCohortsByOriginNodeDefinitionIdAcceptData, PostApiPipelineExecutionsByPipelineExecutionIdCohortsByOriginNodeDefinitionIdAcceptErrors, PostApiPipelineExecutionsByPipelineExecutionIdCohortsByOriginNodeDefinitionIdAcceptResponses, PostApiPipelineExecutionsByPipelineExecutionIdRerunData, PostApiPipelineExecutionsByPipelineExecutionIdRerunErrors, PostApiPipelineExecutionsByPipelineExecutionIdRerunResponses, PostApiPipelineExecutionsByPipelineExecutionIdStepRunsByPipelineStepRunIdAcceptData, PostApiPipelineExecutionsByPipelineExecutionIdStepRunsByPipelineStepRunIdAcceptErrors, PostApiPipelineExecutionsByPipelineExecutionIdStepRunsByPipelineStepRunIdAcceptResponses, PostApiPipelineExecutionsByPipelineExecutionIdStepRunsByPipelineStepRunIdResultsData, PostApiPipelineExecutionsByPipelineExecutionIdStepRunsByPipelineStepRunIdResultsErrors, PostApiPipelineExecutionsByPipelineExecutionIdStepRunsByPipelineStepRunIdResultsResponses, PostApiPipelineExecutionsByPipelineExecutionIdStepRunsFirstData, PostApiPipelineExecutionsByPipelineExecutionIdStepRunsFirstErrors, PostApiPipelineExecutionsByPipelineExecutionIdStepRunsFirstResponses, PostApiPipelineExecutionsByPipelineExecutionIdStepsByStepKeyMessagesData, PostApiPipelineExecutionsByPipelineExecutionIdStepsByStepKeyMessagesErrors, PostApiPipelineExecutionsByPipelineExecutionIdStepsByStepKeyMessagesResponses, PostApiPipelineExecutionsData, PostApiPipelineExecutionsErrors, PostApiPipelineExecutionsResponses, PostApiProjectInvitesByTokenAcceptData, PostApiProjectInvitesByTokenAcceptErrors, PostApiProjectInvitesByTokenAcceptResponses, PostApiProjectsByProjectIdIntegrationsByIntegrationIdSyncData, PostApiProjectsByProjectIdIntegrationsByIntegrationIdSyncErrors, PostApiProjectsByProjectIdIntegrationsByIntegrationIdSyncResponses, PostApiProjectsByProjectIdIntegrationsData, PostApiProjectsByProjectIdIntegrationsErrors, PostApiProjectsByProjectIdIntegrationsResponses, PostApiProjectsByProjectIdInvitesByInviteIdRevokeData, PostApiProjectsByProjectIdInvitesByInviteIdRevokeErrors, PostApiProjectsByProjectIdInvitesByInviteIdRevokeResponses, PostApiProjectsByProjectIdInvitesData, PostApiProjectsByProjectIdInvitesErrors, PostApiProjectsByProjectIdInvitesResponses, PostApiProjectsByProjectIdNotificationsByNotificationIdDismissData, PostApiProjectsByProjectIdNotificationsByNotificationIdDismissErrors, PostApiProjectsByProjectIdNotificationsByNotificationIdDismissResponses, PostApiProjectsByProjectIdNotificationsByNotificationIdRespondData, PostApiProjectsByProjectIdNotificationsByNotificationIdRespondErrors, PostApiProjectsByProjectIdNotificationsByNotificationIdRespondResponses, PostApiProjectsData, PostApiProjectsErrors, PostApiProjectsIssueTrackerCheckData, PostApiProjectsIssueTrackerCheckErrors, PostApiProjectsIssueTrackerCheckResponses, PostApiProjectsRepoCheckData, PostApiProjectsRepoCheckErrors, PostApiProjectsRepoCheckResponses, PostApiProjectsResponses, PostApiStepDefinitionsData, PostApiStepDefinitionsErrors, PostApiStepDefinitionsResponses, PostApiStepDefinitionTemplatesByStepDefinitionTemplateIdInstantiateData, PostApiStepDefinitionTemplatesByStepDefinitionTemplateIdInstantiateErrors, PostApiStepDefinitionTemplatesByStepDefinitionTemplateIdInstantiateResponses, PostApiTaskResultsByTaskResultIdSignalsExtractData, PostApiTaskResultsByTaskResultIdSignalsExtractErrors, PostApiTaskResultsByTaskResultIdSignalsExtractResponses, PostApiTaskResultsData, PostApiTaskResultsErrors, PostApiTaskResultsResponses, PostApiTasksByTaskIdArtifactFailuresData, PostApiTasksByTaskIdArtifactFailuresErrors, PostApiTasksByTaskIdArtifactFailuresResponses, PostApiTasksByTaskIdArtifactsData, PostApiTasksByTaskIdArtifactsErrors, PostApiTasksByTaskIdArtifactsResponses, PostApiTasksByTaskIdArtifactUploadUrlData, PostApiTasksByTaskIdArtifactUploadUrlErrors, PostApiTasksByTaskIdArtifactUploadUrlResponses, PostApiTasksByTaskIdCompletionsData, PostApiTasksByTaskIdCompletionsErrors, PostApiTasksByTaskIdCompletionsResponses, PostApiTasksByTaskIdLogsData, PostApiTasksByTaskIdLogsErrors, PostApiTasksByTaskIdLogsResponses, PostApiTasksByTaskIdWorkerContextData, PostApiTasksByTaskIdWorkerContextErrors, PostApiTasksByTaskIdWorkerContextResponses, PostApiTasksClaimsData, PostApiTasksClaimsErrors, PostApiTasksClaimsResponses, PostApiTasksData, PostApiTasksErrors, PostApiTasksResponses, PostApiUsernameData, PostApiUsernameErrors, PostApiUsernameResponses, PostApiWorkItemBlocksData, PostApiWorkItemBlocksErrors, PostApiWorkItemBlocksResponses, PostApiWorkItemCommentDraftsByNotificationIdApproveData, PostApiWorkItemCommentDraftsByNotificationIdApproveErrors, PostApiWorkItemCommentDraftsByNotificationIdApproveResponses, PostApiWorkItemCommentDraftsByNotificationIdRejectData, PostApiWorkItemCommentDraftsByNotificationIdRejectErrors, PostApiWorkItemCommentDraftsByNotificationIdRejectResponses, PostApiWorkItemCommentsByCommentIdPinData, PostApiWorkItemCommentsByCommentIdPinErrors, PostApiWorkItemCommentsByCommentIdPinResponses, PostApiWorkItemCommentsData, PostApiWorkItemCommentsErrors, PostApiWorkItemCommentsResponses, PostApiWorkItemsBatchData, PostApiWorkItemsBatchErrors, PostApiWorkItemsBatchResponses, PostApiWorkItemsData, PostApiWorkItemsErrors, PostApiWorkItemsResponses, PutApiAuth__Data, PutApiPipelineDefinitionsByPipelineDefinitionIdArchiveData, PutApiPipelineDefinitionsByPipelineDefinitionIdArchiveErrors, PutApiPipelineDefinitionsByPipelineDefinitionIdArchiveResponses, PutApiPipelineDefinitionsByPipelineDefinitionIdStepsByPipelineStepDefinitionIdAdvancementPolicyData, PutApiPipelineDefinitionsByPipelineDefinitionIdStepsByPipelineStepDefinitionIdAdvancementPolicyErrors, PutApiPipelineDefinitionsByPipelineDefinitionIdStepsByPipelineStepDefinitionIdAdvancementPolicyResponses, PutApiPipelineDefinitionsByPipelineDefinitionIdUnarchiveData, PutApiPipelineDefinitionsByPipelineDefinitionIdUnarchiveErrors, PutApiPipelineDefinitionsByPipelineDefinitionIdUnarchiveResponses, PutApiPipelineDefinitionsData, PutApiPipelineDefinitionsErrors, PutApiPipelineDefinitionsResponses, PutApiPipelineExecutionsBatchCancelData, PutApiPipelineExecutionsBatchCancelErrors, PutApiPipelineExecutionsBatchCancelResponses, PutApiPipelineExecutionsByPipelineExecutionIdCancelData, PutApiPipelineExecutionsByPipelineExecutionIdCancelErrors, PutApiPipelineExecutionsByPipelineExecutionIdCancelResponses, PutApiPipelineExecutionsByPipelineExecutionIdStartData, PutApiPipelineExecutionsByPipelineExecutionIdStartErrors, PutApiPipelineExecutionsByPipelineExecutionIdStartResponses, PutApiPipelineExecutionsByPipelineExecutionIdStepRunsByPipelineStepRunIdRunningData, PutApiPipelineExecutionsByPipelineExecutionIdStepRunsByPipelineStepRunIdRunningErrors, PutApiPipelineExecutionsByPipelineExecutionIdStepRunsByPipelineStepRunIdRunningResponses, PutApiProjectsByProjectIdDefaultPipelineAssignmentData, PutApiProjectsByProjectIdDefaultPipelineAssignmentErrors, PutApiProjectsByProjectIdDefaultPipelineAssignmentResponses, PutApiProjectsByProjectIdMembersByUserIdPermissionsData, PutApiProjectsByProjectIdMembersByUserIdPermissionsErrors, PutApiProjectsByProjectIdMembersByUserIdPermissionsResponses, PutApiProjectsByProjectIdNotificationRulesData, PutApiProjectsByProjectIdNotificationRulesErrors, PutApiProjectsByProjectIdNotificationRulesResponses, PutApiStepDefinitionsByStepDefinitionIdArchiveData, PutApiStepDefinitionsByStepDefinitionIdArchiveErrors, PutApiStepDefinitionsByStepDefinitionIdArchiveResponses, PutApiStepDefinitionsData, PutApiStepDefinitionsErrors, PutApiStepDefinitionsResponses, PutApiTasksByTaskIdHeartbeatData, PutApiTasksByTaskIdHeartbeatErrors, PutApiTasksByTaskIdHeartbeatResponses, PutApiTasksByTaskIdRunningData, PutApiTasksByTaskIdRunningErrors, PutApiTasksByTaskIdRunningResponses, PutApiWorkItemsBatchData, PutApiWorkItemsBatchErrors, PutApiWorkItemsBatchResponses, PutApiWorkItemsData, PutApiWorkItemsErrors, PutApiWorkItemsResponses, TraceApiAuth__Data } from './types.gen';
+import type { DeleteApiAuth__Data, DeleteApiMeSecretsBySecretIdData, DeleteApiMeSecretsBySecretIdErrors, DeleteApiMeSecretsBySecretIdResponses, DeleteApiProjectsByProjectIdArtifactsBatchData, DeleteApiProjectsByProjectIdArtifactsBatchErrors, DeleteApiProjectsByProjectIdArtifactsBatchResponses, DeleteApiProjectsByProjectIdArtifactsByArtifactIdData, DeleteApiProjectsByProjectIdArtifactsByArtifactIdErrors, DeleteApiProjectsByProjectIdArtifactsByArtifactIdResponses, DeleteApiProjectsByProjectIdIntegrationsByIntegrationIdData, DeleteApiProjectsByProjectIdIntegrationsByIntegrationIdErrors, DeleteApiProjectsByProjectIdIntegrationsByIntegrationIdResponses, DeleteApiWorkItemBlocksByBlockIdData, DeleteApiWorkItemBlocksByBlockIdErrors, DeleteApiWorkItemBlocksByBlockIdResponses, DeleteApiWorkItemCommentsByCommentIdData, DeleteApiWorkItemCommentsByCommentIdErrors, DeleteApiWorkItemCommentsByCommentIdResponses, DeleteApiWorkItemsBatchData, DeleteApiWorkItemsBatchErrors, DeleteApiWorkItemsBatchResponses, DeleteApiWorkItemsByWorkItemIdData, DeleteApiWorkItemsByWorkItemIdErrors, DeleteApiWorkItemsByWorkItemIdResponses, GetApiAuth__Data, GetApiConversationsByConversationIdData, GetApiConversationsByConversationIdErrors, GetApiConversationsByConversationIdResponses, GetApiIntegrationsGithubCallbackData, GetApiIntegrationsGithubInstallData, GetApiIntegrationsGithubReposData, GetApiIntegrationsGithubReposErrors, GetApiIntegrationsGithubReposResponses, GetApiMeSecretsData, GetApiMeSecretsErrors, GetApiMeSecretsResponses, GetApiOrgsByOrgIdUsageData, GetApiOrgsByOrgIdUsageErrors, GetApiOrgsByOrgIdUsageResponses, GetApiPipelineDefinitionsByPipelineDefinitionIdData, GetApiPipelineDefinitionsByPipelineDefinitionIdErrors, GetApiPipelineDefinitionsByPipelineDefinitionIdResponses, GetApiPipelineDefinitionsByPipelineDefinitionIdVersionsByVersionData, GetApiPipelineDefinitionsByPipelineDefinitionIdVersionsByVersionErrors, GetApiPipelineDefinitionsByPipelineDefinitionIdVersionsByVersionResponses, GetApiPipelineDefinitionsByPipelineDefinitionIdVersionsData, GetApiPipelineDefinitionsByPipelineDefinitionIdVersionsErrors, GetApiPipelineDefinitionsByPipelineDefinitionIdVersionsResponses, GetApiPipelineExecutionsByPipelineExecutionIdData, GetApiPipelineExecutionsByPipelineExecutionIdErrors, GetApiPipelineExecutionsByPipelineExecutionIdResponses, GetApiPipelineExecutionsByPipelineExecutionIdVisitsByVisitIdThreadData, GetApiPipelineExecutionsByPipelineExecutionIdVisitsByVisitIdThreadErrors, GetApiPipelineExecutionsByPipelineExecutionIdVisitsByVisitIdThreadResponses, GetApiPipelineExecutionsCountsByPipelineData, GetApiPipelineExecutionsCountsByPipelineErrors, GetApiPipelineExecutionsCountsByPipelineResponses, GetApiPipelineExecutionsData, GetApiPipelineExecutionsErrors, GetApiPipelineExecutionsResponses, GetApiProjectInvitesByTokenData, GetApiProjectInvitesByTokenErrors, GetApiProjectInvitesByTokenResponses, GetApiProjectsByProjectIdArtifactsByArtifactIdData, GetApiProjectsByProjectIdArtifactsByArtifactIdErrors, GetApiProjectsByProjectIdArtifactsByArtifactIdResponses, GetApiProjectsByProjectIdArtifactsData, GetApiProjectsByProjectIdArtifactsErrors, GetApiProjectsByProjectIdArtifactsResponses, GetApiProjectsByProjectIdData, GetApiProjectsByProjectIdErrors, GetApiProjectsByProjectIdIntegrationsData, GetApiProjectsByProjectIdIntegrationsErrors, GetApiProjectsByProjectIdIntegrationsResponses, GetApiProjectsByProjectIdInvitesData, GetApiProjectsByProjectIdInvitesErrors, GetApiProjectsByProjectIdInvitesResponses, GetApiProjectsByProjectIdNotificationRulesData, GetApiProjectsByProjectIdNotificationRulesErrors, GetApiProjectsByProjectIdNotificationRulesResponses, GetApiProjectsByProjectIdNotificationsByNotificationIdData, GetApiProjectsByProjectIdNotificationsByNotificationIdErrors, GetApiProjectsByProjectIdNotificationsByNotificationIdResponses, GetApiProjectsByProjectIdNotificationsData, GetApiProjectsByProjectIdNotificationsErrors, GetApiProjectsByProjectIdNotificationsResponses, GetApiProjectsByProjectIdPipelineDefinitionsData, GetApiProjectsByProjectIdPipelineDefinitionsErrors, GetApiProjectsByProjectIdPipelineDefinitionsResponses, GetApiProjectsByProjectIdResponses, GetApiProjectsByProjectIdWorkItemFieldOptionsData, GetApiProjectsByProjectIdWorkItemFieldOptionsErrors, GetApiProjectsByProjectIdWorkItemFieldOptionsResponses, GetApiProjectsByProjectIdWorkItemsData, GetApiProjectsByProjectIdWorkItemsErrors, GetApiProjectsByProjectIdWorkItemsResponses, GetApiProjectsData, GetApiProjectsErrors, GetApiProjectsResolveData, GetApiProjectsResolveErrors, GetApiProjectsResolveResponses, GetApiProjectsResponses, GetApiStepDefinitionsByStepDefinitionIdData, GetApiStepDefinitionsByStepDefinitionIdErrors, GetApiStepDefinitionsByStepDefinitionIdResponses, GetApiStepDefinitionsData, GetApiStepDefinitionsErrors, GetApiStepDefinitionsResponses, GetApiStepDefinitionTemplatesByStepDefinitionTemplateIdData, GetApiStepDefinitionTemplatesByStepDefinitionTemplateIdErrors, GetApiStepDefinitionTemplatesByStepDefinitionTemplateIdResponses, GetApiStepDefinitionTemplatesData, GetApiStepDefinitionTemplatesErrors, GetApiStepDefinitionTemplatesResponses, GetApiTaskRunsByTaskRunIdArtifactFailuresData, GetApiTaskRunsByTaskRunIdArtifactFailuresErrors, GetApiTaskRunsByTaskRunIdArtifactFailuresResponses, GetApiTaskRunsByTaskRunIdArtifactsByArtifactIdDownloadUrlData, GetApiTaskRunsByTaskRunIdArtifactsByArtifactIdDownloadUrlErrors, GetApiTaskRunsByTaskRunIdArtifactsByArtifactIdDownloadUrlResponses, GetApiTaskRunsByTaskRunIdArtifactsData, GetApiTaskRunsByTaskRunIdArtifactsErrors, GetApiTaskRunsByTaskRunIdArtifactsResponses, GetApiTaskRunsByTaskRunIdData, GetApiTaskRunsByTaskRunIdErrors, GetApiTaskRunsByTaskRunIdLogsArchiveData, GetApiTaskRunsByTaskRunIdLogsArchiveErrors, GetApiTaskRunsByTaskRunIdLogsArchiveResponses, GetApiTaskRunsByTaskRunIdLogsData, GetApiTaskRunsByTaskRunIdLogsErrors, GetApiTaskRunsByTaskRunIdLogsResponses, GetApiTaskRunsByTaskRunIdResponses, GetApiTaskRunsData, GetApiTaskRunsErrors, GetApiTaskRunsResponses, GetApiTasksByTaskIdData, GetApiTasksByTaskIdErrors, GetApiTasksByTaskIdResponses, GetApiTasksByTaskIdRunsData, GetApiTasksByTaskIdRunsErrors, GetApiTasksByTaskIdRunsResponses, GetApiUsernameAvailableData, GetApiUsernameAvailableErrors, GetApiUsernameAvailableResponses, GetApiWorkItemBlocksData, GetApiWorkItemBlocksErrors, GetApiWorkItemBlocksResponses, GetApiWorkItemCommentDraftsData, GetApiWorkItemCommentDraftsErrors, GetApiWorkItemCommentDraftsResponses, GetApiWorkItemCommentsData, GetApiWorkItemCommentsErrors, GetApiWorkItemCommentsResponses, GetApiWorkItemsByWorkItemIdChildrenData, GetApiWorkItemsByWorkItemIdChildrenErrors, GetApiWorkItemsByWorkItemIdChildrenResponses, GetApiWorkItemsByWorkItemIdConversationsData, GetApiWorkItemsByWorkItemIdConversationsErrors, GetApiWorkItemsByWorkItemIdConversationsResponses, GetApiWorkItemsByWorkItemIdData, GetApiWorkItemsByWorkItemIdErrors, GetApiWorkItemsByWorkItemIdQuestionsData, GetApiWorkItemsByWorkItemIdQuestionsErrors, GetApiWorkItemsByWorkItemIdQuestionsResponses, GetApiWorkItemsByWorkItemIdResponses, HeadApiAuth__Data, OptionsApiAuth__Data, PatchApiAuth__Data, PatchApiMeSecretsBySecretIdData, PatchApiMeSecretsBySecretIdErrors, PatchApiMeSecretsBySecretIdResponses, PatchApiWorkItemCommentsByCommentIdData, PatchApiWorkItemCommentsByCommentIdErrors, PatchApiWorkItemCommentsByCommentIdResponses, PatchApiWorkItemsByWorkItemIdData, PatchApiWorkItemsByWorkItemIdErrors, PatchApiWorkItemsByWorkItemIdParentData, PatchApiWorkItemsByWorkItemIdParentErrors, PatchApiWorkItemsByWorkItemIdParentResponses, PatchApiWorkItemsByWorkItemIdResponses, PostApiAuth__Data, PostApiConversationsByConversationIdContinueData, PostApiConversationsByConversationIdContinueErrors, PostApiConversationsByConversationIdContinueResponses, PostApiConversationsByConversationIdDoneData, PostApiConversationsByConversationIdDoneErrors, PostApiConversationsByConversationIdDoneResponses, PostApiConversationsByConversationIdMessagesData, PostApiConversationsByConversationIdMessagesErrors, PostApiConversationsByConversationIdMessagesResponses, PostApiIntegrationsGithubInstallationsByInstallationIdRefreshData, PostApiIntegrationsGithubInstallationsByInstallationIdRefreshErrors, PostApiIntegrationsGithubInstallationsByInstallationIdRefreshResponses, PostApiIntegrationsGithubWebhookData, PostApiMeSecretsData, PostApiMeSecretsErrors, PostApiMeSecretsResponses, PostApiPipelineDefinitionsByPipelineDefinitionIdVersionsData, PostApiPipelineDefinitionsByPipelineDefinitionIdVersionsErrors, PostApiPipelineDefinitionsByPipelineDefinitionIdVersionsResponses, PostApiPipelineDefinitionsData, PostApiPipelineDefinitionsErrors, PostApiPipelineDefinitionsResponses, PostApiPipelineExecutionsByPipelineExecutionIdQuestionsByQuestionIdContinueData, PostApiPipelineExecutionsByPipelineExecutionIdQuestionsByQuestionIdContinueErrors, PostApiPipelineExecutionsByPipelineExecutionIdQuestionsByQuestionIdContinueResponses, PostApiPipelineExecutionsByPipelineExecutionIdVisitsByVisitIdDecisionData, PostApiPipelineExecutionsByPipelineExecutionIdVisitsByVisitIdDecisionErrors, PostApiPipelineExecutionsByPipelineExecutionIdVisitsByVisitIdDecisionResponses, PostApiPipelineExecutionsByPipelineExecutionIdVisitsByVisitIdMessagesData, PostApiPipelineExecutionsByPipelineExecutionIdVisitsByVisitIdMessagesErrors, PostApiPipelineExecutionsByPipelineExecutionIdVisitsByVisitIdMessagesResponses, PostApiPipelineExecutionsByPipelineExecutionIdVisitsByVisitIdRerunData, PostApiPipelineExecutionsByPipelineExecutionIdVisitsByVisitIdRerunErrors, PostApiPipelineExecutionsByPipelineExecutionIdVisitsByVisitIdRerunResponses, PostApiPipelineExecutionsData, PostApiPipelineExecutionsErrors, PostApiPipelineExecutionsResponses, PostApiProjectInvitesByTokenAcceptData, PostApiProjectInvitesByTokenAcceptErrors, PostApiProjectInvitesByTokenAcceptResponses, PostApiProjectsByProjectIdIntegrationsByIntegrationIdSyncData, PostApiProjectsByProjectIdIntegrationsByIntegrationIdSyncErrors, PostApiProjectsByProjectIdIntegrationsByIntegrationIdSyncResponses, PostApiProjectsByProjectIdIntegrationsData, PostApiProjectsByProjectIdIntegrationsErrors, PostApiProjectsByProjectIdIntegrationsResponses, PostApiProjectsByProjectIdInvitesByInviteIdRevokeData, PostApiProjectsByProjectIdInvitesByInviteIdRevokeErrors, PostApiProjectsByProjectIdInvitesByInviteIdRevokeResponses, PostApiProjectsByProjectIdInvitesData, PostApiProjectsByProjectIdInvitesErrors, PostApiProjectsByProjectIdInvitesResponses, PostApiProjectsByProjectIdNotificationsByNotificationIdDismissData, PostApiProjectsByProjectIdNotificationsByNotificationIdDismissErrors, PostApiProjectsByProjectIdNotificationsByNotificationIdDismissResponses, PostApiProjectsByProjectIdNotificationsByNotificationIdRespondData, PostApiProjectsByProjectIdNotificationsByNotificationIdRespondErrors, PostApiProjectsByProjectIdNotificationsByNotificationIdRespondResponses, PostApiProjectsData, PostApiProjectsErrors, PostApiProjectsIssueTrackerCheckData, PostApiProjectsIssueTrackerCheckErrors, PostApiProjectsIssueTrackerCheckResponses, PostApiProjectsRepoCheckData, PostApiProjectsRepoCheckErrors, PostApiProjectsRepoCheckResponses, PostApiProjectsResponses, PostApiStepDefinitionsData, PostApiStepDefinitionsErrors, PostApiStepDefinitionsResponses, PostApiStepDefinitionTemplatesByStepDefinitionTemplateIdInstantiateData, PostApiStepDefinitionTemplatesByStepDefinitionTemplateIdInstantiateErrors, PostApiStepDefinitionTemplatesByStepDefinitionTemplateIdInstantiateResponses, PostApiTaskRunsByTaskRunIdArtifactFailuresData, PostApiTaskRunsByTaskRunIdArtifactFailuresErrors, PostApiTaskRunsByTaskRunIdArtifactFailuresResponses, PostApiTaskRunsByTaskRunIdArtifactsData, PostApiTaskRunsByTaskRunIdArtifactsErrors, PostApiTaskRunsByTaskRunIdArtifactsResponses, PostApiTaskRunsByTaskRunIdArtifactUploadUrlData, PostApiTaskRunsByTaskRunIdArtifactUploadUrlErrors, PostApiTaskRunsByTaskRunIdArtifactUploadUrlResponses, PostApiTaskRunsByTaskRunIdCompletionsData, PostApiTaskRunsByTaskRunIdCompletionsErrors, PostApiTaskRunsByTaskRunIdCompletionsResponses, PostApiTaskRunsByTaskRunIdLogsData, PostApiTaskRunsByTaskRunIdLogsErrors, PostApiTaskRunsByTaskRunIdLogsResponses, PostApiTaskRunsByTaskRunIdSessionUploadUrlData, PostApiTaskRunsByTaskRunIdSessionUploadUrlErrors, PostApiTaskRunsByTaskRunIdSessionUploadUrlResponses, PostApiTaskRunsByTaskRunIdWorkerContextData, PostApiTaskRunsByTaskRunIdWorkerContextErrors, PostApiTaskRunsByTaskRunIdWorkerContextResponses, PostApiTaskRunsByTaskRunIdYieldsData, PostApiTaskRunsByTaskRunIdYieldsErrors, PostApiTaskRunsByTaskRunIdYieldsResponses, PostApiTaskRunsClaimsData, PostApiTaskRunsClaimsErrors, PostApiTaskRunsClaimsResponses, PostApiTasksData, PostApiTasksErrors, PostApiTasksResponses, PostApiUsernameData, PostApiUsernameErrors, PostApiUsernameResponses, PostApiWorkItemBlocksData, PostApiWorkItemBlocksErrors, PostApiWorkItemBlocksResponses, PostApiWorkItemCommentDraftsByNotificationIdApproveData, PostApiWorkItemCommentDraftsByNotificationIdApproveErrors, PostApiWorkItemCommentDraftsByNotificationIdApproveResponses, PostApiWorkItemCommentDraftsByNotificationIdRejectData, PostApiWorkItemCommentDraftsByNotificationIdRejectErrors, PostApiWorkItemCommentDraftsByNotificationIdRejectResponses, PostApiWorkItemCommentsByCommentIdPinData, PostApiWorkItemCommentsByCommentIdPinErrors, PostApiWorkItemCommentsByCommentIdPinResponses, PostApiWorkItemCommentsData, PostApiWorkItemCommentsErrors, PostApiWorkItemCommentsResponses, PostApiWorkItemsBatchData, PostApiWorkItemsBatchErrors, PostApiWorkItemsBatchResponses, PostApiWorkItemsData, PostApiWorkItemsErrors, PostApiWorkItemsResponses, PutApiAuth__Data, PutApiPipelineDefinitionsByPipelineDefinitionIdArchiveData, PutApiPipelineDefinitionsByPipelineDefinitionIdArchiveErrors, PutApiPipelineDefinitionsByPipelineDefinitionIdArchiveResponses, PutApiPipelineDefinitionsByPipelineDefinitionIdUnarchiveData, PutApiPipelineDefinitionsByPipelineDefinitionIdUnarchiveErrors, PutApiPipelineDefinitionsByPipelineDefinitionIdUnarchiveResponses, PutApiPipelineDefinitionsByPipelineDefinitionIdVersionsByVersionActivateData, PutApiPipelineDefinitionsByPipelineDefinitionIdVersionsByVersionActivateErrors, PutApiPipelineDefinitionsByPipelineDefinitionIdVersionsByVersionActivateResponses, PutApiPipelineExecutionsBatchCancelData, PutApiPipelineExecutionsBatchCancelErrors, PutApiPipelineExecutionsBatchCancelResponses, PutApiPipelineExecutionsByPipelineExecutionIdCancelData, PutApiPipelineExecutionsByPipelineExecutionIdCancelErrors, PutApiPipelineExecutionsByPipelineExecutionIdCancelResponses, PutApiProjectsByProjectIdDefaultPipelineAssignmentData, PutApiProjectsByProjectIdDefaultPipelineAssignmentErrors, PutApiProjectsByProjectIdDefaultPipelineAssignmentResponses, PutApiProjectsByProjectIdMembersByUserIdPermissionsData, PutApiProjectsByProjectIdMembersByUserIdPermissionsErrors, PutApiProjectsByProjectIdMembersByUserIdPermissionsResponses, PutApiProjectsByProjectIdNotificationRulesData, PutApiProjectsByProjectIdNotificationRulesErrors, PutApiProjectsByProjectIdNotificationRulesResponses, PutApiStepDefinitionsByStepDefinitionIdArchiveData, PutApiStepDefinitionsByStepDefinitionIdArchiveErrors, PutApiStepDefinitionsByStepDefinitionIdArchiveResponses, PutApiStepDefinitionsData, PutApiStepDefinitionsErrors, PutApiStepDefinitionsResponses, PutApiTaskRunsByTaskRunIdHeartbeatData, PutApiTaskRunsByTaskRunIdHeartbeatErrors, PutApiTaskRunsByTaskRunIdHeartbeatResponses, PutApiTaskRunsByTaskRunIdRunningData, PutApiTaskRunsByTaskRunIdRunningErrors, PutApiTaskRunsByTaskRunIdRunningResponses, PutApiWorkItemsBatchData, PutApiWorkItemsBatchErrors, PutApiWorkItemsBatchResponses, PutApiWorkItemsData, PutApiWorkItemsErrors, PutApiWorkItemsResponses, TraceApiAuth__Data } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -36,7 +36,7 @@ class HeyApiRegistry<T> {
     get(key?: string): T {
         const instance = this.instances.get(key ?? this.defaultKey);
         if (!instance) {
-            throw new Error(`No SDK client found. Create one with "new BoboddyClient()" to fix this error.`);
+            throw new Error(`No SDK client found. Create one with "new ScarnClient()" to fix this error.`);
         }
         return instance;
     }
@@ -187,91 +187,9 @@ export class StepDefinitions extends HeyApiClient {
 }
 
 export class Tasks extends HeyApiClient {
-    public claimTasks<ThrowOnError extends boolean = false>(options: Options<PostApiTasksClaimsData, ThrowOnError>) {
-        return (options.client ?? this.client).post<PostApiTasksClaimsResponses, PostApiTasksClaimsErrors, ThrowOnError>({
-            url: '/api/tasks/claims',
-            ...options,
-            headers: {
-                'Content-Type': 'application/json',
-                ...options.headers
-            }
-        });
-    }
-    
-    public listTasks<ThrowOnError extends boolean = false>(options: Options<GetApiTasksData, ThrowOnError>) {
-        return (options.client ?? this.client).get<GetApiTasksResponses, GetApiTasksErrors, ThrowOnError>({ url: '/api/tasks', ...options });
-    }
-    
     public createTask<ThrowOnError extends boolean = false>(options: Options<PostApiTasksData, ThrowOnError>) {
         return (options.client ?? this.client).post<PostApiTasksResponses, PostApiTasksErrors, ThrowOnError>({
             url: '/api/tasks',
-            ...options,
-            headers: {
-                'Content-Type': 'application/json',
-                ...options.headers
-            }
-        });
-    }
-    
-    public heartbeatTask<ThrowOnError extends boolean = false>(options: Options<PutApiTasksByTaskIdHeartbeatData, ThrowOnError>) {
-        return (options.client ?? this.client).put<PutApiTasksByTaskIdHeartbeatResponses, PutApiTasksByTaskIdHeartbeatErrors, ThrowOnError>({
-            url: '/api/tasks/{taskId}/heartbeat',
-            ...options,
-            headers: {
-                'Content-Type': 'application/json',
-                ...options.headers
-            }
-        });
-    }
-    
-    public getTaskWorkerContext<ThrowOnError extends boolean = false>(options: Options<PostApiTasksByTaskIdWorkerContextData, ThrowOnError>) {
-        return (options.client ?? this.client).post<PostApiTasksByTaskIdWorkerContextResponses, PostApiTasksByTaskIdWorkerContextErrors, ThrowOnError>({
-            url: '/api/tasks/{taskId}/worker-context',
-            ...options,
-            headers: {
-                'Content-Type': 'application/json',
-                ...options.headers
-            }
-        });
-    }
-    
-    public completeTask<ThrowOnError extends boolean = false>(options: Options<PostApiTasksByTaskIdCompletionsData, ThrowOnError>) {
-        return (options.client ?? this.client).post<PostApiTasksByTaskIdCompletionsResponses, PostApiTasksByTaskIdCompletionsErrors, ThrowOnError>({
-            url: '/api/tasks/{taskId}/completions',
-            ...options,
-            headers: {
-                'Content-Type': 'application/json',
-                ...options.headers
-            }
-        });
-    }
-    
-    public markTaskRunning<ThrowOnError extends boolean = false>(options: Options<PutApiTasksByTaskIdRunningData, ThrowOnError>) {
-        return (options.client ?? this.client).put<PutApiTasksByTaskIdRunningResponses, PutApiTasksByTaskIdRunningErrors, ThrowOnError>({ url: '/api/tasks/{taskId}/running', ...options });
-    }
-    
-    public createTaskResult<ThrowOnError extends boolean = false>(options: Options<PostApiTaskResultsData, ThrowOnError>) {
-        return (options.client ?? this.client).post<PostApiTaskResultsResponses, PostApiTaskResultsErrors, ThrowOnError>({
-            url: '/api/task-results',
-            ...options,
-            headers: {
-                'Content-Type': 'application/json',
-                ...options.headers
-            }
-        });
-    }
-    
-    public extractTaskSignals<ThrowOnError extends boolean = false>(options: Options<PostApiTaskResultsByTaskResultIdSignalsExtractData, ThrowOnError>) {
-        return (options.client ?? this.client).post<PostApiTaskResultsByTaskResultIdSignalsExtractResponses, PostApiTaskResultsByTaskResultIdSignalsExtractErrors, ThrowOnError>({ url: '/api/task-results/{taskResultId}/signals/extract', ...options });
-    }
-    
-    public readTaskLogs<ThrowOnError extends boolean = false>(options: Options<GetApiTasksByTaskIdLogsData, ThrowOnError>) {
-        return (options.client ?? this.client).get<GetApiTasksByTaskIdLogsResponses, GetApiTasksByTaskIdLogsErrors, ThrowOnError>({ url: '/api/tasks/{taskId}/logs', ...options });
-    }
-    
-    public appendTaskLogs<ThrowOnError extends boolean = false>(options: Options<PostApiTasksByTaskIdLogsData, ThrowOnError>) {
-        return (options.client ?? this.client).post<PostApiTasksByTaskIdLogsResponses, PostApiTasksByTaskIdLogsErrors, ThrowOnError>({
-            url: '/api/tasks/{taskId}/logs',
             ...options,
             headers: {
                 'Content-Type': 'application/json',
@@ -284,17 +202,15 @@ export class Tasks extends HeyApiClient {
         return (options.client ?? this.client).get<GetApiTasksByTaskIdResponses, GetApiTasksByTaskIdErrors, ThrowOnError>({ url: '/api/tasks/{taskId}', ...options });
     }
     
-    public getTaskLogArchive<ThrowOnError extends boolean = false>(options: Options<GetApiTasksByTaskIdLogsArchiveData, ThrowOnError>) {
-        return (options.client ?? this.client).get<GetApiTasksByTaskIdLogsArchiveResponses, GetApiTasksByTaskIdLogsArchiveErrors, ThrowOnError>({ url: '/api/tasks/{taskId}/logs/archive', ...options });
+    public getTaskRuns<ThrowOnError extends boolean = false>(options: Options<GetApiTasksByTaskIdRunsData, ThrowOnError>) {
+        return (options.client ?? this.client).get<GetApiTasksByTaskIdRunsResponses, GetApiTasksByTaskIdRunsErrors, ThrowOnError>({ url: '/api/tasks/{taskId}/runs', ...options });
     }
-    
-    public getTaskHistory<ThrowOnError extends boolean = false>(options: Options<GetApiTasksByTaskIdHistoryData, ThrowOnError>) {
-        return (options.client ?? this.client).get<GetApiTasksByTaskIdHistoryResponses, GetApiTasksByTaskIdHistoryErrors, ThrowOnError>({ url: '/api/tasks/{taskId}/history', ...options });
-    }
-    
-    public createArtifactUploadUrl<ThrowOnError extends boolean = false>(options: Options<PostApiTasksByTaskIdArtifactUploadUrlData, ThrowOnError>) {
-        return (options.client ?? this.client).post<PostApiTasksByTaskIdArtifactUploadUrlResponses, PostApiTasksByTaskIdArtifactUploadUrlErrors, ThrowOnError>({
-            url: '/api/tasks/{taskId}/artifact-upload-url',
+}
+
+export class TaskRuns extends HeyApiClient {
+    public claimTaskRuns<ThrowOnError extends boolean = false>(options: Options<PostApiTaskRunsClaimsData, ThrowOnError>) {
+        return (options.client ?? this.client).post<PostApiTaskRunsClaimsResponses, PostApiTaskRunsClaimsErrors, ThrowOnError>({
+            url: '/api/task-runs/claims',
             ...options,
             headers: {
                 'Content-Type': 'application/json',
@@ -303,13 +219,9 @@ export class Tasks extends HeyApiClient {
         });
     }
     
-    public listTaskArtifacts<ThrowOnError extends boolean = false>(options: Options<GetApiTasksByTaskIdArtifactsData, ThrowOnError>) {
-        return (options.client ?? this.client).get<GetApiTasksByTaskIdArtifactsResponses, GetApiTasksByTaskIdArtifactsErrors, ThrowOnError>({ url: '/api/tasks/{taskId}/artifacts', ...options });
-    }
-    
-    public recordTaskArtifact<ThrowOnError extends boolean = false>(options: Options<PostApiTasksByTaskIdArtifactsData, ThrowOnError>) {
-        return (options.client ?? this.client).post<PostApiTasksByTaskIdArtifactsResponses, PostApiTasksByTaskIdArtifactsErrors, ThrowOnError>({
-            url: '/api/tasks/{taskId}/artifacts',
+    public heartbeatTaskRun<ThrowOnError extends boolean = false>(options: Options<PutApiTaskRunsByTaskRunIdHeartbeatData, ThrowOnError>) {
+        return (options.client ?? this.client).put<PutApiTaskRunsByTaskRunIdHeartbeatResponses, PutApiTaskRunsByTaskRunIdHeartbeatErrors, ThrowOnError>({
+            url: '/api/task-runs/{taskRunId}/heartbeat',
             ...options,
             headers: {
                 'Content-Type': 'application/json',
@@ -318,17 +230,124 @@ export class Tasks extends HeyApiClient {
         });
     }
     
-    public getArtifactDownloadUrl<ThrowOnError extends boolean = false>(options: Options<GetApiTasksByTaskIdArtifactsByArtifactIdDownloadUrlData, ThrowOnError>) {
-        return (options.client ?? this.client).get<GetApiTasksByTaskIdArtifactsByArtifactIdDownloadUrlResponses, GetApiTasksByTaskIdArtifactsByArtifactIdDownloadUrlErrors, ThrowOnError>({ url: '/api/tasks/{taskId}/artifacts/{artifactId}/download-url', ...options });
+    public getTaskRunWorkerContext<ThrowOnError extends boolean = false>(options: Options<PostApiTaskRunsByTaskRunIdWorkerContextData, ThrowOnError>) {
+        return (options.client ?? this.client).post<PostApiTaskRunsByTaskRunIdWorkerContextResponses, PostApiTaskRunsByTaskRunIdWorkerContextErrors, ThrowOnError>({
+            url: '/api/task-runs/{taskRunId}/worker-context',
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
+            }
+        });
     }
     
-    public listTaskArtifactFailures<ThrowOnError extends boolean = false>(options: Options<GetApiTasksByTaskIdArtifactFailuresData, ThrowOnError>) {
-        return (options.client ?? this.client).get<GetApiTasksByTaskIdArtifactFailuresResponses, GetApiTasksByTaskIdArtifactFailuresErrors, ThrowOnError>({ url: '/api/tasks/{taskId}/artifact-failures', ...options });
+    public completeTaskRun<ThrowOnError extends boolean = false>(options: Options<PostApiTaskRunsByTaskRunIdCompletionsData, ThrowOnError>) {
+        return (options.client ?? this.client).post<PostApiTaskRunsByTaskRunIdCompletionsResponses, PostApiTaskRunsByTaskRunIdCompletionsErrors, ThrowOnError>({
+            url: '/api/task-runs/{taskRunId}/completions',
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
+            }
+        });
     }
     
-    public recordTaskArtifactFailure<ThrowOnError extends boolean = false>(options: Options<PostApiTasksByTaskIdArtifactFailuresData, ThrowOnError>) {
-        return (options.client ?? this.client).post<PostApiTasksByTaskIdArtifactFailuresResponses, PostApiTasksByTaskIdArtifactFailuresErrors, ThrowOnError>({
-            url: '/api/tasks/{taskId}/artifact-failures',
+    /**
+     * Records that the task run's agent ended its turn and handed the conversation to a person. The task run ends `yielded`; when it belongs to a pipeline run, the run posts `message` to the step visit's conversation and waits for a reply. Requires the claim token and `executions:write`.
+     */
+    public yieldTaskRun<ThrowOnError extends boolean = false>(options: Options<PostApiTaskRunsByTaskRunIdYieldsData, ThrowOnError>) {
+        return (options.client ?? this.client).post<PostApiTaskRunsByTaskRunIdYieldsResponses, PostApiTaskRunsByTaskRunIdYieldsErrors, ThrowOnError>({
+            url: '/api/task-runs/{taskRunId}/yields',
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
+            }
+        });
+    }
+    
+    public markTaskRunRunning<ThrowOnError extends boolean = false>(options: Options<PutApiTaskRunsByTaskRunIdRunningData, ThrowOnError>) {
+        return (options.client ?? this.client).put<PutApiTaskRunsByTaskRunIdRunningResponses, PutApiTaskRunsByTaskRunIdRunningErrors, ThrowOnError>({ url: '/api/task-runs/{taskRunId}/running', ...options });
+    }
+    
+    public readTaskLogs<ThrowOnError extends boolean = false>(options: Options<GetApiTaskRunsByTaskRunIdLogsData, ThrowOnError>) {
+        return (options.client ?? this.client).get<GetApiTaskRunsByTaskRunIdLogsResponses, GetApiTaskRunsByTaskRunIdLogsErrors, ThrowOnError>({ url: '/api/task-runs/{taskRunId}/logs', ...options });
+    }
+    
+    public appendTaskLogs<ThrowOnError extends boolean = false>(options: Options<PostApiTaskRunsByTaskRunIdLogsData, ThrowOnError>) {
+        return (options.client ?? this.client).post<PostApiTaskRunsByTaskRunIdLogsResponses, PostApiTaskRunsByTaskRunIdLogsErrors, ThrowOnError>({
+            url: '/api/task-runs/{taskRunId}/logs',
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
+            }
+        });
+    }
+    
+    public getTaskRun<ThrowOnError extends boolean = false>(options: Options<GetApiTaskRunsByTaskRunIdData, ThrowOnError>) {
+        return (options.client ?? this.client).get<GetApiTaskRunsByTaskRunIdResponses, GetApiTaskRunsByTaskRunIdErrors, ThrowOnError>({ url: '/api/task-runs/{taskRunId}', ...options });
+    }
+    
+    public listTaskRuns<ThrowOnError extends boolean = false>(options: Options<GetApiTaskRunsData, ThrowOnError>) {
+        return (options.client ?? this.client).get<GetApiTaskRunsResponses, GetApiTaskRunsErrors, ThrowOnError>({ url: '/api/task-runs', ...options });
+    }
+    
+    public getTaskLogArchive<ThrowOnError extends boolean = false>(options: Options<GetApiTaskRunsByTaskRunIdLogsArchiveData, ThrowOnError>) {
+        return (options.client ?? this.client).get<GetApiTaskRunsByTaskRunIdLogsArchiveResponses, GetApiTaskRunsByTaskRunIdLogsArchiveErrors, ThrowOnError>({ url: '/api/task-runs/{taskRunId}/logs/archive', ...options });
+    }
+    
+    /**
+     * Mints a presigned PUT URL for the task run's exported agent session (`tasks/<taskRunId>/session.json`). The worker uploads the export, then passes the returned `objectKey` when it yields. Requires the claim token and `executions:write`.
+     */
+    public createSessionUploadUrl<ThrowOnError extends boolean = false>(options: Options<PostApiTaskRunsByTaskRunIdSessionUploadUrlData, ThrowOnError>) {
+        return (options.client ?? this.client).post<PostApiTaskRunsByTaskRunIdSessionUploadUrlResponses, PostApiTaskRunsByTaskRunIdSessionUploadUrlErrors, ThrowOnError>({
+            url: '/api/task-runs/{taskRunId}/session-upload-url',
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
+            }
+        });
+    }
+    
+    public createArtifactUploadUrl<ThrowOnError extends boolean = false>(options: Options<PostApiTaskRunsByTaskRunIdArtifactUploadUrlData, ThrowOnError>) {
+        return (options.client ?? this.client).post<PostApiTaskRunsByTaskRunIdArtifactUploadUrlResponses, PostApiTaskRunsByTaskRunIdArtifactUploadUrlErrors, ThrowOnError>({
+            url: '/api/task-runs/{taskRunId}/artifact-upload-url',
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
+            }
+        });
+    }
+    
+    public listTaskArtifacts<ThrowOnError extends boolean = false>(options: Options<GetApiTaskRunsByTaskRunIdArtifactsData, ThrowOnError>) {
+        return (options.client ?? this.client).get<GetApiTaskRunsByTaskRunIdArtifactsResponses, GetApiTaskRunsByTaskRunIdArtifactsErrors, ThrowOnError>({ url: '/api/task-runs/{taskRunId}/artifacts', ...options });
+    }
+    
+    public recordTaskArtifact<ThrowOnError extends boolean = false>(options: Options<PostApiTaskRunsByTaskRunIdArtifactsData, ThrowOnError>) {
+        return (options.client ?? this.client).post<PostApiTaskRunsByTaskRunIdArtifactsResponses, PostApiTaskRunsByTaskRunIdArtifactsErrors, ThrowOnError>({
+            url: '/api/task-runs/{taskRunId}/artifacts',
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
+            }
+        });
+    }
+    
+    public getArtifactDownloadUrl<ThrowOnError extends boolean = false>(options: Options<GetApiTaskRunsByTaskRunIdArtifactsByArtifactIdDownloadUrlData, ThrowOnError>) {
+        return (options.client ?? this.client).get<GetApiTaskRunsByTaskRunIdArtifactsByArtifactIdDownloadUrlResponses, GetApiTaskRunsByTaskRunIdArtifactsByArtifactIdDownloadUrlErrors, ThrowOnError>({ url: '/api/task-runs/{taskRunId}/artifacts/{artifactId}/download-url', ...options });
+    }
+    
+    public listTaskArtifactFailures<ThrowOnError extends boolean = false>(options: Options<GetApiTaskRunsByTaskRunIdArtifactFailuresData, ThrowOnError>) {
+        return (options.client ?? this.client).get<GetApiTaskRunsByTaskRunIdArtifactFailuresResponses, GetApiTaskRunsByTaskRunIdArtifactFailuresErrors, ThrowOnError>({ url: '/api/task-runs/{taskRunId}/artifact-failures', ...options });
+    }
+    
+    public recordTaskArtifactFailure<ThrowOnError extends boolean = false>(options: Options<PostApiTaskRunsByTaskRunIdArtifactFailuresData, ThrowOnError>) {
+        return (options.client ?? this.client).post<PostApiTaskRunsByTaskRunIdArtifactFailuresResponses, PostApiTaskRunsByTaskRunIdArtifactFailuresErrors, ThrowOnError>({
+            url: '/api/task-runs/{taskRunId}/artifact-failures',
             ...options,
             headers: {
                 'Content-Type': 'application/json',
@@ -350,15 +369,23 @@ export class PipelineDefinitions extends HeyApiClient {
         });
     }
     
-    public upsertPipelineDefinition<ThrowOnError extends boolean = false>(options: Options<PutApiPipelineDefinitionsData, ThrowOnError>) {
-        return (options.client ?? this.client).put<PutApiPipelineDefinitionsResponses, PutApiPipelineDefinitionsErrors, ThrowOnError>({
-            url: '/api/pipeline-definitions',
+    public listPipelineDefinitionVersions<ThrowOnError extends boolean = false>(options: Options<GetApiPipelineDefinitionsByPipelineDefinitionIdVersionsData, ThrowOnError>) {
+        return (options.client ?? this.client).get<GetApiPipelineDefinitionsByPipelineDefinitionIdVersionsResponses, GetApiPipelineDefinitionsByPipelineDefinitionIdVersionsErrors, ThrowOnError>({ url: '/api/pipeline-definitions/{pipelineDefinitionId}/versions', ...options });
+    }
+    
+    public publishPipelineDefinitionVersion<ThrowOnError extends boolean = false>(options: Options<PostApiPipelineDefinitionsByPipelineDefinitionIdVersionsData, ThrowOnError>) {
+        return (options.client ?? this.client).post<PostApiPipelineDefinitionsByPipelineDefinitionIdVersionsResponses, PostApiPipelineDefinitionsByPipelineDefinitionIdVersionsErrors, ThrowOnError>({
+            url: '/api/pipeline-definitions/{pipelineDefinitionId}/versions',
             ...options,
             headers: {
                 'Content-Type': 'application/json',
                 ...options.headers
             }
         });
+    }
+    
+    public activatePipelineDefinitionVersion<ThrowOnError extends boolean = false>(options: Options<PutApiPipelineDefinitionsByPipelineDefinitionIdVersionsByVersionActivateData, ThrowOnError>) {
+        return (options.client ?? this.client).put<PutApiPipelineDefinitionsByPipelineDefinitionIdVersionsByVersionActivateResponses, PutApiPipelineDefinitionsByPipelineDefinitionIdVersionsByVersionActivateErrors, ThrowOnError>({ url: '/api/pipeline-definitions/{pipelineDefinitionId}/versions/{version}/activate', ...options });
     }
     
     public archivePipelineDefinition<ThrowOnError extends boolean = false>(options: Options<PutApiPipelineDefinitionsByPipelineDefinitionIdArchiveData, ThrowOnError>) {
@@ -369,23 +396,12 @@ export class PipelineDefinitions extends HeyApiClient {
         return (options.client ?? this.client).put<PutApiPipelineDefinitionsByPipelineDefinitionIdUnarchiveResponses, PutApiPipelineDefinitionsByPipelineDefinitionIdUnarchiveErrors, ThrowOnError>({ url: '/api/pipeline-definitions/{pipelineDefinitionId}/unarchive', ...options });
     }
     
-    public setPipelineStepAdvancementPolicy<ThrowOnError extends boolean = false>(options: Options<PutApiPipelineDefinitionsByPipelineDefinitionIdStepsByPipelineStepDefinitionIdAdvancementPolicyData, ThrowOnError>) {
-        return (options.client ?? this.client).put<PutApiPipelineDefinitionsByPipelineDefinitionIdStepsByPipelineStepDefinitionIdAdvancementPolicyResponses, PutApiPipelineDefinitionsByPipelineDefinitionIdStepsByPipelineStepDefinitionIdAdvancementPolicyErrors, ThrowOnError>({
-            url: '/api/pipeline-definitions/{pipelineDefinitionId}/steps/{pipelineStepDefinitionId}/advancement-policy',
-            ...options,
-            headers: {
-                'Content-Type': 'application/json',
-                ...options.headers
-            }
-        });
-    }
-    
     public getPipelineDefinition<ThrowOnError extends boolean = false>(options: Options<GetApiPipelineDefinitionsByPipelineDefinitionIdData, ThrowOnError>) {
         return (options.client ?? this.client).get<GetApiPipelineDefinitionsByPipelineDefinitionIdResponses, GetApiPipelineDefinitionsByPipelineDefinitionIdErrors, ThrowOnError>({ url: '/api/pipeline-definitions/{pipelineDefinitionId}', ...options });
     }
     
-    public getPipelineDefinitionGraphSpec<ThrowOnError extends boolean = false>(options: Options<GetApiPipelineDefinitionsByPipelineDefinitionIdVersionsByPipelineDefinitionVersionIdGraphSpecData, ThrowOnError>) {
-        return (options.client ?? this.client).get<GetApiPipelineDefinitionsByPipelineDefinitionIdVersionsByPipelineDefinitionVersionIdGraphSpecResponses, GetApiPipelineDefinitionsByPipelineDefinitionIdVersionsByPipelineDefinitionVersionIdGraphSpecErrors, ThrowOnError>({ url: '/api/pipeline-definitions/{pipelineDefinitionId}/versions/{pipelineDefinitionVersionId}/graph-spec', ...options });
+    public getPipelineDefinitionVersion<ThrowOnError extends boolean = false>(options: Options<GetApiPipelineDefinitionsByPipelineDefinitionIdVersionsByVersionData, ThrowOnError>) {
+        return (options.client ?? this.client).get<GetApiPipelineDefinitionsByPipelineDefinitionIdVersionsByVersionResponses, GetApiPipelineDefinitionsByPipelineDefinitionIdVersionsByVersionErrors, ThrowOnError>({ url: '/api/pipeline-definitions/{pipelineDefinitionId}/versions/{version}', ...options });
     }
     
     public listPipelineDefinitions<ThrowOnError extends boolean = false>(options: Options<GetApiProjectsByProjectIdPipelineDefinitionsData, ThrowOnError>) {
@@ -398,6 +414,9 @@ export class PipelineExecutions extends HeyApiClient {
         return (options.client ?? this.client).get<GetApiPipelineExecutionsResponses, GetApiPipelineExecutionsErrors, ThrowOnError>({ url: '/api/pipeline-executions', ...options });
     }
     
+    /**
+     * Starts a run of the pipeline's active version, or of `version` when given, and advances it to its first step.
+     */
     public createPipelineExecution<ThrowOnError extends boolean = false>(options: Options<PostApiPipelineExecutionsData, ThrowOnError>) {
         return (options.client ?? this.client).post<PostApiPipelineExecutionsResponses, PostApiPipelineExecutionsErrors, ThrowOnError>({
             url: '/api/pipeline-executions',
@@ -409,60 +428,18 @@ export class PipelineExecutions extends HeyApiClient {
         });
     }
     
-    public startPipelineExecution<ThrowOnError extends boolean = false>(options: Options<PutApiPipelineExecutionsByPipelineExecutionIdStartData, ThrowOnError>) {
-        return (options.client ?? this.client).put<PutApiPipelineExecutionsByPipelineExecutionIdStartResponses, PutApiPipelineExecutionsByPipelineExecutionIdStartErrors, ThrowOnError>({ url: '/api/pipeline-executions/{pipelineExecutionId}/start', ...options });
+    /**
+     * Reruns a step visit: it and every visit downstream of it are superseded and the node is visited again.
+     */
+    public rerunPipelineExecutionVisit<ThrowOnError extends boolean = false>(options: Options<PostApiPipelineExecutionsByPipelineExecutionIdVisitsByVisitIdRerunData, ThrowOnError>) {
+        return (options.client ?? this.client).post<PostApiPipelineExecutionsByPipelineExecutionIdVisitsByVisitIdRerunResponses, PostApiPipelineExecutionsByPipelineExecutionIdVisitsByVisitIdRerunErrors, ThrowOnError>({ url: '/api/pipeline-executions/{pipelineExecutionId}/visits/{visitId}/rerun', ...options });
     }
     
-    public queueFirstPipelineStepRun<ThrowOnError extends boolean = false>(options: Options<PostApiPipelineExecutionsByPipelineExecutionIdStepRunsFirstData, ThrowOnError>) {
-        return (options.client ?? this.client).post<PostApiPipelineExecutionsByPipelineExecutionIdStepRunsFirstResponses, PostApiPipelineExecutionsByPipelineExecutionIdStepRunsFirstErrors, ThrowOnError>({ url: '/api/pipeline-executions/{pipelineExecutionId}/step-runs/first', ...options });
-    }
-    
-    public markPipelineStepRunRunning<ThrowOnError extends boolean = false>(options: Options<PutApiPipelineExecutionsByPipelineExecutionIdStepRunsByPipelineStepRunIdRunningData, ThrowOnError>) {
-        return (options.client ?? this.client).put<PutApiPipelineExecutionsByPipelineExecutionIdStepRunsByPipelineStepRunIdRunningResponses, PutApiPipelineExecutionsByPipelineExecutionIdStepRunsByPipelineStepRunIdRunningErrors, ThrowOnError>({ url: '/api/pipeline-executions/{pipelineExecutionId}/step-runs/{pipelineStepRunId}/running', ...options });
-    }
-    
-    public applyPipelineStepResult<ThrowOnError extends boolean = false>(options: Options<PostApiPipelineExecutionsByPipelineExecutionIdStepRunsByPipelineStepRunIdResultsData, ThrowOnError>) {
-        return (options.client ?? this.client).post<PostApiPipelineExecutionsByPipelineExecutionIdStepRunsByPipelineStepRunIdResultsResponses, PostApiPipelineExecutionsByPipelineExecutionIdStepRunsByPipelineStepRunIdResultsErrors, ThrowOnError>({
-            url: '/api/pipeline-executions/{pipelineExecutionId}/step-runs/{pipelineStepRunId}/results',
-            ...options,
-            headers: {
-                'Content-Type': 'application/json',
-                ...options.headers
-            }
-        });
-    }
-    
-    public acceptPipelineStepRun<ThrowOnError extends boolean = false>(options: Options<PostApiPipelineExecutionsByPipelineExecutionIdStepRunsByPipelineStepRunIdAcceptData, ThrowOnError>) {
-        return (options.client ?? this.client).post<PostApiPipelineExecutionsByPipelineExecutionIdStepRunsByPipelineStepRunIdAcceptResponses, PostApiPipelineExecutionsByPipelineExecutionIdStepRunsByPipelineStepRunIdAcceptErrors, ThrowOnError>({
-            url: '/api/pipeline-executions/{pipelineExecutionId}/step-runs/{pipelineStepRunId}/accept',
-            ...options,
-            headers: {
-                'Content-Type': 'application/json',
-                ...options.headers
-            }
-        });
-    }
-    
-    public acceptPipelineCohort<ThrowOnError extends boolean = false>(options: Options<PostApiPipelineExecutionsByPipelineExecutionIdCohortsByOriginNodeDefinitionIdAcceptData, ThrowOnError>) {
-        return (options.client ?? this.client).post<PostApiPipelineExecutionsByPipelineExecutionIdCohortsByOriginNodeDefinitionIdAcceptResponses, PostApiPipelineExecutionsByPipelineExecutionIdCohortsByOriginNodeDefinitionIdAcceptErrors, ThrowOnError>({
-            url: '/api/pipeline-executions/{pipelineExecutionId}/cohorts/{originNodeDefinitionId}/accept',
-            ...options,
-            headers: {
-                'Content-Type': 'application/json',
-                ...options.headers
-            }
-        });
-    }
-    
-    public rerunPipelineExecution<ThrowOnError extends boolean = false>(options: Options<PostApiPipelineExecutionsByPipelineExecutionIdRerunData, ThrowOnError>) {
-        return (options.client ?? this.client).post<PostApiPipelineExecutionsByPipelineExecutionIdRerunResponses, PostApiPipelineExecutionsByPipelineExecutionIdRerunErrors, ThrowOnError>({
-            url: '/api/pipeline-executions/{pipelineExecutionId}/rerun',
-            ...options,
-            headers: {
-                'Content-Type': 'application/json',
-                ...options.headers
-            }
-        });
+    /**
+     * Resumes the visit waiting on an open question without a reply: the question becomes answered with no answer comment and the wait's result is `{ replied: false, body: null, commentId: null }`. Requires `executions:write`.
+     */
+    public continueWithoutReply<ThrowOnError extends boolean = false>(options: Options<PostApiPipelineExecutionsByPipelineExecutionIdQuestionsByQuestionIdContinueData, ThrowOnError>) {
+        return (options.client ?? this.client).post<PostApiPipelineExecutionsByPipelineExecutionIdQuestionsByQuestionIdContinueResponses, PostApiPipelineExecutionsByPipelineExecutionIdQuestionsByQuestionIdContinueErrors, ThrowOnError>({ url: '/api/pipeline-executions/{pipelineExecutionId}/questions/{questionId}/continue', ...options });
     }
     
     public cancelPipelineExecution<ThrowOnError extends boolean = false>(options: Options<PutApiPipelineExecutionsByPipelineExecutionIdCancelData, ThrowOnError>) {
@@ -484,11 +461,25 @@ export class PipelineExecutions extends HeyApiClient {
     }
     
     /**
-     * Sends a message to a step of a pipeline execution. Requires `executions:write`. Reruns the execution from that step as a new attempt; the step's new Task continues its previous run and carries the message. Rejected while any Task in the latest attempt is pending, queued or running.
+     * Sends a message to a step visit of a pipeline execution. Requires `executions:write`. Reruns the visit; its new Task carries the message. Code steps don't accept messages.
      */
-    public sendStepMessage<ThrowOnError extends boolean = false>(options: Options<PostApiPipelineExecutionsByPipelineExecutionIdStepsByStepKeyMessagesData, ThrowOnError>) {
-        return (options.client ?? this.client).post<PostApiPipelineExecutionsByPipelineExecutionIdStepsByStepKeyMessagesResponses, PostApiPipelineExecutionsByPipelineExecutionIdStepsByStepKeyMessagesErrors, ThrowOnError>({
-            url: '/api/pipeline-executions/{pipelineExecutionId}/steps/{stepKey}/messages',
+    public sendVisitMessage<ThrowOnError extends boolean = false>(options: Options<PostApiPipelineExecutionsByPipelineExecutionIdVisitsByVisitIdMessagesData, ThrowOnError>) {
+        return (options.client ?? this.client).post<PostApiPipelineExecutionsByPipelineExecutionIdVisitsByVisitIdMessagesResponses, PostApiPipelineExecutionsByPipelineExecutionIdVisitsByVisitIdMessagesErrors, ThrowOnError>({
+            url: '/api/pipeline-executions/{pipelineExecutionId}/visits/{visitId}/messages',
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
+            }
+        });
+    }
+    
+    /**
+     * Records a decision on a waiting decision visit. Requires `executions:write`.
+     */
+    public decideWaitVisit<ThrowOnError extends boolean = false>(options: Options<PostApiPipelineExecutionsByPipelineExecutionIdVisitsByVisitIdDecisionData, ThrowOnError>) {
+        return (options.client ?? this.client).post<PostApiPipelineExecutionsByPipelineExecutionIdVisitsByVisitIdDecisionResponses, PostApiPipelineExecutionsByPipelineExecutionIdVisitsByVisitIdDecisionErrors, ThrowOnError>({
+            url: '/api/pipeline-executions/{pipelineExecutionId}/visits/{visitId}/decision',
             ...options,
             headers: {
                 'Content-Type': 'application/json',
@@ -501,31 +492,26 @@ export class PipelineExecutions extends HeyApiClient {
         return (options.client ?? this.client).get<GetApiPipelineExecutionsByPipelineExecutionIdResponses, GetApiPipelineExecutionsByPipelineExecutionIdErrors, ThrowOnError>({ url: '/api/pipeline-executions/{pipelineExecutionId}', ...options });
     }
     
-    public getPipelineExecutionRoutedChain<ThrowOnError extends boolean = false>(options: Options<GetApiPipelineExecutionsByPipelineExecutionIdRoutedChainData, ThrowOnError>) {
-        return (options.client ?? this.client).get<GetApiPipelineExecutionsByPipelineExecutionIdRoutedChainResponses, GetApiPipelineExecutionsByPipelineExecutionIdRoutedChainErrors, ThrowOnError>({ url: '/api/pipeline-executions/{pipelineExecutionId}/routed-chain', ...options });
-    }
-    
     /**
-     * A step's conversation: every distinct Task that ran the step across attempts, oldest first, with the messages sent to each. Requires `executions:read`. Inherited runs are not repeated; results and logs come from the Task routes.
+     * A visit's conversation: its latest Task and every earlier run it continues, oldest first, with the messages sent to each. Requires `executions:read`.
      */
-    public getStepThread<ThrowOnError extends boolean = false>(options: Options<GetApiPipelineExecutionsByPipelineExecutionIdStepsByStepKeyThreadData, ThrowOnError>) {
-        return (options.client ?? this.client).get<GetApiPipelineExecutionsByPipelineExecutionIdStepsByStepKeyThreadResponses, GetApiPipelineExecutionsByPipelineExecutionIdStepsByStepKeyThreadErrors, ThrowOnError>({ url: '/api/pipeline-executions/{pipelineExecutionId}/steps/{stepKey}/thread', ...options });
+    public getVisitThread<ThrowOnError extends boolean = false>(options: Options<GetApiPipelineExecutionsByPipelineExecutionIdVisitsByVisitIdThreadData, ThrowOnError>) {
+        return (options.client ?? this.client).get<GetApiPipelineExecutionsByPipelineExecutionIdVisitsByVisitIdThreadResponses, GetApiPipelineExecutionsByPipelineExecutionIdVisitsByVisitIdThreadErrors, ThrowOnError>({ url: '/api/pipeline-executions/{pipelineExecutionId}/visits/{visitId}/thread', ...options });
     }
     
     public countPipelineExecutionsByPipeline<ThrowOnError extends boolean = false>(options: Options<GetApiPipelineExecutionsCountsByPipelineData, ThrowOnError>) {
         return (options.client ?? this.client).get<GetApiPipelineExecutionsCountsByPipelineResponses, GetApiPipelineExecutionsCountsByPipelineErrors, ThrowOnError>({ url: '/api/pipeline-executions/counts/by-pipeline', ...options });
     }
-    
-    public listPipelineDefinitionStepRollups<ThrowOnError extends boolean = false>(options: Options<GetApiPipelineExecutionsStepRollupsByDefinitionByPipelineDefinitionIdData, ThrowOnError>) {
-        return (options.client ?? this.client).get<GetApiPipelineExecutionsStepRollupsByDefinitionByPipelineDefinitionIdResponses, GetApiPipelineExecutionsStepRollupsByDefinitionByPipelineDefinitionIdErrors, ThrowOnError>({ url: '/api/pipeline-executions/step-rollups/by-definition/{pipelineDefinitionId}', ...options });
-    }
-    
-    public listPipelineDefinitionStepRuns<ThrowOnError extends boolean = false>(options: Options<GetApiPipelineExecutionsStepRunsByDefinitionByPipelineDefinitionIdData, ThrowOnError>) {
-        return (options.client ?? this.client).get<GetApiPipelineExecutionsStepRunsByDefinitionByPipelineDefinitionIdResponses, GetApiPipelineExecutionsStepRunsByDefinitionByPipelineDefinitionIdErrors, ThrowOnError>({ url: '/api/pipeline-executions/step-runs/by-definition/{pipelineDefinitionId}', ...options });
-    }
 }
 
 export class WorkItems extends HeyApiClient {
+    /**
+     * The question comments runs posted on a work item, oldest first, each with the run and visit that asked it and its status (`open`, `answered` or `not_needed`). The comments UI reads it so the comments API needn't know about runs. Requires `comments:read`.
+     */
+    public listWorkItemQuestions<ThrowOnError extends boolean = false>(options: Options<GetApiWorkItemsByWorkItemIdQuestionsData, ThrowOnError>) {
+        return (options.client ?? this.client).get<GetApiWorkItemsByWorkItemIdQuestionsResponses, GetApiWorkItemsByWorkItemIdQuestionsErrors, ThrowOnError>({ url: '/api/work-items/{workItemId}/questions', ...options });
+    }
+    
     public deleteWorkItem<ThrowOnError extends boolean = false>(options: Options<DeleteApiWorkItemsByWorkItemIdData, ThrowOnError>) {
         return (options.client ?? this.client).delete<DeleteApiWorkItemsByWorkItemIdResponses, DeleteApiWorkItemsByWorkItemIdErrors, ThrowOnError>({ url: '/api/work-items/{workItemId}', ...options });
     }
@@ -616,11 +602,58 @@ export class WorkItems extends HeyApiClient {
     }
 }
 
+export class Conversations extends HeyApiClient {
+    /**
+     * A conversation with its messages, oldest first, the step visit it belongs to, and how that step ends (`findings` or `conversation`). Requires `executions:read`.
+     */
+    public getConversation<ThrowOnError extends boolean = false>(options: Options<GetApiConversationsByConversationIdData, ThrowOnError>) {
+        return (options.client ?? this.client).get<GetApiConversationsByConversationIdResponses, GetApiConversationsByConversationIdErrors, ThrowOnError>({ url: '/api/conversations/{conversationId}', ...options });
+    }
+    
+    /**
+     * A work item's conversations, newest first, each with its status, step node and last message time. Requires `executions:read`.
+     */
+    public listWorkItemConversations<ThrowOnError extends boolean = false>(options: Options<GetApiWorkItemsByWorkItemIdConversationsData, ThrowOnError>) {
+        return (options.client ?? this.client).get<GetApiWorkItemsByWorkItemIdConversationsResponses, GetApiWorkItemsByWorkItemIdConversationsErrors, ThrowOnError>({ url: '/api/work-items/{workItemId}/conversations', ...options });
+    }
+    
+    /**
+     * Replies in a conversation. Requires `comments:create`. The first reply while the agent waits queues its next turn; more replies join that turn until it starts. Refused with `CONVERSATION_NOT_WAITING` once the agent has the floor or the conversation is closed.
+     */
+    public sendConversationMessage<ThrowOnError extends boolean = false>(options: Options<PostApiConversationsByConversationIdMessagesData, ThrowOnError>) {
+        return (options.client ?? this.client).post<PostApiConversationsByConversationIdMessagesResponses, PostApiConversationsByConversationIdMessagesErrors, ThrowOnError>({
+            url: '/api/conversations/{conversationId}/messages',
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
+            }
+        });
+    }
+    
+    /**
+     * Queues the agent's next turn without a reply. Requires `executions:write`. Only while the conversation waits for a person (`CONVERSATION_NOT_WAITING` otherwise).
+     */
+    public continueConversation<ThrowOnError extends boolean = false>(options: Options<PostApiConversationsByConversationIdContinueData, ThrowOnError>) {
+        return (options.client ?? this.client).post<PostApiConversationsByConversationIdContinueResponses, PostApiConversationsByConversationIdContinueErrors, ThrowOnError>({ url: '/api/conversations/{conversationId}/continue', ...options });
+    }
+    
+    /**
+     * Ends a conversation step (one with no result schema): the step succeeds with `{ conversationId, summary }`, the summary being the last agent message, and the conversation closes. Requires `executions:write`. Only while the conversation waits for a person (`CONVERSATION_NOT_WAITING`); refused on a step with a result schema (`CONVERSATION_STEP_HAS_RESULT_SCHEMA`).
+     */
+    public endConversation<ThrowOnError extends boolean = false>(options: Options<PostApiConversationsByConversationIdDoneData, ThrowOnError>) {
+        return (options.client ?? this.client).post<PostApiConversationsByConversationIdDoneResponses, PostApiConversationsByConversationIdDoneErrors, ThrowOnError>({ url: '/api/conversations/{conversationId}/done', ...options });
+    }
+}
+
 export class WorkItemComments extends HeyApiClient {
     public listWorkItemComments<ThrowOnError extends boolean = false>(options: Options<GetApiWorkItemCommentsData, ThrowOnError>) {
         return (options.client ?? this.client).get<GetApiWorkItemCommentsResponses, GetApiWorkItemCommentsErrors, ThrowOnError>({ url: '/api/work-item-comments', ...options });
     }
     
+    /**
+     * Creates a comment, or a reply when `parentCommentId` names a top-level comment. A reply to an open question's comment answers it and resumes the run waiting on it. Requires `comments:create`.
+     */
     public createWorkItemComment<ThrowOnError extends boolean = false>(options: Options<PostApiWorkItemCommentsData, ThrowOnError>) {
         return (options.client ?? this.client).post<PostApiWorkItemCommentsResponses, PostApiWorkItemCommentsErrors, ThrowOnError>({
             url: '/api/work-item-comments',
@@ -632,10 +665,16 @@ export class WorkItemComments extends HeyApiClient {
         });
     }
     
+    /**
+     * Deletes a comment. A question comment can't be deleted while its question is open (`WORK_ITEM_COMMENT_QUESTION_OPEN`).
+     */
     public deleteWorkItemComment<ThrowOnError extends boolean = false>(options: Options<DeleteApiWorkItemCommentsByCommentIdData, ThrowOnError>) {
         return (options.client ?? this.client).delete<DeleteApiWorkItemCommentsByCommentIdResponses, DeleteApiWorkItemCommentsByCommentIdErrors, ThrowOnError>({ url: '/api/work-item-comments/{commentId}', ...options });
     }
     
+    /**
+     * Edits a comment's body. A question comment can't be edited while its question is open (`WORK_ITEM_COMMENT_QUESTION_OPEN`).
+     */
     public editWorkItemComment<ThrowOnError extends boolean = false>(options: Options<PatchApiWorkItemCommentsByCommentIdData, ThrowOnError>) {
         return (options.client ?? this.client).patch<PatchApiWorkItemCommentsByCommentIdResponses, PatchApiWorkItemCommentsByCommentIdErrors, ThrowOnError>({
             url: '/api/work-item-comments/{commentId}',
@@ -927,15 +966,15 @@ export class Secrets extends HeyApiClient {
     }
 }
 
-export class BoboddyClient extends HeyApiClient {
-    public static readonly __registry = new HeyApiRegistry<BoboddyClient>();
+export class ScarnClient extends HeyApiClient {
+    public static readonly __registry = new HeyApiRegistry<ScarnClient>();
     
     constructor(args?: {
         client?: Client;
         key?: string;
     }) {
         super(args);
-        BoboddyClient.__registry.set(this, args?.key);
+        ScarnClient.__registry.set(this, args?.key);
     }
     
     private _api?: Api;
@@ -958,6 +997,11 @@ export class BoboddyClient extends HeyApiClient {
         return this._tasks ??= new Tasks({ client: this.client });
     }
     
+    private _taskRuns?: TaskRuns;
+    get taskRuns(): TaskRuns {
+        return this._taskRuns ??= new TaskRuns({ client: this.client });
+    }
+    
     private _pipelineDefinitions?: PipelineDefinitions;
     get pipelineDefinitions(): PipelineDefinitions {
         return this._pipelineDefinitions ??= new PipelineDefinitions({ client: this.client });
@@ -971,6 +1015,11 @@ export class BoboddyClient extends HeyApiClient {
     private _workItems?: WorkItems;
     get workItems(): WorkItems {
         return this._workItems ??= new WorkItems({ client: this.client });
+    }
+    
+    private _conversations?: Conversations;
+    get conversations(): Conversations {
+        return this._conversations ??= new Conversations({ client: this.client });
     }
     
     private _workItemComments?: WorkItemComments;

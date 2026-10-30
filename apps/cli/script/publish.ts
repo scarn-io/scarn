@@ -1,20 +1,20 @@
 #!/usr/bin/env bun
 
 /**
- * Publishes the CLI to npm as a thin `@boboddy/cli` package plus one
- * `@boboddy/cli-<platform>-<arch>` optionalDependency package per compiled
+ * Publishes the CLI to npm as a thin `@scarn/cli` package plus one
+ * `@scarn/cli-<platform>-<arch>` optionalDependency package per compiled
  * binary (see targets.ts).
  *
  * Why split it up: every platform's binary used to ship inside the single
- * `@boboddy/cli` tarball (~170MB combined across 5 binaries). A plain
- * `npm install -g @boboddy/cli` therefore had to download and atomically
+ * `@scarn/cli` tarball (~170MB combined across 5 binaries). A plain
+ * `npm install -g @scarn/cli` therefore had to download and atomically
  * extract all of that on every install/upgrade, on every platform — and a
  * large multi-file extraction that gets interrupted (network blip, disk
  * pressure, a stray leftover temp dir from a previous failed install
  * colliding with npm's rename-based swap) can leave a partially-extracted,
  * silently-broken install behind: e.g. the binaries land but a file later in
  * the tarball — like the bundled devcontainer CLI — never gets extracted.
- * bin/boboddy's own integrity checks now fail loudly when that happens, but
+ * bin/scarn's own integrity checks now fail loudly when that happens, but
  * shrinking each install to one ~70-90MB platform package (the npm/optional
  * dependency pattern used by esbuild, @swc/core, rollup, turbo, etc.) makes
  * the underlying interrupted-extraction failure far less likely in the first
@@ -22,11 +22,11 @@
  * package instead of the whole CLI.
  *
  * Publish order matters: platform packages are published before the main
- * package, so that by the time `@boboddy/cli`'s optionalDependencies are
+ * package, so that by the time `@scarn/cli`'s optionalDependencies are
  * resolvable, the versions they pin already exist on the registry.
  *
  * One catch with the optionalDependency pattern itself: npm treats a failed
- * optionalDependency as a *non-fatal* skip — `npm install -g @boboddy/cli`
+ * optionalDependency as a *non-fatal* skip — `npm install -g @scarn/cli`
  * can exit 0 with the platform package silently missing (a dropped
  * connection fetching that ~90MB package, not just corruption, is enough).
  * That traded a rare corrupted-extraction failure for a more common silent
@@ -49,7 +49,7 @@ const args = process.argv.slice(2);
 const dryRun = args.includes("--dry-run");
 const publishTag = args.find((arg) => !arg.startsWith("-")) ?? "latest";
 
-// pino/pino-pretty versions must match apps/cli/package.json — bin/boboddy
+// pino/pino-pretty versions must match apps/cli/package.json — bin/scarn
 // (copied verbatim into the published package, see below) requires both.
 const WRAPPER_DEPENDENCIES: Record<string, string> = {
   pino: pkg.dependencies.pino,
@@ -104,7 +104,7 @@ async function preparePlatformPackage(target: (typeof CLI_BUILD_TARGETS)[number]
       {
         name: target.packageName,
         version: pkg.version,
-        description: `${target.platform}/${target.arch} binary for @boboddy/cli. Not for direct use.`,
+        description: `${target.platform}/${target.arch} binary for @scarn/cli. Not for direct use.`,
         os: [target.platform],
         cpu: [target.arch],
         files: ["bin"],
@@ -120,7 +120,7 @@ async function preparePlatformPackage(target: (typeof CLI_BUILD_TARGETS)[number]
 }
 
 /**
- * Build `dist/npm-package/`: the thin main package. Ships bin/boboddy and
+ * Build `dist/npm-package/`: the thin main package. Ships bin/scarn and
  * bin/postinstall.js verbatim (the real dev shim and install-time integrity
  * check, not separately-maintained copies — those used to drift from the
  * published artifact) plus the shared devcontainer CLI bundle. No platform
@@ -140,8 +140,8 @@ async function prepareMainPackage(): Promise<string> {
   await mkdir(`${publishDir}/bin`, { recursive: true });
   await mkdir(`${publishDir}/dist`, { recursive: true });
   await cp("./README.md", `${publishDir}/README.md`);
-  await cp("./bin/boboddy", `${publishDir}/bin/boboddy`);
-  await chmod(`${publishDir}/bin/boboddy`, 0o755);
+  await cp("./bin/scarn", `${publishDir}/bin/scarn`);
+  await chmod(`${publishDir}/bin/scarn`, 0o755);
   await cp("./bin/postinstall.js", `${publishDir}/bin/postinstall.js`);
   await chmod(`${publishDir}/bin/postinstall.js`, 0o755);
   await cp(devcontainerSrc, `${publishDir}/dist/devcontainer`, { recursive: true });
@@ -157,7 +157,7 @@ async function prepareMainPackage(): Promise<string> {
         name: pkg.name,
         version: pkg.version,
         bin: {
-          boboddy: "bin/boboddy",
+          scarn: "bin/scarn",
         },
         scripts: {
           postinstall: "node bin/postinstall.js",
@@ -181,7 +181,7 @@ if (!existsSync("./dist")) {
 }
 
 // Guard against dist/npm-package* leaking into itself: prepareMainPackage()
-// copies specific subpaths (README, bin/boboddy, dist/devcontainer) rather
+// copies specific subpaths (README, bin/scarn, dist/devcontainer) rather
 // than the whole dist/ directory, so stale npm-package* output from a
 // previous run can't get recursively re-bundled. Clean any of it up first.
 for (const entry of await readdir("./dist")) {

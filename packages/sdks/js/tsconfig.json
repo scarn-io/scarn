@@ -4,8 +4,8 @@
     "exactOptionalPropertyTypes": false,
     "noPropertyAccessFromIndexSignature": false,
     "paths": {
-      "@boboddy/sdk": ["./src/index.ts"],
-      "@boboddy/sdk/*": ["./src/*"]
+      "@scarn/sdk": ["./src/index.ts"],
+      "@scarn/sdk/*": ["./src/*"]
     },
     "types": ["bun-types", "node"]
   },

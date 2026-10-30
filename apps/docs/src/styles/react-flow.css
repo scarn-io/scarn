@@ -18,7 +18,7 @@
 /*
  * React Flow themes itself via CSS custom properties (see
  * https://reactflow.dev/learn/customization/theming#css-variables). Map its
- * variables onto `@boboddy/design-tokens` so a graph rendered on this
+ * variables onto `@scarn/design-tokens` so a graph rendered on this
  * (forced dark-only) site matches the surrounding chrome instead of React
  * Flow's light-mode defaults.
  */

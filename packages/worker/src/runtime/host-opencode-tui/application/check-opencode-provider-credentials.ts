@@ -1,7 +1,7 @@
 import {
   listOpencodeAuthProviders,
   type ListOpencodeAuthProvidersInput,
-} from "../../../work/task/infra/provider-access/opencode-credential-discovery";
+} from "../../../work/task-run/infra/provider-access/opencode-credential-discovery";
 
 /**
  * Pre-flight check for the interactive OpenCode TUI: does the user have any AI
@@ -33,11 +33,11 @@ export type CheckOpencodeProviderCredentialsInput = {
   /**
    * Absolute path of the provisioned OpenCode launcher (`launch.sh`). Runs the
    * credential export and builds the remediation command — the user may not
-   * have `opencode` on PATH at all, so we always point at the binary Boboddy
+   * have `opencode` on PATH at all, so we always point at the binary Scarn
    * provisioned.
    *
    * Optional: a caller that only needs the yes/no answer can omit it rather
-   * than provision the runtime just to ask the question — `boboddy init` does
+   * than provision the runtime just to ask the question — `scarn init` does
    * exactly that. The export then uses an already-provisioned runtime if there
    * is one, and otherwise only `auth.json` and env are consulted.
    */
@@ -83,7 +83,7 @@ export function buildRemediation(launcherPath?: string): string {
   return [
     "No AI provider credentials were found.",
     "",
-    "Sign in with the AI runtime Boboddy provisioned for you:",
+    "Sign in with the AI runtime Scarn provisioned for you:",
     "",
     `  ${command}`,
     "",

@@ -21,7 +21,7 @@ export function logCacheFallback(
 
 /**
  * Timing lines. They go through `log` (info) so the default
- * `BOBODDY_LOG_SHIP_LEVEL` ships them, and carry no URL: only a duration and a
+ * `SCARN_LOG_SHIP_LEVEL` ships them, and carry no URL: only a duration and a
  * hit/miss/fallback marker.
  */
 export function logMirrorPrepared(

@@ -1,12 +1,12 @@
 /**
- * Check every `boboddy …` command shown in the docs against the real CLI
+ * Check every `scarn …` command shown in the docs against the real CLI
  * parser (docs/plans/docs-onboarding-clarity.md, Phase 7c).
  *
  * Usage: bun scripts/check-commands.ts
  *
  * Scans fenced `bash`/`sh`/`shell`/`zsh`/`console` blocks under
  * `src/content/docs/`. Each line is split on `&&`, `||`, `;`, and `|`; every
- * segment starting with `boboddy` (after an optional `$ ` prompt) is checked.
+ * segment starting with `scarn` (after an optional `$ ` prompt) is checked.
  * Trailing `# comments` and `<placeholder>` tokens are dropped, and `\` line
  * continuations are joined.
  *
@@ -124,7 +124,7 @@ export function extractCommands(source: string, file: string): DocCommand[] {
       const tokens = tokenize(segment).filter(
         (token) => !/^<[^>]*>$/.test(token),
       );
-      if (tokens[0] !== "boboddy") continue;
+      if (tokens[0] !== "scarn") continue;
       commands.push({ file, line, argv: tokens.slice(1) });
     }
   }
@@ -171,12 +171,12 @@ async function main(): Promise<void> {
     if (error === null) continue;
     failures += 1;
     console.error(
-      `${command.file}:${String(command.line)}: boboddy ${command.argv.join(" ")}\n  ${error}`,
+      `${command.file}:${String(command.line)}: scarn ${command.argv.join(" ")}\n  ${error}`,
     );
   }
 
   console.log(
-    `Checked ${String(commands.length)} boboddy commands in docs: ${String(failures)} failed.`,
+    `Checked ${String(commands.length)} scarn commands in docs: ${String(failures)} failed.`,
   );
   if (failures > 0) process.exit(1);
 }

@@ -1,7 +1,7 @@
 import path from "node:path";
-import { createBoboddyClient } from "../client";
+import { createScarnClient } from "../client";
 import { loadAuthProfile } from "./auth-file";
-import { resolveBoboddyBaseUrl } from "./base-url";
+import { resolveScarnBaseUrl } from "./base-url";
 import { loadProjectConfig } from "./project-config";
 import { resolveProjectRef } from "./project-ref";
 
@@ -13,7 +13,7 @@ export interface PushDefaults {
 
 export interface LoadPushDefaultsOptions {
   /**
-   * Directory the script is running from. The project config (`.boboddy/boboddy.jsonc`)
+   * Directory the script is running from. The project config (`.scarn/scarn.jsonc`)
    * is searched for in this directory and each ancestor directory.
    */
   dir: string;
@@ -31,13 +31,13 @@ async function findProjectConfigUpwards(startDir: string) {
 }
 
 /**
- * Reads the conventional defaults for a `boboddy pipelines push` run:
- * - `baseUrl`: from `BOBODDY_BASE_URL` env var or the built-in default.
- * - `accessToken`: from `BOBODDY_ACCESS_TOKEN` env var or the saved auth
+ * Reads the conventional defaults for a `scarn pipelines push` run:
+ * - `baseUrl`: from `SCARN_BASE_URL` env var or the built-in default.
+ * - `accessToken`: from `SCARN_ACCESS_TOKEN` env var or the saved auth
  *   profile for the resolved `baseUrl`.
- * - `projectId`: from `BOBODDY_PROJECT_ID` env var (a project id, which
- *   `boboddy pipelines push` sets after resolving the ref), or else the
- *   `"project"` ref in the nearest ancestor `.boboddy/boboddy.jsonc` of
+ * - `projectId`: from `SCARN_PROJECT_ID` env var (a project id, which
+ *   `scarn pipelines push` sets after resolving the ref), or else the
+ *   `"project"` ref in the nearest ancestor `.scarn/scarn.jsonc` of
  *   `opts.dir`, resolved against the server. Resolution needs `accessToken`;
  *   without one `projectId` is left undefined. A ref the server rejects throws
  *   a `ProjectRefError` naming the ref.
@@ -45,14 +45,14 @@ async function findProjectConfigUpwards(startDir: string) {
 export async function loadPushDefaults(
   opts: LoadPushDefaultsOptions,
 ): Promise<PushDefaults> {
-  const baseUrl = resolveBoboddyBaseUrl();
+  const baseUrl = resolveScarnBaseUrl();
 
-  const envAccessToken = process.env["BOBODDY_ACCESS_TOKEN"]?.trim();
+  const envAccessToken = process.env["SCARN_ACCESS_TOKEN"]?.trim();
   const accessToken = envAccessToken
     ? envAccessToken
     : loadAuthProfile(baseUrl)?.accessToken;
 
-  const envProjectId = process.env["BOBODDY_PROJECT_ID"]?.trim();
+  const envProjectId = process.env["SCARN_PROJECT_ID"]?.trim();
   if (envProjectId) {
     return { baseUrl, projectId: envProjectId, accessToken };
   }
@@ -63,7 +63,7 @@ export async function loadPushDefaults(
   }
 
   const resolved = await resolveProjectRef(
-    createBoboddyClient(baseUrl),
+    createScarnClient(baseUrl),
     config.project,
     {
       headers: { Authorization: `Bearer ${accessToken}` },

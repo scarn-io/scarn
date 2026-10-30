@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 
 /**
- * Runs as @boboddy/cli's own "postinstall" lifecycle script (see
+ * Runs as @scarn/cli's own "postinstall" lifecycle script (see
  * script/publish.ts's prepareMainPackage, which wires this up and copies this
- * file into the published package verbatim — like bin/boboddy, this is plain
+ * file into the published package verbatim — like bin/scarn, this is plain
  * CommonJS, not compiled, so it can't import script/targets.ts at runtime).
  *
- * Why this exists: the platform binary (@boboddy/cli-<platform>-<arch>) is an
+ * Why this exists: the platform binary (@scarn/cli-<platform>-<arch>) is an
  * npm optionalDependency of the main package (see targets.ts / publish.ts's
  * module doc for why). optionalDependencies are, by design, allowed to fail
  * npm's install without failing the overall `npm install` command — that's
@@ -14,24 +14,24 @@
  * providing a nice-to-have; it is NOT fine here, because the platform binary
  * is the entire CLI. A single dropped connection fetching that ~90MB package
  * (far more likely on a fresh CI runner or a flaky network than a checksum
- * mismatch) used to leave `npm install -g @boboddy/cli` reporting success —
+ * mismatch) used to leave `npm install -g @scarn/cli` reporting success —
  * exit code 0 — with a broken install, and the user finding out only when
- * they ran `boboddy` and hit bin/boboddy's "Missing compiled binary" error,
+ * they ran `scarn` and hit bin/scarn's "Missing compiled binary" error,
  * possibly minutes or commits later.
  *
  * This script closes that gap: it verifies the platform package actually
  * resolves right after install, and if it doesn't, downloads the tarball
  * directly from the registry (bypassing npm — no child `npm install`, so this
  * can't recurse into another lifecycle run) and extracts just the compiled
- * binary into dist/, the same monolithic-layout path bin/boboddy already
+ * binary into dist/, the same monolithic-layout path bin/scarn already
  * falls back to. If that recovery also fails (registry unreachable, disk
  * full, etc.) this script exits non-zero, which — unlike a skipped
  * optionalDependency — DOES fail `npm install`, immediately and loudly,
  * instead of deferring the failure to first run.
  *
- * Skipped entirely (exit 0, no network call) when BOBODDY_DIST_DIR is set
+ * Skipped entirely (exit 0, no network call) when SCARN_DIST_DIR is set
  * (dev build) or the platform/arch has no compiled target at all (unsupported
- * platform — bin/boboddy already reports that clearly when actually run).
+ * platform — bin/scarn already reports that clearly when actually run).
  */
 
 const { mkdirSync, renameSync, writeFileSync, chmodSync } = require("node:fs");
@@ -40,12 +40,12 @@ const { gunzipSync } = require("node:zlib");
 const http = require("node:http");
 const https = require("node:https");
 
-const cliName = "boboddy";
+const cliName = "scarn";
 const projectRoot = resolve(__dirname, "..");
 const distDirectory = resolve(projectRoot, "dist");
 
 // Keep in sync with apps/cli/script/targets.ts (CLI_BUILD_TARGETS) and
-// bin/boboddy's own copies of these two maps.
+// bin/scarn's own copies of these two maps.
 const binaryNames = {
   "darwin:arm64": `${cliName}-darwin-arm64`,
   "darwin:x64": `${cliName}-darwin-x64`,
@@ -54,11 +54,11 @@ const binaryNames = {
   "win32:x64": `${cliName}-windows-x64.exe`,
 };
 const platformPackageNames = {
-  "darwin:arm64": "@boboddy/cli-darwin-arm64",
-  "darwin:x64": "@boboddy/cli-darwin-x64",
-  "linux:arm64": "@boboddy/cli-linux-arm64",
-  "linux:x64": "@boboddy/cli-linux-x64",
-  "win32:x64": "@boboddy/cli-win32-x64",
+  "darwin:arm64": "@scarn/cli-darwin-arm64",
+  "darwin:x64": "@scarn/cli-darwin-x64",
+  "linux:arm64": "@scarn/cli-linux-arm64",
+  "linux:x64": "@scarn/cli-linux-x64",
+  "win32:x64": "@scarn/cli-win32-x64",
 };
 
 const MAX_DOWNLOAD_ATTEMPTS = 3;
@@ -67,9 +67,9 @@ const RETRY_DELAY_MS = retryDelayMs();
 const REQUEST_TIMEOUT_MS = 60_000;
 const MAX_REDIRECTS = 5;
 
-/** Base retry delay; BOBODDY_POSTINSTALL_RETRY_DELAY_MS overrides it (tests set 0). */
+/** Base retry delay; SCARN_POSTINSTALL_RETRY_DELAY_MS overrides it (tests set 0). */
 function retryDelayMs() {
-  const raw = process.env["BOBODDY_POSTINSTALL_RETRY_DELAY_MS"];
+  const raw = process.env["SCARN_POSTINSTALL_RETRY_DELAY_MS"];
   if (raw === undefined || !/^\d+$/.test(raw.trim()))
     return DEFAULT_RETRY_DELAY_MS;
   const parsed = Number(raw.trim());
@@ -168,8 +168,8 @@ function extractTarEntry(tarBuffer, entryName) {
 /**
  * Fetch `packageName@version`'s tarball directly from the registry and pull
  * just `bin/<binaryName>` out of it, writing the result to
- * `distDirectory/<binaryName>` — the same path bin/boboddy's monolithic-dist
- * fallback layout already checks, so no change to bin/boboddy is needed to
+ * `distDirectory/<binaryName>` — the same path bin/scarn's monolithic-dist
+ * fallback layout already checks, so no change to bin/scarn is needed to
  * pick this up.
  */
 async function downloadPlatformBinary(packageName, binaryName, version) {
@@ -203,18 +203,18 @@ async function downloadPlatformBinary(packageName, binaryName, version) {
 }
 
 async function main() {
-  if (process.env["BOBODDY_DIST_DIR"]) {
+  if (process.env["SCARN_DIST_DIR"]) {
     return; // Dev build / explicit override — nothing to verify.
   }
 
-  const platform = process.env["BOBODDY_PLATFORM"] ?? process.platform;
-  const arch = process.env["BOBODDY_ARCH"] ?? process.arch;
+  const platform = process.env["SCARN_PLATFORM"] ?? process.platform;
+  const arch = process.env["SCARN_ARCH"] ?? process.arch;
   const targetKey = `${platform}:${arch}`;
   const binaryName = binaryNames[targetKey];
   const packageName = platformPackageNames[targetKey];
 
   if (binaryName === undefined || packageName === undefined) {
-    return; // Unsupported platform — bin/boboddy reports this clearly at run time.
+    return; // Unsupported platform — bin/scarn reports this clearly at run time.
   }
 
   try {
@@ -225,7 +225,7 @@ async function main() {
   }
 
   process.stdout.write(
-    `@boboddy/cli: optional dependency ${packageName} did not install (this can happen after ` +
+    `@scarn/cli: optional dependency ${packageName} did not install (this can happen after ` +
       "a network blip); downloading its binary directly as a fallback...\n",
   );
 
@@ -233,13 +233,13 @@ async function main() {
 
   try {
     await downloadPlatformBinary(packageName, binaryName, version);
-    process.stdout.write(`@boboddy/cli: recovered — ${binaryName} downloaded successfully.\n`);
+    process.stdout.write(`@scarn/cli: recovered — ${binaryName} downloaded successfully.\n`);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     process.stderr.write(
-      `@boboddy/cli: failed to install the ${platform}/${arch} binary (${packageName}), and ` +
+      `@scarn/cli: failed to install the ${platform}/${arch} binary (${packageName}), and ` +
         `the fallback download also failed: ${message}\n` +
-        "Try again — e.g. `npm install -g @boboddy/cli --force` — once you have a stable " +
+        "Try again — e.g. `npm install -g @scarn/cli --force` — once you have a stable " +
         "network connection.\n",
     );
     process.exitCode = 1;

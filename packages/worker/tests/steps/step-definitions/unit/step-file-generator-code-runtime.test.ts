@@ -1,8 +1,8 @@
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { describe, expect, test } from "bun:test";
-import { resolveRepoConfig } from "@boboddy/sdk/repo-config";
-import { codeStep, Runtime } from "@boboddy/sdk/definitions/steps";
+import { resolveRepoConfig } from "@scarn/sdk/repo-config";
+import { codeStep, Runtime, toStepSpec } from "@scarn/sdk/definitions/steps";
 import {
   generateStepsFileContent,
   keyToVarName,
@@ -26,7 +26,6 @@ function makeStep(overrides: Partial<StepDefContract> = {}): StepDefContract {
     opencodeMcpJson: null,
     healthChecksJson: null,
     envJson: null,
-    signalExtractorDefinitions: [],
     ...overrides,
   };
 }
@@ -50,7 +49,7 @@ describe("generateStepsFileContent code step runtime", () => {
       "environment: {\n    runtime: Runtime.managed.node24(),\n  }",
     );
     expect(content).toContain(
-      'import { defineStep, Runtime } from "@boboddy/sdk/definitions/steps";',
+      'import { defineStep, Runtime } from "@scarn/sdk/definitions/steps";',
     );
   });
 
@@ -64,7 +63,7 @@ describe("generateStepsFileContent code step runtime", () => {
       2,
     );
     expect(content).toContain(
-      'import { defineStep, Runtime } from "@boboddy/sdk/definitions/steps";',
+      'import { defineStep, Runtime } from "@scarn/sdk/definitions/steps";',
     );
   });
 
@@ -149,7 +148,7 @@ describe("generateStepsFileContent code step runtime", () => {
       {
         key: "legacy",
         spec: {
-          ...codeStep({ key: "legacy", name: "Legacy", fn: noop }),
+          ...toStepSpec(codeStep({ key: "legacy", name: "Legacy", fn: noop })),
           managedRuntime: null,
         },
       },
@@ -166,13 +165,13 @@ describe("generateStepsFileContent code step runtime", () => {
         }),
       ),
     ).replace(
-      'from "@boboddy/sdk/definitions/steps"',
+      'from "@scarn/sdk/definitions/steps"',
       'from "./code-step-shim"',
     );
 
     const shim = [
-      'import { codeStep } from "@boboddy/sdk/definitions/steps";',
-      'export * from "@boboddy/sdk/definitions/steps";',
+      'import { codeStep } from "@scarn/sdk/definitions/steps";',
+      'export * from "@scarn/sdk/definitions/steps";',
       "export const defineStep = ({ key, name, environment }) =>",
       "  codeStep({ key, name, environment, fn: () => ({}) });",
       "",

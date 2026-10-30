@@ -4,7 +4,7 @@ import {
   logWork,
   logWorkDebug,
   logWorkError,
-} from "../../../work/task/application/work-logger";
+} from "../../../work/task-run/application/work-logger";
 import {
   LAUNCH_WRAPPER_FILENAME,
   LINUX_PAYLOAD_PLATFORMS,
@@ -31,8 +31,8 @@ import {
 import { buildOpencodeLaunchWrapper } from "./opencode-runtime-launch-wrapper";
 
 /**
- * Provisions the Boboddy-managed OpenCode runtime payload into the host cache
- * (`~/.boboddy/runtimes/opencode/<version>`), version-pinned and reused across
+ * Provisions the Scarn-managed OpenCode runtime payload into the host cache
+ * (`~/.scarn/runtimes/opencode/<version>`), version-pinned and reused across
  * sessions, and GCs stale versions.
  *
  * Provisioning is idempotent: an existing, valid payload (matching version +

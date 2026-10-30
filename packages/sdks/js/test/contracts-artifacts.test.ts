@@ -10,7 +10,7 @@ import {
 } from "../src/contracts/artifacts";
 import { artifact } from "../src/definitions/artifacts";
 
-const KEYWORD = "x-boboddy-artifact";
+const KEYWORD = "x-scarn-artifact";
 
 describe("findArtifactFields", () => {
   test.concurrent("returns nothing for a missing or plain schema", () => {

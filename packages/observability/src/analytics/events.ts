@@ -20,12 +20,12 @@ export const AnalyticsEvents = {
   InvestigationReportProduced: "investigation_report_produced",
   InviteAccepted: "invite_accepted",
   GithubAppInstalled: "github_app_installed",
-  // Captured by `@boboddy/growth` when a visitor opens a `/s/<code>` share
+  // Captured by `@scarn/growth` when a visitor opens a `/s/<code>` share
   // link, under the visitor's browser distinct id.
   ShareLinkClicked: "share_link_clicked",
   // CLI onboarding funnel (see apps/cli/src/lib/telemetry.ts) — one event per
   // milestone, keyed by distinct-id/session rather than by command, so the
-  // funnel reads the same across `boboddy init`'s guided path and every
+  // funnel reads the same across `scarn init`'s guided path and every
   // self-healing shortcut (e.g. `pipelines design`'s own sign-in check) that
   // reaches the same milestone.
   CliInitStarted: "cli_init_started",
@@ -79,7 +79,7 @@ export type PipelineCreatedProperties = {
 };
 
 export type PipelineRunCompletedStatus =
-  "succeeded" | "failed" | "cancelled" | "blocked" | "routed";
+  "succeeded" | "failed" | "cancelled";
 
 export type PipelineRunCompletedProperties = {
   project_id: string;
@@ -90,7 +90,7 @@ export type PipelineRunCompletedProperties = {
 };
 
 /**
- * One stored step artifact. `kind` mirrors `ArtifactKind` in `@boboddy/sdk`;
+ * One stored step artifact. `kind` mirrors `ArtifactKind` in `@scarn/sdk`;
  * the artifact's path is left out because it is named by the agent.
  */
 export type ArtifactProducedProperties = {
@@ -177,7 +177,7 @@ export type CliRunOfferSkippedProperties = {
 
 /**
  * AI tools found installed on the machine — names only. Mirrors
- * `InstalledAiTool` in `@boboddy/worker`, redeclared here so observability
+ * `InstalledAiTool` in `@scarn/worker`, redeclared here so observability
  * does not depend on the worker.
  */
 export type CliDetectedAiTool = "claude" | "codex" | "copilot";

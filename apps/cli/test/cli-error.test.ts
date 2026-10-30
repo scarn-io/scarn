@@ -1,12 +1,11 @@
-import { describe, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import {
   ConfigurationError,
   CoreError,
   SetupErrorCodes,
-} from "@boboddy/worker";
-import { ProjectRefError } from "@boboddy/sdk/defaults";
+} from "@scarn/worker";
+import { ProjectRefError } from "@scarn/sdk/defaults";
 import { CliError, classifyCliError } from "../src/lib/cli-error";
-import { concurrentTest as test } from "./utils";
 
 describe("classifyCliError", () => {
   test("returns a CliError's own code", () => {
@@ -54,7 +53,7 @@ describe("classifyCliError", () => {
   });
 
   test("follows the cause chain of a wrapping error", () => {
-    const wrapped = new Error("Run `boboddy pipelines design` again.", {
+    const wrapped = new Error("Run `scarn pipelines design` again.", {
       cause: new CliError("run_queue_failed", "Could not queue the run"),
     });
     expect(classifyCliError(wrapped)).toBe("run_queue_failed");

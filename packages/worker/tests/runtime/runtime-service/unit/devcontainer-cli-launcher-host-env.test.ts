@@ -15,8 +15,8 @@ import type { LaunchDevcontainerInput } from "../../../../src/runtime/runtime-se
 import { DevcontainerCliLauncher } from "../../../../src/runtime/runtime-service/infra/devcontainer-cli-launcher";
 
 const REPORTED_ENV_KEYS = [
-  "BOBODDY_GIT_CACHE_DIR",
-  "BOBODDY_HOST_ENV_OTHER",
+  "SCARN_GIT_CACHE_DIR",
+  "SCARN_HOST_ENV_OTHER",
   "SETUP_TEST_NPM_TOKEN",
 ];
 
@@ -34,11 +34,11 @@ describe("devcontainer CLI launcher hostEnv", () => {
     stubDir = await mkdtemp(path.join(os.tmpdir(), "devcontainer-stub-"));
     const scriptPath = path.join(stubDir, "devcontainer-stub.js");
     await writeFile(scriptPath, STUB_SCRIPT, "utf8");
-    for (const key of ["BOBODDY_DEVCONTAINER_SCRIPT", ...REPORTED_ENV_KEYS]) {
+    for (const key of ["SCARN_DEVCONTAINER_SCRIPT", ...REPORTED_ENV_KEYS]) {
       saved[key] = process.env[key];
       Reflect.deleteProperty(process.env, key);
     }
-    process.env["BOBODDY_DEVCONTAINER_SCRIPT"] = scriptPath;
+    process.env["SCARN_DEVCONTAINER_SCRIPT"] = scriptPath;
   });
 
   afterEach(async () => {
@@ -81,36 +81,36 @@ describe("devcontainer CLI launcher hostEnv", () => {
 
   test("merges hostEnv into the spawned CLI environment", async () => {
     const env = await spawnedEnv(
-      launchInput({ BOBODDY_GIT_CACHE_DIR: "/var/cache/boboddy" }),
+      launchInput({ SCARN_GIT_CACHE_DIR: "/var/cache/scarn" }),
     );
 
-    expect(env["BOBODDY_GIT_CACHE_DIR"]).toBe("/var/cache/boboddy");
+    expect(env["SCARN_GIT_CACHE_DIR"]).toBe("/var/cache/scarn");
   });
 
   test("hostEnv wins over the same key in process.env and keeps other process.env vars", async () => {
-    process.env["BOBODDY_GIT_CACHE_DIR"] = "/from/process";
-    process.env["BOBODDY_HOST_ENV_OTHER"] = "kept";
+    process.env["SCARN_GIT_CACHE_DIR"] = "/from/process";
+    process.env["SCARN_HOST_ENV_OTHER"] = "kept";
 
     const env = await spawnedEnv(
-      launchInput({ BOBODDY_GIT_CACHE_DIR: "/from/host-env" }),
+      launchInput({ SCARN_GIT_CACHE_DIR: "/from/host-env" }),
     );
 
-    expect(env["BOBODDY_GIT_CACHE_DIR"]).toBe("/from/host-env");
-    expect(env["BOBODDY_HOST_ENV_OTHER"]).toBe("kept");
+    expect(env["SCARN_GIT_CACHE_DIR"]).toBe("/from/host-env");
+    expect(env["SCARN_HOST_ENV_OTHER"]).toBe("kept");
   });
 
   test("without hostEnv the spawned environment is process.env unchanged", async () => {
-    process.env["BOBODDY_GIT_CACHE_DIR"] = "/from/process";
+    process.env["SCARN_GIT_CACHE_DIR"] = "/from/process";
 
     const env = await spawnedEnv(launchInput());
 
-    expect(env["BOBODDY_GIT_CACHE_DIR"]).toBe("/from/process");
+    expect(env["SCARN_GIT_CACHE_DIR"]).toBe("/from/process");
   });
 
   test("without hostEnv nothing is exported that process.env lacks", async () => {
     const env = await spawnedEnv(launchInput());
 
-    expect(env["BOBODDY_GIT_CACHE_DIR"]).toBeNull();
+    expect(env["SCARN_GIT_CACHE_DIR"]).toBeNull();
   });
 
   test("a step setup variable reaches the CLI and overrides the worker's process.env", async () => {
@@ -119,11 +119,11 @@ describe("devcontainer CLI launcher hostEnv", () => {
     const env = await spawnedEnv(
       launchInput({
         SETUP_TEST_NPM_TOKEN: "from-step-setup",
-        BOBODDY_GIT_CACHE_DIR: "/var/cache/boboddy",
+        SCARN_GIT_CACHE_DIR: "/var/cache/scarn",
       }),
     );
 
     expect(env["SETUP_TEST_NPM_TOKEN"]).toBe("from-step-setup");
-    expect(env["BOBODDY_GIT_CACHE_DIR"]).toBe("/var/cache/boboddy");
+    expect(env["SCARN_GIT_CACHE_DIR"]).toBe("/var/cache/scarn");
   });
 });

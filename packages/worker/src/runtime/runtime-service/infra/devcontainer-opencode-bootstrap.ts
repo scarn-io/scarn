@@ -1,14 +1,20 @@
-import { execFile, spawn } from "node:child_process";
+import { execFile } from "node:child_process";
 import net from "node:net";
+import path from "node:path";
 import { promisify } from "node:util";
-import { SecretMasker } from "../../../work/task/application/secret-masker";
+import {
+  BUNDLED_SKILL_FILES,
+  BUNDLED_SKILLS_HOME_DIR,
+} from "@scarn/opencode-plugin";
+import { SecretMasker } from "../../../work/task-run/application/secret-masker";
 import {
   logWork,
   logWorkDebug,
   logWorkError,
-} from "../../../work/task/application/work-logger";
+} from "../../../work/task-run/application/work-logger";
 import type { DevcontainerBindMount } from "./devcontainer-mount-injection";
 import { buildDockerEnvFlags } from "./docker-env-flags";
+import { execDockerWithStdin, shQuote } from "./docker-exec-with-stdin";
 import {
   patchDevcontainerAppPort,
   patchDevcontainerMounts,
@@ -42,7 +48,7 @@ export { resolveSessionAgentHomeDir };
 const execFileAsync = promisify(execFile);
 
 /**
- * Bootstraps the Boboddy-managed OpenCode runtime INSIDE the user devcontainer.
+ * Bootstraps the Scarn-managed OpenCode runtime INSIDE the user devcontainer.
  *
  * The agent HOME ({@link CONTAINER_AGENT_HOME}) lives on the container's NATIVE
  * OVERLAY filesystem — it is NOT a host bind mount. A macOS host bind mount
@@ -56,8 +62,8 @@ const execFileAsync = promisify(execFile);
  *    to inject into the cloned devcontainer.json using the SAME mechanism as the
  *    existing `containerEnv` patch (`patchDevcontainerMounts` /
  *    `patchDevcontainerAppPort`). Mounts:
- *      * runtime payload dir  -> /opt/boboddy/runtimes/opencode/<ver> (read-only)
- *      * provider credentials -> /opt/boboddy/provider                (read-only),
+ *      * runtime payload dir  -> /opt/scarn/runtimes/opencode/<ver> (read-only)
+ *      * provider credentials -> /opt/scarn/provider                (read-only),
  *        only when the resolver's chosen source needs config files.
  *    The agent HOME is deliberately NOT mounted — it lives on overlay.
  *
@@ -74,7 +80,7 @@ const execFileAsync = promisify(execFile);
  *    `opencode serve` by ABSOLUTE PATH (the mounted payload's `launch.sh`), with
  *    the dedicated HOME env and the resolved workspace cwd, binding
  *    `0.0.0.0:<containerPort>` so it is reachable from the host over the
- *    published loopback port. Boboddy's override config is passed as
+ *    published loopback port. Scarn's override config is passed as
  *    `OPENCODE_CONFIG_CONTENT` (precedence #6 — inline), ensuring the permission
  *    baseline, step MCPs, and `AGENT_DEFAULT_MODEL` win over the user's
  *    home/project configs. The server is protected by a per-session
@@ -89,16 +95,16 @@ const execFileAsync = promisify(execFile);
  */
 
 /** In-container path the runtime payload is mounted at is version-specific. */
-export const CONTAINER_AGENT_HOME = "/opt/boboddy/agent-home";
+export const CONTAINER_AGENT_HOME = "/opt/scarn/agent-home";
 /** In-container path the materialized provider config dir is mounted at. */
-export const CONTAINER_PROVIDER_DIR = "/opt/boboddy/provider";
+export const CONTAINER_PROVIDER_DIR = "/opt/scarn/provider";
 /**
  * In-container npm cache dir. MUST live on the container's native overlay
  * filesystem, NOT under {@link CONTAINER_AGENT_HOME} (a macOS host bind mount
  * whose unstable file metadata breaks npm's `_npx` lock verification, causing
  * `ECOMPROMISED: Lock compromised` for every `npx`-based MCP server).
  */
-export const CONTAINER_NPM_CACHE_DIR = "/tmp/boboddy-npm-cache";
+export const CONTAINER_NPM_CACHE_DIR = "/tmp/scarn-npm-cache";
 /** Port OpenCode binds inside the container; published to a host loopback port. */
 export const CONTAINER_OPENCODE_PORT = 4096;
 
@@ -114,7 +120,7 @@ const HOST_GATEWAY_RUN_ARGS = [
 ];
 
 /** Where the in-container opencode process writes its boot log. */
-const AGENT_LOG_DIR = `${CONTAINER_AGENT_HOME}/.boboddy-log`;
+const AGENT_LOG_DIR = `${CONTAINER_AGENT_HOME}/.scarn-log`;
 /** Filename of the in-container opencode serve log within the log directory. */
 export const AGENT_SERVE_LOG_FILENAME = "opencode-serve.log";
 const AGENT_LOG_PATH = `${AGENT_LOG_DIR}/${AGENT_SERVE_LOG_FILENAME}`;
@@ -129,6 +135,8 @@ const AGENT_PID_PATH = `${AGENT_LOG_DIR}/opencode-serve.pid`;
  */
 const AGENT_CONFIG_DIR = `${CONTAINER_AGENT_HOME}/.config/opencode`;
 const AGENT_CONFIG_PATH = `${AGENT_CONFIG_DIR}/opencode.json`;
+/** Where the plugin's bundled skills are seeded (see `bundled-skills.ts`). */
+const AGENT_SKILLS_DIR = `${CONTAINER_AGENT_HOME}/${BUNDLED_SKILLS_HOME_DIR}`;
 
 export type PlanMountsInput = {
   payload: OpencodeRuntimePayloadLocation;
@@ -174,7 +182,7 @@ export type StartInput = {
    */
   stepEnv?: Readonly<Record<string, string>> | undefined;
   /**
-   * Boboddy's override config as a JSON string. Passed to the in-container
+   * Scarn's override config as a JSON string. Passed to the in-container
    * OpenCode as `OPENCODE_CONFIG_CONTENT` (precedence level #6 — inline),
    * which takes effect after the user's global (#2) and project (#4) configs.
    *
@@ -210,48 +218,6 @@ export function findFreePort(): Promise<number> {
       });
     });
     server.on("error", reject);
-  });
-}
-
-/** Single-quote a value for safe interpolation into a `sh -c` command. */
-function shQuote(value: string): string {
-  return `'${value.replaceAll("'", "'\\''")}'`;
-}
-
-/**
- * Run `docker` with the given args, piping `stdin` to the child's stdin and
- * closing it. Unlike {@link execFileAsync}, this can stream content over stdin,
- * which is how {@link DevcontainerOpencodeBootstrap.prepareAgentHome} seeds
- * the global config into the container via `docker exec -i ... tee`.
- *
- * `stdin` may contain secrets (a user config can embed provider keys). It is
- * NEVER logged here and MUST NOT be logged by callers.
- */
-function execDockerWithStdin(args: string[], stdin: string): Promise<void> {
-  return new Promise<void>((resolve, reject) => {
-    const child = spawn("docker", args, {
-      stdio: ["pipe", "ignore", "pipe"],
-    });
-    let stderr = "";
-    child.stderr.on("data", (chunk: Buffer) => {
-      stderr += chunk.toString("utf8");
-    });
-    child.on("error", (error: Error) => {
-      reject(error);
-    });
-    child.on("close", (code: number | null) => {
-      if (code === 0) {
-        resolve();
-      } else {
-        reject(
-          new Error(
-            `docker ${args[0] ?? ""} exited with code ${String(code)}` +
-              (stderr.trim() ? `: ${stderr.trim()}` : ""),
-          ),
-        );
-      }
-    });
-    child.stdin.end(stdin);
   });
 }
 
@@ -325,9 +291,13 @@ export class DevcontainerOpencodeBootstrap {
    * ALREADY-RUNNING container: it `mkdir -p`s the config dir on overlay, then
    * pipes the config over stdin into `tee` and `chmod 600`s it.
    *
+   * It also seeds the plugin's bundled skills into the agent HOME's
+   * `.claude/skills` (see `bundled-skills.ts`), never the workspace, so repo
+   * skills win on a name clash and nothing lands in the repo.
+   *
    * Provider credentials are not copied; {@link start} injects them over the
    * API. Must be called AFTER the container is launched and BEFORE
-   * {@link start}. When no global config exists, only the `mkdir` runs.
+   * {@link start}. When no global config exists, it is not written.
    */
   async prepareAgentHome(input: {
     containerId: string;
@@ -357,6 +327,22 @@ export class DevcontainerOpencodeBootstrap {
             `chmod 600 ${shQuote(AGENT_CONFIG_PATH)}`,
         ],
         hostConfigContent,
+      );
+    }
+
+    for (const file of BUNDLED_SKILL_FILES) {
+      const target = path.posix.join(AGENT_SKILLS_DIR, file.relativePath);
+      await execDockerWithStdin(
+        [
+          "exec",
+          "-i",
+          input.containerId,
+          "sh",
+          "-lc",
+          `mkdir -p ${shQuote(path.posix.dirname(target))} && ` +
+            `cat > ${shQuote(target)}`,
+        ],
+        file.content,
       );
     }
 
@@ -390,20 +376,20 @@ export class DevcontainerOpencodeBootstrap {
       // redundant belt-and-suspenders — harmless now that HOME is on overlay.
       "-e",
       `npm_config_cache=${CONTAINER_NPM_CACHE_DIR}`,
-      // Boboddy's override layer: permission baseline, step MCPs, plugins, and
+      // Scarn's override layer: permission baseline, step MCPs, plugins, and
       // AGENT_DEFAULT_MODEL. Wins over global (#2) and project (#4) configs.
       "-e",
       `OPENCODE_CONFIG_CONTENT=${input.opencodeConfigContent}`,
-      // The resolved workspace folder OpenCode operates against. The Boboddy
-      // OpenCode plugin's step tools (e.g. boboddy-submit-step-findings) read
-      // `.boboddy/current-execution/execution.json` relative to the worktree,
+      // The resolved workspace folder OpenCode operates against. The Scarn
+      // OpenCode plugin's step tools (e.g. scarn-submit-step-findings) read
+      // `.scarn/current-execution/execution.json` relative to the worktree,
       // but OpenCode reports `context.worktree` as "/" inside the container.
       // Without this env the plugin falls back to a "/workspace" default that
       // does not exist here, so the findings tool cannot locate the execution
       // metadata and the step never submits findings. Wire the true workspace
       // folder so resolveWorktree() resolves correctly.
       "-e",
-      `BOBODDY_WORKSPACE_FOLDER=${input.workspaceFolder}`,
+      `SCARN_WORKSPACE_FOLDER=${input.workspaceFolder}`,
     ];
     envFlags.push(
       ...buildDockerEnvFlags(input.providerEnv),

@@ -15,14 +15,14 @@ const artifactsDir = resolve(projectRoot, ".artifacts");
 // cached package from the same absolute tarball path.
 const outputPath = resolve(
   artifactsDir,
-  `boboddy-sdk-local-${String(Date.now())}.tgz`,
+  `scarn-sdk-local-${String(Date.now())}.tgz`,
 );
 
 await $`bun run build`;
 await mkdir(artifactsDir, { recursive: true });
 
 for (const entry of await readdir(artifactsDir).catch(() => [])) {
-  if (entry.startsWith("boboddy-sdk-local-") && entry.endsWith(".tgz")) {
+  if (entry.startsWith("scarn-sdk-local-") && entry.endsWith(".tgz")) {
     await rm(resolve(artifactsDir, entry), { force: true });
   }
 }

@@ -1,4 +1,4 @@
-import { describe, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -9,14 +9,13 @@ import {
   warnAboutStrayProjectConfig,
 } from "../src/lib/init-repository-resolution";
 import {
-  concurrentTest as test,
   createReporterRecorder as createRecorder,
   reportedMessages as messages,
   reportedMethods as methods,
 } from "./utils";
 
 /**
- * The very first step of `boboddy init` (#140): resolving the real git
+ * The very first step of `scarn init` (#140): resolving the real git
  * repository — walking up to the root and reading the `origin` remote — and
  * printing both, before any project-matching or auth logic runs. A
  * subdirectory walk that never tells the user what it found would be silent
@@ -109,7 +108,7 @@ describe("reportResolvedRepository", () => {
 
 describe("warnAboutStrayProjectConfig", () => {
   function withRepo(fn: (repoRoot: string, nested: string) => void): void {
-    const repoRoot = mkdtempSync(resolve(tmpdir(), "boboddy-stray-"));
+    const repoRoot = mkdtempSync(resolve(tmpdir(), "scarn-stray-"));
     const nested = join(repoRoot, "packages", "app");
     mkdirSync(nested, { recursive: true });
     try {
@@ -120,8 +119,8 @@ describe("warnAboutStrayProjectConfig", () => {
   }
 
   function writeConfig(dir: string): void {
-    mkdirSync(join(dir, ".boboddy"), { recursive: true });
-    writeFileSync(join(dir, ".boboddy", "boboddy.jsonc"), "{}\n");
+    mkdirSync(join(dir, ".scarn"), { recursive: true });
+    writeFileSync(join(dir, ".scarn", "scarn.jsonc"), "{}\n");
   }
 
   test("warns about a leftover subdirectory config, without touching it", () => {

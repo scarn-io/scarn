@@ -1,48 +1,64 @@
-import type { DefinitionValidationIssue } from "@boboddy/sdk/definitions/validation";
 import type {
+  StudioIssue,
   StudioNode,
-  StudioNodeInputField,
-  StudioNodeOutputSignal,
-  StudioParallelBranchShape,
+  StudioSchemaField,
 } from "./studio-graph-types";
 import { SeverityChip } from "./SeverityChip";
-import { severityColor } from "./studio-graph-visuals";
+import { nodeCaption, severityColor } from "./studio-graph-visuals";
 
 /** One row of an issue list — full message text, colored by its own severity. */
-function IssueMessageRow({ issue }: { issue: DefinitionValidationIssue }) {
+function IssueMessageRow({ issue }: { issue: StudioIssue }) {
   return (
-    <li className="studio-detail-issue" style={{ borderLeftColor: severityColor(issue.severity) }}>
+    <li
+      className="studio-detail-issue"
+      style={{ borderLeftColor: severityColor(issue.severity) }}
+    >
       <div className="studio-issue-header">
         <SeverityChip severity={issue.severity} />
-        <span className="studio-issue-check">{issue.check}</span>
+        <span className="studio-issue-check">{issue.code}</span>
       </div>
       {issue.message}
+      {issue.hint ? (
+        <div className="studio-issue-hint">{issue.hint}</div>
+      ) : null}
+      {issue.path ? (
+        <code className="studio-issue-path">{issue.path}</code>
+      ) : null}
     </li>
   );
 }
 
-function IssueMessageList({ issues }: { issues: readonly DefinitionValidationIssue[] }) {
+function IssueMessageList({ issues }: { issues: readonly StudioIssue[] }) {
   if (issues.length === 0) {
     return <p className="studio-issues-empty">No validation issues.</p>;
   }
   return (
     <ul className="studio-detail-issue-list">
       {issues.map((issue, index) => (
-        <IssueMessageRow key={`${issue.check}-${issue.branchKey ?? ""}-${String(index)}`} issue={issue} />
+        <IssueMessageRow
+          key={`${issue.code}-${issue.path ?? ""}-${String(index)}`}
+          issue={issue}
+        />
       ))}
     </ul>
   );
 }
 
-/** A "required" pill shown next to input/output field names. */
+/** A "required" pill shown next to schema field names. */
 function RequiredBadge({ required }: { required: boolean }) {
   if (!required) return null;
   return <span className="studio-required-badge">required</span>;
 }
 
-function InputFieldsTable({ fields }: { fields: readonly StudioNodeInputField[] }) {
+function SchemaFieldsTable({
+  fields,
+  emptyText,
+}: {
+  fields: readonly StudioSchemaField[];
+  emptyText: string;
+}) {
   if (fields.length === 0) {
-    return <p className="studio-detail-empty">No additional input fields.</p>;
+    return <p className="studio-detail-empty">{emptyText}</p>;
   }
   return (
     <table className="studio-detail-table">
@@ -51,7 +67,6 @@ function InputFieldsTable({ fields }: { fields: readonly StudioNodeInputField[] 
           <th>Name</th>
           <th>Type</th>
           <th>Required</th>
-          <th>Bound to</th>
         </tr>
       </thead>
       <tbody>
@@ -62,63 +77,17 @@ function InputFieldsTable({ fields }: { fields: readonly StudioNodeInputField[] 
             <td>
               <RequiredBadge required={field.required} />
             </td>
-            <td className={field.boundTo === null ? "studio-detail-unbound" : undefined}>
-              {field.boundTo ?? "unbound"}
-            </td>
           </tr>
         ))}
       </tbody>
     </table>
-  );
-}
-
-function OutputSignalsTable({ signals }: { signals: readonly StudioNodeOutputSignal[] }) {
-  if (signals.length === 0) {
-    return <p className="studio-detail-empty">No declared output signals.</p>;
-  }
-  return (
-    <table className="studio-detail-table">
-      <thead>
-        <tr>
-          <th>Key</th>
-          <th>Type</th>
-          <th>Required</th>
-        </tr>
-      </thead>
-      <tbody>
-        {signals.map((signal) => (
-          <tr key={signal.key}>
-            <td>{signal.key}</td>
-            <td>{signal.type}</td>
-            <td>
-              <RequiredBadge required={signal.required} />
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  );
-}
-
-function ParallelBranchSection({ branch }: { branch: StudioParallelBranchShape }) {
-  return (
-    <div className="studio-detail-branch">
-      <h4>{branch.label}</h4>
-      {branch.inputFields === null ? (
-        <p className="studio-detail-empty">Shape unknown — this branch's step wasn't found.</p>
-      ) : (
-        <InputFieldsTable fields={branch.inputFields} />
-      )}
-      <IssueMessageList issues={branch.issues} />
-    </div>
   );
 }
 
 /**
- * The right-hand `<aside>`'s content when a node is selected (Phase 5) —
- * swapped in for `IssuesPanel` by `App.tsx`. Renders the node's own
- * step-derived shape (per `StudioNodeShape.kind`) plus its own filtered
- * issue messages (full text, not counts — those live on the graph badge).
+ * The right-hand `<aside>`'s content when a node is selected — swapped in for
+ * the issues list by `App.tsx`. Renders a step node's input and result
+ * schema fields and declared errors, plus the node's own issue messages.
  */
 export function NodeDetailPanel({
   node,
@@ -136,17 +105,31 @@ export function NodeDetailPanel({
         ← Back to issues
       </button>
       <h2 className="studio-detail-title">{data.label}</h2>
-      <div className="studio-node-kind">{data.kind}</div>
+      <div className="studio-node-kind">{nodeCaption(data)}</div>
 
       {shape.kind === "step" ? (
         <>
           <section className="studio-detail-section">
             <h3>Input fields</h3>
-            <InputFieldsTable fields={shape.inputFields} />
+            <SchemaFieldsTable
+              fields={shape.inputFields}
+              emptyText="No declared input fields."
+            />
           </section>
           <section className="studio-detail-section">
-            <h3>Output signals</h3>
-            <OutputSignalsTable signals={shape.outputSignals} />
+            <h3>Result fields</h3>
+            <SchemaFieldsTable
+              fields={shape.resultFields}
+              emptyText="No declared result fields."
+            />
+          </section>
+          <section className="studio-detail-section">
+            <h3>Errors</h3>
+            {shape.errors.length === 0 ? (
+              <p className="studio-detail-empty">No declared errors.</p>
+            ) : (
+              <p>{shape.errors.join(", ")}</p>
+            )}
           </section>
           <section className="studio-detail-section">
             <details>
@@ -157,15 +140,6 @@ export function NodeDetailPanel({
             </details>
           </section>
         </>
-      ) : null}
-
-      {shape.kind === "parallel" ? (
-        <section className="studio-detail-section">
-          <h3>Branches</h3>
-          {shape.branches.map((branch) => (
-            <ParallelBranchSection key={branch.key} branch={branch} />
-          ))}
-        </section>
       ) : null}
 
       <section className="studio-detail-section">

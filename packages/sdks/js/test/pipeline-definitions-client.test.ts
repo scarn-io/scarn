@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { createPipelineDefinitionsClient } from "../src/definitions/pipelines/pipeline-definitions-client";
-import type { PipelineDefinitionSpec } from "../src/definitions/pipelines/define-pipeline";
+import {
+  createPipelineDefinitionsClient,
+  PipelineDefinitionsApiError,
+} from "../src/definitions/pipelines/pipeline-definitions-client";
 
 type CapturedRequest = {
   url: string;
@@ -74,41 +76,27 @@ function createMockFetch(responses: MockResponse[]): {
 }
 
 const AUTH_HEADER = { Authorization: "Bearer test-token" };
-const BASE_URL = "https://boboddy.example.com";
+const BASE_URL = "https://scarn.example.com";
 
-const ADVANCEMENT_POLICY = {
-  rulesJson: { rules: [] },
-  defaultEventType: "continue" as const,
-  defaultEventParamsJson: null,
-  allowedEventTypes: ["continue" as const],
+const DOCUMENT = {
+  schemaVersion: 1,
+  key: "investigation",
+  start: "investigate",
+  nodes: { investigate: { kind: "step", step: "investigate" } },
 };
 
-function makeSpec(
-  overrides?: Partial<PipelineDefinitionSpec>,
-): PipelineDefinitionSpec {
-  return {
-    key: "investigation",
-    name: "Investigation",
-    description: null,
-    version: 1,
-    status: "active",
-    entryNodeKey: "investigate",
-    nodeDefinitions: [
-      {
-        nodeKey: "investigate",
-        kind: "step",
-        stepKey: "investigate",
-        stepName: "Investigate",
-        stepDescription: null,
-        inputBindingsJson: {},
-        timeoutSeconds: null,
-        advancementPolicyDefinition: ADVANCEMENT_POLICY,
-        computedSignalDefinitions: [],
-      },
-    ],
-    dependencyEdges: [],
-    ...overrides,
-  };
+async function withMockFetch<T>(
+  responses: MockResponse[],
+  run: (captured: CapturedRequest[]) => Promise<T>,
+): Promise<T> {
+  const { mockFetch, captured } = createMockFetch(responses);
+  const prev = globalThis.fetch;
+  globalThis.fetch = mockFetch;
+  try {
+    return await run(captured);
+  } finally {
+    globalThis.fetch = prev;
+  }
 }
 
 describe("createPipelineDefinitionsClient", () => {
@@ -151,285 +139,137 @@ describe("createPipelineDefinitionsClient", () => {
     });
   });
 
-  describe("upsertFromSpec", () => {
-    test("sends PUT to /api/pipeline-definitions with the graph-shaped body", async () => {
-      const { mockFetch, captured } = createMockFetch([
-        { status: 200, body: { id: "pipeline-id" } },
-      ]);
-      const prev = globalThis.fetch;
-      globalThis.fetch = mockFetch;
-      try {
-        const client = createPipelineDefinitionsClient(BASE_URL);
-        await client.upsertFromSpec(
-          "proj-1",
-          makeSpec(),
-          [{ id: "step-def-id", key: "investigate", version: 1 }],
-          { headers: AUTH_HEADER },
-        );
-
-        expect(captured).toHaveLength(1);
-        expect(captured[0]?.method).toBe("PUT");
-        expect(captured[0]?.url).toBe(`${BASE_URL}/api/pipeline-definitions`);
-        expect(captured[0]?.body).toMatchObject({
-          projectId: "proj-1",
-          key: "investigation",
-          name: "Investigation",
-          status: "active",
-          entryNodeKey: "investigate",
-          nodeDefinitions: [
+  describe("create", () => {
+    test("sends POST to /api/pipeline-definitions with the document", async () => {
+      await withMockFetch(
+        [{ status: 200, body: { id: "pipeline-id" } }],
+        async (captured) => {
+          const client = createPipelineDefinitionsClient(BASE_URL);
+          await client.create(
             {
-              key: "investigate",
-              kind: "step",
-              stepDefinitionId: "step-def-id",
-              stepDefinitionVersion: 1,
+              projectId: "proj-1",
+              key: "investigation",
+              name: "Investigation",
+              document: DOCUMENT,
             },
-          ],
-          dependencyEdges: [],
-        });
-      } finally {
-        globalThis.fetch = prev;
-      }
+            { headers: AUTH_HEADER },
+          );
+
+          expect(captured).toHaveLength(1);
+          expect(captured[0]?.method).toBe("POST");
+          expect(captured[0]?.url).toBe(`${BASE_URL}/api/pipeline-definitions`);
+          expect(captured[0]?.body).toEqual({
+            projectId: "proj-1",
+            key: "investigation",
+            name: "Investigation",
+            document: DOCUMENT,
+          });
+        },
+      );
     });
+  });
 
-    test("picks the highest-version step def when multiple versions are present", async () => {
-      const { mockFetch, captured } = createMockFetch([
-        { status: 200, body: { id: "pipeline-id" } },
-      ]);
-      const prev = globalThis.fetch;
-      globalThis.fetch = mockFetch;
-      try {
-        const client = createPipelineDefinitionsClient(BASE_URL);
-        await client.upsertFromSpec(
-          "proj-1",
-          makeSpec(),
-          [
-            { id: "old-id", key: "investigate", version: 1 },
-            { id: "new-id", key: "investigate", version: 2 },
-          ],
-          { headers: AUTH_HEADER },
-        );
+  describe("publishVersion", () => {
+    test("sends POST to /api/pipeline-definitions/{id}/versions", async () => {
+      await withMockFetch(
+        [{ status: 200, body: { published: true } }],
+        async (captured) => {
+          const client = createPipelineDefinitionsClient(BASE_URL);
+          const result = await client.publishVersion("pipe-1", DOCUMENT, {
+            headers: AUTH_HEADER,
+          });
 
-        const body = captured[0]?.body as {
-          nodeDefinitions: Array<{
-            stepDefinitionId: string;
-            stepDefinitionVersion: number;
-          }>;
-        };
-        expect(body.nodeDefinitions[0]).toMatchObject({
-          stepDefinitionId: "new-id",
-          stepDefinitionVersion: 2,
-        });
-      } finally {
-        globalThis.fetch = prev;
-      }
-    });
-
-    test("throws a descriptive error when a referenced step key is missing", async () => {
-      const { mockFetch } = createMockFetch([
-        { status: 200, body: { id: "pipeline-id" } },
-      ]);
-      const prev = globalThis.fetch;
-      globalThis.fetch = mockFetch;
-
-      let caughtError: unknown;
-      try {
-        const client = createPipelineDefinitionsClient(BASE_URL);
-        await client.upsertFromSpec("proj-1", makeSpec(), [], {
-          headers: AUTH_HEADER,
-        });
-      } catch (err) {
-        caughtError = err;
-      } finally {
-        globalThis.fetch = prev;
-      }
-      expect(caughtError).toBeInstanceOf(Error);
-      expect((caughtError as Error).message).toContain(
-        'Step "investigate" referenced by node "investigate" in pipeline "investigation" was not found',
+          expect(result.published).toBe(true);
+          expect(captured[0]?.method).toBe("POST");
+          expect(captured[0]?.url).toBe(
+            `${BASE_URL}/api/pipeline-definitions/pipe-1/versions`,
+          );
+          expect(captured[0]?.body).toEqual({ document: DOCUMENT });
+        },
       );
     });
 
-    test("pushes a fanOut/cohortGate pair via the graph shape (no longer chain-only)", async () => {
-      const { mockFetch, captured } = createMockFetch([
-        { status: 200, body: { id: "pipeline-id" } },
-      ]);
-      const prev = globalThis.fetch;
-      globalThis.fetch = mockFetch;
-
-      const spec = makeSpec({
-        nodeDefinitions: [
-          {
-            nodeKey: "review",
-            kind: "fanOut",
-            stepKey: "review",
-            stepName: "Review",
-            stepDescription: null,
-            inputBindingsJson: {},
-            timeoutSeconds: null,
-            overSignalKey: "reviewer_count",
-            advanceEachPolicyDefinition: {
-              rules: [],
-              defaultEventType: "continue",
-              defaultEventParamsJson: null,
-            },
-            maxConcurrency: null,
-          },
-          {
-            nodeKey: "review__cohortGate",
-            kind: "cohortGate",
-            advanceAllPolicyDefinition: {
-              rules: [],
-              defaultEventType: "continue",
-              defaultEventParamsJson: null,
-            },
-            stepSignalsListDefinitions: [],
-          },
-        ],
-        dependencyEdges: [
-          { fromNodeKey: "review", toNodeKey: "review__cohortGate" },
-        ],
-      });
-
-      try {
-        const client = createPipelineDefinitionsClient(BASE_URL);
-        await client.upsertFromSpec(
-          "proj-1",
-          spec,
-          [{ id: "step-def-id", key: "review", version: 1 }],
-          { headers: AUTH_HEADER },
-        );
-      } finally {
-        globalThis.fetch = prev;
-      }
-
-      expect(captured).toHaveLength(1);
-      const body = captured[0]?.body as {
-        nodeDefinitions: Array<{
-          key: string;
-          kind: string;
-          configJson: unknown;
-        }>;
+    test("throws PipelineDefinitionsApiError carrying the document issues", async () => {
+      const issue = {
+        code: "unknown_step",
+        path: "/nodes/investigate/step",
+        message: "Unknown step 'investigate'",
+        hint: "Push the step first",
       };
-      const fanOutNode = body.nodeDefinitions.find((n) => n.key === "review");
-      const gateNode = body.nodeDefinitions.find(
-        (n) => n.key === "review__cohortGate",
+      const caught = await withMockFetch(
+        [
+          {
+            status: 422,
+            body: {
+              title: "Validation failed",
+              detail: "Pipeline document is invalid",
+              code: "PIPELINE_DOCUMENT_INVALID",
+              meta: { errors: [issue, { unrelated: true }] },
+            },
+          },
+        ],
+        async () => {
+          const client = createPipelineDefinitionsClient(BASE_URL);
+          try {
+            await client.publishVersion("pipe-1", DOCUMENT);
+            return undefined;
+          } catch (err) {
+            return err;
+          }
+        },
       );
-      expect(fanOutNode?.kind).toBe("fanOut");
-      expect(fanOutNode?.configJson).toMatchObject({
-        overSignalKey: "reviewer_count",
-      });
-      expect(gateNode?.kind).toBe("cohortGate");
+
+      expect(caught).toBeInstanceOf(PipelineDefinitionsApiError);
+      const error = caught as PipelineDefinitionsApiError;
+      expect(error.message).toBe("Pipeline document is invalid");
+      expect(error.code).toBe("PIPELINE_DOCUMENT_INVALID");
+      expect(error.issues).toEqual([issue]);
     });
+  });
 
-    test("sends a split node's branchNodeKeys via configJson", async () => {
-      const { mockFetch, captured } = createMockFetch([
-        { status: 200, body: { id: "pipeline-id" } },
-      ]);
-      const prev = globalThis.fetch;
-      globalThis.fetch = mockFetch;
+  describe("activateVersion", () => {
+    test("sends PUT to /api/pipeline-definitions/{id}/versions/{version}/activate", async () => {
+      await withMockFetch(
+        [{ status: 200, body: { id: "pipe-1" } }],
+        async (captured) => {
+          const client = createPipelineDefinitionsClient(BASE_URL);
+          await client.activateVersion("pipe-1", 3, { headers: AUTH_HEADER });
 
-      const spec = makeSpec({
-        nodeDefinitions: [
-          {
-            nodeKey: "fork",
-            kind: "split",
-            branchNodeKeys: ["notify", "record"],
-          },
-          { nodeKey: "notify", kind: "succeed" },
-          { nodeKey: "record", kind: "succeed" },
-        ],
-        dependencyEdges: [
-          { fromNodeKey: "fork", toNodeKey: "notify" },
-          { fromNodeKey: "fork", toNodeKey: "record" },
-        ],
-      });
-
-      try {
-        const client = createPipelineDefinitionsClient(BASE_URL);
-        await client.upsertFromSpec("proj-1", spec, [], {
-          headers: AUTH_HEADER,
-        });
-      } finally {
-        globalThis.fetch = prev;
-      }
-
-      expect(captured).toHaveLength(1);
-      const body = captured[0]?.body as {
-        nodeDefinitions: Array<{
-          key: string;
-          kind: string;
-          configJson: unknown;
-        }>;
-      };
-      const splitNode = body.nodeDefinitions.find((n) => n.key === "fork");
-      expect(splitNode?.kind).toBe("split");
-      expect(splitNode?.configJson).toEqual({
-        branchNodeKeys: ["notify", "record"],
-      });
+          expect(captured[0]?.method).toBe("PUT");
+          expect(captured[0]?.url).toBe(
+            `${BASE_URL}/api/pipeline-definitions/pipe-1/versions/3/activate`,
+          );
+        },
+      );
     });
+  });
 
-    test("omits inputBindingsJson/timeoutSeconds for terminal succeed/fail nodes", async () => {
-      const { mockFetch, captured } = createMockFetch([
-        { status: 200, body: { id: "pipeline-id" } },
-      ]);
-      const prev = globalThis.fetch;
-      globalThis.fetch = mockFetch;
-
-      const spec = makeSpec({
-        nodeDefinitions: [
-          { nodeKey: "done", kind: "succeed" },
-          { nodeKey: "failed", kind: "fail" },
-        ],
-        dependencyEdges: [],
-      });
-
-      try {
+  describe("versions", () => {
+    test("listVersions sends GET to /api/pipeline-definitions/{id}/versions", async () => {
+      await withMockFetch([{ status: 200, body: [] }], async (captured) => {
         const client = createPipelineDefinitionsClient(BASE_URL);
-        await client.upsertFromSpec("proj-1", spec, [], {
-          headers: AUTH_HEADER,
-        });
-      } finally {
-        globalThis.fetch = prev;
-      }
+        await client.listVersions("pipe-1");
 
-      expect(captured).toHaveLength(1);
-      const body = captured[0]?.body as {
-        nodeDefinitions: Array<{
-          key: string;
-          kind: string;
-          inputBindingsJson: unknown;
-        }>;
-      };
-      const succeedNode = body.nodeDefinitions.find((n) => n.key === "done");
-      const failNode = body.nodeDefinitions.find((n) => n.key === "failed");
-      // Must be null, not `{}` — the server rejects any non-null
-      // inputBindingsJson on non-working node kinds
-      // (NODE_DEFINITION_INPUT_BINDINGS_NOT_ALLOWED).
-      expect(succeedNode?.inputBindingsJson).toBeNull();
-      expect(failNode?.inputBindingsJson).toBeNull();
-    });
-
-    test("throws when the server returns an error status", async () => {
-      const { mockFetch } = createMockFetch([
-        { status: 422, body: { title: "Bad request" } },
-      ]);
-      const prev = globalThis.fetch;
-      globalThis.fetch = mockFetch;
-
-      let caughtError: unknown;
-      try {
-        const client = createPipelineDefinitionsClient(BASE_URL);
-        await client.upsertFromSpec(
-          "proj-1",
-          makeSpec(),
-          [{ id: "step-def-id", key: "investigate", version: 1 }],
-          { headers: AUTH_HEADER },
+        expect(captured[0]?.method).toBe("GET");
+        expect(captured[0]?.url).toBe(
+          `${BASE_URL}/api/pipeline-definitions/pipe-1/versions`,
         );
-      } catch (err) {
-        caughtError = err;
-      } finally {
-        globalThis.fetch = prev;
-      }
-      expect(caughtError).toBeInstanceOf(Error);
+      });
+    });
+
+    test("getVersion sends GET to /api/pipeline-definitions/{id}/versions/{version}", async () => {
+      await withMockFetch(
+        [{ status: 200, body: { version: 2 } }],
+        async (captured) => {
+          const client = createPipelineDefinitionsClient(BASE_URL);
+          await client.getVersion("pipe-1", 2);
+
+          expect(captured[0]?.method).toBe("GET");
+          expect(captured[0]?.url).toBe(
+            `${BASE_URL}/api/pipeline-definitions/pipe-1/versions/2`,
+          );
+        },
+      );
     });
   });
 });

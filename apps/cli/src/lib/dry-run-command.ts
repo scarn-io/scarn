@@ -2,7 +2,7 @@ import {
   runPipelineFirstStepDryRun,
   runWorkDryRun,
   type WorkDryRunReport,
-} from "@boboddy/worker";
+} from "@scarn/worker";
 import { createTransport } from "./logger";
 import { resolveDryRunStepSelection } from "./dry-run-step-picker";
 import { renderDryRunReport } from "./dry-run-report";

@@ -1,0 +1,199 @@
+{
+  "schemaVersion": 1,
+  "key": "bug-pipeline",
+  "title": "Bug Pipeline",
+  "start": {
+    "to": "evaluate"
+  },
+  "nodes": {
+    "evaluate": {
+      "kind": "step",
+      "step": "evaluate",
+      "next": {
+        "routes": [
+          {
+            "when": {
+              "path": "result.quality",
+              "op": "lessThan",
+              "value": 0.1
+            },
+            "to": "request-details",
+            "args": {
+              "evaluate": "result"
+            }
+          }
+        ],
+        "otherwise": {
+          "to": "investigate-and-reproduce",
+          "args": {
+            "appUrl": {
+              "value": "https://staging.example.com"
+            },
+            "evaluate": "result"
+          }
+        }
+      }
+    },
+    "request-details": {
+      "kind": "step",
+      "step": "request-details",
+      "next": {
+        "routes": [
+          {
+            "to": "insufficient-detail"
+          }
+        ]
+      }
+    },
+    "investigate-and-reproduce": {
+      "kind": "step",
+      "step": "investigate-and-reproduce",
+      "next": {
+        "routes": [
+          {
+            "when": {
+              "all": [
+                {
+                  "path": "result.reproductionConfidence",
+                  "op": "greaterThanInclusive",
+                  "value": 0.8
+                },
+                {
+                  "path": "result.reproVideo",
+                  "op": "exists"
+                }
+              ]
+            },
+            "to": "report-reproduction",
+            "args": {
+              "investigateAndReproduce": "result"
+            }
+          },
+          {
+            "when": {
+              "path": "result.reproductionConfidence",
+              "op": "greaterThanInclusive",
+              "value": 0.8
+            },
+            "to": "failing-test",
+            "args": {
+              "evaluate": "input.evaluate",
+              "investigateAndReproduce": "result"
+            }
+          }
+        ],
+        "otherwise": {
+          "to": "not-reproduced"
+        }
+      }
+    },
+    "report-reproduction": {
+      "kind": "step",
+      "step": "report-reproduction",
+      "next": {
+        "routes": [
+          {
+            "to": "failing-test",
+            "args": {
+              "evaluate": "nodes.evaluate.result",
+              "investigateAndReproduce": "input.investigateAndReproduce"
+            }
+          }
+        ]
+      }
+    },
+    "failing-test": {
+      "kind": "step",
+      "step": "failing-test",
+      "next": {
+        "routes": [
+          {
+            "to": "propose-fix",
+            "args": {
+              "evaluate": "input.evaluate",
+              "investigateAndReproduce": "input.investigateAndReproduce",
+              "failingTest": "result"
+            }
+          }
+        ]
+      }
+    },
+    "propose-fix": {
+      "kind": "step",
+      "step": "propose-fix",
+      "next": {
+        "routes": [
+          {
+            "to": "approve-fix",
+            "args": {
+              "proposal": "result"
+            }
+          }
+        ]
+      }
+    },
+    "approve-fix": {
+      "kind": "wait",
+      "for": "decision",
+      "actions": [
+        {
+          "key": "approve",
+          "label": "Approve",
+          "body": "optional"
+        },
+        {
+          "key": "reject",
+          "label": "Reject",
+          "body": "optional"
+        }
+      ],
+      "next": {
+        "routes": [
+          {
+            "when": {
+              "path": "result.action",
+              "op": "equal",
+              "value": "approve"
+            },
+            "to": "fix",
+            "args": {
+              "evaluate": "nodes.propose-fix.input.evaluate",
+              "investigateAndReproduce": "nodes.propose-fix.input.investigateAndReproduce",
+              "failingTest": "nodes.propose-fix.input.failingTest",
+              "proposeFix": "nodes.propose-fix.result"
+            }
+          }
+        ],
+        "otherwise": {
+          "to": "fix-rejected"
+        }
+      }
+    },
+    "fix": {
+      "kind": "step",
+      "step": "fix",
+      "next": {
+        "routes": [
+          {
+            "to": "done"
+          }
+        ]
+      }
+    },
+    "insufficient-detail": {
+      "kind": "fail",
+      "error": "InsufficientDetail"
+    },
+    "not-reproduced": {
+      "kind": "fail",
+      "error": "NotReproduced"
+    },
+    "fix-rejected": {
+      "kind": "fail",
+      "error": "FixRejected"
+    },
+    "done": {
+      "kind": "succeed"
+    }
+  }
+}

@@ -1,17 +1,17 @@
-import type { createBoboddyClient } from "@boboddy/sdk";
+import type { createScarnClient } from "@scarn/sdk";
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { readProjectConfig, resolveGitRepository } from "@boboddy/worker";
+import { readProjectConfig, resolveGitRepository } from "@scarn/worker";
 import { linkInitProject, type LinkProjectPorts } from "../src/commands/init";
 import type { ResolvedRepository } from "../src/lib/init-repository-resolution";
 import { createReporterRecorder as createRecorder } from "./utils";
 
 /**
  * `init` run from a nested directory of a repo must still anchor
- * `.boboddy/boboddy.jsonc` at the repository root — both when an existing
+ * `.scarn/scarn.jsonc` at the repository root — both when an existing
  * project matches and when it only appears after the browser hand-off.
  */
 
@@ -38,7 +38,7 @@ function fakeClient(
         });
       },
     },
-  } as unknown as ReturnType<typeof createBoboddyClient>;
+  } as unknown as ReturnType<typeof createScarnClient>;
 }
 
 function fakePorts(): LinkProjectPorts {
@@ -68,7 +68,7 @@ describe("linkInitProject from a nested directory", () => {
   let repo: ResolvedRepository;
 
   beforeEach(async () => {
-    repoRoot = mkdtempSync(resolve(tmpdir(), "boboddy-init-nested-"));
+    repoRoot = mkdtempSync(resolve(tmpdir(), "scarn-init-nested-"));
     execFileSync("git", ["-C", repoRoot, "init", "-b", "main"]);
     execFileSync("git", [
       "-C",
@@ -91,7 +91,7 @@ describe("linkInitProject from a nested directory", () => {
     const { reporter } = createRecorder();
 
     await linkInitProject({
-      baseUrl: "https://app.boboddy.dev",
+      baseUrl: "https://app.scarn.io",
       interactive: true,
       reporter,
       client: fakeClient([[{ id: "existing", gitUrl: REMOTE_URL }]]),
@@ -103,14 +103,14 @@ describe("linkInitProject from a nested directory", () => {
     expect(await readProjectConfig(repoRoot)).toEqual({
       project: "acme/existing",
     });
-    expect(existsSync(join(nested, ".boboddy"))).toBe(false);
+    expect(existsSync(join(nested, ".scarn"))).toBe(false);
   });
 
   test("writes the config at the repo root once the browser hand-off finds the project", async () => {
     const { reporter } = createRecorder();
 
     await linkInitProject({
-      baseUrl: "https://app.boboddy.dev",
+      baseUrl: "https://app.scarn.io",
       interactive: true,
       reporter,
       client: fakeClient([
@@ -131,6 +131,6 @@ describe("linkInitProject from a nested directory", () => {
     expect(await readProjectConfig(repoRoot)).toEqual({
       project: "acme/created-in-browser",
     });
-    expect(existsSync(join(nested, ".boboddy"))).toBe(false);
+    expect(existsSync(join(nested, ".scarn"))).toBe(false);
   });
 });

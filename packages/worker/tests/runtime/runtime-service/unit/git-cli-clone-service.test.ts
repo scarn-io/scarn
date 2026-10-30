@@ -24,7 +24,7 @@ async function setupRemoteFixture(): Promise<{
 
   const seed = path.join(root, "seed");
   await git(root, ["clone", remote, seed]);
-  await git(seed, ["config", "user.email", "seed@boboddy.dev"]);
+  await git(seed, ["config", "user.email", "seed@scarn.io"]);
   await git(seed, ["config", "user.name", "Seed"]);
   await writeRepoFile(seed, "README.md", "hello\n");
   await git(seed, ["add", "-A"]);

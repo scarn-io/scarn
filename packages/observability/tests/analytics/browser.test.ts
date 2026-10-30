@@ -5,7 +5,7 @@ import * as analytics from "../../src/analytics/browser";
 describe("browser analytics wrapper", () => {
   beforeAll(() => {
     (globalThis as { window?: unknown }).window = globalThis;
-    analytics.init({ key: "phc_test", host: "https://t.boboddy.dev" });
+    analytics.init({ key: "phc_test", host: "https://t.scarn.io" });
   });
 
   beforeEach(() => {
@@ -20,7 +20,7 @@ describe("browser analytics wrapper", () => {
       (call) => call[0] === "phc_test",
     );
     expect(matching?.[1]).toMatchObject({
-      api_host: "https://t.boboddy.dev",
+      api_host: "https://t.scarn.io",
       capture_exceptions: true,
     });
   });
@@ -33,9 +33,9 @@ describe("browser analytics wrapper", () => {
   });
 
   test("pageView posts $pageview with the supplied url", () => {
-    analytics.pageView("https://app.boboddy.dev/dashboard");
+    analytics.pageView("https://app.scarn.io/dashboard");
     expect(posthogTestMock.capture).toHaveBeenCalledWith("$pageview", {
-      $current_url: "https://app.boboddy.dev/dashboard",
+      $current_url: "https://app.scarn.io/dashboard",
     });
   });
 

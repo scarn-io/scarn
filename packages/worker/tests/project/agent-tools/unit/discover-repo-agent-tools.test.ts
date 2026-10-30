@@ -229,7 +229,7 @@ describe("discoverRepoAgentTools", () => {
               type: "remote",
               url: "https://oauth.test/mcp",
               oauth: {
-                client_id: "boboddy",
+                client_id: "scarn",
                 client_secret: SECRET_VALUES[4],
               },
             },
@@ -276,7 +276,7 @@ describe("discoverRepoAgentTools", () => {
       expect(byName["oauth"]?.config).toEqual({
         type: "remote",
         url: "https://oauth.test/mcp",
-        oauth: { client_id: "boboddy" },
+        oauth: { client_id: "scarn" },
       });
       expect(byName["oauth"]?.inlineSecrets).toEqual([
         { field: "oauth", key: "client_secret", inlineSecret: true },

@@ -205,13 +205,13 @@ describe("buildAgentToolsManifest", () => {
     },
   );
 
-  test.concurrent("lives under ~/.boboddy/projects/<owner>/<slug>", () => {
+  test.concurrent("lives under ~/.scarn/projects/<owner>/<slug>", () => {
     expect(
       agentToolsManifestPath({
         homeDir: "/home/u",
         owner: "acme",
         slug: "app",
       }),
-    ).toBe("/home/u/.boboddy/projects/acme/app/discovered-tools.json");
+    ).toBe("/home/u/.scarn/projects/acme/app/discovered-tools.json");
   });
 });

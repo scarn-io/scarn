@@ -8,13 +8,15 @@
 import { rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { afterAll, describe, expect, test } from "bun:test";
+import { afterAll, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { GitCliSourceBranchPort } from "../../../../src/project/source-branch/infra/git-cli-source-branch-port";
 import {
   git,
   GitFixtureTemplate,
   writeRepoFile,
 } from "../../../runtime/runtime-service/unit/git-test-fixtures";
+
+setDefaultTimeout(15_000);
 
 async function commitAll(repo: string, message: string): Promise<void> {
   await git(repo, ["add", "-A"]);
@@ -27,7 +29,7 @@ const template = new GitFixtureTemplate("git-source-branch", async (dir) => {
 
   const seed = path.join(dir, "seed");
   await git(dir, ["clone", remote, seed]);
-  await git(seed, ["config", "user.email", "seed@boboddy.dev"]);
+  await git(seed, ["config", "user.email", "seed@scarn.io"]);
   await git(seed, ["config", "user.name", "Seed"]);
   await writeRepoFile(seed, "README.md", "hello\n");
   await commitAll(seed, "init");
@@ -36,7 +38,7 @@ const template = new GitFixtureTemplate("git-source-branch", async (dir) => {
 
   const workspace = path.join(dir, "workspace");
   await git(dir, ["clone", remote, workspace]);
-  await git(workspace, ["config", "user.email", "workspace@boboddy.dev"]);
+  await git(workspace, ["config", "user.email", "workspace@scarn.io"]);
   await git(workspace, ["config", "user.name", "Workspace"]);
 });
 
@@ -105,7 +107,7 @@ describe("GitCliSourceBranchPort", () => {
         // Publish "feature-x" to the remote from a separate clone.
         const other = path.join(root, "other");
         await git(root, ["clone", remote, other]);
-        await git(other, ["config", "user.email", "other@boboddy.dev"]);
+        await git(other, ["config", "user.email", "other@scarn.io"]);
         await git(other, ["config", "user.name", "Other"]);
         await git(other, ["checkout", "-b", "feature-x"]);
         await writeRepoFile(other, "feature.txt", "feature\n");

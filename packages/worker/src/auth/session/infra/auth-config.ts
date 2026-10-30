@@ -1,3 +1,3 @@
-export const CLI_AUTH_CLIENT_ID = "boboddy-cli";
+export const CLI_AUTH_CLIENT_ID = "scarn-cli";
 
-export { resolveBoboddyBaseUrl } from "@boboddy/sdk/defaults";
+export { resolveScarnBaseUrl } from "@scarn/sdk/defaults";

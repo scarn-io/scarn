@@ -1,13 +1,12 @@
-import { describe, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { buildDesignerHandoffPorts } from "../src/commands/init";
-import { concurrentTest as test } from "./utils";
 
 /**
  * `init`'s handoff into the designer used to discard any work item resolved
  * upstream by hardcoding `workItemId: undefined`. This pins the fix: the
  * ports' `launchDesign` must carry `--work-item-id` (and `--base-url`)
  * straight through to `runPipelineDesign`, unchanged — along with the repo
- * root `init` resolved, so the designer anchors `.boboddy/` at the same root.
+ * root `init` resolved, so the designer anchors `.scarn/` at the same root.
  */
 
 describe("buildDesignerHandoffPorts", () => {

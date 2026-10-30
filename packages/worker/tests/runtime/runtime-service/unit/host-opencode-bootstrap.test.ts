@@ -5,7 +5,14 @@
  * the `launch.sh` wrapper, so the spawn, exit-detection, and serve-log wiring
  * are exercised for real without needing an OpenCode binary.
  */
-import { chmod, mkdtemp, rm, writeFile } from "node:fs/promises";
+import {
+  chmod,
+  mkdtemp,
+  readdir,
+  readFile,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
@@ -46,7 +53,7 @@ describe("HostOpencodeBootstrap.start startup failures", () => {
       providerEnv: {},
       credentials: [],
       opencodeConfigContent: "{}",
-      expectedVersion: "2.0.28",
+      expectedVersion: "2.1.4",
       ...overrides,
     };
   }
@@ -116,7 +123,7 @@ describe("HostOpencodeBootstrap.start startup failures", () => {
         readinessIntervalMs: FAST_READINESS_INTERVAL_MS,
       }).start(
         startInput(launcher, {
-          providerEnv: { BOBODDY_PROVIDER_TOKEN: "super-secret-token-value" },
+          providerEnv: { SCARN_PROVIDER_TOKEN: "super-secret-token-value" },
         }),
       );
     } catch (error) {
@@ -211,7 +218,7 @@ describe("HostOpencodeBootstrap.start startup failures", () => {
   }
 
   test("becomes ready once the server answers the expected version with the generated password", async () => {
-    const launcher = await writeServingLauncher("2.0.28");
+    const launcher = await writeServingLauncher("2.1.4");
     const bootstrap = new HostOpencodeBootstrap({
       readinessIntervalMs: FAST_READINESS_INTERVAL_MS,
     });
@@ -220,6 +227,25 @@ describe("HostOpencodeBootstrap.start startup failures", () => {
     try {
       expect(started.serverPassword).toMatch(/^[A-Za-z0-9_-]{43}$/);
       expect(started.agentBaseUrl).toMatch(/^http:\/\/127\.0\.0\.1:\d+$/);
+    } finally {
+      bootstrap.stop(started.pid);
+    }
+  });
+
+  test("seeds the bundled skills into the agent HOME, not the workspace", async () => {
+    const launcher = await writeServingLauncher("2.1.4");
+    const bootstrap = new HostOpencodeBootstrap({
+      readinessIntervalMs: FAST_READINESS_INTERVAL_MS,
+    });
+
+    const started = await bootstrap.start(startInput(launcher));
+    try {
+      const seeded = await readFile(
+        path.join(tempDir, "agent-home", ".claude/skills/grilling/SKILL.md"),
+        "utf8",
+      );
+      expect(seeded).toContain("name: grilling");
+      expect(await readdir(tempDir)).not.toContain(".claude");
     } finally {
       bootstrap.stop(started.pid);
     }
@@ -239,7 +265,7 @@ describe("HostOpencodeBootstrap.start startup failures", () => {
     }
 
     expect((caught as Error).message).toContain(
-      "reports version 1.17.3, expected 2.0.28",
+      "reports version 1.17.3, expected 2.1.4",
     );
     expect(Date.now() - startedAt).toBeLessThan(10_000);
   });
@@ -274,15 +300,10 @@ describe("HostOpencodeBootstrap.start startup failures", () => {
     expect(readyBeforeSettled).toBe(true);
     expect(ready).toHaveLength(1);
     expect(ready[0]?.agentLogPath).toBe(
-      path.join(
-        tempDir,
-        "agent-home",
-        ".boboddy-log",
-        "opencode-serve.log",
-      ),
+      path.join(tempDir, "agent-home", ".scarn-log", "opencode-serve.log"),
     );
     expect(ready[0]?.agentLogDirectory).toBe(
-      path.join(tempDir, "agent-home", ".boboddy-log"),
+      path.join(tempDir, "agent-home", ".scarn-log"),
     );
   });
 

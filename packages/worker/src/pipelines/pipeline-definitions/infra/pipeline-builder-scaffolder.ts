@@ -1,14 +1,16 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { DEFAULT_PIPELINE_ASSIGNMENT_FILENAME } from "@boboddy/sdk/definitions/pipelines";
-import { PIPELINE_BUILDER_DIR } from "@boboddy/sdk/push";
-// Inlined at build time, so the compiled CLI carries the starter as a string.
+import { DEFAULT_PIPELINE_ASSIGNMENT_FILENAME } from "@scarn/sdk/definitions/pipelines";
+import { PIPELINE_BUILDER_DIR } from "@scarn/sdk/push";
+// Inlined at build time, so the compiled CLI carries the starter as strings.
+import starterPipelineJson from "./bug-pipeline.json.tmpl" with { type: "text" };
 import starterPipeline from "./bug-pipeline.ts.tmpl" with { type: "text" };
 
 export { PIPELINE_BUILDER_DIR };
 
 export const STARTER_PIPELINE_KEY = "bug-pipeline";
 export const STARTER_PIPELINE_FILENAME = `${STARTER_PIPELINE_KEY}.ts`;
+export const STARTER_PIPELINE_JSON_FILENAME = `${STARTER_PIPELINE_KEY}.json`;
 
 type ScaffoldResult = {
   created: string[];
@@ -16,7 +18,7 @@ type ScaffoldResult = {
 };
 
 function resolveSdkDependency(sdkVersion: string): string {
-  const artifactPath = process.env["BOBODDY_SDK_ARTIFACT_PATH"];
+  const artifactPath = process.env["SCARN_SDK_ARTIFACT_PATH"];
   if (artifactPath) {
     return `file:${artifactPath}`;
   }
@@ -69,7 +71,7 @@ export function buildPipelineBuilderPackageJson(sdkVersion: string): string {
           PIPELINE_BUILDER_TYPECHECK_SCRIPT,
       },
       dependencies: {
-        "@boboddy/sdk": resolveSdkDependency(sdkVersion),
+        "@scarn/sdk": resolveSdkDependency(sdkVersion),
         // Capped below 4.5.0, not a plain "^4.4.2": zod 4.5.0-4.5.4's
         // z.toJSONSchema() has a real upstream bug in its record-key
         // handling (ctx.deferred is undefined in recordProcessor for a
@@ -81,7 +83,7 @@ export function buildPipelineBuilderPackageJson(sdkVersion: string): string {
         // to hit this — don't just bump the floor without checking.
         zod: ">=4.4.2 <4.5.0",
       },
-      // tsx lets `boboddy pipelines push` execute `push.ts` under node-based
+      // tsx lets `scarn pipelines push` execute `push.ts` under node-based
       // package managers (npm/pnpm/yarn). bun and deno don't need it.
       // typescript backs the `typecheck` script above; deno users typecheck
       // with `deno check` instead and can ignore it.
@@ -108,9 +110,9 @@ export function buildPipelineBuilderPackageJson(sdkVersion: string): string {
  *   (`fetch`/`Response`/`Headers`); without DOM they are unresolved.
  * - `noEmit` — this project is only ever typechecked, never built.
  *
- * `push.ts` is excluded because `boboddy pipelines push` regenerates it on
+ * `push.ts` is excluded because `scarn pipelines push` regenerates it on
  * every run and it uses `import.meta.dirname`, which does not typecheck under
- * these settings. It is a Boboddy-owned artifact, not user code.
+ * these settings. It is a Scarn-owned artifact, not user code.
  */
 export const PIPELINE_BUILDER_TSCONFIG = JSON.stringify(
   {
@@ -148,14 +150,15 @@ export const PIPELINE_BUILDER_TSCONFIG = JSON.stringify(
  * - Lockfiles — see the note in the file body. Anchored to this directory
  *   because only a lockfile at this level drives runtime detection.
  * - `push.ts` — regenerated from an embedded template on EVERY
- *   `boboddy pipelines push`, so it would otherwise churn in every diff. It is
+ *   `scarn pipelines push`, so it would otherwise churn in every diff. It is
  *   also excluded from `PIPELINE_BUILDER_TSCONFIG` for the same reason: it is a
- *   Boboddy-owned artifact, not user code.
+ *   Scarn-owned artifact, not user code.
  *
- * Not listed, and therefore committed: the `.ts` definitions, `package.json`,
- * `tsconfig.json`, and this file itself.
+ * Not listed, and therefore committed: the `.ts` definitions, the `.json`
+ * pipeline documents `scarn pipelines build` writes from them,
+ * `package.json`, `tsconfig.json`, and this file itself.
  */
-export const PIPELINE_BUILDER_GITIGNORE = `# Boboddy scaffolds and manages this directory, but your pipeline and step
+export const PIPELINE_BUILDER_GITIGNORE = `# Scarn scaffolds and manages this directory, but your pipeline and step
 # definitions are source code: commit and review them like any other file.
 # Only generated or vendored artifacts are ignored below.
 
@@ -164,7 +167,7 @@ node_modules/
 
 # Lockfiles. Unusually for a JS project these are NOT committed. This directory
 # is a tool-managed harness rather than a deployed artifact — nothing ships from
-# here, and \`boboddy pipelines push\` uploads definitions, not builds. More
+# here, and \`scarn pipelines push\` uploads definitions, not builds. More
 # importantly, push picks its runtime from whichever lockfile it finds here, so
 # a committed lockfile would force every teammate onto one package manager. Each
 # developer installs with the tool they have.
@@ -175,7 +178,7 @@ node_modules/
 /yarn.lock
 /deno.lock
 
-# Regenerated from a template on every \`boboddy pipelines push\`.
+# Regenerated from a template on every \`scarn pipelines push\`.
 /push.ts
 
 # Keys pulled from the platform for work item fields
@@ -183,7 +186,7 @@ node_modules/
 
 # Written by the post-push run-offer gate (#146) when its dry run of the
 # pushed pipeline's first step fails; read once (and deleted) by the next
-# \`boboddy pipelines design\` session's orientation, so it is never meant to be
+# \`scarn pipelines design\` session's orientation, so it is never meant to be
 # committed or reviewed.
 /.run-offer-gate-failure.json
 `;
@@ -191,28 +194,36 @@ node_modules/
 /**
  * The starter pipeline every new pipeline-builder directory gets: the
  * opinionated default bug pipeline (evaluate → investigate and reproduce →
- * failing test → propose fix → fix). It is also what the designer agent adapts
- * in place, so `pipelines init`, `pipelines studio` and `pipelines design` all
- * start from the same file. `apps/cli/test/design-agent-default-pipeline.test.ts`
- * compiles it and runs it through the push validator.
+ * failing test → propose fix → decision → fix). It is also what the designer
+ * agent adapts in place, so `pipelines init`, `pipelines studio` and
+ * `pipelines design` all start from the same file.
+ * `apps/cli/test/design-agent-default-pipeline.test.ts` compiles it, builds
+ * it and validates the result.
  */
 export const STARTER_PIPELINE_FILE = starterPipeline;
 
+/**
+ * `STARTER_PIPELINE_FILE` built by `scarn pipelines build`: the document
+ * `publish` sends. Scaffolded next to the source so a new project can publish
+ * without building first. `design-agent-default-pipeline.test.ts` fails if it
+ * drifts from what building the `.ts` template produces.
+ */
+export const STARTER_PIPELINE_JSON_FILE = starterPipelineJson;
+
 // Scaffolded alongside the pipeline so new projects start with automatic
 // assignment wired up: every new work item runs the starter pipeline.
-export const STARTER_DEFAULT_PIPELINE_ASSIGNMENT_FILE = `import { defaultPipelineAssignment } from "@boboddy/sdk/definitions/pipelines";
-import bugPipeline from "./${STARTER_PIPELINE_KEY}";
+export const STARTER_DEFAULT_PIPELINE_ASSIGNMENT_FILE = `import { defaultPipelineAssignment } from "@scarn/sdk/definitions/pipelines";
 
 // This reserved file controls which pipeline starts automatically when a new
 // work item arrives (created in the dashboard or ingested from GitHub/Jira).
 // Rules run top to bottom; the first match wins, otherwise \`default\` applies.
 export default defaultPipelineAssignment(({ workItem, assign, skip }) => ({
-  default: assign(bugPipeline),
+  default: assign("${STARTER_PIPELINE_KEY}"),
   rules: [
     // Don't start a pipeline for items that arrive already resolved.
     workItem.field("status").eq("resolved").then(skip()),
     // As you add pipelines, route work items to them here, e.g.:
-    //   workItem.field("issueType").eq("feature").then(assign(featurePipeline)),
+    //   workItem.field("issueType").eq("feature").then(assign("feature-pipeline")),
   ],
 }));
 `;
@@ -241,6 +252,7 @@ export function scaffoldPipelineBuilderDirectory(
   writeFile("tsconfig.json", PIPELINE_BUILDER_TSCONFIG);
   writeFile(".gitignore", PIPELINE_BUILDER_GITIGNORE);
   writeFile(STARTER_PIPELINE_FILENAME, STARTER_PIPELINE_FILE);
+  writeFile(STARTER_PIPELINE_JSON_FILENAME, STARTER_PIPELINE_JSON_FILE);
   // Scaffold the reserved default pipeline assignment file
   writeFile(
     DEFAULT_PIPELINE_ASSIGNMENT_FILENAME,

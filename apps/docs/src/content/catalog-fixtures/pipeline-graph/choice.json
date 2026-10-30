@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "key": "catalog-choice",
+  "title": "Route an incident by severity",
+  "start": { "to": "classify" },
+  "nodes": {
+    "classify": {
+      "kind": "step",
+      "title": "Classify severity",
+      "step": "classify-step",
+      "next": {
+        "routes": [
+          {
+            "when": {
+              "path": "result.severity",
+              "op": "equal",
+              "value": "critical"
+            },
+            "to": "pageOncall"
+          }
+        ],
+        "otherwise": { "to": "fileTicket" }
+      }
+    },
+    "pageOncall": {
+      "kind": "step",
+      "title": "Page on-call",
+      "step": "page-oncall-step",
+      "next": {
+        "routes": [{ "to": "paged" }]
+      }
+    },
+    "fileTicket": {
+      "kind": "step",
+      "title": "File a ticket",
+      "step": "file-ticket-step",
+      "next": {
+        "routes": [{ "to": "ticketed" }]
+      }
+    },
+    "paged": { "kind": "succeed" },
+    "ticketed": { "kind": "succeed" }
+  }
+}

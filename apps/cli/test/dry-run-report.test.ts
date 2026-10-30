@@ -5,7 +5,7 @@ import type {
   PipelineHealthDryRunReport,
   StepHealthCheckReport,
   WorkDryRunReport,
-} from "@boboddy/worker";
+} from "@scarn/worker";
 import {
   renderDryRunReport,
   toDryRunGateResult,

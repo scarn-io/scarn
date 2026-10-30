@@ -1,4 +1,4 @@
-import type { SecretMasker } from "../../../work/task/application/secret-masker";
+import type { SecretMasker } from "../../../work/task-run/application/secret-masker";
 
 /**
  * Formats the tail of an OpenCode serve log for appending to a startup failure

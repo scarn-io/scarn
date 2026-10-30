@@ -22,7 +22,7 @@
  * environment-specific parts that a literal would hide actually live.
  *
  * Growing this catalog beyond these two entries, and hosting it in the SDK
- * for reuse by other consumers, are both out of scope — see boboddy-platform
+ * for reuse by other consumers, are both out of scope — see scarn-platform
  * issue #122. This stays local to the designer templates with one consumer.
  */
 export type HealthCheckCatalogEntry = {

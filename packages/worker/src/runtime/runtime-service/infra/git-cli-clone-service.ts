@@ -5,7 +5,7 @@ import type {
   CloneRepositoryResult,
   GitCloneService,
 } from "../application/git-clone-service";
-import { noopLogger, type Logger } from "@boboddy/observability/logging/host";
+import { noopLogger, type Logger } from "@scarn/observability/logging/host";
 
 const execFileAsync = promisify(execFile);
 

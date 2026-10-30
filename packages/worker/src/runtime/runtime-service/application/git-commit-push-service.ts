@@ -13,7 +13,7 @@ export type CommitAllInput = {
   workspacePath: string;
   message: string;
   /**
-   * Repo-relative paths that must never be committed (Boboddy runtime files).
+   * Repo-relative paths that must never be committed (Scarn runtime files).
    * Applied as git pathspec excludes and, when tracked+modified, restored
    * before commit so they cannot sneak in.
    */
@@ -60,8 +60,8 @@ export type PushSubmoduleInput = {
 
 /**
  * Host-side git operations for the branch-per-step feature: check out a base
- * work branch (later steps), create the step's `boboddy/...` work branch, commit
- * the agent's changes excluding Boboddy runtime files, and push the branch.
+ * work branch (later steps), create the step's `scarn/...` work branch, commit
+ * the agent's changes excluding Scarn runtime files, and push the branch.
  *
  * Submodule methods mirror the superproject ones but operate with the
  * submodule's own working tree as cwd, against its own `origin`. The push-failure

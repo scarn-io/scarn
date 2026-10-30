@@ -183,7 +183,7 @@ export const Env = {
   },
 
   /**
-   * Reads the variable from the **worker** host (`.boboddy/.env`, then
+   * Reads the variable from the **worker** host (`.scarn/.env`, then
    * `process.env`), not from the devcontainer's `containerEnv`. The name
    * defaults to the key; `from` renames it.
    *

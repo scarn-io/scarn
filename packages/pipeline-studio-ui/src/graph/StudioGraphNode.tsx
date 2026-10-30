@@ -1,37 +1,75 @@
 import { Handle, Position, type NodeProps } from "@xyflow/react";
+import {
+  FLOW_SOURCE_HANDLE,
+  FLOW_TARGET_HANDLE,
+  LOOP_SOURCE_HANDLE,
+  LOOP_TARGET_HANDLE,
+} from "./edge-route";
 import type { StudioNode } from "./studio-graph-types";
-import { formatInOutCounts, highestSeverity, nodeInOutCounts, severityColor } from "./studio-graph-visuals";
+import {
+  forkMarker,
+  formatInOutCounts,
+  highestSeverity,
+  mergeBadge,
+  nodeCaption,
+  nodeInOutCounts,
+  severityColor,
+} from "./studio-graph-visuals";
 
 /**
  * The studio's custom node renderer — registered as `nodeTypes.default` in
- * `PipelineGraphView.tsx`, so every `StudioNode` (all built with an
- * undefined/`"default"` `type` by `translateSpecToGraph`) renders through
- * here instead of React Flow's own built-in default node.
+ * `PipelineGraphView.tsx`, so every `StudioNode` renders through here.
  *
- * Shows, top to bottom: the step/node label (parity with React Flow's
- * built-in default node, which shows only `data.label`), a `kind` subtitle
- * (the plan's "existing label/kind" — `kind` gets its own line since it's a
- * different fact from the label and squeezing both onto one line reads as
- * cluttered), the "N in · M out" counts line (omitted entirely for
- * `shape.kind === "none"` — see `nodeInOutCounts`'s doc comment), and an
- * issue-count badge in the top-right corner when `data.issues` is non-empty.
- * The whole node's border is colored by `highestSeverity(data.issues)`.
+ * Shows the node label, a kind caption (`step · <step key>`,
+ * `wait · decision`, ...), the "N in · M out" schema field counts for step
+ * nodes whose step is known, a fork marker on `match: "all"` nodes, a
+ * "merges: …" badge on merge nodes, and an issue-count badge when
+ * `data.issues` is non-empty. The border is colored by `highestSeverity(data.issues)`. The
+ * synthetic start node renders as a small dot with no target handle.
  *
- * Top/bottom handles (`Position.Top`/`Position.Bottom`) match
- * `translateSpecToGraph`'s dagre layout, which always runs `rankdir: "TB"`.
+ * Top/bottom handles match `translateDocumentToGraph`'s `rankdir: "TB"`.
  */
 export function StudioGraphNode({ data, selected }: NodeProps<StudioNode>) {
+  if (data.kind === "start") {
+    return (
+      <div className="studio-node-start" aria-label="Start">
+        <Handle
+          id={FLOW_SOURCE_HANDLE}
+          type="source"
+          position={Position.Bottom}
+          isConnectable={false}
+        />
+      </div>
+    );
+  }
+
   const severity = highestSeverity(data.issues);
   const counts = nodeInOutCounts(data.shape);
+  const fork = forkMarker(data);
+  const merge = mergeBadge(data);
 
   return (
     <div
       className="studio-node"
+      data-kind={data.kind}
       data-severity={severity ?? "none"}
+      data-match={data.match}
       data-selected={selected ? "true" : undefined}
       style={{ borderColor: severityColor(severity) }}
     >
-      <Handle type="target" position={Position.Top} isConnectable={false} />
+      <Handle
+        id={FLOW_TARGET_HANDLE}
+        type="target"
+        position={Position.Top}
+        isConnectable={false}
+      />
+      <Handle
+        id={LOOP_TARGET_HANDLE}
+        type="target"
+        position={Position.Right}
+        isConnectable={false}
+        style={{ top: "30%", opacity: 0 }}
+      />
       {data.issues.length > 0 ? (
         <span
           className="studio-node-badge"
@@ -41,10 +79,30 @@ export function StudioGraphNode({ data, selected }: NodeProps<StudioNode>) {
           {data.issues.length}
         </span>
       ) : null}
+      {merge ? <div className="studio-node-merge">{merge}</div> : null}
       <div className="studio-node-label">{data.label}</div>
-      <div className="studio-node-kind">{data.kind}</div>
-      {counts ? <div className="studio-node-counts">{formatInOutCounts(counts)}</div> : null}
-      <Handle type="source" position={Position.Bottom} isConnectable={false} />
+      <div className="studio-node-kind">{nodeCaption(data)}</div>
+      {counts ? (
+        <div className="studio-node-counts">{formatInOutCounts(counts)}</div>
+      ) : null}
+      {fork ? <div className="studio-node-fork">{fork}</div> : null}
+      {data.kind === "step" || data.kind === "wait" ? (
+        <>
+          <Handle
+            id={FLOW_SOURCE_HANDLE}
+            type="source"
+            position={Position.Bottom}
+            isConnectable={false}
+          />
+          <Handle
+            id={LOOP_SOURCE_HANDLE}
+            type="source"
+            position={Position.Right}
+            isConnectable={false}
+            style={{ top: "70%", opacity: 0 }}
+          />
+        </>
+      ) : null}
     </div>
   );
 }

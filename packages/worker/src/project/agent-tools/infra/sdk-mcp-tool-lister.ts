@@ -96,7 +96,7 @@ async function listOver(
   signal: AbortSignal,
 ): Promise<ListedMcpTool[]> {
   const client = new Client({
-    name: "boboddy-designer-preflight",
+    name: "scarn-designer-preflight",
     version: "0",
   });
   const close = () => {

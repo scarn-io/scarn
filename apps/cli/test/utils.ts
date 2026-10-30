@@ -1,13 +1,5 @@
-import { test } from "bun:test";
 import { resolve } from "node:path";
 import type { BaseReporter } from "../src/lib/reporter-types";
-
-export const concurrentTest =
-  ("concurrent" in test &&
-  typeof (test as typeof test & { concurrent?: typeof test }).concurrent ===
-    "function"
-    ? (test as typeof test & { concurrent: typeof test }).concurrent
-    : test);
 
 export const cliProjectRoot = resolve(import.meta.dir, "..");
 export const cliEntrypoint = resolve(cliProjectRoot, "src/index.ts");
@@ -24,11 +16,9 @@ export interface RunOptions {
 }
 
 /**
- * Spawn `command` asynchronously and collect its output. Async (not
- * `spawnSync`) so `test.concurrent` tests actually overlap their child
- * processes instead of blocking the event loop one at a time. stdout and
- * stderr are drained alongside `exited` so large output can't deadlock on a
- * full pipe buffer.
+ * Spawn `command` asynchronously and collect its output. stdout and stderr
+ * are drained alongside `exited` so large output can't deadlock on a full
+ * pipe buffer.
  */
 export async function runCommand(
   command: readonly string[],

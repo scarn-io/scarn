@@ -1,4 +1,4 @@
-import type { createBoboddyClient } from "@boboddy/sdk";
+import type { createScarnClient } from "@scarn/sdk";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
@@ -24,7 +24,7 @@ function fakeClient(projects: Array<{ id: string; gitUrl: string }>) {
           })),
         }),
     },
-  } as unknown as ReturnType<typeof createBoboddyClient>;
+  } as unknown as ReturnType<typeof createScarnClient>;
 }
 
 /**
@@ -36,7 +36,7 @@ describe("completeProjectHandoff", () => {
   concurrentTest(
     "persists the owner/slug ref and returns the project once a matching project exists",
     async () => {
-      const tmpDir = mkdtempSync(resolve(tmpdir(), "boboddy-handoff-"));
+      const tmpDir = mkdtempSync(resolve(tmpdir(), "scarn-handoff-"));
       try {
         const client = fakeClient([{ id: "new-project-id", gitUrl }]);
 
@@ -63,7 +63,7 @@ describe("completeProjectHandoff", () => {
   concurrentTest(
     "returns undefined, and writes nothing, while no project matches yet",
     async () => {
-      const tmpDir = mkdtempSync(resolve(tmpdir(), "boboddy-handoff-"));
+      const tmpDir = mkdtempSync(resolve(tmpdir(), "scarn-handoff-"));
       try {
         const client = fakeClient([]);
 
@@ -86,7 +86,7 @@ describe("completeProjectHandoff", () => {
   concurrentTest(
     "links a project stored with the HTTPS URL when the local remote is SSH",
     async () => {
-      const tmpDir = mkdtempSync(resolve(tmpdir(), "boboddy-handoff-"));
+      const tmpDir = mkdtempSync(resolve(tmpdir(), "scarn-handoff-"));
       try {
         const client = fakeClient([
           {
@@ -118,7 +118,7 @@ describe("completeProjectHandoff", () => {
   concurrentTest(
     "surfaces a project-list failure instead of reporting no match",
     async () => {
-      const tmpDir = mkdtempSync(resolve(tmpdir(), "boboddy-handoff-"));
+      const tmpDir = mkdtempSync(resolve(tmpdir(), "scarn-handoff-"));
       try {
         const client = {
           projects: {
@@ -129,7 +129,7 @@ describe("completeProjectHandoff", () => {
                 response: { status: 500 },
               }),
           },
-        } as unknown as ReturnType<typeof createBoboddyClient>;
+        } as unknown as ReturnType<typeof createScarnClient>;
 
         let caught: unknown;
         try {
@@ -154,7 +154,7 @@ describe("completeProjectHandoff", () => {
   );
 
   concurrentTest("ignores a project with a different gitUrl", async () => {
-    const tmpDir = mkdtempSync(resolve(tmpdir(), "boboddy-handoff-"));
+    const tmpDir = mkdtempSync(resolve(tmpdir(), "scarn-handoff-"));
     try {
       const client = fakeClient([
         { id: "unrelated", gitUrl: "git@github.com:acme/other-repo.git" },

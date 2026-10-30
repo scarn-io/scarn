@@ -1,8 +1,8 @@
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { describe, expect, test } from "bun:test";
-import { envVarsSchema, type EnvVarSpec } from "@boboddy/sdk/env-vars";
-import { resolveRepoConfig } from "@boboddy/sdk/repo-config";
+import { envVarsSchema, type EnvVarSpec } from "@scarn/sdk/env-vars";
+import { resolveRepoConfig } from "@scarn/sdk/repo-config";
 import {
   generateStepsFileContent,
   type StepDefContract,
@@ -24,7 +24,6 @@ function makeStep(overrides: Partial<StepDefContract> = {}): StepDefContract {
     opencodeMcpJson: null,
     healthChecksJson: null,
     envJson: null,
-    signalExtractorDefinitions: [],
     ...overrides,
   };
 }
@@ -42,16 +41,16 @@ describe("generateStepsFileContent", () => {
         prompt: [
           "Open {{env.BASE_URL}}.",
           "Investigate {{input.title}}.",
-          "Save files to {{boboddy.artifactsDir}}trace.zip.",
+          "Save files to {{scarn.artifactsDir}}trace.zip.",
         ].join("\n"),
       }),
     ]);
 
-    expect(content).toContain("agentPrompt: ({ input, env, boboddy }) => `");
+    expect(content).toContain("agentPrompt: ({ input, env, scarn }) => `");
     expect(content).toContain("Open ${env.BASE_URL}.");
     expect(content).toContain("Investigate ${input.title}.");
     expect(content).toContain(
-      "Save files to ${boboddy.artifactsDir}trace.zip.",
+      "Save files to ${scarn.artifactsDir}trace.zip.",
     );
   });
 
@@ -124,7 +123,7 @@ describe("generateStepsFileContent", () => {
 
       expect(content).not.toContain("environment:");
       expect(content).toContain(
-        'import { defineStep } from "@boboddy/sdk/definitions/steps";',
+        'import { defineStep } from "@scarn/sdk/definitions/steps";',
       );
     }
   });
@@ -149,7 +148,7 @@ describe("generateStepsFileContent", () => {
     );
     expect(content).not.toContain("Env.");
     expect(content).toContain(
-      'import { defineStep } from "@boboddy/sdk/definitions/steps";',
+      'import { defineStep } from "@scarn/sdk/definitions/steps";',
     );
   });
 
@@ -260,7 +259,7 @@ describe("generateStepsFileContent", () => {
     );
     expect(content).toContain("SENTRY_DSN: Env.inherit(),");
     expect(content).toContain(
-      'import { defineStep, Env } from "@boboddy/sdk/definitions/steps";',
+      'import { defineStep, Env } from "@scarn/sdk/definitions/steps";',
     );
   });
 

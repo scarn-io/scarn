@@ -1,6 +1,6 @@
 import {
   createPipelineDefinitionsClient,
-  type StepDefinitionRef,
+  PipelineDefinitionsApiError,
 } from "../definitions/pipelines";
 import {
   DEFAULT_PIPELINE_ASSIGNMENT_FILENAME,
@@ -12,6 +12,10 @@ import { assertValidDefinitionSpecs } from "../definitions/validation";
 import { createClient } from "../generated/client";
 import { Projects } from "../generated/sdk.gen";
 import { collectDefinitionsFromDirectory } from "./collect-definitions";
+import {
+  collectPipelineDocuments,
+  type PipelineDocumentFile,
+} from "./collect-pipeline-documents";
 
 export interface PushFromDirectoryOptions {
   baseUrl: string;
@@ -23,25 +27,32 @@ export interface PushFromDirectoryOptions {
 
 export interface PushFromDirectoryResult {
   pushedSteps: number;
-  pushedPipelines: number;
+  /** Keys of the pipelines that got a new active version. */
+  publishedPipelines: string[];
+  /** Keys of the pipelines whose document matched their latest version. */
+  unchangedPipelines: string[];
   /** true if the default pipeline assignment was synced to the server. */
   syncedDefaultPipelineAssignment: boolean;
 }
 
+type PipelinesClient = ReturnType<typeof createPipelineDefinitionsClient>;
+type Headers = { Authorization: string };
+
 /**
- * Imports every `.ts`/`.js` file in `dir` (except the push script itself and
- * `default-pipeline-assignment.ts`), collects all pipeline and step
- * definitions, validates them, then upserts them via the strongly-typed SDK
- * clients.
+ * Pushes a pipeline-builder directory to the server, in three passes:
  *
- * If `default-pipeline-assignment.ts` is present, it is imported separately
- * after pipelines are pushed, and the project default pipeline assignment is
- * updated on the server.
+ * 1. Upserts every step exported from the `.ts`/`.js` files (except the push
+ *    script itself and `default-pipeline-assignment.ts`).
+ * 2. Publishes every built pipeline document (`<key>.json`, from
+ *    `scarn pipelines build`), creating the pipeline when its key is new.
+ *    The server pins each document to the steps just pushed; a document
+ *    identical to its latest version publishes nothing.
+ * 3. Syncs `default-pipeline-assignment.ts`, when present, as the project
+ *    default pipeline assignment. Every pipeline it assigns must exist by now.
  *
- * Collection is `collectDefinitionsFromDirectory` (offline, no token) and
- * validation is `validateDefinitionSpecs` (pure). Both run before the first
- * mutating request, so a batch with a dead signal `sourcePath`, a dangling
- * route target, or a backwards signal binding fails without half-pushing.
+ * Collection (`collectDefinitionsFromDirectory`, `collectPipelineDocuments`)
+ * and step validation (`validateDefinitionSpecs`) are offline and run before
+ * the first mutating request, so an invalid batch fails without half-pushing.
  *
  * Designed to run on the user's native runtime (bun, node-with-tsx, deno),
  * NOT inside a `bun --compile`'d binary — that runtime can't resolve scoped
@@ -59,51 +70,40 @@ export async function pushFromDirectory(
   const headers = { Authorization: `Bearer ${opts.accessToken}` };
 
   const collected = await collectDefinitionsFromDirectory(dir);
-  const { pipelines, steps } = collected;
+  const { steps } = collected;
+  const documents = collectPipelineDocuments(dir);
 
   log(
-    `Found ${String(pipelines.length)} pipeline(s) and ${String(steps.length)} step(s).`,
+    `Found ${String(steps.length)} step(s) and ${String(documents.length)} pipeline document(s).`,
   );
+
+  assertValidDefinitionSpecs(steps);
 
   const stepsClient = createStepDefinitionsClient(opts.baseUrl);
-  const pipelinesClient = createPipelineDefinitionsClient(opts.baseUrl);
-
-  // Route targets may already live on the server, so the known-key set needs
-  // one read before validation can run. Nothing has been written yet.
-  const serverPipelineKeys =
-    pipelines.length > 0
-      ? (
-          await pipelinesClient.listByProjectId(opts.projectId, { headers })
-        ).map((pipeline) => pipeline.key)
-      : [];
-
-  assertValidDefinitionSpecs(
-    { pipelines, steps },
-    { knownPipelineKeys: serverPipelineKeys },
-  );
-
-  // Upsert steps first so the server knows about them by the time we push
-  // pipelines (which reference step IDs).
   for (const spec of steps) {
     await stepsClient.upsertFromSpec(opts.projectId, spec, { headers });
     log(`✓ step ${spec.key} v${String(spec.version)} → upserted`);
   }
 
-  if (pipelines.length > 0) {
-    const serverSteps = await stepsClient.listByProjectId(opts.projectId, {
-      headers,
-    });
-    const stepDefs: StepDefinitionRef[] = serverSteps.map((s) => ({
-      id: s.id,
-      key: s.key,
-      version: s.version,
-    }));
-
-    for (const spec of pipelines) {
-      await pipelinesClient.upsertFromSpec(opts.projectId, spec, stepDefs, {
+  const pipelinesClient = createPipelineDefinitionsClient(opts.baseUrl);
+  const publishedPipelines: string[] = [];
+  const unchangedPipelines: string[] = [];
+  if (documents.length > 0) {
+    const serverPipelines = await pipelinesClient.listByProjectId(
+      opts.projectId,
+      { headers },
+    );
+    const idByKey = new Map(serverPipelines.map((p) => [p.key, p.id]));
+    for (const document of documents) {
+      const published = await publishPipelineDocument(
+        document,
+        idByKey.get(document.key),
+        opts.projectId,
         headers,
-      });
-      log(`✓ pipeline ${spec.key} v${String(spec.version)} → upserted`);
+        pipelinesClient,
+        log,
+      );
+      (published ? publishedPipelines : unchangedPipelines).push(document.key);
     }
   }
 
@@ -119,16 +119,63 @@ export async function pushFromDirectory(
 
   return {
     pushedSteps: steps.length,
-    pushedPipelines: pipelines.length,
+    publishedPipelines,
+    unchangedPipelines,
     syncedDefaultPipelineAssignment,
   };
+}
+
+/** Returns false when the document matched the pipeline's latest version. */
+async function publishPipelineDocument(
+  { file, key, title, document }: PipelineDocumentFile,
+  pipelineDefinitionId: string | undefined,
+  projectId: string,
+  headers: Headers,
+  pipelinesClient: PipelinesClient,
+  log: (msg: string) => void,
+): Promise<boolean> {
+  try {
+    if (pipelineDefinitionId === undefined) {
+      await pipelinesClient.create(
+        { projectId, key, name: title ?? key, document },
+        { headers },
+      );
+      log(`✓ pipeline ${key} → created and published (${file})`);
+      return true;
+    }
+    const result = await pipelinesClient.publishVersion(
+      pipelineDefinitionId,
+      document,
+      { headers },
+    );
+    const version = String(result.version.version);
+    log(
+      result.published
+        ? `✓ pipeline ${key} v${version} → published (${file})`
+        : `✓ pipeline ${key} v${version} → unchanged (${file})`,
+    );
+    return result.published;
+  } catch (error) {
+    if (error instanceof PipelineDefinitionsApiError) {
+      const issues = error.issues.map((issue) =>
+        issue.hint === undefined
+          ? `  ${issue.path || "/"}: ${issue.message}`
+          : `  ${issue.path || "/"}: ${issue.message}. ${issue.hint}`,
+      );
+      throw new Error(
+        [`Could not publish ${file}: ${error.message}`, ...issues].join("\n"),
+        { cause: error },
+      );
+    }
+    throw error;
+  }
 }
 
 async function syncDefaultPipelineAssignment(
   spec: DefaultPipelineAssignmentSpec,
   opts: PushFromDirectoryOptions,
-  headers: { Authorization: string },
-  pipelinesClient: ReturnType<typeof createPipelineDefinitionsClient>,
+  headers: Headers,
+  pipelinesClient: PipelinesClient,
   log: (msg: string) => void,
 ): Promise<boolean> {
   const serialized = serializeDefaultPipelineAssignment(spec);
@@ -143,10 +190,7 @@ async function syncDefaultPipelineAssignment(
 
   // Build key → id map from all referenced pipeline keys (assign outcomes)
   const pipelineKeyToId = new Map<string, string>(
-    (serverPipelines as Array<{ key: string; id: string }>).map((p) => [
-      p.key,
-      p.id,
-    ]),
+    serverPipelines.map((p) => [p.key, p.id]),
   );
 
   // Collect all pipeline keys referenced in the spec (assign outcomes)
@@ -167,7 +211,7 @@ async function syncDefaultPipelineAssignment(
       throw new Error(
         `${DEFAULT_PIPELINE_ASSIGNMENT_FILENAME} references pipeline "${key}", ` +
           `but no pipeline with that key was found on the server. ` +
-          `Push the pipeline first with \`boboddy pipelines push\`.`,
+          `Run \`scarn pipelines build\` to write ${key}.json next to its source, then push again.`,
       );
     }
   }

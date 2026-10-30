@@ -1,4 +1,4 @@
-import { describe, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import {
   HANDOFF_POLL_INTERVAL_MS,
   HANDOFF_TIMEOUT_MS,
@@ -10,7 +10,6 @@ import {
 } from "../src/lib/init-project-handoff";
 import { CliError } from "../src/lib/cli-error";
 import {
-  concurrentTest as test,
   createReporterRecorder as createRecorder,
   reportedMessages as messages,
 } from "./utils";
@@ -24,7 +23,7 @@ import {
  */
 
 const URL =
-  "https://app.boboddy.dev/projects/new?gitUrl=git%40github.com%3Aacme%2Fmy-repo.git&name=my-repo&source=cli";
+  "https://app.scarn.io/projects/new?gitUrl=git%40github.com%3Aacme%2Fmy-repo.git&name=my-repo&source=cli";
 
 /**
  * Fake ports over a virtual clock. `wakeups` scripts what each wait resolves

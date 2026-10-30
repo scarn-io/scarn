@@ -26,8 +26,8 @@
  *    `a/../../../x` is normalised before matching.
  * 6. `*` spans `/`: a bare `*` matches `a/b.txt` and `../../README.md` alike.
  * 7. The last matching rule wins. A compound shell command is split into one
- *    resource per command (`ls && boboddy pipelines push` checks `ls` and
- *    `boboddy pipelines push`), and any `ask` among them asks.
+ *    resource per command (`ls && scarn pipelines push` checks `ls` and
+ *    `scarn pipelines push`), and any `ask` among them asks.
  * 8. A read outside the worktree is checked as `external_directory` with
  *    resource `<containing dir>/*`, then as `read` with the absolute path.
  */
@@ -61,7 +61,7 @@ export type OpencodeInjectedConfig = {
   agents: Record<string, OpencodeInjectedAgentConfig>;
 };
 
-/** Agent name used by `boboddy pipelines design`. */
+/** Agent name used by `scarn pipelines design`. */
 export const PIPELINE_DESIGNER_AGENT_NAME = "pipeline-designer";
 
 /**
@@ -86,10 +86,10 @@ export const PIPELINE_DESIGNER_AGENT_NAME = "pipeline-designer";
  * session stops being local.
  *
  * INVARIANT: that pattern must stay wildcard-WRAPPED, `*…*`, not anchored.
- * Patterns match a whole command string, so an anchored `boboddy pipelines push`
+ * Patterns match a whole command string, so an anchored `scarn pipelines push`
  * would miss every real invocation: §9 of AUTHORING.md tells the agent to run
- * `cd ../.. && "$BOBODDY_CLI" pipelines push`, where `$BOBODDY_CLI` is an
- * absolute path that need not contain the word `boboddy` at all. Matching the
+ * `cd ../.. && "$SCARN_CLI" pipelines push`, where `$SCARN_CLI` is an
+ * absolute path that need not contain the word `scarn` at all. Matching the
  * distinctive `pipelines push` substring catches the bare command, each segment
  * of a chained form (finding #7), and any binary path alike. Under an
  * allow-by-default base an anchored pattern does not merely weaken the gate — it
@@ -119,8 +119,8 @@ export const PIPELINE_DESIGNER_SHELL_PERMISSIONS: readonly OpencodePermissionRul
  *   is the directory whose only purpose is that config — not the repository.
  * - `../.env.example` → allow, one exact file. The interview records the *name*
  *   of any secret a new tool needs there — never a real value — so the user
- *   knows what to fill in when they create `.boboddy/.env` themselves.
- *   `.boboddy/.env` (the real secrets) is deliberately absent: it is not a file
+ *   knows what to fill in when they create `.scarn/.env` themselves.
+ *   `.scarn/.env` (the real secrets) is deliberately absent: it is not a file
  *   the agent may ever write, and this is the enforcement of that, independent
  *   of what the prompt says.
  *

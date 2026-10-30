@@ -1,0 +1,147 @@
+{
+  "schemaVersion": 1,
+  "key": "catalog-routes-all",
+  "title": "Triage an issue on every matching route",
+  "start": {
+    "to": "classifyIssue",
+    "args": {
+      "title": "workItem.title"
+    }
+  },
+  "nodes": {
+    "classifyIssue": {
+      "kind": "step",
+      "title": "Classify issue",
+      "step": "classify-issue",
+      "next": {
+        "match": "all",
+        "routes": [
+          {
+            "to": "reproduceBug",
+            "args": {
+              "appUrl": "result.appUrl"
+            }
+          },
+          {
+            "when": {
+              "path": "result.category",
+              "op": "equal",
+              "value": "security"
+            },
+            "to": "notifySecurity",
+            "args": {
+              "summary": "result.summary"
+            }
+          },
+          {
+            "when": {
+              "not": {
+                "path": "result.affectedPages",
+                "op": "isEmpty"
+              }
+            },
+            "to": "captureScreenshot",
+            "each": {
+              "over": "result.affectedPages",
+              "maxConcurrency": 3
+            },
+            "args": {
+              "url": "item"
+            }
+          }
+        ],
+        "otherwise": {
+          "to": "addToBacklog",
+          "args": {
+            "summary": "result.summary"
+          }
+        }
+      }
+    },
+    "reproduceBug": {
+      "kind": "step",
+      "title": "Reproduce bug",
+      "step": "reproduce-bug",
+      "next": {
+        "routes": [
+          {
+            "to": "writeFailingTest",
+            "args": {
+              "observedBehavior": "result.observedBehavior"
+            },
+            "partial": true
+          }
+        ]
+      }
+    },
+    "notifySecurity": {
+      "kind": "step",
+      "title": "Notify security",
+      "step": "notify-security",
+      "next": {
+        "routes": [
+          {
+            "to": "writeFailingTest",
+            "args": {
+              "securityNotes": "result.notes"
+            },
+            "partial": true
+          }
+        ]
+      }
+    },
+    "captureScreenshot": {
+      "kind": "step",
+      "title": "Capture screenshot",
+      "step": "capture-screenshot",
+      "next": {
+        "routes": [
+          {
+            "to": "summariseFindings",
+            "args": {
+              "screenshots": {
+                "list": ["result.url"]
+              }
+            },
+            "partial": true
+          }
+        ]
+      }
+    },
+    "addToBacklog": {
+      "kind": "step",
+      "step": "add-to-backlog"
+    },
+    "writeFailingTest": {
+      "kind": "step",
+      "title": "Write failing test",
+      "step": "write-failing-test",
+      "next": {
+        "routes": [
+          {
+            "to": "summariseFindings",
+            "args": {
+              "failingTest": "result.testPath"
+            },
+            "partial": true
+          }
+        ]
+      }
+    },
+    "summariseFindings": {
+      "kind": "step",
+      "title": "Summarise findings",
+      "step": "summarise-findings",
+      "next": {
+        "routes": [
+          {
+            "to": "triaged"
+          }
+        ]
+      }
+    },
+    "triaged": {
+      "kind": "succeed"
+    }
+  }
+}

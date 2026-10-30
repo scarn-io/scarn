@@ -23,8 +23,8 @@ export interface ConfigFile {
    */
   anonymousId?: string;
   /**
-   * User-level telemetry opt-out, set via `boboddy telemetry disable` (or
-   * the `BOBODDY_TELEMETRY_DISABLED` env var, checked separately at the
+   * User-level telemetry opt-out, set via `scarn telemetry disable` (or
+   * the `SCARN_TELEMETRY_DISABLED` env var, checked separately at the
    * call site). Global — unlike auth profiles, it is not scoped to a
    * `baseUrl`.
    */
@@ -32,9 +32,9 @@ export interface ConfigFile {
   artifacts: ArtifactRetentionSettings;
 }
 
-const authFilePath = () => join(resolveHomeDir(), ".boboddy", "auth.jsonc");
+const authFilePath = () => join(resolveHomeDir(), ".scarn", "auth.jsonc");
 const configFilePath = () =>
-  join(resolveHomeDir(), ".boboddy", "config.jsonc");
+  join(resolveHomeDir(), ".scarn", "config.jsonc");
 
 export const getConfigFilePath = () => configFilePath();
 
@@ -133,9 +133,9 @@ const writeConfigFile = (data: ConfigFile) => {
 /**
  * The persisted pre-auth distinct id for this machine/install, creating and
  * persisting one the first time it is read. Stable across every command
- * invocation until `~/.boboddy/config.jsonc` is deleted or edited by hand —
+ * invocation until `~/.scarn/config.jsonc` is deleted or edited by hand —
  * unlike `auth.jsonc`, nothing in this package deletes `config.jsonc`
- * automatically (telemetry settings survive `boboddy auth logout`, matching
+ * automatically (telemetry settings survive `scarn auth logout`, matching
  * today's behavior).
  */
 export const getOrCreateAnonymousId = (): string => {

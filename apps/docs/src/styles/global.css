@@ -4,7 +4,7 @@
  */
 @layer base, starlight, theme, components, utilities;
 @import "@astrojs/starlight-tailwind";
-@import "@boboddy/design-tokens/css";
+@import "@scarn/design-tokens/css";
 @import "tailwindcss/theme.css" layer(theme);
 @import "tailwindcss/utilities.css" layer(utilities);
 @import "./react-flow.css";
@@ -16,16 +16,16 @@
  * off `--color-accent-600` (links, current-item highlight) and off
  * `--color-gray-200/300/400/600/700/800/900` (text and surface shades). We
  * author both ramps here so Starlight's stock indigo-on-zinc palette is
- * replaced with Boboddy's brand colors.
+ * replaced with Scarn's brand colors.
  *
  * Accent ramp: derived from the brand cyan `--color-accent` (#38bdf8, see
- * @boboddy/design-tokens). `--color-accent-600` is pinned to the exact token
+ * @scarn/design-tokens). `--color-accent-600` is pinned to the exact token
  * value, since that's the step starlight-tailwind uses as `--sl-color-accent`
  * in dark mode; the rest of the ramp is a perceptual lighten/darken around
  * that anchor (same hue/saturation family, decreasing lightness).
  *
  * Gray ramp: derived from the 8 Primer dark surface steps already defined in
- * @boboddy/design-tokens, darkest → lightest, mapped to 950 → 200. There are
+ * @scarn/design-tokens, darkest → lightest, mapped to 950 → 200. There are
  * only 8 token anchors for 11 ramp steps, so `--color-gray-50/100` (lighter
  * than the lightest token, for parity/light-mode fallback only — this site
  * is dark-only) and `--color-gray-500` (between the `border` and
@@ -38,7 +38,7 @@
   --color-accent-300: #8cd7f8;
   --color-accent-400: #64caf7;
   --color-accent-500: #4bc2f7;
-  --color-accent-600: #38bdf8; /* == --color-accent in @boboddy/design-tokens */
+  --color-accent-600: #38bdf8; /* == --color-accent in @scarn/design-tokens */
   --color-accent-700: #0dacf2;
   --color-accent-800: #1087bc;
   --color-accent-900: #146285;
@@ -63,7 +63,7 @@
  * The Tailwind ramps above give Starlight's derived hover/active states the
  * right feel, but they're an approximation (starlight-tailwind maps ramp
  * steps to `--sl-color-*` through a couple of layers of indirection). Pin
- * the canvas colors that must match @boboddy/design-tokens exactly, as plain
+ * the canvas colors that must match @scarn/design-tokens exactly, as plain
  * unlayered CSS so they win over any layered Starlight/Tailwind default.
  */
 :root {
@@ -366,7 +366,7 @@ starlight-menu-button[aria-expanded="true"] button {
  * Starlight's stock `Card.astro` (@astrojs/starlight/user-components/
  * Card.astro) sets `--sl-card-border`/`--sl-card-bg` per `nth-child`
  * position, cycling purple/orange/green/red/blue borders — a generic
- * Starlight-branding gimmick, not Boboddy's. These unlayered rules replace
+ * Starlight-branding gimmick, not Scarn's. These unlayered rules replace
  * it with landing's flat card recipe (see apps/landing/src/components/
  * Features.astro): `rounded-xl border border-[--color-border]
  * bg-[--color-surface]/40 p-6 hover:border-[--color-border-strong]`.

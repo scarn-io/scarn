@@ -1,5 +1,5 @@
 {
-  "name": "@boboddy/worker",
+  "name": "@scarn/worker",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -10,25 +10,25 @@
       "default": "./src/index.ts"
     },
     "./testing/fake-ai": {
-      "types": "./src/work/task/infra/fake-ai/index.ts",
-      "bun": "./src/work/task/infra/fake-ai/index.ts",
-      "default": "./src/work/task/infra/fake-ai/index.ts"
+      "types": "./src/work/task-run/infra/fake-ai/index.ts",
+      "bun": "./src/work/task-run/infra/fake-ai/index.ts",
+      "default": "./src/work/task-run/infra/fake-ai/index.ts"
     }
   },
   "scripts": {
     "build": "tsgo -p tsconfig.json --noEmit",
     "typecheck": "tsgo -p tsconfig.json --noEmit",
-    "test": "bun test tests"
+    "test": "bun test tests --parallel"
   },
   "dependencies": {
-    "@boboddy/observability": "workspace:*",
-    "@boboddy/opencode-plugin": "workspace:*",
-    "@boboddy/pipeline-studio-ui": "workspace:*",
-    "@boboddy/platform-client": "workspace:*",
-    "@boboddy/sdk": "workspace:*",
+    "@scarn/observability": "workspace:*",
+    "@scarn/opencode-plugin": "workspace:*",
+    "@scarn/pipeline-studio-ui": "workspace:*",
+    "@scarn/sdk": "workspace:*",
+    "@scarn/shared-core": "workspace:*",
     "@devcontainers/cli": "catalog:",
     "@modelcontextprotocol/sdk": "^1.27.1",
-    "@opencode/client": "2.0.28",
+    "@opencode/client": "2.1.4",
     "ajv": "^8.20.0",
     "better-auth": "^1.6.7",
     "dotenv": "^17.4.2",

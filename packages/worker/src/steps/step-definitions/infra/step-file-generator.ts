@@ -1,9 +1,9 @@
 import { isDeepStrictEqual } from "node:util";
 import { parseSchema } from "json-schema-to-zod";
-import { appliesToSetup, type EnvVarSpec } from "@boboddy/sdk/env-vars";
-import { resolveRepoConfig, type RepoConfig } from "@boboddy/sdk/repo-config";
-import { isSecretLookingEnvName } from "@boboddy/sdk/definitions/steps";
-import { DEFAULT_CODE_STEP_RUNTIME_ID } from "@boboddy/sdk/managed-runtimes";
+import { appliesToSetup, type EnvVarSpec } from "@scarn/sdk/env-vars";
+import { resolveRepoConfig, type RepoConfig } from "@scarn/sdk/repo-config";
+import { isSecretLookingEnvName } from "@scarn/sdk/definitions/steps";
+import { DEFAULT_CODE_STEP_RUNTIME_ID } from "@scarn/sdk/managed-runtimes";
 
 export type StepDefContract = {
   key: string;
@@ -22,13 +22,6 @@ export type StepDefContract = {
   opencodeMcpJson: Record<string, unknown> | null;
   healthChecksJson: unknown[] | null;
   envJson: EnvVarSpec[] | null;
-  signalExtractorDefinitions: Array<{
-    key: string;
-    sourcePath: string;
-    type: string;
-    required: boolean;
-    availableWhenResultStatusIn: string[] | null;
-  }>;
 };
 
 export function keyToVarName(key: string): string {
@@ -46,7 +39,7 @@ export function promptToLiteral(prompt: string): string {
   return `\`${escaped}\``;
 }
 
-const PROMPT_SCOPES = ["input", "env", "boboddy"] as const;
+const PROMPT_SCOPES = ["input", "env", "scarn"] as const;
 const REPO_MESSAGE_SCOPES = ["input", "result"] as const;
 
 function scopedTokenPattern(scopes: readonly string[]): RegExp {
@@ -89,7 +82,7 @@ function templateToExpr(
   const usedScopes = new Set(matches.map((match) => match[1]));
   const placeholders = matches.map((match, index) => ({
     token: match[0],
-    marker: `__BOBODDY_PROMPT_EXPR_${String(index)}__`,
+    marker: `__SCARN_PROMPT_EXPR_${String(index)}__`,
     expr: `\${${promptPathToJsExpr(match[1] ?? "", match[2] ?? "")}}`,
   }));
 
@@ -304,21 +297,6 @@ function buildEnvironmentField(step: StepDefContract): EnvironmentField | null {
   };
 }
 
-function buildSignalLine(
-  sig: StepDefContract["signalExtractorDefinitions"][number],
-): string {
-  const parts: string[] = [`sourcePath: ${JSON.stringify(sig.sourcePath)}`];
-  if (sig.key !== sig.sourcePath) parts.push(`key: ${JSON.stringify(sig.key)}`);
-  parts.push(`type: ${JSON.stringify(sig.type)} as const`);
-  if (!sig.required) parts.push("required: false");
-  if (sig.availableWhenResultStatusIn !== null) {
-    parts.push(
-      `availableWhenResultStatusIn: ${JSON.stringify(sig.availableWhenResultStatusIn)}`,
-    );
-  }
-  return `    { ${parts.join(", ")} }`;
-}
-
 export function generateStepsFileContent(steps: StepDefContract[]): string {
   if (steps.length === 0) return "";
 
@@ -334,7 +312,6 @@ export function generateStepsFileContent(steps: StepDefContract[]): string {
     const varName = keyToVarName(step.key);
     const inputExpr = schemaToZodExpr(step.inputSchemaJson);
     const resultExpr = schemaToZodExpr(step.resultSchemaJson);
-    const signalLines = step.signalExtractorDefinitions.map(buildSignalLine);
 
     const fields: string[] = [
       `  key: ${JSON.stringify(step.key)}`,
@@ -349,11 +326,6 @@ export function generateStepsFileContent(steps: StepDefContract[]): string {
     fields.push(`  agentPrompt: ${promptToSource(step.prompt ?? "")}`);
     fields.push(`  input: ${inputExpr}`);
     fields.push(`  result: ${resultExpr}`);
-    if (signalLines.length > 0) {
-      fields.push(`  signals: [\n${signalLines.join(",\n")}\n  ]`);
-    } else {
-      fields.push("  signals: []");
-    }
     if (step.opencodeMcpJson && Object.keys(step.opencodeMcpJson).length > 0) {
       const mcpJson = JSON.stringify(step.opencodeMcpJson, null, 2).replace(
         /\n/g,
@@ -380,7 +352,7 @@ export function generateStepsFileContent(steps: StepDefContract[]): string {
     ...(usesEnvHelper ? ["Env"] : []),
   ].join(", ");
   return `import { z } from "zod";
-import { ${sdkImports} } from "@boboddy/sdk/definitions/steps";
+import { ${sdkImports} } from "@scarn/sdk/definitions/steps";
 
 ${stepBlocks.join("\n\n")}
 `;

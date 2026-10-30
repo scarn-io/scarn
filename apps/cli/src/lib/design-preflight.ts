@@ -21,10 +21,10 @@ import type {
 import type { BaseReporter } from "./reporter-types";
 import { CliError } from "./cli-error";
 import { ensureSignedIn, type SignInPorts } from "./ensure-signed-in";
-import type { ResolvedProjectRef } from "@boboddy/sdk/defaults";
+import type { ResolvedProjectRef } from "@scarn/sdk/defaults";
 
 /**
- * The preflight for `boboddy pipelines design`.
+ * The preflight for `scarn pipelines design`.
  *
  * Every step is SELF-HEALING by design: the command's whole reason to exist is
  * that a new user should be able to type one thing and end up in a working
@@ -46,15 +46,15 @@ export interface DesignPreflightPorts
     SignInPorts,
     ProviderConnectPorts,
     AgentToolsPorts {
-  /** The `owner/slug` ref recorded as `"project"` in `.boboddy/boboddy.jsonc`, if any. */
+  /** The `owner/slug` ref recorded as `"project"` in `.scarn/scarn.jsonc`, if any. */
   readConfiguredProject(): Promise<string | undefined>;
   /**
    * Identify the project for THIS repository against the server by matching
-   * its git remote, persist its `owner/slug` ref to `.boboddy/boboddy.jsonc`,
+   * its git remote, persist its `owner/slug` ref to `.scarn/scarn.jsonc`,
    * and return that ref. Resolves to `undefined` — falling through to
    * `promptProject` below — both when the repository cannot be identified at
    * all (no `origin` remote, not a git root) and when it's identified but no
-   * project matches its remote yet (that hand-off lives in `boboddy init`, see
+   * project matches its remote yet (that hand-off lives in `scarn init`, see
    * #141; run it first).
    */
   resolveProjectFromRepo(baseUrl: string): Promise<string | undefined>;
@@ -125,10 +125,10 @@ export interface DesignPreflightPorts
     projectId: string;
     draft: WorkItemDraft;
   }): Promise<DesignWorkItem>;
-  /** Does `.boboddy/pipeline-builder` already exist? */
+  /** Does `.scarn/pipeline-builder` already exist? */
   builderDirExists(): boolean;
   /**
-   * Create `.boboddy/pipeline-builder`. Throws when the current directory is
+   * Create `.scarn/pipeline-builder`. Throws when the current directory is
    * not a plausible project root.
    */
   scaffoldBuilderDir(): void;
@@ -149,7 +149,7 @@ export type DesignPreflightInput = {
 };
 
 export type DesignPreflightResult = {
-  /** The resolved project id, for every API call and `BOBODDY_PROJECT_ID`. */
+  /** The resolved project id, for every API call and `SCARN_PROJECT_ID`. */
   projectId: string;
   /** The `owner/slug` ref the id was resolved from — what the user sees. */
   project: string;
@@ -167,10 +167,10 @@ export type DesignPreflightResult = {
 };
 
 export const NO_PROJECT_ID_MESSAGE =
-  "No project. Boboddy could not identify a project for this repository " +
-  "automatically — run `boboddy init` from the root of a git repo with an " +
+  "No project. Scarn could not identify a project for this repository " +
+  "automatically — run `scarn init` from the root of a git repo with an " +
   "`origin` remote, or pass one explicitly: " +
-  "`boboddy pipelines design <owner>/<project-slug>`.";
+  "`scarn pipelines design <owner>/<project-slug>`.";
 
 // Re-exported for callers that only know this module, not `design-work-item.ts`
 // where it actually lives (next to the other work-item-resolution pieces).
@@ -249,15 +249,15 @@ export async function runDesignPreflight(
 
 /**
  * Step 2 — project. Mirrors `pipelines push`: the positional `owner/slug`
- * wins, then `"project"` in `.boboddy/boboddy.jsonc`. Whichever ref is picked
+ * wins, then `"project"` in `.scarn/scarn.jsonc`. Whichever ref is picked
  * is then resolved to the project id once, here, so a stale or forbidden ref
  * fails before any prompt — naming the ref, never an id.
  *
  * Unlike push, a missing ref HEALS: the project is looked up on the server from
- * the repository's git remote and written to `.boboddy/boboddy.jsonc`, exactly
- * as `boboddy init` does. The prompt survives for the case where the repo
+ * the repository's git remote and written to `.scarn/scarn.jsonc`, exactly
+ * as `scarn init` does. The prompt survives for the case where the repo
  * cannot be identified at all (no `origin` remote), and for the case where no
- * project exists for it yet (run `boboddy init` first, which sends the user
+ * project exists for it yet (run `scarn init` first, which sends the user
  * through the browser hand-off — see #141).
  */
 async function ensureProject(input: {

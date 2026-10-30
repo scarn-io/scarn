@@ -32,77 +32,65 @@ describe("validateDefinitionSpecs — health checks", () => {
 
   test("accepts a check naming a declared MCP server with a bare tool name", () => {
     expect(
-      validateDefinitionSpecs({
-        pipelines: [],
-        steps: [
-          withMcp([
-            {
-              mcp: "playwright",
-              tool: "browser_navigate",
-              args: { url: "about:blank" },
-              severity: "required",
-              timeoutSeconds: 15,
-            },
-          ]),
-        ],
-      }),
+      validateDefinitionSpecs([
+        withMcp([
+          {
+            mcp: "playwright",
+            tool: "browser_navigate",
+            args: { url: "about:blank" },
+            severity: "required",
+            timeoutSeconds: 15,
+          },
+        ]),
+      ]),
     ).toEqual([]);
   });
 
   test("accepts a check naming a server declared as a ref", () => {
     expect(
-      validateDefinitionSpecs({
-        pipelines: [],
-        steps: [
-          stepSpecWithOverrides("ref-step", {
-            opencodeMcpJson: { postgres: { type: "ref" } },
-            healthChecksJson: [
-              {
-                mcp: "postgres",
-                tool: "list_schemas",
-                severity: "required",
-                timeoutSeconds: 15,
-              },
-            ],
-          }),
-        ],
-      }),
+      validateDefinitionSpecs([
+        stepSpecWithOverrides("ref-step", {
+          opencodeMcpJson: { postgres: { type: "ref" } },
+          healthChecksJson: [
+            {
+              mcp: "postgres",
+              tool: "list_schemas",
+              severity: "required",
+              timeoutSeconds: 15,
+            },
+          ],
+        }),
+      ]),
     ).toEqual([]);
   });
 
   test("accepts a check with no mcp qualifier (plugin/standalone/built-in tool)", () => {
     expect(
-      validateDefinitionSpecs({
-        pipelines: [],
-        steps: [
-          stepSpecWithOverrides("plugin-step", {
-            healthChecksJson: [
-              {
-                tool: "my_plugin_tool",
-                severity: "required",
-                timeoutSeconds: 15,
-              },
-            ],
-          }),
-        ],
-      }),
+      validateDefinitionSpecs([
+        stepSpecWithOverrides("plugin-step", {
+          healthChecksJson: [
+            {
+              tool: "my_plugin_tool",
+              severity: "required",
+              timeoutSeconds: 15,
+            },
+          ],
+        }),
+      ]),
     ).toEqual([]);
   });
 
   test("rejects a check naming an MCP server not declared in mcps", () => {
-    const issues = validateDefinitionSpecs({
-      pipelines: [],
-      steps: [
-        withMcp([
-          {
-            mcp: "typo",
-            tool: "browser_navigate",
-            severity: "required",
-            timeoutSeconds: 15,
-          },
-        ]),
-      ],
-    });
+    const issues = validateDefinitionSpecs([
+      withMcp([
+        {
+          mcp: "typo",
+          tool: "browser_navigate",
+          severity: "required",
+          timeoutSeconds: 15,
+        },
+      ]),
+    ]);
     expect(issues).toHaveLength(1);
     expect(issues[0]?.check).toBe("health-check-mcp-server");
     expect(issues[0]?.message).toContain(
@@ -115,19 +103,16 @@ describe("validateDefinitionSpecs — health checks", () => {
   });
 
   test("rejects a double-qualified tool name (server key + tool already prefixed)", () => {
-    const issues = validateDefinitionSpecs({
-      pipelines: [],
-      steps: [
-        withMcp([
-          {
-            mcp: "playwright",
-            tool: "playwright_browser_navigate",
-            severity: "required",
-            timeoutSeconds: 15,
-          },
-        ]),
-      ],
-    });
+    const issues = validateDefinitionSpecs([
+      withMcp([
+        {
+          mcp: "playwright",
+          tool: "playwright_browser_navigate",
+          severity: "required",
+          timeoutSeconds: 15,
+        },
+      ]),
+    ]);
     expect(issues).toHaveLength(1);
     expect(issues[0]?.check).toBe("health-check-double-qualified");
     expect(issues[0]?.message).toContain(
@@ -139,20 +124,17 @@ describe("validateDefinitionSpecs — health checks", () => {
   });
 
   test("uses the check's name for the label when provided", () => {
-    const issues = validateDefinitionSpecs({
-      pipelines: [],
-      steps: [
-        withMcp([
-          {
-            mcp: "typo",
-            tool: "browser_navigate",
-            name: "Browser smoke test",
-            severity: "required",
-            timeoutSeconds: 15,
-          },
-        ]),
-      ],
-    });
+    const issues = validateDefinitionSpecs([
+      withMcp([
+        {
+          mcp: "typo",
+          tool: "browser_navigate",
+          name: "Browser smoke test",
+          severity: "required",
+          timeoutSeconds: 15,
+        },
+      ]),
+    ]);
     expect(issues[0]?.message).toContain(
       'health check #1 ("Browser smoke test")',
     );
@@ -160,63 +142,14 @@ describe("validateDefinitionSpecs — health checks", () => {
 
   test("stays quiet for a step declaring no health checks", () => {
     expect(
-      validateDefinitionSpecs({
-        pipelines: [],
-        steps: [stepSpecWithOverrides("no-checks")],
-      }),
+      validateDefinitionSpecs([stepSpecWithOverrides("no-checks")]),
     ).toEqual([]);
   });
 
   test('accepts a step declaring only a kind: "cli" check', () => {
     expect(
-      validateDefinitionSpecs({
-        pipelines: [],
-        steps: [
-          stepSpecWithOverrides("cli-step", {
-            healthChecksJson: [
-              {
-                kind: "cli",
-                command: ["gh", "--version"],
-                severity: "required",
-                timeoutSeconds: 15,
-              },
-            ],
-          }),
-        ],
-      }),
-    ).toEqual([]);
-  });
-
-  test("accepts a step declaring both a tool check and a cli check together", () => {
-    expect(
-      validateDefinitionSpecs({
-        pipelines: [],
-        steps: [
-          withMcp([
-            {
-              mcp: "playwright",
-              tool: "browser_navigate",
-              args: { url: "about:blank" },
-              severity: "required",
-              timeoutSeconds: 15,
-            },
-            {
-              kind: "cli",
-              command: ["gh", "--version"],
-              severity: "required",
-              timeoutSeconds: 15,
-            },
-          ]),
-        ],
-      }),
-    ).toEqual([]);
-  });
-
-  test("a cli check's absence of mcp/tool never triggers the mcp-server or double-qualified checks", () => {
-    const issues = validateDefinitionSpecs({
-      pipelines: [],
-      steps: [
-        stepSpecWithOverrides("cli-only-step", {
+      validateDefinitionSpecs([
+        stepSpecWithOverrides("cli-step", {
           healthChecksJson: [
             {
               kind: "cli",
@@ -226,8 +159,45 @@ describe("validateDefinitionSpecs — health checks", () => {
             },
           ],
         }),
-      ],
-    });
+      ]),
+    ).toEqual([]);
+  });
+
+  test("accepts a step declaring both a tool check and a cli check together", () => {
+    expect(
+      validateDefinitionSpecs([
+        withMcp([
+          {
+            mcp: "playwright",
+            tool: "browser_navigate",
+            args: { url: "about:blank" },
+            severity: "required",
+            timeoutSeconds: 15,
+          },
+          {
+            kind: "cli",
+            command: ["gh", "--version"],
+            severity: "required",
+            timeoutSeconds: 15,
+          },
+        ]),
+      ]),
+    ).toEqual([]);
+  });
+
+  test("a cli check's absence of mcp/tool never triggers the mcp-server or double-qualified checks", () => {
+    const issues = validateDefinitionSpecs([
+      stepSpecWithOverrides("cli-only-step", {
+        healthChecksJson: [
+          {
+            kind: "cli",
+            command: ["gh", "--version"],
+            severity: "required",
+            timeoutSeconds: 15,
+          },
+        ],
+      }),
+    ]);
     expect(
       issues.some(
         (issue) =>

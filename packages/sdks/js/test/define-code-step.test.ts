@@ -16,7 +16,6 @@ describe("codeStep", () => {
         fn,
         inputSchema: z.object({ path: z.string() }),
         resultSchema: z.object({ ok: z.boolean(), path: z.string() }),
-        signals: [{ sourcePath: "ok", type: "boolean" }],
       });
 
       expect(spec.kind).toBe("code");
@@ -26,15 +25,6 @@ describe("codeStep", () => {
       expect(spec.entrypointJson).toBeUndefined();
       expect(spec.inputSchemaJson).toMatchObject({ type: "object" });
       expect(spec.resultSchemaJson).toMatchObject({ type: "object" });
-      expect(spec.signalExtractorDefinitions).toEqual([
-        {
-          key: "ok",
-          sourcePath: "ok",
-          type: "boolean",
-          required: true,
-          availableWhenResultStatusIn: null,
-        },
-      ]);
     },
   );
 
@@ -73,7 +63,7 @@ describe("codeStep", () => {
 
   describe("features", () => {
     test.concurrent(
-      "features: [Features.notifications()] wires the result field and signal without a prompt",
+      "features: [Features.notifications()] wires the result field without a prompt",
       () => {
         const spec = codeStep({
           key: "notify",
@@ -85,14 +75,7 @@ describe("codeStep", () => {
         expect(spec.kind).toBe("code");
         expect(spec.prompt).toBeNull();
         expect(spec.resultSchemaJson).toMatchObject({
-          properties: { $boboddy_notifications_v1: { type: "array" } },
-        });
-        expect(spec.signalExtractorDefinitions).toContainEqual({
-          key: "$boboddy_notifications_v1",
-          sourcePath: "$boboddy_notifications_v1",
-          type: "array",
-          required: false,
-          availableWhenResultStatusIn: null,
+          properties: { $scarn_notifications_v1: { type: "array" } },
         });
       },
     );
@@ -102,7 +85,7 @@ describe("codeStep", () => {
       () => {
         const result = Notify.inApp("Title", "This is the comment", "high");
         expect(result).toEqual({
-          $boboddy_notifications_v1: [
+          $scarn_notifications_v1: [
             {
               kind: "status_update",
               title: "Title",
@@ -122,7 +105,7 @@ describe("codeStep", () => {
           kind: "blocked",
           payload: { category: "infra" },
         });
-        expect(result.$boboddy_notifications_v1[0]).toMatchObject({
+        expect(result.$scarn_notifications_v1[0]).toMatchObject({
           kind: "blocked",
           suggestedChannels: ["in_app"],
           payload: { category: "infra" },
@@ -140,7 +123,7 @@ describe("codeStep", () => {
           priority: "normal",
           suggestedChannels: ["slack"],
         });
-        expect(result.$boboddy_notifications_v1[0]).toMatchObject({
+        expect(result.$scarn_notifications_v1[0]).toMatchObject({
           suggestedChannels: ["slack"],
         });
       },
@@ -159,9 +142,9 @@ describe("codeStep", () => {
             suggestedChannels: ["email"],
           }),
         );
-        expect(result.$boboddy_notifications_v1).toHaveLength(2);
+        expect(result.$scarn_notifications_v1).toHaveLength(2);
         expect(
-          result.$boboddy_notifications_v1.map((n) => n.suggestedChannels),
+          result.$scarn_notifications_v1.map((n) => n.suggestedChannels),
         ).toEqual([["in_app"], ["email"]]);
       },
     );
@@ -183,7 +166,7 @@ describe("codeStep", () => {
         expect(spec.resultSchemaJson).toMatchObject({
           properties: {
             status: { const: "completed" },
-            $boboddy_notifications_v1: { type: "array" },
+            $scarn_notifications_v1: { type: "array" },
           },
         });
       },

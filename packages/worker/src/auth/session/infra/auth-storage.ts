@@ -4,4 +4,4 @@ export {
   loadAuthFile,
   loadAuthProfile,
   saveAuthProfile,
-} from "@boboddy/sdk/defaults";
+} from "@scarn/sdk/defaults";

@@ -58,7 +58,7 @@ export async function pollForAccessToken({
         continue;
       case "expired_token":
         throw new DeviceLoginError(
-          "The CLI sign-in request expired. Run `boboddy auth login` again.",
+          "The CLI sign-in request expired. Run `scarn auth login` again.",
           SetupErrorCodes.DeviceLoginExpired,
         );
       case "access_denied":

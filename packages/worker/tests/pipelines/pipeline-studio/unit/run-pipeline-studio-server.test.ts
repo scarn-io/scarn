@@ -1,12 +1,18 @@
 import { describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdtempSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import {
   MISSING_STUDIO_ASSETS_MESSAGE,
   runPipelineStudioServer,
 } from "../../../../src/pipelines/pipeline-studio/application/run-pipeline-studio-server";
-import type { StudioSnapshot } from "@boboddy/pipeline-studio-ui";
+import type { StudioSnapshot } from "@scarn/pipeline-studio-ui";
 
 /**
  * A real `Bun.serve` + real `fs.watch` smoke test — deliberately NOT a fake,
@@ -18,11 +24,11 @@ import type { StudioSnapshot } from "@boboddy/pipeline-studio-ui";
  */
 
 function makeTempDir(): string {
-  return mkdtempSync(join(tmpdir(), "boboddy-studio-server-test-"));
+  return mkdtempSync(join(tmpdir(), "scarn-studio-server-test-"));
 }
 
 function makeStaticDir(): string {
-  const dir = mkdtempSync(join(tmpdir(), "boboddy-studio-static-test-"));
+  const dir = mkdtempSync(join(tmpdir(), "scarn-studio-static-test-"));
   writeFileSync(join(dir, "index.html"), "<!doctype html>");
   return dir;
 }
@@ -35,21 +41,55 @@ async function findFreePort(): Promise<number> {
   return port;
 }
 
-const PIPELINE_V1 = `export default {
-  key: "review-pr", name: "Review PR", description: null, version: 1, status: "active",
-  nodeDefinitions: [{ nodeKey: "analyze", kind: "step", stepKey: "analyze-step", stepName: "Analyze" }],
-  dependencyEdges: [],
-};
-`;
+const PIPELINE_V1 = JSON.stringify({
+  schemaVersion: 1,
+  key: "review-pr",
+  title: "Review PR",
+  start: { to: "done" },
+  nodes: { done: { kind: "succeed" } },
+});
 
-const PIPELINE_V2 = `export default {
-  key: "review-pr", name: "Review PR", description: null, version: 1, status: "active",
-  nodeDefinitions: [
-    { nodeKey: "analyze", kind: "step", stepKey: "analyze-step", stepName: "Analyze" },
-    { nodeKey: "done", kind: "succeed" },
-  ],
-  dependencyEdges: [{ fromNodeKey: "analyze", toNodeKey: "done" }],
-};
+const PIPELINE_V2 = JSON.stringify({
+  schemaVersion: 1,
+  key: "review-pr",
+  title: "Review PR",
+  start: { to: "approve" },
+  nodes: {
+    approve: {
+      kind: "wait",
+      for: "decision",
+      actions: [
+        { key: "approve", label: "Approve", body: "optional" },
+        { key: "reject", label: "Reject", body: "optional" },
+      ],
+      next: {
+        routes: [{ to: "done" }],
+      },
+    },
+    done: { kind: "succeed" },
+  },
+});
+
+const WORKER_NODE_MODULES = resolve(
+  import.meta.dir,
+  "../../../../node_modules",
+);
+
+const TS_PIPELINE = `import { decision, definePipeline, succeed } from "@scarn/sdk/pipelines";
+
+const approve = decision("approve", {
+  actions: {
+    approve: { label: "Approve" },
+    reject: { label: "Reject" },
+  },
+});
+
+export default definePipeline({
+  key: "review-pr",
+  title: "Review PR",
+  start: approve,
+  flow: [approve.next(succeed("done"))],
+});
 `;
 
 /** Reads one `data: {...}\n\n` SSE frame from a stream reader. */
@@ -82,7 +122,7 @@ describe("runPipelineStudioServer", () => {
       staticDir,
     });
     try {
-      writeFileSync(join(dir, "review-pr.ts"), PIPELINE_V1);
+      writeFileSync(join(dir, "review-pr.json"), PIPELINE_V1);
       // The handle's own preflight snapshot predates this write, so the
       // FIRST stream connection is what actually observes it.
       const response = await fetch(`${handle.url}/api/stream`);
@@ -95,13 +135,13 @@ describe("runPipelineStudioServer", () => {
       const initial = await readOneSnapshot(reader);
       expect(initial.status).toBe("ok");
 
-      writeFileSync(join(dir, "review-pr.ts"), PIPELINE_V2);
+      writeFileSync(join(dir, "review-pr.json"), PIPELINE_V2);
 
       const updated = await readOneSnapshot(reader);
       expect(updated.status).toBe("ok");
       if (updated.status !== "ok") return;
-      expect(updated.pipelines[0]?.nodes).toHaveLength(2);
-      expect(updated.pipelines[0]?.edges).toHaveLength(1);
+      expect(updated.pipelines[0]?.nodes).toHaveLength(3);
+      expect(updated.pipelines[0]?.edges).toHaveLength(2);
 
       await reader.cancel();
     } finally {
@@ -110,6 +150,40 @@ describe("runPipelineStudioServer", () => {
       rmSync(staticDir, { recursive: true, force: true });
     }
   }, 10_000);
+
+  test("rebuilds a changed .ts pipeline to JSON, then renders it", async () => {
+    const dir = makeTempDir();
+    const staticDir = makeStaticDir();
+    symlinkSync(WORKER_NODE_MODULES, join(dir, "node_modules"), "dir");
+    writeFileSync(join(dir, "bun.lock"), "");
+    const handle = await runPipelineStudioServer({
+      builderDir: dir,
+      staticDir,
+    });
+    try {
+      const response = await fetch(`${handle.url}/api/stream`);
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error("Expected a readable SSE body");
+      await readOneSnapshot(reader);
+
+      writeFileSync(join(dir, "review-pr.ts"), TS_PIPELINE);
+
+      let snapshot = await readOneSnapshot(reader);
+      while (snapshot.status === "ok" && snapshot.pipelines.length === 0) {
+        snapshot = await readOneSnapshot(reader);
+      }
+      expect(existsSync(join(dir, "review-pr.json"))).toBe(true);
+      expect(snapshot.status).toBe("ok");
+      if (snapshot.status !== "ok") return;
+      expect(snapshot.pipelines[0]?.nodes).toHaveLength(3);
+
+      await reader.cancel();
+    } finally {
+      await handle.close();
+      rmSync(dir, { recursive: true, force: true });
+      rmSync(staticDir, { recursive: true, force: true });
+    }
+  }, 20_000);
 
   test("close() stops accepting new connections", async () => {
     const dir = makeTempDir();
@@ -152,7 +226,7 @@ describe("runPipelineStudioServer", () => {
       expect(thrown).toBeInstanceOf(Error);
       expect((thrown as Error).message).toBe(MISSING_STUDIO_ASSETS_MESSAGE);
       expect(MISSING_STUDIO_ASSETS_MESSAGE).toContain(
-        "bun run --filter @boboddy/pipeline-studio-ui build",
+        "bun run --filter @scarn/pipeline-studio-ui build",
       );
 
       let connectionRefused = false;

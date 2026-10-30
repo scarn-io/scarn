@@ -12,7 +12,7 @@ import {
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
-import { logWorkDebug } from "../../../work/task/application/work-logger";
+import { logWorkDebug } from "../../../work/task-run/application/work-logger";
 import {
   opencodePlatformPackage,
   opencodePlatformTarballUrl,

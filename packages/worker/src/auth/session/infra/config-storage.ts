@@ -5,4 +5,4 @@ export {
   isTelemetryDisabled,
   setTelemetryDisabled,
   getArtifactRetentionSettings,
-} from "@boboddy/sdk/defaults";
+} from "@scarn/sdk/defaults";

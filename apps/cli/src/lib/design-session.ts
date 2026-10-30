@@ -1,17 +1,17 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { AnalyticsEvents } from "@boboddy/observability/analytics/events";
+import { AnalyticsEvents } from "@scarn/observability/analytics/events";
 import {
   buildOpencodeTuiConfig,
   findGitRoot,
   hasFailedExitCode,
   PIPELINE_BUILDER_DIR,
   PIPELINE_DESIGNER_AGENT_NAME,
-  resolveBoboddyBaseUrl,
+  resolveScarnBaseUrl,
   serializeOpencodeTuiConfig,
   type LaunchOpencodeTuiInput,
   type LaunchOpencodeTuiResult,
-} from "@boboddy/worker";
+} from "@scarn/worker";
 import type { CommandContext } from "./command-output";
 import {
   buildPipelineDesignerPrompt,
@@ -28,7 +28,7 @@ import {
   STUDIO_HANDOFF_MESSAGE,
   type DesignStudioHandle,
 } from "./design-studio";
-import { resolveCurrentBoboddyCliPath } from "./resolve-cli-path";
+import { resolveCurrentScarnCliPath } from "./resolve-cli-path";
 import {
   captureMilestone,
   shutdownTelemetry,
@@ -36,21 +36,21 @@ import {
 } from "./telemetry";
 
 /**
- * The body of `boboddy pipelines design` past the tty check: preflight, the
+ * The body of `scarn pipelines design` past the tty check: preflight, the
  * studio companion, the TUI handoff, the run offer, and the exit-code
  * passthrough. Its side effects sit behind {@link DesignSessionPorts}; the
  * real wiring lives in `commands/pipelines-design.ts`.
  */
 
 export interface DesignArguments {
-  /** The project as `owner/slug`; defaults to `"project"` in `.boboddy/boboddy.jsonc`. */
+  /** The project as `owner/slug`; defaults to `"project"` in `.scarn/scarn.jsonc`. */
   project: string | undefined;
   baseUrl: string | undefined;
   workItemId: string | undefined;
   /** Open the pipeline studio in the browser alongside the session. */
   studio: boolean;
   /**
-   * The repository root `.boboddy/` lives in. `init` passes the root it
+   * The repository root `.scarn/` lives in. `init` passes the root it
    * already resolved; standalone runs resolve it from the cwd.
    */
   repoRoot?: string | undefined;
@@ -70,7 +70,7 @@ export interface DesignPaths {
 /**
  * Resolve the designer's paths: an explicit `repoRoot` wins; otherwise walk up
  * from `cwd` to the nearest git root, so a run from a subdirectory still uses
- * the repository's `.boboddy/`.
+ * the repository's `.scarn/`.
  */
 export async function resolveDesignPaths(input: {
   repoRoot: string | undefined;
@@ -142,7 +142,7 @@ export async function runDesignSession(input: {
 }): Promise<void> {
   const { args, ctx, ports } = input;
 
-  const baseUrl = resolveBoboddyBaseUrl(args.baseUrl);
+  const baseUrl = resolveScarnBaseUrl(args.baseUrl);
   const paths = await resolveDesignPaths({
     repoRoot: args.repoRoot,
     cwd: process.cwd(),
@@ -150,7 +150,7 @@ export async function runDesignSession(input: {
   const { builderDir } = paths;
   syncIdentityFromDisk(baseUrl);
 
-  ctx.reporter.start("Boboddy pipeline designer");
+  ctx.reporter.start("Scarn pipeline designer");
 
   const preflight = await ports.preflight({
     baseUrl,
@@ -200,7 +200,7 @@ export async function runDesignSession(input: {
       agentToolsManifestPath: preflight.agentToolsManifestPath,
     });
 
-    const cliPath = resolveCurrentBoboddyCliPath();
+    const cliPath = resolveCurrentScarnCliPath();
     ctx.logger.info(
       {
         builderDir,
@@ -238,10 +238,10 @@ export async function runDesignSession(input: {
       env: {
         // The agent shells out to the CLI to push; `process.env` is inherited
         // wholesale by the launcher, so TMUX/TMUX_PANE survive untouched.
-        BOBODDY_CLI: cliPath,
-        BOBODDY_PROJECT_ID: preflight.projectId,
-        BOBODDY_BASE_URL: baseUrl,
-        ...(studio ? { BOBODDY_STUDIO_URL: studio.url } : {}),
+        SCARN_CLI: cliPath,
+        SCARN_PROJECT_ID: preflight.projectId,
+        SCARN_BASE_URL: baseUrl,
+        ...(studio ? { SCARN_STUDIO_URL: studio.url } : {}),
       },
     });
 

@@ -1,15 +1,14 @@
-import { describe, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import {
   STARTER_DEFAULT_PIPELINE_ASSIGNMENT_FILE,
   STARTER_PIPELINE_FILE,
   STARTER_PIPELINE_FILENAME,
-} from "@boboddy/worker";
+} from "@scarn/worker";
 import {
   buildDesignSeedPrompt,
   hasAuthoredDefinitions,
   MAX_SEED_DESCRIPTION_LENGTH,
 } from "../src/lib/design-seed-prompt";
-import { concurrentTest as test } from "./utils";
 import type { DesignWorkItem } from "../src/lib/design-work-item";
 
 /**
@@ -51,7 +50,7 @@ describe("buildDesignSeedPrompt", () => {
 
   test("names the discovered-tools manifest path for phase 1", () => {
     const manifestPath =
-      "/home/u/.boboddy/projects/acme/app/discovered-tools.json";
+      "/home/u/.scarn/projects/acme/app/discovered-tools.json";
     const prompt = buildDesignSeedPrompt({
       workItem: ITEM,
       hasExistingDefinitions: false,

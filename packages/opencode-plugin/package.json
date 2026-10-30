@@ -1,5 +1,5 @@
 {
-  "name": "@boboddy/opencode-plugin",
+  "name": "@scarn/opencode-plugin",
   "version": "0.0.0",
   "type": "module",
   "exports": {
@@ -23,15 +23,15 @@
     "test": "bun test"
   },
   "dependencies": {
-    "@boboddy/sdk": "workspace:*",
+    "@scarn/sdk": "workspace:*",
     "ajv": "^8.17.1"
   },
   "peerDependencies": {
-    "@opencode/plugin": "2.0.28"
+    "@opencode/plugin": "2.1.4"
   },
   "devDependencies": {
-    "@opencode/client": "2.0.28",
-    "@opencode/plugin": "2.0.28",
+    "@opencode/client": "2.1.4",
+    "@opencode/plugin": "2.1.4",
     "bun-types": "^1.4.0"
   }
 }

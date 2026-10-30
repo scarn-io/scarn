@@ -6,7 +6,7 @@ import { mkdir, mkdtemp, readdir, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterAll, describe, expect, test } from "bun:test";
-import { noopLogger } from "@boboddy/observability/logging/host";
+import { noopLogger } from "@scarn/observability/logging/host";
 import { ConfigurationError } from "../../../../src/lib/errors";
 import { CachedGitCloneService } from "../../../../src/runtime/runtime-service/infra/cached-git-clone-service";
 import { createGitCloneService } from "../../../../src/runtime/runtime-service/infra/create-git-clone-service";
@@ -22,9 +22,9 @@ import { git } from "./git-test-fixtures";
 afterAll(disposeMirrorFixtureTemplate);
 
 describe("createGitCloneService", () => {
-  test("BOBODDY_GIT_CACHE=off returns the plain service and no cache dir", () => {
+  test("SCARN_GIT_CACHE=off returns the plain service and no cache dir", () => {
     const result = createGitCloneService(
-      { BOBODDY_GIT_CACHE: "off", HOME: "/home/tester" },
+      { SCARN_GIT_CACHE: "off", HOME: "/home/tester" },
       noopLogger,
     );
 
@@ -37,13 +37,13 @@ describe("createGitCloneService", () => {
 
     expect(result.gitCloneService).toBeInstanceOf(CachedGitCloneService);
     expect(result.cacheDir).toBe(
-      path.join("/home/tester", ".boboddy", "git-cache"),
+      path.join("/home/tester", ".scarn", "git-cache"),
     );
   });
 
-  test("BOBODDY_GIT_CACHE_DIR is the resolved cache dir", () => {
+  test("SCARN_GIT_CACHE_DIR is the resolved cache dir", () => {
     const result = createGitCloneService(
-      { BOBODDY_GIT_CACHE: "on", BOBODDY_GIT_CACHE_DIR: "/var/cache/git" },
+      { SCARN_GIT_CACHE: "on", SCARN_GIT_CACHE_DIR: "/var/cache/git" },
       noopLogger,
     );
 
@@ -51,9 +51,9 @@ describe("createGitCloneService", () => {
     expect(result.cacheDir).toBe("/var/cache/git");
   });
 
-  test("an unknown BOBODDY_GIT_CACHE value throws", () => {
+  test("an unknown SCARN_GIT_CACHE value throws", () => {
     expect(() =>
-      createGitCloneService({ BOBODDY_GIT_CACHE: "maybe" }, noopLogger),
+      createGitCloneService({ SCARN_GIT_CACHE: "maybe" }, noopLogger),
     ).toThrow(ConfigurationError);
   });
 
@@ -64,7 +64,7 @@ describe("createGitCloneService", () => {
       try {
         const cacheDir = path.join(root, "cache");
         const { gitCloneService } = createGitCloneService(
-          { BOBODDY_GIT_CACHE_DIR: cacheDir },
+          { SCARN_GIT_CACHE_DIR: cacheDir },
           noopLogger,
         );
 

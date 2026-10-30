@@ -1,8 +1,8 @@
-import type { SecretMasker } from "../../../work/task/application/secret-masker";
+import type { SecretMasker } from "../../../work/task-run/application/secret-masker";
 import {
   logWork,
   logWorkWarn,
-} from "../../../work/task/application/work-logger";
+} from "../../../work/task-run/application/work-logger";
 import { basicAuthHeader } from "./opencode-server-contract";
 
 /**
@@ -14,8 +14,8 @@ import { basicAuthHeader } from "./opencode-server-contract";
  * `GET /api/config?directory=<workspace>` and scans the server log for
  * `message="configuration normalization diagnostic"` lines:
  *
- * - `kind=invalid` with `source=OPENCODE_CONFIG_CONTENT` is Boboddy's own
- *   generated overlay being rejected — a Boboddy bug that silently drops part
+ * - `kind=invalid` with `source=OPENCODE_CONFIG_CONTENT` is Scarn's own
+ *   generated overlay being rejected — a Scarn bug that silently drops part
  *   of the permission baseline or a step MCP server — so the launch fails.
  * - Everything else (the user's global config, legacy-syntax warnings) is
  *   logged at warn and otherwise left alone.
@@ -100,7 +100,7 @@ export function parseOpencodeConfigDiagnostics(
   return [...byKey.values()];
 }
 
-/** Whether a diagnostic means Boboddy's own overlay was rejected. */
+/** Whether a diagnostic means Scarn's own overlay was rejected. */
 export function isOverlayRejection(
   diagnostic: OpencodeConfigDiagnostic,
 ): boolean {
@@ -112,8 +112,8 @@ export function isOverlayRejection(
 export class OpencodeOverlayConfigRejectedError extends Error {
   constructor(maskedLines: readonly string[]) {
     super(
-      "OpenCode rejected part of Boboddy's generated config overlay " +
-        "(OPENCODE_CONFIG_CONTENT). This is a Boboddy bug; the rejected values " +
+      "OpenCode rejected part of Scarn's generated config overlay " +
+        "(OPENCODE_CONFIG_CONTENT). This is a Scarn bug; the rejected values " +
         "would have been silently dropped:\n" +
         maskedLines.join("\n"),
     );

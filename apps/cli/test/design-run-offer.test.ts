@@ -1,4 +1,4 @@
-import { describe, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import {
   DEVCONTAINER_MISSING_MESSAGE,
   NO_PIPELINE_MESSAGE,
@@ -16,13 +16,12 @@ import {
   TARGET,
 } from "./design-run-offer-fixtures";
 import {
-  concurrentTest as test,
   createReporterRecorder as createRecorder,
   reportedMessages as messages,
 } from "./utils";
 
 /**
- * The tail of `boboddy pipelines design`: the offer to run the pipeline the
+ * The tail of `scarn pipelines design`: the offer to run the pipeline the
  * session just built, on the work item the session was about.
  *
  * Worth testing without a terminal because every branch here is a decision the
@@ -38,7 +37,7 @@ describe("formatRunCommand", () => {
     // The user never has to learn the flag exists — but if they copy the line,
     // it has to be the whole command, ready to paste.
     expect(RUN_COMMAND).toBe(
-      `boboddy work acme/web-app --work-item-id ${TARGET.workItemId}`,
+      `scarn work acme/web-app --work-item-id ${TARGET.workItemId}`,
     );
   });
 });

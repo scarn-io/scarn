@@ -1,8 +1,7 @@
 import {
   WORK_ITEM_FIELDS_PATH_PREFIX,
   WORK_ITEM_TOP_LEVEL_FIELDS,
-} from "@boboddy/sdk/definitions/pipelines";
-import { keyToVarName } from "../../../steps/step-definitions/infra/step-file-generator";
+} from "@scarn/sdk/definitions/pipelines";
 
 // ─── Types matching the server-side wire format ───────────────────────────────
 
@@ -169,7 +168,7 @@ function reconstructOutcomeExpr(
 ): string {
   if (type === "skip") return "skip()";
   const key = resolvePipelineKey(params, definitionIdToKey, contextDesc);
-  return `assign(${keyToVarName(key)})`;
+  return `assign(${JSON.stringify(key)})`;
 }
 
 // ─── Rule reconstruction ──────────────────────────────────────────────────────
@@ -203,45 +202,7 @@ function reconstructRuleExpr(
   return `${mode}(\n      ${nestableExprs},\n    ).then(${outcomeExpr})`;
 }
 
-// ─── Import collection ────────────────────────────────────────────────────────
-
-/**
- * Collect all pipeline keys that need to be imported as pipeline files.
- * Includes the default pipeline (if assign) and any assign() in rules.
- */
-function collectImportedPipelineKeys(
-  contract: DefaultPipelineAssignmentContract,
-  definitionIdToKey: Map<string, string>,
-): Set<string> {
-  const keys = new Set<string>();
-
-  // Default outcome
-  if (contract.defaultEventType === "assign") {
-    const key = resolvePipelineKey(
-      contract.defaultEventParamsJson,
-      definitionIdToKey,
-      "default outcome",
-    );
-    keys.add(key);
-  }
-
-  // Rule outcomes
-  for (const rule of contract.rulesJson.rules) {
-    if (rule.event.type === "assign") {
-      const id = rule.event.params?.["pipelineDefinitionId"] as
-        string | undefined;
-      const pKey = rule.event.params?.["pipelineKey"] as string | undefined;
-      if (id) {
-        const resolved = definitionIdToKey.get(id);
-        if (resolved) keys.add(resolved);
-      } else if (pKey) {
-        keys.add(pKey);
-      }
-    }
-  }
-
-  return keys;
-}
+// ─── Ctx names ────────────────────────────────────────────────────────────────
 
 /**
  * Collect the `DefaultPipelineAssignmentCtx` property names this file's
@@ -249,7 +210,7 @@ function collectImportedPipelineKeys(
  * `any`, `workItem`, `context`. These are properties of the ctx object
  * `defaultPipelineAssignment(ctx => ...)`'s callback receives (see
  * `define-default-pipeline-assignment.ts`'s `DefaultPipelineAssignmentCtx`
- * type), NOT top-level named exports of `@boboddy/sdk/definitions/pipelines`
+ * type), NOT top-level named exports of `@scarn/sdk/definitions/pipelines`
  * — only `defaultPipelineAssignment` itself is a real module export.
  * Conflating the two here previously produced a generated file whose
  * top-level `import { ..., assign, skip, ... }` statement failed to
@@ -315,10 +276,6 @@ export function generateDefaultPipelineAssignmentFileContent(
   contract: DefaultPipelineAssignmentContract,
   definitionIdToKey: Map<string, string>,
 ): string {
-  const importedPipelineKeys = collectImportedPipelineKeys(
-    contract,
-    definitionIdToKey,
-  );
   const ctxParts = collectCtxNames(contract);
 
   const lines: string[] = [];
@@ -328,13 +285,8 @@ export function generateDefaultPipelineAssignmentFileContent(
   // `skip`, `all`, `any`, `workItem`, `context`) is a property of the
   // callback's ctx argument, not a module export.
   lines.push(
-    `import { defaultPipelineAssignment } from "@boboddy/sdk/definitions/pipelines";`,
+    `import { defaultPipelineAssignment } from "@scarn/sdk/definitions/pipelines";`,
   );
-
-  // Pipeline default imports
-  for (const key of importedPipelineKeys) {
-    lines.push(`import ${keyToVarName(key)} from "./${key}";`);
-  }
   lines.push("");
 
   const ctxParam =

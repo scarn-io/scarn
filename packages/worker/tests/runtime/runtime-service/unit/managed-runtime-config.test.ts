@@ -8,9 +8,9 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { MANAGED_RUNTIME_IDS } from "@boboddy/sdk/managed-runtimes";
-import { PIPELINE_BUILDER_DIR } from "@boboddy/sdk/push";
-import { patchDevcontainerEnv } from "../../../../src/work/task/infra/local-project-runtime-environment-helpers";
+import { MANAGED_RUNTIME_IDS } from "@scarn/sdk/managed-runtimes";
+import { PIPELINE_BUILDER_DIR } from "@scarn/sdk/push";
+import { patchDevcontainerEnv } from "../../../../src/work/task-run/infra/local-project-runtime-environment-helpers";
 import { PIPELINE_BUILDER_LOCKFILES } from "../../../../src/runtime/runtime-service/domain/pipeline-builder-lockfiles";
 import {
   managedRuntimeConfigPath,
@@ -75,7 +75,7 @@ describe("managedRuntimeConfigPath", () => {
     "%s lives at a devcontainer.json under the managed directory",
     (id) => {
       expect(managedRuntimeConfigPath(id)).toBe(
-        `.boboddy/managed-devcontainers/${id}/devcontainer.json`,
+        `.scarn/managed-devcontainers/${id}/devcontainer.json`,
       );
     },
   );
@@ -102,7 +102,7 @@ describe("writeManagedRuntimeConfig", () => {
     });
 
     expect(relativePath).toBe(
-      ".boboddy/managed-devcontainers/bun1/devcontainer.json",
+      ".scarn/managed-devcontainers/bun1/devcontainer.json",
     );
     const written = JSON.parse(
       await readFile(path.join(workspacePath, relativePath), "utf8"),
@@ -128,7 +128,7 @@ describe("writeManagedRuntimeConfig", () => {
       await readFile(path.join(workspacePath, relativePath), "utf8"),
     ) as { onCreateCommand: string };
     expect(written.onCreateCommand).toBe(
-      "cd .boboddy/pipeline-builder && corepack pnpm install --prod",
+      "cd .scarn/pipeline-builder && corepack pnpm install --prod",
     );
   });
 
@@ -142,7 +142,7 @@ describe("writeManagedRuntimeConfig", () => {
       await readFile(path.join(workspacePath, relativePath), "utf8"),
     ) as { onCreateCommand: string };
     expect(written.onCreateCommand).toBe(
-      "cd .boboddy/pipeline-builder && bun install --production && rm -f bun.lock",
+      "cd .scarn/pipeline-builder && bun install --production && rm -f bun.lock",
     );
   });
 
@@ -157,7 +157,7 @@ describe("writeManagedRuntimeConfig", () => {
     });
 
     expect(relativePath).toBe(
-      ".boboddy/managed-devcontainers/node24/devcontainer.json",
+      ".scarn/managed-devcontainers/node24/devcontainer.json",
     );
   });
 

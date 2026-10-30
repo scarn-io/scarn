@@ -1,9 +1,9 @@
 import { chmod, mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { OpenCodeOverlayConfig as Config } from "./opencode-overlay-config";
-import type { ResolvedOpenCodeMcpServers } from "@boboddy/sdk/opencode-mcp";
-import { parseJsonc } from "@boboddy/sdk/jsonc";
-import { buildBoboddyOverrideConfig } from "./build-task-opencode-config";
+import type { ResolvedOpenCodeMcpServers } from "@scarn/sdk/opencode-mcp";
+import { parseJsonc } from "@scarn/sdk/jsonc";
+import { buildScarnOverrideConfig } from "./build-task-opencode-config";
 import embeddedOpencodeJsonc from "../opencode.jsonc" with { type: "text" };
 import embeddedOpencodeignore from "../opencodeignore.txt" with { type: "text" };
 import embeddedPluginSource from "../dist/plugin.js" with { type: "text" };
@@ -17,14 +17,14 @@ function parseJsoncConfig(content: string): Config {
  *
  * OpenCode runs INSIDE the user's devcontainer (single-container model), so
  * user `.opencode/tools/*` files and `plugin[]` entries are trusted and load
- * normally. The only thing we materialize here is the embedded Boboddy plugin
- * (`plugins/boboddy.js`) and the ignore file. User plugin files in
- * `.opencode/plugins/` are left in place alongside `boboddy.js`.
+ * normally. The only thing we materialize here is the embedded Scarn plugin
+ * (`plugins/scarn.js`) and the ignore file. User plugin files in
+ * `.opencode/plugins/` are left in place alongside `scarn.js`.
  *
  * NOTE: We do NOT write `opencode.json` here. The project's existing
  * `.opencode/opencode.json[c]` (if any) is left completely untouched so that
  * the user's repo stays clean. OpenCode loads it natively at precedence level
- * #4 (project config). Boboddy's additions are delivered via
+ * #4 (project config). Scarn's additions are delivered via
  * `OPENCODE_CONFIG_CONTENT` at precedence level #6 (inline override).
  */
 async function prepareOpencodeDir(targetRoot: string): Promise<void> {
@@ -38,7 +38,7 @@ async function prepareOpencodeDir(targetRoot: string): Promise<void> {
       "utf8",
     ),
     writeFile(
-      path.join(pluginsRoot, "boboddy.js"),
+      path.join(pluginsRoot, "scarn.js"),
       embeddedPluginSource as unknown as string,
       "utf8",
     ),
@@ -47,18 +47,18 @@ async function prepareOpencodeDir(targetRoot: string): Promise<void> {
 }
 
 /**
- * Build the Boboddy OpenCode context for a task.
+ * Build the Scarn OpenCode context for a task.
  *
  * Returns a JSON string (`opencodeConfigContent`) that must be passed to the
  * in-container OpenCode as the `OPENCODE_CONFIG_CONTENT` environment variable.
- * This string carries Boboddy's required overrides (permission baseline, step
+ * This string carries Scarn's required overrides (permission baseline, step
  * MCP servers, AGENT_DEFAULT_MODEL) at precedence level #6
  * (inline), ensuring they win over the user's global (#2) and project (#4)
  * configs without modifying any files in the user's repo.
  *
  * Side effects:
  *   - Creates `.opencode/plugins/` directory in `workspacePath`.
- *   - Writes `.opencode/plugins/boboddy.js` (the embedded Boboddy plugin).
+ *   - Writes `.opencode/plugins/scarn.js` (the embedded Scarn plugin).
  *   - Writes `.opencode/.gitignore` (the embedded ignore file).
  *
  * The project's `.opencode/opencode.json[c]` is NOT read or written.
@@ -89,7 +89,7 @@ export async function buildOpencodeContext(input: {
   // override config in parallel.
   const [overrideConfig] = await Promise.all([
     Promise.resolve(
-      buildBoboddyOverrideConfig({
+      buildScarnOverrideConfig({
         baseConfig: baselineConfig,
         stepMcpServers: input.stepMcpServers,
         agentPromptText: input.agentPromptText,

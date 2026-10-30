@@ -3,7 +3,6 @@ import { z } from "zod";
 import { defineStep } from "../src/definitions/steps/define-step";
 import {
   Features,
-  NotificationSignal,
   type AnyStepFeature,
 } from "../src/definitions/steps/step-features";
 
@@ -22,7 +21,6 @@ describe("defineStep", () => {
       prompt: "Do the work.",
       inputSchemaJson: null,
       resultSchemaJson: null,
-      signalExtractorDefinitions: [],
       opencodeMcpJson: null,
     });
   });
@@ -32,12 +30,12 @@ describe("defineStep", () => {
       key: "my-step",
       name: "My Step",
       additionalInput: z.object({ title: z.string() }),
-      agentPrompt: ({ input, env, boboddy }) =>
-        `Open ${env.BASE_URL ?? ""} for ${input.title} and save artifacts to ${boboddy.artifactsDir}`,
+      agentPrompt: ({ input, env, scarn }) =>
+        `Open ${env.BASE_URL ?? ""} for ${input.title} and save artifacts to ${scarn.artifactsDir}`,
     });
 
     expect(spec.prompt).toBe(
-      "Open {{env.BASE_URL}} for {{input.title}} and save artifacts to {{boboddy.artifactsDir}}",
+      "Open {{env.BASE_URL}} for {{input.title}} and save artifacts to {{scarn.artifactsDir}}",
     );
   });
 
@@ -73,7 +71,6 @@ describe("defineStep", () => {
       name: "Debug Issue",
       agentPrompt: "Analyze the issue.",
       result: resultSchema,
-      signals: [{ sourcePath: "outcome" }, { sourcePath: "summaryOfFindings" }],
     });
 
     expect(spec.resultSchemaJson).toMatchObject({
@@ -122,16 +119,10 @@ describe("defineStep", () => {
     const mockFeatureA: AnyStepFeature = {
       _resultExtension: z.object({ flagA: z.boolean() }),
       _promptAddition: "Feature A instructions",
-      _signals: [
-        { key: "sig_a", sourcePath: "flagA", type: "boolean", required: true },
-      ],
     };
     const mockFeatureB: AnyStepFeature = {
       _resultExtension: z.object({ labelB: z.string() }),
       _promptAddition: "Feature B instructions",
-      _signals: [
-        { key: "sig_b", sourcePath: "labelB", type: "string", required: false },
-      ],
     };
 
     test("merges feature result extension into resultSchemaJson", () => {
@@ -200,46 +191,7 @@ describe("defineStep", () => {
       );
     });
 
-    test("injects feature signals into signalExtractorDefinitions", () => {
-      const spec = defineStep({
-        key: "my-step",
-        name: "My Step",
-        agentPrompt: "Do the work.",
-        features: [mockFeatureA],
-      });
-
-      expect(spec.signalExtractorDefinitions).toEqual([
-        {
-          key: "sig_a",
-          sourcePath: "flagA",
-          type: "boolean",
-          required: true,
-          availableWhenResultStatusIn: null,
-        },
-      ]);
-    });
-
-    test("feature signals are appended after user-defined signals", () => {
-      const spec = defineStep({
-        key: "my-step",
-        name: "My Step",
-        agentPrompt: "Do the work.",
-        result: z.object({ score: z.number(), flagA: z.boolean() }),
-        signals: [{ sourcePath: "score" }],
-        features: [mockFeatureA],
-      });
-
-      const defs = spec.signalExtractorDefinitions;
-      expect(defs).toHaveLength(2);
-      const def0 = defs[0];
-      if (!def0) throw new Error("expected def0");
-      expect(def0.key).toBe("score");
-      const def1 = defs[1];
-      if (!def1) throw new Error("expected def1");
-      expect(def1.key).toBe("sig_a");
-    });
-
-    test("multiple features merge all result extensions, prompts, and signals", () => {
+    test("multiple features merge all result extensions and prompts", () => {
       const spec = defineStep({
         key: "my-step",
         name: "My Step",
@@ -256,17 +208,9 @@ describe("defineStep", () => {
       expect(spec.prompt).toBe(
         "Do the work.\n\nFeature A instructions\n\nFeature B instructions",
       );
-      const defs = spec.signalExtractorDefinitions;
-      expect(defs).toHaveLength(2);
-      const sigA = defs[0];
-      if (!sigA) throw new Error("expected sigA");
-      expect(sigA.key).toBe("sig_a");
-      const sigB = defs[1];
-      if (!sigB) throw new Error("expected sigB");
-      expect(sigB.key).toBe("sig_b");
     });
 
-    test("Features.notifications() injects notifications field, prompt section, and signal", () => {
+    test("Features.notifications() injects notifications field and prompt section", () => {
       const spec = defineStep({
         key: "my-step",
         name: "My Step",
@@ -278,21 +222,14 @@ describe("defineStep", () => {
       expect(spec.resultSchemaJson).toMatchObject({
         properties: {
           outcome: { type: "string" },
-          $boboddy_notifications_v1: { type: "array" },
+          $scarn_notifications_v1: { type: "array" },
         },
       });
       expect(spec.prompt).toContain("## User Notifications");
       expect(spec.prompt).toMatch(/^Do the thing\.\n\n/);
-      expect(spec.signalExtractorDefinitions).toContainEqual({
-        key: "$boboddy_notifications_v1",
-        sourcePath: "$boboddy_notifications_v1",
-        type: "array",
-        required: false,
-        availableWhenResultStatusIn: null,
-      });
     });
 
-    test("Features.feedbackRequests() is backed by the same notifications signal, narrowed to kind: 'feedback_request'", () => {
+    test("Features.feedbackRequests() writes the same notifications field, narrowed to kind: 'feedback_request'", () => {
       const spec = defineStep({
         key: "my-step",
         name: "My Step",
@@ -303,79 +240,12 @@ describe("defineStep", () => {
 
       expect(spec.resultSchemaJson).toMatchObject({
         properties: {
-          $boboddy_notifications_v1: {
+          $scarn_notifications_v1: {
             type: "array",
             items: { properties: { kind: { const: "feedback_request" } } },
           },
         },
       });
-      expect(NotificationSignal.key).toBe("$boboddy_notifications_v1");
-      expect(spec.signalExtractorDefinitions).toContainEqual({
-        key: "$boboddy_notifications_v1",
-        sourcePath: "$boboddy_notifications_v1",
-        type: "array",
-        required: false,
-        availableWhenResultStatusIn: null,
-      });
-    });
-  });
-
-  // `packages/sdks/js/tsconfig.json` includes `test/**/*.ts`, so every
-  // `@ts-expect-error` below IS the assertion: `bun run typecheck` fails if the
-  // error it claims stops being reported. `bun test` only proves the runtime
-  // still behaves, since the types are erased by then.
-  describe("signal sourcePath is checked against the result schema", () => {
-    const result = z.object({
-      findings: z.string(),
-      nested: z.object({ deep: z.number() }),
-    });
-
-    test("rejects a sourcePath that does not exist in the result schema", () => {
-      const spec = defineStep({
-        key: "my-step",
-        name: "My Step",
-        agentPrompt: "Do the work.",
-        result,
-        // @ts-expect-error "totally.not.real" is not a path in `result`.
-        signals: [{ sourcePath: "totally.not.real" }],
-      });
-
-      // The type error is the point; the runtime is unchanged and still emits
-      // the (dead) extractor, which is what `validateDefinitionSpecs` catches
-      // for JS and hand-edited callers.
-      expect(spec.signalExtractorDefinitions[0]?.sourcePath).toBe(
-        "totally.not.real",
-      );
-    });
-
-    test("accepts top-level and nested paths that do exist", () => {
-      const spec = defineStep({
-        key: "my-step",
-        name: "My Step",
-        agentPrompt: "Do the work.",
-        result,
-        signals: [
-          { sourcePath: "findings" },
-          { key: "deep", sourcePath: "nested.deep" },
-        ],
-      });
-
-      expect(spec.signalExtractorDefinitions.map((s) => s.key)).toEqual([
-        "findings",
-        "deep",
-      ]);
-    });
-
-    test("accepts signals on a step with no result schema", () => {
-      const spec = defineStep({
-        key: "my-step",
-        name: "My Step",
-        agentPrompt: "Do the work.",
-        signals: [{ sourcePath: "whatever.the.agent.returns" }],
-      });
-
-      expect(spec.resultSchemaJson).toBeNull();
-      expect(spec.signalExtractorDefinitions).toHaveLength(1);
     });
   });
 });

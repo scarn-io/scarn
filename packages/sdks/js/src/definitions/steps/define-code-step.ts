@@ -3,37 +3,23 @@ import type { $ZodType } from "zod/v4/core";
 import type { ZodObject, ZodRawShape, ZodType } from "zod";
 import type {
   EffectiveResult,
-  SignalKeysOf,
-  SignalTypeMapOf,
-  SignalTypeStr,
   StepDefinitionSpec,
-  TypedStepDefinitionSpec,
+  StepRetryEntry,
 } from "./define-step";
-import { attachSignalHandles } from "./signal-handles";
+import type { BuiltInError } from "../../pipelines/types";
+import {
+  compileStepErrors,
+  compileStepRetry,
+  toStepHandle,
+  type StepHandle,
+} from "./step-handle";
 import { DEFAULT_CODE_STEP_RUNTIME_ID } from "../../managed-runtimes";
 import {
   compileEnvironment,
   Runtime,
   type CodeStepEnvironment,
 } from "./runtime";
-import type { AnyStepFeature, FeatureSignalKeys } from "./step-features";
-
-/**
- * `codeStep()`'s own signal spec shape — unlike `defineStep()`'s
- * `SignalSpecInput`, `type` is required rather than inferred from the
- * result schema at a dot-path (`resolveZodSchemaAtPath`/
- * `zodTypeToSignalType` are `define-step.ts`-internal, and a code step's
- * result shape is arbitrary application data, not necessarily reflecting
- * one at all) — a small, deliberate simplification over `defineStep`'s own
- * signal authoring surface.
- */
-export type CodeStepSignalSpec = {
-  key?: string;
-  sourcePath: string;
-  type: SignalTypeStr;
-  required?: boolean;
-  availableWhenResultStatusIn?: string[] | null;
-};
+import type { AnyStepFeature } from "./step-features";
 
 /** What the worker passes a code step besides its input. */
 export type CodeStepContext = {
@@ -65,12 +51,11 @@ export type DefineCodeStepInput<
    * the file that defines the step is pushed (as `{ sourceFile }`), and the
    * worker re-imports that file from the repo checkout and finds the step by
    * `key`, so closures and module-level helpers keep working. The step must
-   * be exported by name from that file or embedded in its default-exported
-   * pipeline.
+   * be exported by name from that file.
    *
    * Typed against `EffectiveResult`, not the bare `resultSchema` output, so
    * a step with `features: [Features.notifications()]` can return the
-   * `$boboddy_notifications_v1` field (e.g. via `Notify.inApp(...)`)
+   * `$scarn_notifications_v1` field (e.g. via `Notify.inApp(...)`)
    * without a type error.
    */
   fn: CodeStepFn<
@@ -79,10 +64,9 @@ export type DefineCodeStepInput<
   >;
   inputSchema?: TInput;
   resultSchema?: TResult;
-  signals?: readonly CodeStepSignalSpec[];
   /**
    * Step features to attach — unlike `defineStep()`, only each feature's
-   * `_resultExtension`/`_signals` apply here (there is no prompt to append
+   * `_resultExtension` applies here (there is no prompt to append
    * to on a `kind: "code"` step).
    */
   features?: TFeatures;
@@ -105,30 +89,42 @@ export type DefineCodeStepInput<
    */
   environment?: CodeStepEnvironment<TInput["_output"], TResult["_output"]>;
   status?: "draft" | "active";
+  /**
+   * Error names this step can fail with, beyond the built-in ones. A
+   * pipeline's `retry.on` and `catch.on` may name them.
+   */
+  errors?: readonly string[];
+  /** As `defineStep()`'s `retry`: how a standalone Task of this step retries. */
+  retry?: readonly StepRetryEntry[];
 };
 
 /**
  * Defines a `kind: "code"` step: a plain function instead of an LLM
- * prompt. Produces the same phantom-typed `TypedStepDefinitionSpec` shape
- * `defineStep()` does (so it plugs into `definePipeline()`'s
- * `states[key].step` field unchanged), but with no `prompt` and a live
+ * prompt. Produces the same callable step handle `defineStep()` does (so a
+ * pipeline calls it the same way), but with no `prompt` and a live
  * `entrypoint.fn` reference attached instead — see `StepDefinitionSpec`'s
  * own doc comment for what happens to it during collection.
  */
 export function codeStep<
   TInput extends ZodType = ZodType,
   TResult extends ZodType = ZodType,
-  const TSignals extends ReadonlyArray<CodeStepSignalSpec> = never[],
   const TFeatures extends ReadonlyArray<AnyStepFeature> = never[],
+  const TErrors extends string = never,
 >(
-  config: DefineCodeStepInput<TInput, TResult, TFeatures> & {
-    signals?: TSignals;
+  config: Omit<
+    DefineCodeStepInput<TInput, TResult, TFeatures>,
+    "errors" | "retry"
+  > & {
+    errors?: readonly TErrors[];
+    retry?: readonly {
+      on: readonly (BuiltInError | TErrors)[];
+      maxAttempts: number;
+    }[];
   },
-): TypedStepDefinitionSpec<
+): StepHandle<
   TInput["_output"],
   EffectiveResult<TResult["_output"], TFeatures>,
-  SignalKeysOf<TSignals> | FeatureSignalKeys<TFeatures>,
-  SignalTypeMapOf<TSignals, TResult["_output"]>
+  TErrors
 > {
   const features = (config.features ?? []) as AnyStepFeature[];
 
@@ -143,8 +139,6 @@ export function codeStep<
         )
       : feature._resultExtension;
   }
-
-  const featureSignals = features.flatMap((f) => f._signals);
 
   const {
     executionMode,
@@ -174,33 +168,18 @@ export function codeStep<
     resultSchemaJson: effectiveResult
       ? toJSONSchema(effectiveResult as unknown as $ZodType)
       : null,
-    signalExtractorDefinitions: [
-      ...(config.signals ?? []).map((signal) => ({
-        key: signal.key ?? signal.sourcePath,
-        sourcePath: signal.sourcePath,
-        type: signal.type,
-        required: signal.required ?? true,
-        availableWhenResultStatusIn: signal.availableWhenResultStatusIn ?? null,
-      })),
-      ...featureSignals.map((signal) => ({
-        key: signal.key,
-        sourcePath: signal.sourcePath,
-        type: signal.type,
-        required: signal.required ?? true,
-        availableWhenResultStatusIn: signal.availableWhenResultStatusIn ?? null,
-      })),
-    ],
     opencodeMcpJson: null,
     healthChecksJson: null,
     envJson,
     ...(repo !== undefined ? { repo } : {}),
+    errors: compileStepErrors(config.key, config.errors),
+    retryJson: compileStepRetry(config.key, config.retry, config.errors ?? []),
     entrypoint: { fn: config.fn },
   };
 
-  return attachSignalHandles(spec) as TypedStepDefinitionSpec<
+  return toStepHandle(spec) as StepHandle<
     TInput["_output"],
     EffectiveResult<TResult["_output"], TFeatures>,
-    SignalKeysOf<TSignals> | FeatureSignalKeys<TFeatures>,
-    SignalTypeMapOf<TSignals, TResult["_output"]>
+    TErrors
   >;
 }

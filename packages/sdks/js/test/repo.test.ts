@@ -201,7 +201,7 @@ describe("compileRepo — message rejections", () => {
   });
 
   test("rejects an unknown root", () => {
-    expect(() => compile("{{boboddy.artifactsDir}}")).toThrow(/tokens/);
+    expect(() => compile("{{scarn.artifactsDir}}")).toThrow(/tokens/);
   });
 
   test("rejects an unknown onPushFailure from untyped callers", () => {
@@ -412,6 +412,6 @@ describe("defineStep — repo", () => {
         environment: { runtime: Runtime.host(), repo: Repo.none() },
       }),
     ];
-    expect(validateDefinitionSpecs({ pipelines: [], steps })).toEqual([]);
+    expect(validateDefinitionSpecs(steps)).toEqual([]);
   });
 });

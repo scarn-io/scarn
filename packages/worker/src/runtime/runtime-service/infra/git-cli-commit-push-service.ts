@@ -14,7 +14,7 @@ import type {
   PushSubmoduleInput,
   SubmoduleHasChangesInput,
 } from "../application/git-commit-push-service";
-import { noopLogger, type Logger } from "@boboddy/observability/logging/host";
+import { noopLogger, type Logger } from "@scarn/observability/logging/host";
 import {
   chmodRecursiveWithDocker,
   isPermissionError,
@@ -22,8 +22,8 @@ import {
 
 const execFileAsync = promisify(execFile);
 
-const GIT_BOT_NAME = "Boboddy Bot";
-const GIT_BOT_EMAIL = "bot@boboddy.dev";
+const GIT_BOT_NAME = "Scarn Bot";
+const GIT_BOT_EMAIL = "bot@scarn.io";
 
 function gitEnv(): NodeJS.ProcessEnv {
   return { ...process.env, GIT_TERMINAL_PROMPT: "0" };
@@ -148,7 +148,7 @@ export class GitCliCommitPushService implements GitCommitPushService {
   /**
    * Shared commit machinery for both the superproject and submodules: stage
    * everything except `excludePaths`, restore those excluded paths, then commit
-   * the index with the injected Boboddy identity (no global config mutation).
+   * the index with the injected Scarn identity (no global config mutation).
    * Returns false when there was nothing to commit.
    */
   private async stageExcludingAndCommit(
@@ -156,7 +156,7 @@ export class GitCliCommitPushService implements GitCommitPushService {
     message: string,
     excludePaths: readonly string[],
   ): Promise<boolean> {
-    // Stage everything EXCEPT the Boboddy runtime files. Excludes that are
+    // Stage everything EXCEPT the Scarn runtime files. Excludes that are
     // already gitignored are dropped from the pathspec: `git add -A -- .` skips
     // ignored paths on its own, and naming one in an exclude pathspec makes git
     // exit 1 ("The following paths are ignored by one of your .gitignore files").
@@ -178,7 +178,7 @@ export class GitCliCommitPushService implements GitCommitPushService {
     // pathspec-exclude on `add` leaves excluded paths UNSTAGED, but if they are
     // tracked + modified they must be actively restored so a later `-a`-free
     // commit of the index doesn't include their prior staged state, and the
-    // working tree is left clean of Boboddy edits for those paths.
+    // working tree is left clean of Scarn edits for those paths.
     await this.restoreExcludedPaths(workspacePath, excludePaths);
 
     if (!(await this.hasStagedChanges(workspacePath))) {
@@ -229,7 +229,7 @@ export class GitCliCommitPushService implements GitCommitPushService {
       "-b",
       input.branchName,
     ]);
-    // Boboddy runtime files are superproject-root-relative, so no excludes apply
+    // Scarn runtime files are superproject-root-relative, so no excludes apply
     // inside a submodule — commit everything the agent changed.
     const committed = await this.stageExcludingAndCommit(
       subPath,
@@ -254,7 +254,7 @@ export class GitCliCommitPushService implements GitCommitPushService {
 
   /**
    * For each excluded path: unstage it and, if tracked, restore the working-tree
-   * copy to HEAD so Boboddy runtime edits never reach the commit. Untracked
+   * copy to HEAD so Scarn runtime edits never reach the commit. Untracked
    * paths are simply left unstaged. Failures are ignored per-path (the path may
    * not exist in this repo).
    */

@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "key": "items-pipeline",
+  "start": {
+    "to": "plan-changes",
+    "args": {
+      "request": "workItem.title"
+    }
+  },
+  "nodes": {
+    "plan-changes": {
+      "kind": "step",
+      "step": "plan-changes",
+      "next": {
+        "routes": [
+          {
+            "to": "edit-file",
+            "each": {
+              "over": "result.files",
+              "maxConcurrency": 5,
+              "toleratedFailures": {
+                "count": 1
+              }
+            },
+            "args": {
+              "file": "item",
+              "planSummary": "result.summary"
+            }
+          }
+        ]
+      }
+    },
+    "edit-file": {
+      "kind": "step",
+      "step": "edit-file",
+      "next": {
+        "routes": [
+          {
+            "to": "review-edit",
+            "args": {
+              "path": "result.path",
+              "diff": "result.diff"
+            }
+          }
+        ]
+      }
+    },
+    "review-edit": {
+      "kind": "step",
+      "step": "review-edit",
+      "next": {
+        "routes": [
+          {
+            "to": "approve-reviews",
+            "args": {
+              "reviews": {
+                "list": ["result"]
+              }
+            },
+            "partial": true
+          }
+        ]
+      }
+    },
+    "approve-reviews": {
+      "kind": "wait",
+      "for": "decision",
+      "actions": [
+        {
+          "key": "approve",
+          "label": "Approve",
+          "body": "optional"
+        },
+        {
+          "key": "reject",
+          "label": "Reject",
+          "body": "optional"
+        }
+      ],
+      "next": {
+        "routes": [
+          {
+            "when": {
+              "path": "result.action",
+              "op": "equal",
+              "value": "approve"
+            },
+            "to": "open-pr",
+            "args": {
+              "request": "nodes.plan-changes.input.request",
+              "reviews": "input.reviews"
+            }
+          }
+        ],
+        "otherwise": {
+          "to": "changes-rejected"
+        }
+      }
+    },
+    "open-pr": {
+      "kind": "step",
+      "step": "open-pr",
+      "next": {
+        "routes": [
+          {
+            "to": "done"
+          }
+        ]
+      }
+    },
+    "done": {
+      "kind": "succeed"
+    },
+    "changes-rejected": {
+      "kind": "fail",
+      "error": "ChangesRejected"
+    }
+  }
+}

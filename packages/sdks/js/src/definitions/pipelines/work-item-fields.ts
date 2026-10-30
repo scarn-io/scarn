@@ -3,14 +3,10 @@ import type { GetApiWorkItemsByWorkItemIdResponses } from "../../generated/types
 // ─── Work-item top-level fields ───────────────────────────────────────────────
 
 /**
- * Top-level work-item properties addressable by every work-item binding
- * mechanism in the SDK: the default-pipeline-assignment DSL's
- * `workItem.<field>` accessor (`define-default-pipeline-assignment.ts`) and
- * the regular pipeline/step `workItem.<field>` accessor
- * (`builder-helpers.ts`'s `WorkItemAccessor`) — and, reversed, both
- * `boboddy pipelines pull` file generators
- * (`default-pipeline-assignment-file-generator.ts`,
- * `pipeline-file-generator.ts`). `fields` is deliberately excluded from this
+ * Top-level work-item properties addressable by the default-pipeline-assignment
+ * DSL's `workItem.<field>` accessor (`define-default-pipeline-assignment.ts`)
+ * and, reversed, its `scarn pipelines pull` file generator
+ * (`default-pipeline-assignment-file-generator.ts`). `fields` is deliberately excluded from this
  * list: it's reached via `.field(name)` on every one of those accessors, not
  * as a top-level property.
  *
@@ -80,8 +76,7 @@ export type WorkItemTopLevelFieldTypeMap = {
  * The path prefix marking a reference into a work item's platform-specific
  * `fields` bag (a Jira custom field, a GitHub label, etc.), as opposed to a
  * `WorkItemTopLevelField`. Shared by every accessor that authors these paths
- * (`workItem.field(name)` in both the default-pipeline-assignment DSL and
- * the regular pipeline/step `WorkItemAccessor`) and every resolver that
+ * (`workItem.field(name)` in the default-pipeline-assignment DSL) and every resolver that
  * reads them back (`resolveWorkItemFieldPath` below; the JSONPath-rooted
  * variant in `evaluate-default-pipeline-assignment.ts`, which layers a `$.`
  * prefix on top of this same convention).

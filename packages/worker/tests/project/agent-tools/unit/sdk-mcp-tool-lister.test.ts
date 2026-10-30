@@ -15,7 +15,7 @@ const FIXTURE_SERVER_PATH = path.join(
   "..",
   "..",
   "work",
-  "task",
+  "task-run",
   "integration",
   "helpers",
   "mcp",
@@ -66,7 +66,7 @@ describe("SdkMcpToolLister", () => {
     let rejected = false;
     try {
       await lister.listTools({
-        server: fixtureServer(["boboddy-no-such-mcp-server-binary"]),
+        server: fixtureServer(["scarn-no-such-mcp-server-binary"]),
         env: {},
         signal: AbortSignal.timeout(15_000),
       });

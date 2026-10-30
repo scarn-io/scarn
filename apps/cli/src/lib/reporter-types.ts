@@ -3,7 +3,7 @@ import {
   type WorkReporter,
   type WorkActivity,
   noopReporter,
-} from "@boboddy/worker";
+} from "@scarn/worker";
 
 export { noopReporter };
 export type { WorkReporter, WorkActivity, WorkEvent };

@@ -5,6 +5,7 @@ import type {
   PutApiStepDefinitionsData,
 } from "../../generated/types.gen";
 import type { StepDefinitionSpec } from "./define-step";
+import { toStepSpec } from "./step-handle";
 
 type RequestOptions = {
   headers?: Record<string, unknown> | undefined;
@@ -12,6 +13,13 @@ type RequestOptions = {
 
 export type CreateStepDefinitionInput = PostApiStepDefinitionsData["body"];
 export type UpsertStepDefinitionInput = PutApiStepDefinitionsData["body"];
+
+/**
+ * What a step without an `additionalInput` schema accepts, and what a code
+ * step without a `resultSchema` returns. An agent step without a `result` is
+ * sent with a null result schema: a conversation step.
+ */
+const ANY_OBJECT_SCHEMA = { type: "object" };
 
 export function createStepDefinitionsClient(
   baseUrl: string,
@@ -42,8 +50,8 @@ const buildStepDefinitionsClient = (stepDefinitions: StepDefinitions) => {
       return result.data;
     },
     /**
-     * Upserts a step definition keyed by (projectId, key, version). Accepts the
-     * `StepDefinitionSpec` produced by `defineStep()`/`codeStep()` directly —
+     * Upserts a step definition keyed by (projectId, key, version). Accepts a
+     * step handle from `defineStep()`/`codeStep()` or a plain spec directly —
      * no separate fetch-existing/branch-on-id step needed.
      *
      * The request body is built field by field so the spec's transient
@@ -53,9 +61,10 @@ const buildStepDefinitionsClient = (stepDefinitions: StepDefinitions) => {
      */
     upsertFromSpec: async (
       projectId: string,
-      spec: StepDefinitionSpec,
+      step: StepDefinitionSpec,
       options?: RequestOptions,
     ) => {
+      const spec = toStepSpec(step);
       const body: UpsertStepDefinitionInput = {
         key: spec.key,
         name: spec.name,
@@ -68,13 +77,20 @@ const buildStepDefinitionsClient = (stepDefinitions: StepDefinitions) => {
         devcontainerConfigPath: spec.devcontainerConfigPath,
         managedRuntime: spec.managedRuntime,
         repo: spec.repo,
-        inputSchemaJson: spec.inputSchemaJson,
-        resultSchemaJson: spec.resultSchemaJson,
+        inputSchemaJson: spec.inputSchemaJson ?? ANY_OBJECT_SCHEMA,
+        resultSchemaJson:
+          spec.kind === "code"
+            ? (spec.resultSchemaJson ?? ANY_OBJECT_SCHEMA)
+            : spec.resultSchemaJson,
         opencodeMcpJson: spec.opencodeMcpJson,
         healthChecksJson: spec.healthChecksJson,
         envJson: spec.envJson,
+        errors: [...(spec.errors ?? [])],
+        retry: (spec.retryJson ?? []).map((entry) => ({
+          on: [...entry.on],
+          maxAttempts: entry.maxAttempts,
+        })),
         status: spec.status,
-        signalExtractorDefinitions: spec.signalExtractorDefinitions,
         projectId,
       };
       const result = await stepDefinitions.upsertStepDefinition({

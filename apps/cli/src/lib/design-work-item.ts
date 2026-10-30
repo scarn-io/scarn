@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 /**
- * The work item that anchors a `boboddy pipelines design` session.
+ * The work item that anchors a `scarn pipelines design` session.
  *
  * The session cannot start without one: the designer agent's whole interview is
  * "what should happen when a ticket like THIS arrives", which is unanswerable in
@@ -27,8 +27,8 @@ export type DesignWorkItem = {
  */
 export const WORK_ITEM_PICKER_LIMIT = 15;
 
-/** Items authored here are Boboddy's own, not mirrored from a tracker. */
-export const DESIGN_WORK_ITEM_PLATFORM = "boboddy";
+/** Items authored here are Scarn's own, not mirrored from a tracker. */
+export const DESIGN_WORK_ITEM_PLATFORM = "scarn";
 
 /**
  * The picker's last rung: "paste or describe a different one".
@@ -67,7 +67,7 @@ export type WorkItemChoiceResult =
  */
 export const NO_WORK_ITEM_MESSAGE =
   "No work item. A design session is built around one concrete thing you want " +
-  "Boboddy to handle — run `boboddy pipelines design` again and either pick an " +
+  "Scarn to handle — run `scarn pipelines design` again and either pick an " +
   "item or describe what you want handled.";
 
 /** `work_items.title` is unbounded in the schema, but a picker rung is not. */

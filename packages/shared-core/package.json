@@ -1,0 +1,30 @@
+{
+  "name": "@scarn/shared-core",
+  "description": "Logic shared by the server and the worker: pipeline document validation and evaluation, and execution and log formatting. Only code both sides need goes here; contracts belong in @scarn/sdk.",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "bun": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./pipelines": {
+      "types": "./src/pipelines/index.ts",
+      "bun": "./src/pipelines/index.ts",
+      "default": "./src/pipelines/index.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsgo -p tsconfig.json --noEmit",
+    "typecheck": "tsgo -p tsconfig.json --noEmit",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@scarn/sdk": "workspace:*",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "bun-types": "^1.4.0"
+  }
+}

@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "key": "catalog-decision",
+  "title": "Review a fix before applying it",
+  "start": { "to": "proposeFix", "args": { "title": "workItem.title" } },
+  "nodes": {
+    "proposeFix": {
+      "kind": "step",
+      "title": "Propose a fix",
+      "step": "propose-fix",
+      "next": {
+        "routes": [
+          {
+            "when": {
+              "path": "result.requiresHumanApproval",
+              "op": "equal",
+              "value": true
+            },
+            "to": "reviewFix",
+            "args": { "plan": "result" }
+          }
+        ],
+        "otherwise": { "to": "applyFix", "args": { "plan": "result" } }
+      }
+    },
+    "reviewFix": {
+      "kind": "wait",
+      "title": "Review the fix",
+      "for": "decision",
+      "actions": [
+        { "key": "approve", "label": "Approve", "body": "optional" },
+        { "key": "revise", "label": "Request changes", "body": "required" },
+        { "key": "reject", "label": "Reject", "body": "optional" }
+      ],
+      "next": {
+        "routes": [
+          {
+            "when": {
+              "path": "result.action",
+              "op": "equal",
+              "value": "approve"
+            },
+            "to": "applyFix",
+            "args": { "plan": "nodes.proposeFix.result" }
+          },
+          {
+            "when": {
+              "path": "result.action",
+              "op": "equal",
+              "value": "revise"
+            },
+            "to": "proposeFix",
+            "args": {
+              "title": "nodes.proposeFix.input.title",
+              "feedback": "result.body"
+            }
+          }
+        ],
+        "otherwise": { "to": "rejected" }
+      }
+    },
+    "applyFix": {
+      "kind": "step",
+      "title": "Apply the fix",
+      "step": "apply-fix",
+      "next": {
+        "routes": [{ "to": "done" }]
+      }
+    },
+    "done": { "kind": "succeed" },
+    "rejected": { "kind": "fail", "error": "FixRejected" }
+  }
+}
