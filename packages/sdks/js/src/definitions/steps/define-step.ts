@@ -19,8 +19,10 @@ import { compileEnvironment, type StepEnvironment } from "./runtime";
 import { mergeStepMcps } from "./compile-mcps";
 import type { McpHandle } from "./define-mcp";
 import type { BuiltInError, ConversationResult } from "../../pipelines/types";
+import type { PutApiStepDefinitionsData } from "../../generated/types.gen";
 import {
   compileStepErrors,
+  compileStepMaxTurns,
   compileStepRetry,
   toStepHandle,
   type StepHandle,
@@ -58,7 +60,7 @@ export type DefineStepInput<
           PromptEnvContext<TEnv>
         >,
       ) => string);
-  additionalInput?: TInput;
+  input?: TInput;
   result?: TResult;
   features?: AnyStepFeature[];
   /**
@@ -85,7 +87,20 @@ export type DefineStepInput<
    * step uses its node's `.retry(...)` instead.
    */
   retry?: readonly StepRetryEntry[];
+  /**
+   * How many times a standalone Task of this step may hand over. Omitted
+   * means the server default. A pipeline step uses its node's
+   * `.settings({ maxTurns })` instead.
+   */
+  maxTurns?: number;
+  /** Work item permissions the step's Tasks get on top of `self`. */
+  workItemPermissions?: readonly WorkItemPermission[];
 };
+
+/** A work item permission a step's Tasks may be granted. */
+export type WorkItemPermission = NonNullable<
+  PutApiStepDefinitionsData["body"]["workItemPermissions"]
+>[number];
 
 /** One `retry` entry: the same shape as a pipeline node's `retry`. */
 export type StepRetryEntry = {
@@ -139,6 +154,10 @@ export type StepDefinitionSpec = {
    * the handle's pipeline chain method.
    */
   retryJson?: StepRetryEntry[];
+  /** How many times a standalone Task of this step may hand over; omitted means the server default. */
+  maxTurns?: number;
+  /** Work item permissions the step's Tasks get on top of `self`. */
+  workItemPermissions?: readonly WorkItemPermission[];
   /**
    * `kind === "code"` only: the live function of a spec produced by
    * `codeStep()`. Code-step discovery (`findCodeStepInModule`) reads it to
@@ -295,8 +314,8 @@ export function defineStep<
     devcontainerConfigPath,
     ...(managedRuntime !== null ? { managedRuntime } : {}),
     prompt: effectivePrompt,
-    inputSchemaJson: config.additionalInput
-      ? toJSONSchema(config.additionalInput as unknown as $ZodType)
+    inputSchemaJson: config.input
+      ? toJSONSchema(config.input as unknown as $ZodType)
       : null,
     resultSchemaJson,
     opencodeMcpJson: mcpFields.opencodeMcpJson,
@@ -305,6 +324,12 @@ export function defineStep<
     ...(repo !== undefined ? { repo } : {}),
     errors: compileStepErrors(config.key, config.errors),
     retryJson: compileStepRetry(config.key, config.retry, config.errors ?? []),
+    ...(config.maxTurns !== undefined
+      ? { maxTurns: compileStepMaxTurns(config.key, config.maxTurns) }
+      : {}),
+    ...(config.workItemPermissions !== undefined
+      ? { workItemPermissions: [...config.workItemPermissions] }
+      : {}),
   };
   return toStepHandle(spec) as StepHandle<
     TInput["_output"],

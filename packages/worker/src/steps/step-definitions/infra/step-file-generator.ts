@@ -22,6 +22,10 @@ export type StepDefContract = {
   opencodeMcpJson: Record<string, unknown> | null;
   healthChecksJson: unknown[] | null;
   envJson: EnvVarSpec[] | null;
+  errors?: string[];
+  retry?: { on: string[]; maxAttempts: number }[];
+  maxTurns?: number | null;
+  workItemPermissions?: string[];
 };
 
 export function keyToVarName(key: string): string {
@@ -340,6 +344,24 @@ export function generateStepsFileContent(steps: StepDefContract[]): string {
         2,
       ).replace(/\n/g, "\n  ");
       fields.push(`  healthChecks: ${healthChecksJson}`);
+    }
+    if (step.errors && step.errors.length > 0) {
+      fields.push(`  errors: ${JSON.stringify(step.errors)}`);
+    }
+    if (step.retry && step.retry.length > 0) {
+      const entries = step.retry.map(
+        (entry) =>
+          `{ on: ${JSON.stringify(entry.on)}, maxAttempts: ${String(entry.maxAttempts)} }`,
+      );
+      fields.push(`  retry: [${entries.join(", ")}]`);
+    }
+    if (step.maxTurns != null) {
+      fields.push(`  maxTurns: ${String(step.maxTurns)}`);
+    }
+    if (step.workItemPermissions && step.workItemPermissions.length > 0) {
+      fields.push(
+        `  workItemPermissions: ${JSON.stringify(step.workItemPermissions)}`,
+      );
     }
 
     return `export const ${varName} = defineStep({\n${fields.join(",\n")},\n});`;

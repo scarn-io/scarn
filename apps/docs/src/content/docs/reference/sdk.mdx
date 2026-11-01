@@ -27,7 +27,7 @@ const myStep = defineStep({
   name: "My Step",
   version: 1,
   description: "Does something useful.",
-  additionalInput: z.object({ text: z.string() }),
+  input: z.object({ text: z.string() }),
   result: z.object({ summary: z.string(), score: z.number() }),
   errors: ["NoAccess"],
   agentPrompt: ({ input, env, scarn }) => `
@@ -49,7 +49,7 @@ Return a summary and quality score.
 | `version`         | `number`                          | No       | Version (default: `1`)                                                    |
 | `description`     | `string`                          | No       | Short description                                                         |
 | `agentPrompt`     | `string \| ((context) => string)` | Yes      | AI instruction given to the executing agent                               |
-| `additionalInput` | `ZodType`                         | No       | Additional input payload schema; the pipeline passes these fields as the step's args |
+| `input`           | `ZodType`                         | No       | Input payload schema; the pipeline passes these fields as the step's args |
 | `result`          | `ZodType`                         | No       | Output payload schema                                                     |
 | `errors`          | `string[]`                        | No       | Error names the step can fail with; a pipeline can `.retry`/`.catch` them by name |
 | `retry`           | `{ on: string[]; maxAttempts: number }[]` | No | How a standalone Task of this step retries: a failure named in `on` (built-in or in `errors`) gets up to `maxAttempts` more runs. In a pipeline, the node's `.retry` applies instead. Compiled onto the handle as `retryJson` |
@@ -67,7 +67,7 @@ Return a summary and quality score.
 const browserReproStep = defineStep({
   key: "browser-repro",
   name: "Browser Repro",
-  additionalInput: z.object({
+  input: z.object({
     title: z.string(),
     description: z.string(),
   }),
@@ -187,7 +187,7 @@ import { z } from "zod";
 defineStep({
   key: "account-investigation",
   name: "Account Investigation",
-  additionalInput: z.object({ tenant: z.string() }),
+  input: z.object({ tenant: z.string() }),
   environment: {
     vars: ({ input }) => ({
       WAREHOUSE_URL: "https://warehouse.internal",

@@ -206,6 +206,9 @@ describe("processProjectWork findings persistence", () => {
           },
         },
         turnsRemaining: 2,
+        workItemId: null,
+        workItemPermissions: [],
+        api: null,
       });
       expect(
         await readFile(
@@ -259,6 +262,7 @@ describe("processProjectWork findings persistence", () => {
         workBranch: null,
         createdFromBranch: null,
         sessionRestored: null,
+        workItemChanges: [],
       });
       const submissionStillExists = await access(
         buildFindingsSubmissionPath(workspacePath),
@@ -350,6 +354,7 @@ describe("processProjectWork findings persistence", () => {
         workBranch: "scarn/step-abc",
         createdFromBranch: "main",
         sessionRestored: null,
+        workItemChanges: [],
       });
     },
   );
@@ -391,6 +396,7 @@ describe("processProjectWork findings persistence", () => {
         workBranch: null,
         createdFromBranch: "main",
         sessionRestored: null,
+        workItemChanges: [],
       });
     },
   );

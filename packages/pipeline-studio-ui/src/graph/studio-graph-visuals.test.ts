@@ -11,7 +11,9 @@ import {
   mergeBadge,
   nodeCaption,
   nodeInOutCounts,
+  nodeLayoutSize,
   orderedEdgeLabel,
+  pauseMarker,
   severityColor,
 } from "./studio-graph-visuals";
 
@@ -145,6 +147,29 @@ describe("mergeBadge", () => {
     );
     expect(mergeBadge({ mergeWaitsFor: [] })).toBeNull();
     expect(mergeBadge({})).toBeNull();
+  });
+});
+
+describe("pauseMarker", () => {
+  test("shows how many rounds a step with maxTurns can pause for", () => {
+    expect(pauseMarker({ kind: "step", maxTurns: 10 })).toBe(
+      "pauses · up to 10 rounds",
+    );
+    expect(pauseMarker({ kind: "step", maxTurns: 1 })).toBe(
+      "pauses · up to 1 round",
+    );
+  });
+
+  test("is null without an explicit maxTurns, at 0, or off a step", () => {
+    expect(pauseMarker({ kind: "step" })).toBeNull();
+    expect(pauseMarker({ kind: "step", maxTurns: 0 })).toBeNull();
+    expect(pauseMarker({ kind: "wait", maxTurns: 3 })).toBeNull();
+  });
+
+  test("adds a line to the step card", () => {
+    expect(nodeLayoutSize({ kind: "step", maxTurns: 10 }).height).toBe(
+      nodeLayoutSize({ kind: "step" }).height + 16,
+    );
   });
 });
 

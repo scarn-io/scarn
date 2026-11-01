@@ -27,7 +27,7 @@ const plan = defineStep({
   key: "plan",
   name: "Plan",
   agentPrompt: "Plan it.",
-  additionalInput: z.object({ issue: z.string() }),
+  input: z.object({ issue: z.string() }),
   result: z.object({ files: z.array(z.string()) }),
   errors: ["NoPlan", "TooBig"],
 });
@@ -101,6 +101,34 @@ describe("step handles", () => {
     expect(
       defineStep({ key: "t", name: "T", agentPrompt: "p" }).retryJson,
     ).toEqual([]);
+  });
+
+  test("maxTurns and workItemPermissions compile onto the spec", () => {
+    const step = defineStep({
+      key: "s",
+      name: "S",
+      agentPrompt: "p",
+      maxTurns: 40,
+      workItemPermissions: ["children"],
+    });
+    const spec = toStepSpec(step);
+    expect(spec.maxTurns).toBe(40);
+    expect(spec.workItemPermissions).toEqual(["children"]);
+
+    const plain = toStepSpec(
+      defineStep({ key: "t", name: "T", agentPrompt: "p" }),
+    );
+    expect("maxTurns" in plain).toBe(false);
+    expect("workItemPermissions" in plain).toBe(false);
+  });
+
+  test("rejects a maxTurns that is not a positive integer", () => {
+    expect(() =>
+      defineStep({ key: "s", name: "S", agentPrompt: "p", maxTurns: 0 }),
+    ).toThrow('Step "s": maxTurns must be a positive integer.');
+    expect(() =>
+      defineStep({ key: "s", name: "S", agentPrompt: "p", maxTurns: 1.5 }),
+    ).toThrow('Step "s": maxTurns must be a positive integer.');
   });
 
   test("rejects a retry on an undeclared error or with a bad maxAttempts", () => {

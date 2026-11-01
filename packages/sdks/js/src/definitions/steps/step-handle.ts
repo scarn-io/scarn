@@ -75,6 +75,14 @@ export function compileStepRetry(
   });
 }
 
+/** Checks a step's `maxTurns` the way the server does on upsert: a positive integer. */
+export function compileStepMaxTurns(stepKey: string, maxTurns: number): number {
+  if (!Number.isInteger(maxTurns) || maxTurns <= 0) {
+    throw new Error(`Step "${stepKey}": maxTurns must be a positive integer.`);
+  }
+  return maxTurns;
+}
+
 /**
  * Wraps a compiled spec in a callable handle. `name` is set with
  * `Object.defineProperty` because a function's own `name` is read-only. The

@@ -46,11 +46,31 @@ function resolveRuntimeEnvironmentOrchestrator(
   return deps.runtimeEnvironmentOrchestrator;
 }
 
+const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
+
+/**
+ * The Scarn base URL as the agent sees it. A devcontainer's loopback is its
+ * own, so a loopback API is reached over the Docker host-gateway alias the
+ * launch adds; a host run uses the URL as it is.
+ */
+export function agentReachableBaseUrl(
+  baseUrl: string,
+  executionMode: "workspace" | "no_workspace",
+): string {
+  if (executionMode === "no_workspace") return baseUrl;
+  const url = new URL(baseUrl);
+  if (!LOOPBACK_HOSTS.has(url.hostname)) return baseUrl;
+  url.hostname = "host.docker.internal";
+  return url.toString().replace(/\/+$/, "");
+}
+
 export async function launchRuntimeEnvironment(
   deps: ProcessProjectWorkDeps,
   input: {
     /** See `TaskRuntimeEnvironmentOrchestrator.launch`'s field of the same name. */
     startAgent: boolean;
+    /** The run's claim token; the agent's live work item reads carry it. */
+    claimToken: string;
     localRuntimeSessionId: UuidV7;
     workerContext: Awaited<ReturnType<typeof fetchWorkerContext>>;
     requestedByUserId: UuidV7;
@@ -113,6 +133,17 @@ export async function launchRuntimeEnvironment(
       taskRunId: input.workerContext.task.id,
       resultSchemaJson: input.workerContext.task.resultSchemaJson,
       turnsRemaining: input.workerContext.task.turnsRemaining ?? null,
+      workItemId: input.workerContext.task.workItemId,
+      workItemPermissions: input.workerContext.task.workItemPermissions,
+      api: deps.workerClient.apiBaseUrl
+        ? {
+            baseUrl: agentReachableBaseUrl(
+              deps.workerClient.apiBaseUrl,
+              executionMode,
+            ),
+            claimToken: input.claimToken,
+          }
+        : undefined,
     },
     reporter: input.reporter,
     taskRunId: input.taskRunId,

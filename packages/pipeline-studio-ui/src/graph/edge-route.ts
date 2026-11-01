@@ -24,6 +24,10 @@ export const FLOW_TARGET_HANDLE = "in";
 /** Handle ids of the right-side handles loop edges leave from and arrive at. */
 export const LOOP_SOURCE_HANDLE = "loop-out";
 export const LOOP_TARGET_HANDLE = "loop-in";
+/** Handle id of the left-side handle hand-off edges arrive at. */
+export const HANDOFF_TARGET_HANDLE = "handoff-in";
+/** Handle id of the top handle a hand-off node's return edge leaves from. */
+export const HANDOFF_SOURCE_HANDLE = "handoff-out";
 
 /** Horizontal offsets smaller than this are drawn straight rather than as a tiny jog. */
 const STRAIGHT_TOLERANCE = 4;
@@ -105,6 +109,22 @@ export function loopEdgeCorners(
   ]);
 }
 
+/** The corner points of a hand-off return edge: up to `topY`, across to `laneX`, then into the target. */
+export function handoffReturnCorners(
+  source: StudioPoint,
+  laneX: number,
+  topY: number,
+  target: StudioPoint,
+): StudioPoint[] {
+  return simplify([
+    source,
+    { x: source.x, y: topY },
+    { x: laneX, y: topY },
+    { x: laneX, y: target.y },
+    target,
+  ]);
+}
+
 /** An SVG path through `corners` with each corner rounded by up to `radius`. */
 export function roundedPath(
   corners: readonly StudioPoint[],
@@ -153,7 +173,12 @@ function towards(
 export function graphBounds(
   nodes: readonly {
     position: StudioPoint;
-    data: { kind: StudioNodeKind; match?: "first" | "all"; mergeWaitsFor?: string[] };
+    data: {
+      kind: StudioNodeKind;
+      match?: "first" | "all";
+      mergeWaitsFor?: string[];
+      maxTurns?: number;
+    };
   }[],
   edges: readonly {
     label?: unknown;
@@ -212,6 +237,20 @@ export function routeEdge(
       path: roundedPath(loopEdgeCorners(source, route.laneX, target)),
       labelX: route.laneX,
       labelY: (source.y + target.y) / 2,
+    };
+  }
+  if (route?.kind === "handoff") {
+    return {
+      path: roundedPath(loopEdgeCorners(source, route.laneX, target)),
+      labelX: route.label.x,
+      labelY: route.label.y,
+    };
+  }
+  if (route?.kind === "handoffReturn") {
+    return {
+      path: roundedPath(handoffReturnCorners(source, route.laneX, route.topY, target)),
+      labelX: route.label.x,
+      labelY: route.label.y,
     };
   }
   const waypoints = route?.waypoints ?? [];

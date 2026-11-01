@@ -22,7 +22,8 @@ import type { CommandContext } from "../lib/command-output";
 import type { BaseReporter } from "../lib/reporter-types";
 
 /**
- * `scarn pipelines studio` — a read-only, local-only visual designer.
+ * `scarn pipelines studio` — a local-only visual designer. It only writes
+ * files when the user picks "Use" on a pipeline template.
  * Unlike `pipelines design`, this command's terminal handoff is NOT a TUI: it starts
  * a local HTTP server, opens the user's browser to it, then just watches
  * `.scarn/pipeline-builder` until the user Ctrl-Cs.
@@ -124,7 +125,8 @@ function waitForShutdownSignal(): Promise<void> {
 function buildRealPorts(builderDir: string): StudioSessionPorts {
   return {
     ...buildPreflightPorts(builderDir),
-    startServer: (options) => runPipelineStudioServer(options),
+    startServer: (options) =>
+      runPipelineStudioServer({ ...options, cliVersion: CLI_VERSION }),
     openBrowser,
     studioOpened: ({ browserOpened }) => {
       captureMilestone(AnalyticsEvents.CliStudioOpened, {
@@ -152,7 +154,7 @@ export const runPipelineStudio = (args: StudioArguments): Promise<void> =>
 
 export const studioCommand: CommandModule<object, StudioArguments> = {
   command: "studio",
-  describe: `Launch a local, read-only visual designer for ${PIPELINE_BUILDER_DIR}`,
+  describe: `Launch a local visual designer for ${PIPELINE_BUILDER_DIR}`,
   builder: (argv: Argv<object>) =>
     argv.option("port", {
       type: "number",

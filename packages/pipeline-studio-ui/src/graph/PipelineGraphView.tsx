@@ -26,14 +26,22 @@ import { GraphLegend } from "./GraphLegend";
 import { GraphNode, type GraphNodeType } from "./GraphNode";
 import { palette, tint } from "./graph-palette";
 import type { StudioEdge, StudioNode } from "./studio-graph-types";
-import { nodeLayoutSize } from "./studio-graph-visuals";
+import { HandoffNode } from "./HandoffNode";
+import {
+  HANDOFF_NODE_TYPE,
+  nodeLayoutSize,
+  PIPELINE_NODE_TYPE,
+} from "./studio-graph-visuals";
 
 // Deliberately NOT keyed `"default"`: React Flow stamps
 // `.react-flow__node-default` onto any node whose type resolves to
 // `"default"`, and its stock stylesheet gives that class a white box, fixed
 // width and padding that bleed around the custom card. Module-level so
 // identity is stable across renders.
-const nodeTypes: NodeTypes = { pipelineNode: GraphNode };
+const nodeTypes: NodeTypes = {
+  [PIPELINE_NODE_TYPE]: GraphNode,
+  [HANDOFF_NODE_TYPE]: HandoffNode,
+};
 const edgeTypes: EdgeTypes = { pipelineEdge: GraphEdge };
 
 /**
@@ -155,7 +163,10 @@ export function PipelineGraphView({
         const { width, height } = nodeLayoutSize(node.data);
         return {
           ...node,
-          type: "pipelineNode",
+          type:
+            node.data.kind === "handoff"
+              ? HANDOFF_NODE_TYPE
+              : PIPELINE_NODE_TYPE,
           // The nodes never receive measured sizes back (no
           // `onNodesChange`), and `<MiniMap>` reads sizes off them.
           initialWidth: width,

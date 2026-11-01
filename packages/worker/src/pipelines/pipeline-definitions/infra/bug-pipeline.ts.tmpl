@@ -128,7 +128,7 @@ or what is affected).
 - \`summary\`: one or two sentences restating the problem as you understand it.
 `,
 
-  additionalInput: z.object({
+  input: z.object({
     title: z.string(),
     description: z.string().nullable(),
   }),
@@ -261,7 +261,7 @@ Report:
 The next step turns this into a failing test, so be specific.
 `,
 
-  additionalInput: z.object({
+  input: z.object({
     appUrl: z.string().nullable().optional(),
     title: z.string(),
     description: z.string().nullable(),
@@ -349,7 +349,7 @@ running just these tests), \`failureOutput\` (verbatim, not a paraphrase) and a
 \`summary\` saying what the test captures and what it does not.
 `,
 
-  additionalInput: z.object({
+  input: z.object({
     evaluate: evaluation,
     investigateAndReproduce: investigation,
   }),
@@ -385,7 +385,7 @@ Report:
 - \`risks\`: what could break, and anything you could not verify.
 `,
 
-  additionalInput: z.object({
+  input: z.object({
     evaluate: evaluation,
     investigateAndReproduce: investigation,
     failingTest: failingTestResult,
@@ -429,7 +429,7 @@ suite is green), \`confidence\` with its reason, a \`summary\` a reviewer reads
 before the diff, and \`remainingRisks\`: anything you could not verify.
 `,
 
-  additionalInput: z.object({
+  input: z.object({
     evaluate: evaluation,
     investigateAndReproduce: investigation,
     failingTest: failingTestResult,

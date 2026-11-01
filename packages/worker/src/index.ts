@@ -233,6 +233,11 @@ export type {
 } from "./pipelines/pipeline-definitions/application/build-pipeline-documents";
 export { BuildScriptError } from "./pipelines/pipeline-definitions/infra/run-build-script";
 export {
+  findPipelineTemplate,
+  listPipelineTemplates,
+} from "./pipelines/pipeline-templates/application/list-pipeline-templates";
+export { renderPipelineTemplate } from "./pipelines/pipeline-templates/application/render-pipeline-template";
+export {
   UnsupportedRuleError,
   generateDefaultPipelineAssignmentFileContent,
 } from "./pipelines/pipeline-definitions/infra/default-pipeline-assignment-file-generator";

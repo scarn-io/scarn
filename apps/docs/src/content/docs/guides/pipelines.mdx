@@ -241,7 +241,7 @@ A transition can point back at the node it leaves from (`fix → fix`). Each pas
 
 ## Args and references
 
-Args fill in the target step's inputs, which come from its `additionalInput` schema. The validator checks args against that schema: no required input missing, no unknown names unless the schema allows extra properties, and every value's type compatible with the input.
+Args fill in the target step's inputs, which come from its `input` schema. The validator checks args against that schema: no required input missing, no unknown names unless the schema allows extra properties, and every value's type compatible with the input.
 
 An arg value is a **reference string**, a **literal**, or a **list** of either:
 
@@ -275,7 +275,7 @@ An arg value is a **reference string**, a **literal**, or a **list** of either:
 </TabItem>
 </Tabs>
 
-Every literal is written as `{ "value": … }`. Any bare string is a reference, so a typo is a validation error rather than being treated as a string. An array literal that contains a reference compiles to `{ "list": […] }`, whose elements are references or `{ "value": … }` literals. In TypeScript, a plain value is a literal and `r.…` is a reference; args are type-checked against the step's `additionalInput`.
+Every literal is written as `{ "value": … }`. Any bare string is a reference, so a typo is a validation error rather than being treated as a string. An array literal that contains a reference compiles to `{ "list": […] }`, whose elements are references or `{ "value": … }` literals. In TypeScript, a plain value is a literal and `r.…` is a reference; args are type-checked against the step's `input` schema.
 
 | Reference                                             | Meaning                                       | Allowed in                                                                                 |
 | ----------------------------------------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------ |
@@ -518,6 +518,9 @@ A retry queues a new attempt straight away, and the next worker poll picks it up
 | `Scarn.MaxRunsExceeded`  | The node would run more than `maxRuns` times in the same lane                            |
 | `Scarn.MaxTurnsExceeded` | The step handed over more than `maxTurns` times in one run of the node. It isn't retried |
 | `Scarn.ConditionError`   | A computed value had no inputs (`avg`, `min` or `max` of an empty array)                 |
+| `Scarn.LogArchiveFailed` | The step changed work items but its log archive couldn't be written, so nothing was applied |
+| `Scarn.WorkItemChangesInvalid` | One of the step's work item changes was invalid (permissions, limits, ids or a stale `descriptionVersion`), so nothing was applied |
+| `Scarn.WorkItemNotNative` | The step tried to change a work item synced from GitHub, Jira or Bitbucket            |
 
 Names in `on` must be built-in or declared in the step's `errors`; anything else is a validation error, and in TypeScript a type error.
 

@@ -5,11 +5,13 @@
  * step) talks until it calls `scarn-end-conversation`, which writes
  * {@link buildEndConversationPath}. In order:
  *
- * 1. a conversation step with the end marker ends;
- * 2. with turns left and a non-empty final message, the turn is handed over;
- * 3. with no turns left in a run, the agent gets one more message saying so,
+ * 1. a Task whose agent called `scarn-wait-for-work` waits on its work item
+ *    (the server fails it when it has no turns left);
+ * 2. a conversation step with the end marker ends;
+ * 3. with turns left and a non-empty final message, the turn is handed over;
+ * 4. with no turns left in a run, the agent gets one more message saying so,
  *    and the decision waits for that turn to end;
- * 4. otherwise a conversation step ends, and a step with a schema takes the
+ * 5. otherwise a conversation step ends, and a step with a schema takes the
  *    missing-findings path. A Task outside a run has no turns and never hands
  *    over.
  *
@@ -19,6 +21,7 @@
 import { TASK_AGENT } from "@scarn/opencode-plugin";
 import { access, rm } from "node:fs/promises";
 import path from "node:path";
+import { readWorkItemChanges } from "@scarn/sdk/contracts/work-item-changes";
 import type { AnyJsonValue } from "../../../common/contracts/json";
 import type {
   CommitAndPushWorkBranchResult,
@@ -28,7 +31,11 @@ import type {
   StartedClaimedTask,
 } from "../contracts/process-project-work-types";
 import { tryReadCurrentExecutionInfo } from "./process-project-work-findings";
-import { handOverAgentTask } from "./process-project-work-yield";
+import { hasWaitForWorkMarker } from "../contracts/wait-for-work-marker";
+import {
+  handOverAgentTask,
+  waitForWorkAgentTask,
+} from "./process-project-work-yield";
 
 const END_CONVERSATION_RELATIVE_PATH = ".scarn/end-conversation.json";
 
@@ -65,6 +72,7 @@ export type TurnEndState = {
 
 export type TurnEndAction =
   | { kind: "hand-over"; message: string }
+  | { kind: "wait-for-work" }
   | { kind: "end"; summary: string }
   | { kind: "continue" }
   | { kind: "missing-findings" };
@@ -99,6 +107,10 @@ export async function decideTurnEnd(
         sessionId: input.agentSessionId,
       })) ?? "",
     );
+
+  if (await hasWaitForWorkMarker(workspacePath)) {
+    return { kind: "wait-for-work" };
+  }
 
   if (state.lastTurnPrompted) {
     if (state.graceWaitedMs < input.graceMs) return { kind: "continue" };
@@ -167,6 +179,9 @@ export async function completeConversationTask(input: {
         : startedTask.environment.workBranch,
     createdFromBranch: startedTask.environment.createdFromBranch,
     sessionRestored: startedTask.sessionRestored ?? null,
+    workItemChanges: await readWorkItemChanges(
+      startedTask.environment.workspacePath,
+    ),
   });
 
   await rm(buildEndConversationPath(startedTask.environment.workspacePath), {
@@ -193,6 +208,17 @@ export async function runTurnEnd(
       server: input.server,
       agentSessionId: input.agentSessionId,
       message: action.message,
+      logStream: input.logStream,
+      logger: input.logger,
+    });
+    return "yielded";
+  }
+  if (action.kind === "wait-for-work") {
+    await waitForWorkAgentTask({
+      deps: input.deps,
+      startedTask: input.startedTask,
+      server: input.server,
+      agentSessionId: input.agentSessionId,
       logStream: input.logStream,
       logger: input.logger,
     });

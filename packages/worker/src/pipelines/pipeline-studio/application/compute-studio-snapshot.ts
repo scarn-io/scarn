@@ -156,21 +156,28 @@ function listDocumentFiles(builderDir: string): string[] {
     .sort();
 }
 
+/** A snapshot plus the step definitions collected from the same directory. */
+export type StudioState = {
+  snapshot: StudioSnapshot;
+  /** Every step collected from the directory's TypeScript files. */
+  steps: readonly StepDefinitionSpec[];
+};
+
 /**
  * Reads, validates, and translates every pipeline document in `builderDir`
- * into the shape `run-pipeline-studio-server.ts` broadcasts over SSE. Never
- * throws.
+ * into the shape `run-pipeline-studio-server.ts` broadcasts over SSE, and
+ * keeps the collected steps alongside it. Never throws.
  *
  * A JSON file that can't be parsed, or doesn't match the document schema,
  * becomes a `brokenPipelines` entry; every other pipeline still renders. A
  * TypeScript file that fails to import is reported the same way, and its
  * steps are missing from the catalog. Only failures that can't be pinned on
  * one file (the directory itself vanishing, ...) turn into a whole-snapshot
- * `{status: "error"}`.
+ * `{status: "error"}` with no steps.
  */
-export async function computeStudioSnapshot(
+export async function computeStudioState(
   builderDir: string,
-): Promise<StudioSnapshot> {
+): Promise<StudioState> {
   const collectedAt = new Date().toISOString();
 
   try {
@@ -201,18 +208,31 @@ export async function computeStudioSnapshot(
     }
 
     return {
-      status: "ok",
-      pipelines,
-      brokenPipelines,
-      validationIssues: [...documentIssues, ...stepIssues],
-      collectedAt,
+      snapshot: {
+        status: "ok",
+        pipelines,
+        brokenPipelines,
+        validationIssues: [...documentIssues, ...stepIssues],
+        collectedAt,
+      },
+      steps: collected.steps.map(toStepSpec),
     };
   } catch (error) {
     logger.error({ err: error }, "Failed to compute pipeline studio snapshot");
     return {
-      status: "error",
-      message: error instanceof Error ? error.message : String(error),
-      collectedAt,
+      snapshot: {
+        status: "error",
+        message: error instanceof Error ? error.message : String(error),
+        collectedAt,
+      },
+      steps: [],
     };
   }
+}
+
+/** `computeStudioState` without the steps. Never throws. */
+export async function computeStudioSnapshot(
+  builderDir: string,
+): Promise<StudioSnapshot> {
+  return (await computeStudioState(builderDir)).snapshot;
 }

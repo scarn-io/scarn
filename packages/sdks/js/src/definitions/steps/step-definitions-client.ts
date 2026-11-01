@@ -15,7 +15,7 @@ export type CreateStepDefinitionInput = PostApiStepDefinitionsData["body"];
 export type UpsertStepDefinitionInput = PutApiStepDefinitionsData["body"];
 
 /**
- * What a step without an `additionalInput` schema accepts, and what a code
+ * What a step without an `input` schema accepts, and what a code
  * step without a `resultSchema` returns. An agent step without a `result` is
  * sent with a null result schema: a conversation step.
  */
@@ -90,6 +90,8 @@ const buildStepDefinitionsClient = (stepDefinitions: StepDefinitions) => {
           on: [...entry.on],
           maxAttempts: entry.maxAttempts,
         })),
+        maxTurns: spec.maxTurns ?? null,
+        workItemPermissions: [...(spec.workItemPermissions ?? [])],
         status: spec.status,
         projectId,
       };

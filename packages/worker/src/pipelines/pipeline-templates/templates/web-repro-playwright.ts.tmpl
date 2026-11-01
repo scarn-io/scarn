@@ -1,0 +1,125 @@
+import { defineMcp, defineStep, Runtime, z } from "@scarn/sdk/definitions/steps";
+import { definePipeline, succeed, workItem } from "@scarn/sdk/pipelines";
+
+// Web Repro Playwright: reproduces a reported browser issue with Playwright
+// in the repository's devcontainer and summarizes the evidence.
+//
+//   web-repro-playwright → done
+
+// @scarn-template-params
+const APP_ACCESS_INSTRUCTIONS = "";
+const ADDITIONAL_INSTRUCTIONS = "";
+
+const playwright = defineMcp({
+  type: "local",
+  name: "playwright",
+  command: [
+    "npx",
+    "-y",
+    "@playwright/mcp@0.0.68",
+    "--headless",
+    "--no-sandbox",
+    "--executable-path",
+    "/ms-playwright/chromium-1212/chrome-linux/chrome",
+  ],
+  healthChecks: {
+    navigate: {
+      tool: "browser_navigate",
+      args: { url: "about:blank" },
+      timeoutSeconds: 15,
+    },
+  },
+});
+
+export const webReproPlaywright = defineStep({
+  key: "web-repro-playwright",
+  name: "Web Repro Playwright",
+  description:
+    "Reproduces a reported browser issue with Playwright and summarizes the evidence.",
+  status: "active",
+  environment: { runtime: Runtime.devcontainer() },
+
+  mcps: { playwright },
+
+  agentPrompt: ({ scarn }) => `\
+## Application Access Instructions
+${APP_ACCESS_INSTRUCTIONS}
+
+${ADDITIONAL_INSTRUCTIONS}
+
+## Browser Automation Instructions
+0. If the application is not already running, start the development server with the \`bash\` tool before opening Playwright. Run the start command in the background (e.g. append \` &\`) from the appropriate subdirectory so the shell returns while the server keeps running, and give it a few seconds to boot before navigating. The server runs inside this devcontainer, so reach it at \`localhost\` on its configured port. When you are finished reproducing the issue, stop the server (e.g. \`kill\` the background process) with the \`bash\` tool.
+1. Use the Playwright MCP browser tools with headless Chromium to interact with the application.
+2. Open the browser session by navigating with \`playwright_browser_navigate\`.
+3. Immediately set the required viewport with \`playwright_browser_resize\`. If the issue is mobile-specific, use a common mobile viewport size (e.g. 375x812). If mobile is not specified, use a common desktop viewport size (e.g. 1440x900).
+4. Immediately confirm the initial page state with \`playwright_browser_snapshot\`.
+5. Start a Playwright trace after the browser has been opened and resized, but before any meaningful user interactions begin. Use \`playwright_browser_run_code\` for:
+   - \`async (page) => { await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true }) }\`
+6. After tracing has started, perform the repro using the normal MCP browser tools. Keep any \`playwright_browser_run_code\` usage narrowly scoped.
+7. Use \`playwright_browser_snapshot\` again before major transitions when the page changes, a modal appears, a redirect happens, or the next interaction target is unclear.
+8. Continue the traced flow through the final user action that is expected to trigger the bug, such as clicking the final submit button, completing login, or landing on the destination page.
+9. After the final triggering action, do not stop immediately. First wait long enough to observe delayed failures, redirects, toast messages, validation errors, modal errors, or forced logout behavior.
+10. Capture any final evidence that appears after that wait using the normal MCP tools, such as:
+    - \`playwright_browser_snapshot\`
+    - \`playwright_browser_console_messages\`
+    - \`playwright_browser_network_requests\`
+11. Stop the trace only after:
+    - the full repro flow has been attempted,
+    - the final triggering action has completed,
+    - and the post-action observation period is finished.
+12. Stop tracing with \`playwright_browser_run_code\` only for:
+    - \`async (page) => { await page.context().tracing.stop({ path: '${scarn.artifactsDir}trace.zip' }) }\`
+13. Do not use \`playwright_browser_run_code\` for navigation, selectors, clicking, typing, form submission, waiting, screenshots, or any other repro logic.
+14. Prefer small, visible MCP actions throughout so each step in the repro is observable and debuggable.
+15. If you cannot proceed because you lack business-specific knowledge — such as login credentials, purchasing flows, navigation paths, user personas, product terminology, or any application-specific detail — do NOT guess. Instead:
+    - First check the Application Access Instructions section at the top of this prompt. If the answer is already there, use it.
+    - If the answer is not there, stop and set \`outcome\` to \`needs_user_feedback\`.
+    - Put a specific, actionable question for the project team in \`failureReason\` (e.g. "What credentials should I use to log in as an admin user?"). If you have several questions, list every one of them.
+    - In \`summaryOfFindings\`, describe what you were able to do and exactly what information you need to continue.
+
+If \`playwright_browser_run_code\` fails or the browser becomes disconnected, restart the Playwright session and continue only after confirming the page is reachable again.
+
+Inspect the running application, follow likely user flows, and capture the clearest reproduction evidence you can find.
+Return JSON with:
+- \`outcome\`: reproduced, not_reproducible, needs_user_feedback, agent_error, or cancelled
+- \`summaryOfFindings\`: concise evidence-based summary of what happened in the browser
+- \`stepsTried\`: array of short strings describing the actions you attempted
+- \`observedBehavior\`: string or null
+- \`expectedBehavior\`: string or null
+- \`failureReason\`: string or null — when \`outcome\` is \`needs_user_feedback\`, the question(s) for the project team
+- \`rawResultJson\`: object or null
+`,
+
+  input: z.object({
+    title: z.string().min(1),
+    description: z.string().nullable(),
+  }),
+
+  result: z.looseObject({
+    outcome: z.enum([
+      "reproduced",
+      "not_reproducible",
+      "needs_user_feedback",
+      "agent_error",
+      "cancelled",
+    ]),
+    summaryOfFindings: z.string().min(1),
+    stepsTried: z.array(z.string().min(1)),
+    observedBehavior: z.string().nullable().optional(),
+    expectedBehavior: z.string().nullable().optional(),
+    failureReason: z.string().nullable().optional(),
+    rawResultJson: z.record(z.string(), z.unknown()).nullable().optional(),
+  }),
+});
+
+const done = succeed("done");
+
+export default definePipeline({
+  key: "web-repro-playwright", // @scarn-template-pipeline-key
+  title: "Web Repro Playwright",
+  start: webReproPlaywright({
+    title: workItem.title,
+    description: workItem.description,
+  }),
+  flow: [webReproPlaywright.next(done)],
+});

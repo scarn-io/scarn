@@ -218,6 +218,7 @@ function buildRawGraph(
         waitFor: node.kind === "wait" ? node.for : undefined,
         match: nodeMatch(node),
         mergeWaitsFor: merges.get(id),
+        maxTurns: node.kind === "step" ? node.maxTurns : undefined,
         issues: byNode.get(id) ?? [],
         shape: nodeShape(node, steps),
       },

@@ -1,3 +1,5 @@
+import { TEMPLATE_PAGE_CSS } from "./template-page-css";
+
 /**
  * The studio's single HTML page. `Bun.build` (see `build.ts`) always emits
  * `main.css` alongside `main.js` for this entrypoint — `App.tsx` imports
@@ -25,7 +27,7 @@ export const STUDIO_INDEX_HTML = `<!doctype html>
         }
       } catch (_) {}
     </script>
-    <link rel="stylesheet" href="./main.css" />
+    <link rel="stylesheet" href="/main.css" />
     <style>
       :root,
       [data-theme="dark"] {
@@ -106,6 +108,74 @@ export const STUDIO_INDEX_HTML = `<!doctype html>
         font: inherit;
         font-size: 13px;
       }
+      .studio-header-start { display: flex; align-items: center; gap: 16px; }
+      .studio-tabs { display: flex; gap: 4px; }
+      .studio-tab {
+        padding: 4px 10px;
+        border-radius: 4px;
+        color: var(--studio-text-muted);
+        font-size: 13px;
+        text-decoration: none;
+      }
+      .studio-tab:hover { background: var(--studio-hover); color: var(--studio-text); }
+      .studio-tab[aria-current="page"] {
+        background: var(--studio-surface-raised);
+        color: var(--studio-text-strong);
+        box-shadow: inset 0 0 0 1px var(--studio-border);
+      }
+      .studio-tab:focus-visible,
+      .studio-template-card:focus-visible {
+        outline: 2px solid var(--studio-focus);
+        outline-offset: 2px;
+      }
+      .studio-page { display: flex; flex-direction: column; height: 100%; }
+      .studio-page-main { flex: 1; overflow-y: auto; }
+      .studio-status a { color: inherit; }
+      .studio-template-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 16px;
+        list-style: none;
+        margin: 0;
+        padding: 24px;
+      }
+      .studio-template-card {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        height: 100%;
+        box-sizing: border-box;
+        padding: 16px;
+        border: 1px solid var(--studio-border);
+        border-radius: 6px;
+        background: var(--studio-surface);
+        color: var(--studio-text);
+        text-decoration: none;
+      }
+      .studio-template-card:hover { background: var(--studio-hover); }
+      .studio-template-card-name { margin: 0; font-size: 15px; color: var(--studio-text-strong); }
+      .studio-template-card-summary { margin: 0; font-size: 13px; color: var(--studio-text-subtle); }
+      .studio-template-card-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: auto;
+        font-size: 12px;
+        color: var(--studio-text-muted);
+      }
+      .studio-template-card-optional { margin: 0; font-size: 12px; color: var(--studio-text-muted); }
+      .studio-template-card-conflict {
+        align-self: flex-start;
+        padding: 1px 6px;
+        border-radius: 3px;
+        background: var(--studio-severity-warning);
+        color: var(--studio-chip-text);
+        font-size: 10px;
+        font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+      }
+${TEMPLATE_PAGE_CSS}
       .studio-theme-toggle { cursor: pointer; }
       .studio-theme-toggle:hover { background: var(--studio-hover); }
       .studio-graph { grid-column: 1; grid-row: 2; }
@@ -284,7 +354,7 @@ export const STUDIO_INDEX_HTML = `<!doctype html>
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="./main.js"></script>
+    <script type="module" src="/main.js"></script>
   </body>
 </html>
 `;

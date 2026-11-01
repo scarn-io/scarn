@@ -22,6 +22,9 @@ export type TaskRunStatus =
  */
 export type TaskKind = "agent" | "code";
 
+/** Mirrors the server's work item permissions: what a Task's agent may change. */
+export type WorkItemPermission = "self" | "children";
+
 export type TaskRunContract = {
   id: string;
   status: TaskRunStatus;
@@ -78,6 +81,9 @@ export type TaskRunWorkerContextContract = {
     resultSchemaJson: Record<string, unknown> | null;
     /** How many more turns the agent may hand to a person; null outside a pipeline run. */
     turnsRemaining?: number | null;
+    workItemId?: string;
+    /** Which work items the agent's work item tools may change. */
+    workItemPermissions?: readonly WorkItemPermission[];
   };
   runtime: {
     /**

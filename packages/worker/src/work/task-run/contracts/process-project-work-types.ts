@@ -1,5 +1,6 @@
 import type { ArtifactKind } from "@scarn/sdk/contracts/artifacts";
 import type { RepoConfig } from "@scarn/sdk/repo-config";
+import type { WorkItemChange } from "@scarn/sdk/contracts/work-item-changes";
 import type {
   AnyJsonObject,
   AnyJsonValue,
@@ -102,6 +103,12 @@ export type TaskLogLine = {
 
 export type TaskRunWorkerClient = {
   userId: UuidV7;
+  /**
+   * The Scarn base URL this client talks to. The agent's live work item reads
+   * go there too; absent on clients with no API behind them, which leaves the
+   * agent without `scarn-get-work-item`.
+   */
+  apiBaseUrl?: string | undefined;
   claimTaskRuns(input: {
     projectId: UuidV7;
     workerId: string;
@@ -138,23 +145,38 @@ export type TaskRunWorkerClient = {
      * absent) when there was nothing to restore.
      */
     sessionRestored?: boolean | null | undefined;
+    /**
+     * The work item changes the agent's tools recorded; the server applies
+     * them with the completion.
+     */
+    workItemChanges?: WorkItemChange[] | undefined;
   }): Promise<void>;
   /**
-   * Park the task as waiting for a person's reply: `message` is the agent's
-   * final message (already masked). The work branch fields follow the same
-   * rules as {@link completeTaskRun}. `sessionObjectKey` is the key the exported
+   * Park the task after its agent's turn ended with a yield. A `hand_over`
+   * waits for a person's reply: `message` is the agent's final message
+   * (already masked). A `wait_for_work` waits until the work item has no
+   * open blockers, and carries the work item changes the agent's tools
+   * recorded. The work branch fields follow the same rules as
+   * {@link completeTaskRun}. `sessionObjectKey` is the key the exported
    * OpenCode session was uploaded to (see {@link createSessionUploadUrl}),
    * null when the export or upload failed.
    */
-  yieldTaskRun(input: {
-    taskRunId: UuidV7;
-    claimToken: string;
-    message: string;
-    workBranch: string | null;
-    createdFromBranch: string | null;
-    sessionObjectKey: string | null;
-    sessionRestored: boolean | null;
-  }): Promise<void>;
+  yieldTaskRun(
+    input: {
+      taskRunId: UuidV7;
+      claimToken: string;
+      workBranch: string | null;
+      createdFromBranch: string | null;
+      sessionObjectKey: string | null;
+      sessionRestored: boolean | null;
+    } & (
+      | { kind?: "hand_over" | undefined; message: string }
+      | {
+          kind: "wait_for_work";
+          workItemChanges?: WorkItemChange[] | undefined;
+        }
+    ),
+  ): Promise<void>;
   appendTaskLogs(input: {
     taskRunId: UuidV7;
     claimToken: string;

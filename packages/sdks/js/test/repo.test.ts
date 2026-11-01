@@ -280,11 +280,11 @@ describe("defineStep — repo", () => {
     expect(spec.executionMode).toBe("no_workspace");
   });
 
-  test("function form types result from the result schema and input from additionalInput", () => {
+  test("function form types result from the result schema and input from the input schema", () => {
     const spec = defineStep({
       key: "implement",
       name: "Implement",
-      additionalInput: z.object({ title: z.string() }),
+      input: z.object({ title: z.string() }),
       result: z.object({ summary: z.string() }),
       environment: {
         runtime: Runtime.devcontainer(),
@@ -320,10 +320,10 @@ describe("defineStep — repo", () => {
   test("function form rejects an unknown input field at the type level", () => {
     defineStep({
       ...base,
-      additionalInput: z.object({ title: z.string() }),
+      input: z.object({ title: z.string() }),
       environment: {
         repo: ({ input }) => {
-          // @ts-expect-error `nope` is not on additionalInput
+          // @ts-expect-error `nope` is not on the input schema
           void input.nope;
           return Repo.readOnly();
         },
@@ -335,7 +335,7 @@ describe("defineStep — repo", () => {
     const repoFirst = defineStep({
       key: "a",
       name: "A",
-      additionalInput: z.object({ id: z.string() }),
+      input: z.object({ id: z.string() }),
       result: z.object({ summary: z.string() }),
       environment: {
         repo: ({ result }) =>
@@ -352,7 +352,7 @@ describe("defineStep — repo", () => {
     const varsFirst = defineStep({
       key: "b",
       name: "B",
-      additionalInput: z.object({ id: z.string() }),
+      input: z.object({ id: z.string() }),
       environment: {
         vars: ({ input }) => ({ ID: input.id }),
         repo: Repo.readOnly(),

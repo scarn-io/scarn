@@ -15,7 +15,7 @@ export const summarizeStep = defineStep({
   key: "summarize-text",
   name: "Summarize Text",
   agentPrompt: "Summarize the provided text concisely.",
-  additionalInput: z.object({
+  input: z.object({
     text: z.string(),
   }),
   result: z.object({
@@ -36,7 +36,7 @@ The agent is automatically given the step's input as default context — the ful
 | `version`         | `number`                          | No       | Version number (defaults to 1)                                                  |
 | `description`     | `string`                          | No       | Brief description shown in the UI                                               |
 | `agentPrompt`     | `string \| ((context) => string)` | Yes      | AI prompt given to the worker agent when executing this step                    |
-| `additionalInput` | `ZodType`                         | No       | Zod schema for the step's additional input fields; a pipeline passes them as args |
+| `input`           | `ZodType`                         | No       | Zod schema for the args a pipeline passes when it calls the step |
 | `result`          | `ZodType`                         | No       | Zod schema for the step's output                                                |
 | `errors`          | `string[]`                        | No       | Error names the step can fail with. See [Declared errors](#declared-errors)     |
 | `mcps`            | `Record<string, McpHandle>`       | No       | The MCP servers the step runs with, each built with `defineMcp` together with its env vars and health checks. See [MCP servers](#mcp-servers) |
@@ -53,7 +53,7 @@ The agent is automatically given the step's input as default context — the ful
 export const browserReproStep = defineStep({
   key: "browser-repro",
   name: "Browser Repro",
-  additionalInput: z.object({
+  input: z.object({
     title: z.string(),
   }),
   agentPrompt: ({ input, env, scarn }) => `
@@ -68,7 +68,7 @@ Available scopes:
 
 | Scope     | Use for                                                         |
 | --------- | --------------------------------------------------------------- |
-| `input`   | Fields from `additionalInput` and any pipeline-bound step input |
+| `input`   | Fields from the `input` schema and any pipeline-bound step input |
 | `env`     | The worker's environment, or the step's `environment.vars` (below) |
 | `scarn` | Scarn-provided runtime values                                 |
 
@@ -89,7 +89,7 @@ import { z } from "zod";
 export const buildFrontend = defineStep({
   key: "build-frontend",
   name: "Build Frontend",
-  additionalInput: z.object({ targetUrl: z.string() }),
+  input: z.object({ targetUrl: z.string() }),
   environment: {
     runtime: Runtime.devcontainer({
       config: ".devcontainer/frontend/devcontainer.json",
@@ -136,7 +136,7 @@ export const classifyStep = defineStep({
   key: "classify-ticket",
   name: "Classify Ticket",
   environment: { runtime: Runtime.host() },
-  additionalInput: z.object({ title: z.string(), body: z.string() }),
+  input: z.object({ title: z.string(), body: z.string() }),
   result: z.object({ category: z.string() }),
   agentPrompt: ({ input }) =>
     `Classify this ticket into a single category:\n\n${input.title}\n${input.body}`,
@@ -271,7 +271,7 @@ export const triage = defineStep({
 export const implement = defineStep({
   key: "implement",
   name: "Implement",
-  additionalInput: z.object({ title: z.string() }),
+  input: z.object({ title: z.string() }),
   result: z.object({ summary: z.string() }),
   environment: {
     repo: ({ result }) =>
@@ -288,7 +288,7 @@ export const implement = defineStep({
 | `message`       | `string`              | `scarn: task <taskId>`         | The commit message, rendered from the step's input and result                                    |
 | `onPushFailure` | `"fail" \| "warn"`    | `"fail"`                         | Whether a failed push fails the step (`"fail"`) or is logged and ignored (`"warn"`)              |
 
-**Commit message.** `repo` is a function of `{ input, result }`, the same way `vars` is a function of `{ input }`: both are typed from the step's `additionalInput` and `result`, and a template literal built from them (`` `fix: ${result.summary}` ``) becomes a `{{result.summary}}` token that the worker renders when the step finishes. Write the string with a prefix before the interpolation, since a bare `` `${result.summary}` `` trips a lint rule. A static `Repo.readWrite({ message: "fix: {{result.summary}}" })` is the same thing, and the common case when the message needs no tokens.
+**Commit message.** `repo` is a function of `{ input, result }`, the same way `vars` is a function of `{ input }`: both are typed from the step's `input` and `result` schemas, and a template literal built from them (`` `fix: ${result.summary}` ``) becomes a `{{result.summary}}` token that the worker renders when the step finishes. Write the string with a prefix before the interpolation, since a bare `` `${result.summary}` `` trips a lint rule. A static `Repo.readWrite({ message: "fix: {{result.summary}}" })` is the same thing, and the common case when the message needs no tokens.
 
 - Only `{{input.…}}` and `{{result.…}}` tokens are allowed. `{{env.…}}` is rejected, so an environment value can never reach git history.
 - The template is one line and at most 500 characters.
@@ -314,7 +314,7 @@ import { z } from "zod";
 export const accountInvestigation = defineStep({
   key: "account-investigation",
   name: "Account Investigation",
-  additionalInput: z.object({ accountId: z.string(), tenant: z.string() }),
+  input: z.object({ accountId: z.string(), tenant: z.string() }),
   environment: {
     vars: ({ input }) => ({
       WAREHOUSE_URL: "https://warehouse.internal",

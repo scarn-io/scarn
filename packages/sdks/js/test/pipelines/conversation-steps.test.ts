@@ -18,7 +18,7 @@ const write = defineStep({
   key: "write",
   name: "Write",
   agentPrompt: "Write it up.",
-  additionalInput: z.object({ summary: z.string() }),
+  input: z.object({ summary: z.string() }),
   result: z.object({ path: z.string() }),
 });
 

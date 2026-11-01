@@ -1,7 +1,10 @@
 import path from "node:path";
 import type { RepoConfig } from "@scarn/sdk/repo-config";
+import { removeWorkItemChanges } from "@scarn/sdk/contracts/work-item-changes";
+import { removeWaitForWorkMarker } from "../contracts/wait-for-work-marker";
 import {
   removeFindingsSubmissionFile,
+  type CurrentExecutionInfo,
   writeCurrentExecutionInfoFile,
 } from "../application/process-project-work-findings";
 import type { OpenCodeMcpServers } from "../../../common/contracts/opencode-mcp";
@@ -111,11 +114,7 @@ export class DefaultLocalProjectRuntimeEnvironmentOrchestrator implements LocalP
     sourceBranch?: string | null | undefined;
     stepKey?: string | undefined;
     opencodeMcpJson?: OpenCodeMcpServers | null | undefined;
-    currentExecutionInfo: {
-      taskRunId: string;
-      resultSchemaJson: Record<string, unknown> | null;
-      turnsRemaining: number | null;
-    };
+    currentExecutionInfo: CurrentExecutionInfo;
     reporter?: WorkReporter | undefined;
     taskRunId?: string | undefined;
     /**
@@ -249,6 +248,8 @@ export class DefaultLocalProjectRuntimeEnvironmentOrchestrator implements LocalP
       // monitor's first poll reads the stale file and fails the step before
       // the agent starts.
       await removeFindingsSubmissionFile(workspacePath);
+      await removeWorkItemChanges(workspacePath);
+      await removeWaitForWorkMarker(workspacePath);
 
       // Step 2: Resolve the devcontainer config + its workspace folder: the
       // cloned repo's, or for a managed runtime one synthesized into the clone.
@@ -294,24 +295,16 @@ export class DefaultLocalProjectRuntimeEnvironmentOrchestrator implements LocalP
           devcontainerConfigPath,
           this.localEnvVars,
         );
-        logWork(
-          "runtime",
-          "Patched devcontainer.json with .scarn/.env vars",
-          {
-            sessionId: input.sessionId,
-            devcontainerConfigPath,
-            varCount: Object.keys(this.localEnvVars).length,
-            varNames: Object.keys(this.localEnvVars),
-          },
-        );
+        logWork("runtime", "Patched devcontainer.json with .scarn/.env vars", {
+          sessionId: input.sessionId,
+          devcontainerConfigPath,
+          varCount: Object.keys(this.localEnvVars).length,
+          varNames: Object.keys(this.localEnvVars),
+        });
       } else {
-        logWork(
-          "runtime",
-          "No .scarn/.env vars to inject into devcontainer",
-          {
-            sessionId: input.sessionId,
-          },
-        );
+        logWork("runtime", "No .scarn/.env vars to inject into devcontainer", {
+          sessionId: input.sessionId,
+        });
       }
 
       // Step 3b: For steps that start an agent, resolve the step's MCP server

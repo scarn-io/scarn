@@ -179,6 +179,7 @@ export async function startProcessClaimedTaskRun(
     });
     const environment = await launchRuntimeEnvironment(deps, {
       startAgent: usesAgent,
+      claimToken: input.claim.claimToken,
       localRuntimeSessionId,
       workerContext,
       requestedByUserId: input.requestedByUserId,

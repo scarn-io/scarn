@@ -9,6 +9,7 @@
     "./contracts/artifacts": "./src/contracts/artifacts.ts",
     "./contracts/artifact-markers": "./src/contracts/artifact-markers.ts",
     "./contracts/step-artifact-submissions": "./src/contracts/step-artifact-submissions.ts",
+    "./contracts/work-item-changes": "./src/contracts/work-item-changes.ts",
     "./contracts/pipeline-document": "./src/contracts/pipeline-document/index.ts",
     "./definitions/steps": "./src/definitions/steps/index.ts",
     "./definitions/pipelines": "./src/definitions/pipelines/index.ts",

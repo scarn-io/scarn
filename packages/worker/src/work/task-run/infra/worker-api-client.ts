@@ -72,6 +72,7 @@ export async function createTaskPlaneWorkerClient(
   return {
     ...planeClient,
     userId: parseUuidV7(authenticated.session.user.id),
+    apiBaseUrl: baseUrl,
     claimTaskRuns: async (input) =>
       (await planeClient.claimTaskRuns(input)).map((claim) => ({
         ...claim,

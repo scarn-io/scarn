@@ -13,6 +13,7 @@ const LEGEND_STROKE: Record<EdgeLegendKind, { color: string; dash?: string }> = 
   loop: { color: TONE_COLOR.loop },
   catch: { color: TONE_COLOR.catch, dash: edgeDashArray({ kind: "catch", lane: null }) },
   each: { color: TONE_COLOR.flow, dash: edgeDashArray({ kind: "route", lane: "each" }) },
+  handoff: { color: TONE_COLOR.flow, dash: edgeDashArray({ kind: "handoff", lane: null }) },
 };
 
 /**

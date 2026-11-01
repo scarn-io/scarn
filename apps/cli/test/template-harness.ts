@@ -85,7 +85,7 @@ export const investigate = defineStep({
   name: "Investigate",
   status: "active",
   agentPrompt: "Investigate the reported problem.",
-  additionalInput: z.object({
+  input: z.object({
     accountRef: z.string().nullable().optional(),
   }),
   result: investigation,
@@ -97,7 +97,7 @@ export const writeFix = defineStep({
   name: "Write Fix",
   status: "active",
   agentPrompt: "Implement the fix described in your input.",
-  additionalInput: z.object({ investigate: investigation }),
+  input: z.object({ investigate: investigation }),
   result: z.object({ summary: z.string() }),
 });
 `;

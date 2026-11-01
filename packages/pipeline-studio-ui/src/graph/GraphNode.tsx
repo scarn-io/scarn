@@ -16,6 +16,7 @@ import {
   kindLabel,
   mergeBadge,
   nodeLayoutSize,
+  pauseMarker,
 } from "./studio-graph-visuals";
 
 /** A node's data with its host app's decoration resolved onto it (see `PipelineGraphView`). */
@@ -36,15 +37,16 @@ const KIND_STYLE: Record<NodeKind, { icon: GraphIconName; color: string }> = {
   wait: { icon: "wait", color: palette.attention },
   succeed: { icon: "succeed", color: palette.success },
   fail: { icon: "fail", color: palette.danger },
+  handoff: { icon: "step", color: palette.textMuted },
 };
 
-const truncate: CSSProperties = {
+export const truncate: CSSProperties = {
   overflow: "hidden",
   textOverflow: "ellipsis",
   whiteSpace: "nowrap",
 };
 
-function selectionShadow(selected: boolean): string {
+export function selectionShadow(selected: boolean): string {
   return selected ? `0 0 0 2px ${palette.accent}, ${palette.shadow}` : palette.shadow;
 }
 
@@ -129,7 +131,7 @@ const SPINNER_CSS =
  * right-side pair, the outgoing one below the incoming one so a self loop
  * reads as a clockwise hook.
  */
-const hiddenHandle: CSSProperties = {
+export const hiddenHandle: CSSProperties = {
   opacity: 0,
   width: 6,
   height: 6,
@@ -219,8 +221,8 @@ function cardCaption(data: GraphNodeData): string {
  *
  * - **start** — a compact pill;
  * - **step / wait** — a card with a kind-colored left stripe and icon chip,
- *   the node's title and caption, a fork tag on a `match: "all"` node and a
- *   merge tag on a merge node;
+ *   the node's title and caption, a fork tag on a `match: "all"` node, a
+ *   merge tag on a merge node and a pause tag on a step that sets `maxTurns`;
  * - **succeed / fail** — a rounded terminal pill tinted green or red.
  *
  * The host's `NodeDecoration` (run status, validation issues) shows as the
@@ -340,6 +342,7 @@ export function GraphNode({ data, selected }: NodeProps<GraphNodeType>) {
   const caption = cardCaption(data);
   const fork = forkMarker(data);
   const merge = mergeBadge(data);
+  const pause = pauseMarker(data);
 
   return (
     <div
@@ -405,6 +408,7 @@ export function GraphNode({ data, selected }: NodeProps<GraphNodeType>) {
         </div>
         {fork ? <NodeTag icon="fork" text={fork} /> : null}
         {merge ? <NodeTag icon="merge" text={merge} /> : null}
+        {pause ? <NodeTag icon="loop" text={pause} /> : null}
       </div>
       <NodeHandles kind={data.kind} />
     </div>

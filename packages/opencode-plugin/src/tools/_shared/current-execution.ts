@@ -9,7 +9,50 @@ export type CurrentExecutionInfo = {
   resultSchemaJson: Record<string, unknown> | null;
   /** How many more turns this step allows; `null` outside a run. */
   turnsRemaining: number | null;
+  /** The work item the run's Task is on; `null` outside a run on one. */
+  workItemId: string | null;
+  workItemPermissions: WorkItemPermission[];
+  /** How the agent's tools reach the API live; `null` when unavailable. */
+  api: CurrentExecutionApi | null;
 };
+
+export type WorkItemPermission = "self" | "children";
+
+export type CurrentExecutionApi = { baseUrl: string; claimToken: string };
+
+const WORK_ITEM_PERMISSIONS: readonly WorkItemPermission[] = [
+  "self",
+  "children",
+];
+
+function parseWorkItemPermissions(
+  record: Record<string, unknown>,
+): WorkItemPermission[] {
+  const value = record["workItemPermissions"];
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return WORK_ITEM_PERMISSIONS.filter((permission) =>
+    value.includes(permission),
+  );
+}
+
+function parseApi(record: Record<string, unknown>): CurrentExecutionApi | null {
+  const value = record["api"];
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  const { baseUrl, claimToken } = value as Record<string, unknown>;
+  if (
+    typeof baseUrl !== "string" ||
+    baseUrl.length === 0 ||
+    typeof claimToken !== "string" ||
+    claimToken.length === 0
+  ) {
+    return null;
+  }
+  return { baseUrl, claimToken };
+}
 
 /** Reads `.scarn/current-execution/execution.json` under the workspace. */
 export async function loadCurrentExecutionInfo(
@@ -57,6 +100,7 @@ export async function loadCurrentExecutionInfo(
   }
 
   const turnsRemaining = parsedRecord["turnsRemaining"];
+  const workItemId = parsedRecord["workItemId"];
 
   return {
     taskRunId,
@@ -65,6 +109,12 @@ export async function loadCurrentExecutionInfo(
       typeof turnsRemaining === "number" && Number.isInteger(turnsRemaining)
         ? turnsRemaining
         : null,
+    workItemId:
+      typeof workItemId === "string" && workItemId.length > 0
+        ? workItemId
+        : null,
+    workItemPermissions: parseWorkItemPermissions(parsedRecord),
+    api: parseApi(parsedRecord),
   };
 }
 

@@ -12,7 +12,7 @@ describe("defineStep — environment.vars type inference", () => {
     defineStep({
       key: "typed",
       name: "Typed",
-      additionalInput: z.object({ accountId: z.string() }),
+      input: z.object({ accountId: z.string() }),
       environment: {
         runtime: Runtime.devcontainer(),
         vars: ({ input }) => ({
@@ -57,11 +57,11 @@ describe("defineStep — environment.vars type inference", () => {
     });
   });
 
-  test("vars input is typed from additionalInput", () => {
+  test("vars input is typed from the input schema", () => {
     defineStep({
       key: "typed-input",
       name: "Typed Input",
-      additionalInput: z.object({ accountId: z.string() }),
+      input: z.object({ accountId: z.string() }),
       environment: {
         vars: ({ input }) => {
           // @ts-expect-error unknown input fields are rejected
@@ -192,7 +192,7 @@ describe("defineStep — environment.vars normalization", () => {
     const spec = defineStep({
       key: "s",
       name: "S",
-      additionalInput: z.object({ accountId: z.string(), tenant: z.string() }),
+      input: z.object({ accountId: z.string(), tenant: z.string() }),
       environment: {
         vars: ({ input }) => ({
           WAREHOUSE_URL: "https://warehouse.internal",
@@ -416,7 +416,7 @@ describe("defineStep — environment.vars definition-time guards", () => {
     const spec = defineStep({
       key: "s",
       name: "S",
-      additionalInput: z.object({ tenant: z.string() }),
+      input: z.object({ tenant: z.string() }),
       environment: {
         vars: ({ input }) => ({ TENANT_TOKEN: `${input.tenant}-x` }),
       },

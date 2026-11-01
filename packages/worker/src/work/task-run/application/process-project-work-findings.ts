@@ -9,7 +9,9 @@ import {
   findSubmittableArtifactFields,
   readStepArtifactSubmissions,
 } from "@scarn/sdk/contracts/step-artifact-submissions";
+import { readWorkItemChanges } from "@scarn/sdk/contracts/work-item-changes";
 import type { AnyJsonValue } from "../../../common/contracts/json";
+import type { WorkItemPermission } from "../contracts/task-run-contracts";
 import type {
   CommitAndPushWorkBranchResult,
   ProcessProjectWorkDeps,
@@ -28,6 +30,15 @@ export type CurrentExecutionInfo = {
   resultSchemaJson: Record<string, unknown> | null;
   /** How many more times the agent may hand the conversation to a person; `null` outside a run. */
   turnsRemaining: number | null;
+  /** The Task's own work item; absent outside a run. */
+  workItemId?: string | undefined;
+  /** Which work items the agent's work item tools may change. */
+  workItemPermissions?: readonly WorkItemPermission[] | undefined;
+  /**
+   * How `scarn-get-work-item` reads items live: the API the runtime can reach
+   * and the run's claim token, which authorizes the read on its own.
+   */
+  api?: { baseUrl: string; claimToken: string } | undefined;
 };
 
 export function buildFindingsSubmissionPath(workspacePath: string): string {
@@ -72,6 +83,9 @@ export async function writeCurrentExecutionInfoFile(
         taskRunId: input.taskRunId,
         resultSchemaJson: input.resultSchemaJson,
         turnsRemaining: input.turnsRemaining,
+        workItemId: input.workItemId ?? null,
+        workItemPermissions: input.workItemPermissions ?? [],
+        api: input.api ?? null,
       },
       null,
       2,
@@ -327,6 +341,9 @@ export async function tryPersistAgentFindings(
     workBranch: pushFailed ? null : startedTask.environment.workBranch,
     createdFromBranch: startedTask.environment.createdFromBranch,
     sessionRestored: startedTask.sessionRestored ?? null,
+    workItemChanges: await readWorkItemChanges(
+      startedTask.environment.workspacePath,
+    ),
   });
 
   await rm(buildFindingsSubmissionPath(startedTask.environment.workspacePath), {

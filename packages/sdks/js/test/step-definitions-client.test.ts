@@ -118,6 +118,8 @@ describe("createStepDefinitionsClient.upsertFromSpec", () => {
         entrypointJson: null,
         errors: [],
         retry: [],
+        maxTurns: null,
+        workItemPermissions: [],
         projectId: "proj-1",
       });
       // Headers.entries() lowercases header names per the WHATWG spec.
@@ -187,6 +189,33 @@ describe("createStepDefinitionsClient.upsertFromSpec", () => {
         { headers: AUTH_HEADER },
       );
       expect(captured[0]?.body).toMatchObject({ managedRuntime: "bun1" });
+    } finally {
+      globalThis.fetch = prev;
+    }
+  });
+
+  test("sends maxTurns and workItemPermissions in the request body", async () => {
+    const { mockFetch, captured } = createMockFetch([
+      { status: 200, body: { id: "step-id" } },
+    ]);
+    const prev = globalThis.fetch;
+    globalThis.fetch = mockFetch;
+    try {
+      const client = createStepDefinitionsClient(BASE_URL);
+      const wayfinder = defineStep({
+        key: "wayfinder",
+        name: "Wayfinder",
+        agentPrompt: "Find the way.",
+        maxTurns: 40,
+        workItemPermissions: ["children"],
+      });
+      await client.upsertFromSpec("proj-1", wayfinder, {
+        headers: AUTH_HEADER,
+      });
+      expect(captured[0]?.body).toMatchObject({
+        maxTurns: 40,
+        workItemPermissions: ["children"],
+      });
     } finally {
       globalThis.fetch = prev;
     }

@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type {
   StudioIssue,
   StudioNode,
@@ -88,13 +89,26 @@ function SchemaFieldsTable({
  * The right-hand `<aside>`'s content when a node is selected — swapped in for
  * the issues list by `App.tsx`. Renders a step node's input and result
  * schema fields and declared errors, plus the node's own issue messages.
+ *
+ * The template detail page reuses it for its read-only preview: `notice`
+ * shows under the caption (a hand-off step's "started by" line), `children`
+ * adds the template step's settings, and `showIssues={false}` drops the
+ * issues section, which a template preview has none of.
  */
 export function NodeDetailPanel({
   node,
   onBack,
+  backLabel = "← Back to issues",
+  notice,
+  showIssues = true,
+  children,
 }: {
   node: StudioNode;
   onBack: () => void;
+  backLabel?: string;
+  notice?: ReactNode;
+  showIssues?: boolean;
+  children?: ReactNode;
 }) {
   const { data } = node;
   const { shape } = data;
@@ -102,10 +116,12 @@ export function NodeDetailPanel({
   return (
     <div className="studio-detail">
       <button type="button" className="studio-detail-back" onClick={onBack}>
-        ← Back to issues
+        {backLabel}
       </button>
       <h2 className="studio-detail-title">{data.label}</h2>
       <div className="studio-node-kind">{nodeCaption(data)}</div>
+      {notice ? <p className="studio-detail-notice">{notice}</p> : null}
+      {children}
 
       {shape.kind === "step" ? (
         <>
@@ -142,10 +158,12 @@ export function NodeDetailPanel({
         </>
       ) : null}
 
-      <section className="studio-detail-section">
-        <h3>Issues</h3>
-        <IssueMessageList issues={data.issues} />
-      </section>
+      {showIssues ? (
+        <section className="studio-detail-section">
+          <h3>Issues</h3>
+          <IssueMessageList issues={data.issues} />
+        </section>
+      ) : null}
     </div>
   );
 }

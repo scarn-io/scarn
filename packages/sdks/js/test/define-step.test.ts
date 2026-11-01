@@ -29,7 +29,7 @@ describe("defineStep", () => {
     const spec = defineStep({
       key: "my-step",
       name: "My Step",
-      additionalInput: z.object({ title: z.string() }),
+      input: z.object({ title: z.string() }),
       agentPrompt: ({ input, env, scarn }) =>
         `Open ${env.BASE_URL ?? ""} for ${input.title} and save artifacts to ${scarn.artifactsDir}`,
     });
@@ -181,7 +181,7 @@ describe("defineStep", () => {
       const spec = defineStep({
         key: "my-step",
         name: "My Step",
-        additionalInput: z.object({ title: z.string() }),
+        input: z.object({ title: z.string() }),
         agentPrompt: ({ input }) => `Use ${input.title}.`,
         features: [mockFeatureA],
       });

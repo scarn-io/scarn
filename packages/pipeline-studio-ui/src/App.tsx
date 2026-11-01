@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { NodeDetailPanel } from "./graph/NodeDetailPanel";
 import { PipelineGraphView } from "./graph/PipelineGraphView";
 import { SeverityChip } from "./graph/SeverityChip";
@@ -7,7 +7,13 @@ import type {
   StudioIssue,
   StudioSnapshot,
 } from "./graph/studio-graph-types";
-import { useStudioTheme } from "./theme";
+import { pipelinePath, type Route } from "./router";
+import { Link, navigate, useRoute } from "./router-react";
+import { StudioHeader } from "./StudioHeader";
+import { TemplateDetailPage } from "./templates/TemplateDetailPage";
+import { TemplateGallery } from "./templates/TemplateGallery";
+import { UseTemplateToast } from "./templates/UseTemplateToast";
+import { useStudioTheme, type StudioTheme } from "./theme";
 
 /**
  * One issue row. Issues with no node (document-level or step-only ones)
@@ -64,8 +70,8 @@ function IssueRow({
 
 /**
  * Subscribes to the studio server's `/api/stream` SSE endpoint and re-renders
- * on every message. Read-only, v1 scope: nothing here ever writes back to the
- * source directory.
+ * on every message. The stream itself is read-only; files written by the
+ * template "Use" endpoint arrive here as a fresh snapshot.
  */
 function useStudioSnapshot(): StudioSnapshot | null {
   const [snapshot, setSnapshot] = useState<StudioSnapshot | null>(null);
@@ -195,10 +201,43 @@ function CompileErrorsPanel({
   );
 }
 
-export function App() {
-  const snapshot = useStudioSnapshot();
-  const { theme, toggleTheme } = useStudioTheme();
-  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+function StudioPage({
+  route,
+  theme,
+  onToggleTheme,
+  children,
+}: {
+  route: Route;
+  theme: StudioTheme;
+  onToggleTheme: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <div className="studio-page">
+      <StudioHeader route={route} theme={theme} onToggleTheme={onToggleTheme} />
+      <main className="studio-page-main">{children}</main>
+    </div>
+  );
+}
+
+/**
+ * `/` and `/pipelines/:key`: the graph of one pipeline from
+ * `.scarn/pipeline-builder`. The selection lives in the URL, so the picker
+ * navigates and Back restores the previous pipeline; `/` (or a key that no
+ * longer exists) shows the first one.
+ */
+function PipelinesScreen({
+  route,
+  snapshot,
+  theme,
+  onToggleTheme,
+}: {
+  route: Extract<Route, { name: "pipelines" }>;
+  snapshot: StudioSnapshot | null;
+  theme: StudioTheme;
+  onToggleTheme: () => void;
+}) {
+  const selectedKey = route.pipelineKey ?? null;
   const [selectedNodeKey, setSelectedNodeKey] = useState<string | null>(null);
 
   const pipelines = snapshot?.status === "ok" ? snapshot.pipelines : [];
@@ -250,31 +289,43 @@ export function App() {
     [validationIssues, selected],
   );
 
-  if (snapshot === null) {
-    return <p className="studio-status">Connecting…</p>;
-  }
+  const selectPipeline = (key: string) => {
+    navigate(pipelinePath(key));
+  };
 
-  if (snapshot.status === "error") {
+  if (snapshot === null || snapshot.status === "error") {
     return (
-      <p className="studio-status studio-status-error">{snapshot.message}</p>
+      <StudioPage route={route} theme={theme} onToggleTheme={onToggleTheme}>
+        {snapshot === null ? (
+          <p className="studio-status">Connecting…</p>
+        ) : (
+          <p className="studio-status studio-status-error">
+            {snapshot.message}
+          </p>
+        )}
+      </StudioPage>
     );
   }
 
   if (pipelines.length === 0 && brokenPipelines.length === 0) {
     return (
-      <p className="studio-status">
-        No pipelines found in .scarn/pipeline-builder yet.
-      </p>
+      <StudioPage route={route} theme={theme} onToggleTheme={onToggleTheme}>
+        <p className="studio-status">
+          No pipelines found in .scarn/pipeline-builder yet. Start from a
+          template:
+        </p>
+        <TemplateGallery refreshToken={snapshot.collectedAt} />
+      </StudioPage>
     );
   }
 
   return (
     <div className="studio-layout">
-      <header className="studio-header">
+      <StudioHeader route={route} theme={theme} onToggleTheme={onToggleTheme}>
         <select
           value={selected?.key ?? selectedBroken?.key ?? ""}
           onChange={(event) => {
-            setSelectedKey(event.target.value);
+            selectPipeline(event.target.value);
           }}
         >
           {pipelines.map((p) => (
@@ -288,15 +339,7 @@ export function App() {
             </option>
           ))}
         </select>
-        <button
-          type="button"
-          className="studio-theme-toggle"
-          onClick={toggleTheme}
-          aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
-        >
-          {theme === "dark" ? "Light mode" : "Dark mode"}
-        </button>
-      </header>
+      </StudioHeader>
       <div className="studio-graph">
         {selected ? (
           <PipelineGraphView
@@ -327,7 +370,7 @@ export function App() {
               <CompileErrorsPanel
                 pipelines={brokenPipelines}
                 selectedKey={selectedBroken?.key ?? null}
-                onSelect={setSelectedKey}
+                onSelect={selectPipeline}
               />
             ) : null}
             <h2>Validation issues</h2>
@@ -340,5 +383,43 @@ export function App() {
         )}
       </aside>
     </div>
+  );
+}
+
+export function App() {
+  const route = useRoute();
+  const snapshot = useStudioSnapshot();
+  const { theme, toggleTheme } = useStudioTheme();
+
+  if (route.name === "pipelines") {
+    return (
+      <>
+        <PipelinesScreen
+          route={route}
+          snapshot={snapshot}
+          theme={theme}
+          onToggleTheme={toggleTheme}
+        />
+        <UseTemplateToast />
+      </>
+    );
+  }
+
+  return (
+    <StudioPage route={route} theme={theme} onToggleTheme={toggleTheme}>
+      {route.name === "templates" ? (
+        <TemplateGallery refreshToken={snapshot?.collectedAt ?? null} />
+      ) : route.name === "template" ? (
+        <TemplateDetailPage
+          templateKey={route.key}
+          refreshToken={snapshot?.collectedAt ?? null}
+          theme={theme}
+        />
+      ) : (
+        <p className="studio-status">
+          Page not found. <Link href="/">Back to pipelines</Link>.
+        </p>
+      )}
+    </StudioPage>
   );
 }

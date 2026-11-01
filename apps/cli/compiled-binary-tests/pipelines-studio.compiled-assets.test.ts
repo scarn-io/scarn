@@ -77,7 +77,7 @@ const ENTRY_SOURCE = `import { runPipelineStudioServer } from "@scarn/worker";
 const builderDir = process.argv[2];
 if (!builderDir) throw new Error("Usage: entry <builderDir>");
 
-const handle = await runPipelineStudioServer({ builderDir });
+const handle = await runPipelineStudioServer({ builderDir, cliVersion: "0.0.0" });
 process.stdout.write(\`STUDIO_URL:\${handle.url}\\n\`);
 `;
 

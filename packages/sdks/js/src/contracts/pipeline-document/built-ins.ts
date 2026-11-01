@@ -14,6 +14,9 @@ export const BUILT_IN_ERRORS = [
   "Scarn.MaxTurnsExceeded",
   "Scarn.ConditionError",
   "Scarn.ArgsError",
+  "Scarn.LogArchiveFailed",
+  "Scarn.WorkItemChangesInvalid",
+  "Scarn.WorkItemNotNative",
 ] as const;
 
 /** The errors a wait node can raise, so the only names its `catch` may use. */

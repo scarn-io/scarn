@@ -48,10 +48,12 @@ export type StudioNodeShape =
   | { kind: "none" };
 
 /**
- * A document node's kind, or `"start"` for the synthetic entry node the
- * `start` transition leaves from (id `START_NODE_ID`).
+ * A document node's kind, `"start"` for the synthetic entry node the `start`
+ * transition leaves from (id `START_NODE_ID`), or `"handoff"` for a step an
+ * agent starts during its run rather than the pipeline (template previews
+ * only; never executed by the graph).
  */
-export type StudioNodeKind = PipelineNode["kind"] | "start";
+export type StudioNodeKind = PipelineNode["kind"] | "start" | "handoff";
 
 /** Per-node data the designer renders inline next to the node itself. */
 export type StudioNodeData = {
@@ -65,12 +67,20 @@ export type StudioNodeData = {
   match?: "first" | "all";
   /** On a merge node: the titles of the nodes whose `partial` routes it waits for, in edge order. */
   mergeWaitsFor?: string[];
+  /** On a step node: its `maxTurns`, when the document sets it. */
+  maxTurns?: number;
+  /** On a hand-off node: the step whose agent starts it, and what it's for. */
+  handoff?: { startedBy: string; summary: string };
   issues: StudioIssue[];
   shape: StudioNodeShape;
 };
 
-/** How the engine leaves the source node along an edge. */
-export type StudioEdgeKind = "start" | "route" | "otherwise" | "catch";
+/**
+ * How the engine leaves the source node along an edge, or `"handoff"` for the
+ * link from a step to a hand-off step its agent starts (not a transition).
+ */
+export type StudioEdgeKind =
+  "start" | "route" | "otherwise" | "catch" | "handoff";
 
 export type StudioPoint = { x: number; y: number };
 
@@ -80,11 +90,18 @@ export type StudioPoint = { x: number; y: number };
  * reserved for its label (null when it has none). A `loop` edge (a back edge
  * or self loop) leaves the source's right side, runs up a vertical lane at
  * `laneX` clear of every node and label it passes, and enters the target's
- * right side; its label sits on that lane.
+ * right side; its label sits on that lane. A `handoff` edge leaves the
+ * starting step's right side, runs along the lane at `laneX` to the hand-off
+ * node's row and enters its left side, its label centred at `label`. A
+ * `handoffReturn` edge leaves the top hand-off node's top, rises to `topY`,
+ * runs left to the lane at `laneX`, drops to the starting step's right side
+ * and enters it, its label centred at `label`.
  */
 export type StudioEdgeRoute =
   | { kind: "flow"; waypoints: StudioPoint[]; label: StudioPoint | null }
-  | { kind: "loop"; laneX: number };
+  | { kind: "loop"; laneX: number }
+  | { kind: "handoff"; laneX: number; label: StudioPoint }
+  | { kind: "handoffReturn"; laneX: number; topY: number; label: StudioPoint };
 
 export type StudioEdgeData = {
   kind: StudioEdgeKind;

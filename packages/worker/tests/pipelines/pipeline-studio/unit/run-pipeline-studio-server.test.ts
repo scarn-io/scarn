@@ -119,6 +119,7 @@ describe("runPipelineStudioServer", () => {
     const staticDir = makeStaticDir();
     const handle = await runPipelineStudioServer({
       builderDir: dir,
+      cliVersion: "0.0.0",
       staticDir,
     });
     try {
@@ -158,6 +159,7 @@ describe("runPipelineStudioServer", () => {
     writeFileSync(join(dir, "bun.lock"), "");
     const handle = await runPipelineStudioServer({
       builderDir: dir,
+      cliVersion: "0.0.0",
       staticDir,
     });
     try {
@@ -190,6 +192,7 @@ describe("runPipelineStudioServer", () => {
     const staticDir = makeStaticDir();
     const handle = await runPipelineStudioServer({
       builderDir: dir,
+      cliVersion: "0.0.0",
       staticDir,
     });
     const url = handle.url;
@@ -215,6 +218,7 @@ describe("runPipelineStudioServer", () => {
       try {
         const handle = await runPipelineStudioServer({
           builderDir: dir,
+          cliVersion: "0.0.0",
           port,
           staticDir: emptyStaticDir,
         });

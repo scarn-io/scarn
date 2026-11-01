@@ -29,6 +29,8 @@ export const WORK_BRANCH_EXCLUDE_PATHS = [
   ".scarn/current-execution",
   ".scarn/step-findings-submission.json",
   ".scarn/end-conversation.json",
+  ".scarn/work-item-changes.json",
+  ".scarn/wait-for-work.json",
   ".scarn/step-artifacts",
   ".scarn/previous-run",
   ".devcontainer/devcontainer.json",

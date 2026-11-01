@@ -68,6 +68,7 @@ const KIND_CAPTION: Record<StudioNodeData["kind"], string> = {
   wait: "wait",
   succeed: "succeed",
   fail: "fail",
+  handoff: "hand-off",
 };
 
 /** The subtitle under a node's label, e.g. `step · triage` or `wait · decision`. */
@@ -94,6 +95,8 @@ export function kindLabel(
       return "Succeed";
     case "fail":
       return "Fail";
+    case "handoff":
+      return data.stepKey ? `Hand-off · ${data.stepKey}` : "Hand-off";
   }
 }
 
@@ -108,13 +111,14 @@ export function edgeTone(
   return "flow";
 }
 
-export type EdgeLegendKind = "flow" | "loop" | "catch" | "each";
+export type EdgeLegendKind = "flow" | "loop" | "catch" | "each" | "handoff";
 
 export const EDGE_LEGEND_LABEL: Record<EdgeLegendKind, string> = {
   flow: "Next",
   loop: "Loop back",
   catch: "On error",
   each: "Each item",
+  handoff: "Hand-off",
 };
 
 /**
@@ -128,6 +132,7 @@ export function edgeLegendKinds(
   if (edges.some((edge) => edge.data?.route?.kind === "loop")) kinds.push("loop");
   if (edges.some((edge) => edge.data?.kind === "catch")) kinds.push("catch");
   if (edges.some((edge) => edge.data?.lane === "each")) kinds.push("each");
+  if (edges.some((edge) => edge.data?.kind === "handoff")) kinds.push("handoff");
   return kinds;
 }
 
@@ -148,6 +153,19 @@ export function mergeBadge(
 }
 
 /**
+ * The pause tag on a step node whose agent can yield and resume, e.g.
+ * `pauses · up to 10 rounds`; `null` when the document leaves `maxTurns` at
+ * its default or turns pausing off with 0.
+ */
+export function pauseMarker(
+  data: Pick<StudioNodeData, "kind" | "maxTurns">,
+): string | null {
+  if (data.kind !== "step" || !data.maxTurns) return null;
+  const rounds = data.maxTurns === 1 ? "round" : "rounds";
+  return `pauses · up to ${String(data.maxTurns)} ${rounds}`;
+}
+
+/**
  * An edge's label with its route order number in front (`1. x > 3`), for
  * `first` nodes that check their routes in order. Unordered edges keep their
  * label as is.
@@ -162,27 +180,38 @@ export function orderedEdgeLabel(
     : `${String(order)}. ${label}`;
 }
 
+/** The dash pattern of hand-off edges and of a hand-off node's border. */
+export const HANDOFF_DASH_ARRAY = "8 5";
+
+/** React Flow node/edge type names `PipelineGraphView` registers. */
+export const PIPELINE_NODE_TYPE = "pipelineNode";
+export const HANDOFF_NODE_TYPE = "handoffNode";
+
 const START_SIZE = { width: 112, height: 36 };
 const TERMINAL_SIZE = { width: 176, height: 44 };
 const CARD_WIDTH = 240;
 const CARD_BASE_HEIGHT = 56;
 const CARD_EXTRA_LINE_HEIGHT = 16;
+const HANDOFF_SIZE = { width: CARD_WIDTH, height: 72 };
 
 /**
  * The size the layout reserves for a node, which the node renderers also
  * draw at so edges meet the card exactly: a compact pill for the synthetic
  * start node, a smaller card for `succeed`/`fail`, and a step/wait card one
- * line taller for each fork marker or merge badge it shows.
+ * line taller for each fork marker, merge badge or pause marker it shows.
  */
 export function nodeLayoutSize(
-  data: Pick<StudioNodeData, "kind" | "match" | "mergeWaitsFor">,
+  data: Pick<StudioNodeData, "kind" | "match" | "mergeWaitsFor" | "maxTurns">,
 ): { width: number; height: number } {
   if (data.kind === "start") return { ...START_SIZE };
+  if (data.kind === "handoff") return { ...HANDOFF_SIZE };
   if (data.kind === "succeed" || data.kind === "fail") {
     return { ...TERMINAL_SIZE };
   }
   const extraLines =
-    (forkMarker(data) ? 1 : 0) + (mergeBadge(data) ? 1 : 0);
+    (forkMarker(data) ? 1 : 0) +
+    (mergeBadge(data) ? 1 : 0) +
+    (pauseMarker(data) ? 1 : 0);
   return {
     width: CARD_WIDTH,
     height: CARD_BASE_HEIGHT + extraLines * CARD_EXTRA_LINE_HEIGHT,
@@ -191,12 +220,14 @@ export function nodeLayoutSize(
 
 /**
  * Edge stroke dash pattern: catch edges are dashed so error paths read
- * differently from normal flow; `each` (fan-out into lanes) edges are dotted.
+ * differently from normal flow; `each` (fan-out into lanes) edges are dotted;
+ * hand-off links are long-dashed, since no transition runs along them.
  */
 export function edgeDashArray(
   data: Partial<Pick<StudioEdgeData, "kind" | "lane">> | undefined,
 ): string | undefined {
   if (data?.kind === "catch") return "6 4";
   if (data?.lane === "each") return "2 4";
+  if (data?.kind === "handoff") return HANDOFF_DASH_ARRAY;
   return undefined;
 }

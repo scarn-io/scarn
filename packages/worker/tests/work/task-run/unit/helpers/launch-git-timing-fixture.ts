@@ -104,6 +104,7 @@ export async function shipLaunchGitTimingLines() {
 
     await launchRuntimeEnvironment(deps, {
       startAgent: true,
+      claimToken: "claim-token",
       localRuntimeSessionId: createUuidV7(),
       workerContext: {
         ...createWorkerContext("workspace"),

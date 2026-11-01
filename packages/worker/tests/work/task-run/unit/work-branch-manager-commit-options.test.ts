@@ -163,6 +163,9 @@ describe("commit message", () => {
     expect(commitPush.commitAllExcludePaths[0]).toContain(
       ".scarn/end-conversation.json",
     );
+    expect(commitPush.commitAllExcludePaths[0]).toContain(
+      ".scarn/wait-for-work.json",
+    );
   });
 });
 

@@ -100,6 +100,7 @@ describe("monitorStartedClaimedTaskRun — ending a conversation", () => {
         workBranch: "scarn/task-1",
         createdFromBranch: "main",
         sessionRestored: null,
+        workItemChanges: [],
       });
       expect(harness.exportSession).not.toHaveBeenCalled();
       expect(harness.createSessionUploadUrl).not.toHaveBeenCalled();

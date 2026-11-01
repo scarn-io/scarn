@@ -576,7 +576,7 @@ The read-only database is at ${env.READONLY_DB_URL}.
   // Optional on purpose: a pipeline may call this step with no args at all
   // (see §3). A required field here forces every transition into the step
   // to supply it.
-  additionalInput: z.object({
+  input: z.object({
     accountRef: z.string().nullable().optional(),
   }),
 
@@ -601,17 +601,17 @@ The read-only database is at ${env.READONLY_DB_URL}.
 - **`agentPrompt`** — a string, or a function `({ input, env, scarn }) => string`.
   Interpolations compile to `{{input.x}}` / `{{env.X}}` / `{{scarn.artifactsDir}}`
   tokens that are substituted at execution time.
-  - `input.x` only type-checks when `additionalInput` declares `x`. With no
-    `additionalInput`, `input` is opaque and any property access is a type error.
+  - `input.x` only type-checks when the `input` schema declares `x`. With no
+    `input` schema, `input` is opaque and any property access is a type error.
   - The step's full resolved input JSON is shown to the agent regardless.
     Interpolation is for emphasis and for weaving a value into a sentence.
   - `scarn.artifactsDir` is the directory the execution collects artifacts
     from (traces, screenshots, reports). It already ends in a separator.
     Prefer telling the agent to submit files with `scarn-submit-artifact`
     (with `name` for an undeclared file), which needs no path.
-- **`additionalInput`** — the args a pipeline passes when it calls this step
+- **`input`** — the args a pipeline passes when it calls this step
   (see §3). Each key is type-checked against the call. With no
-  `additionalInput`, or only optional fields, the step can be used bare.
+  `input` schema, or only optional fields, the step can be used bare.
 - **`result`** — the schema the agent's structured answer must satisfy. A
   pipeline reads it as `r.result` to route (§4) and to pass values on (§3).
   Pass a later step a whole earlier result (`r.result`) rather than copying it
@@ -948,7 +948,7 @@ so pass the reference itself (`evaluate: r.result`).
 
 **Pass whole results.** The default is to give a later step every earlier
 result it could use, each under a field named after the step that produced it,
-and to declare each one in the consumer's `additionalInput` with the
+and to declare each one in the consumer's `input` schema with the
 producer's own `result` schema. Copy single fields only when a step needs one
 value.
 
@@ -1189,7 +1189,7 @@ export default defaultPipelineAssignment(
 2. A chain is finished by `.next(target)` or `.next({ match?, routes,
    otherwise? })`. `routes` needs at least one entry. When no route is taken
    and there is no `otherwise`, the path ends without failing.
-3. Args are type-checked against the step's `additionalInput`: a required field
+3. Args are type-checked against the step's `input` schema: a required field
    must be passed, and an unknown one is an error.
 4. Conditions are built with the helpers in §4. JavaScript logic on a
    reference compiles to the wrong thing; the build catches most of it, not
@@ -1273,7 +1273,7 @@ How it is wired, and why:
   `proposeFix` only if they ask for one.
 - **Whole results, passed forward.** Each step gets every earlier result it
   can use as an arg named after the step that produced it, and declares those
-  fields in `additionalInput` with the producer's schema. Each chain reads
+  fields in its `input` schema with the producer's schema. Each chain reads
   them from `r.result`, `r.input` or `r.node(...)`.
 - **Branches.** `investigateAndReproduce` and `proposeFix` are read-only, so
   they push nothing. `failingTest` commits its test on a work branch, and
@@ -1468,7 +1468,7 @@ or what is affected).
 - \`summary\`: one or two sentences restating the problem as you understand it.
 `,
 
-  additionalInput: z.object({
+  input: z.object({
     title: z.string(),
     description: z.string().nullable(),
   }),
@@ -1601,7 +1601,7 @@ Report:
 The next step turns this into a failing test, so be specific.
 `,
 
-  additionalInput: z.object({
+  input: z.object({
     appUrl: z.string().nullable().optional(),
     title: z.string(),
     description: z.string().nullable(),
@@ -1689,7 +1689,7 @@ running just these tests), \`failureOutput\` (verbatim, not a paraphrase) and a
 \`summary\` saying what the test captures and what it does not.
 `,
 
-  additionalInput: z.object({
+  input: z.object({
     evaluate: evaluation,
     investigateAndReproduce: investigation,
   }),
@@ -1725,7 +1725,7 @@ Report:
 - \`risks\`: what could break, and anything you could not verify.
 `,
 
-  additionalInput: z.object({
+  input: z.object({
     evaluate: evaluation,
     investigateAndReproduce: investigation,
     failingTest: failingTestResult,
@@ -1769,7 +1769,7 @@ suite is green), \`confidence\` with its reason, a \`summary\` a reviewer reads
 before the diff, and \`remainingRisks\`: anything you could not verify.
 `,
 
-  additionalInput: z.object({
+  input: z.object({
     evaluate: evaluation,
     investigateAndReproduce: investigation,
     failingTest: failingTestResult,

@@ -45,7 +45,10 @@ import {
   type DesignPaths,
   type DesignSessionPorts,
 } from "../lib/design-session";
-import { startDesignStudio, type DesignStudioPorts } from "../lib/design-studio";
+import {
+  startDesignStudio,
+  type DesignStudioPorts,
+} from "../lib/design-studio";
 import {
   createDesignWorkItem,
   findWorkItemByUrl,
@@ -261,15 +264,14 @@ function buildRunOfferPorts(input: {
 
 function buildStudioPorts(): DesignStudioPorts {
   return {
-    startServer: ({ builderDir }) => runPipelineStudioServer({ builderDir }),
+    startServer: ({ builderDir }) =>
+      runPipelineStudioServer({ builderDir, cliVersion: CLI_VERSION }),
     openBrowser,
   };
 }
 
 /** Wire the session's ports to their real implementations. */
-function buildDesignSessionPorts(
-  ctx: CommandContext,
-): DesignSessionPorts {
+function buildDesignSessionPorts(ctx: CommandContext): DesignSessionPorts {
   return {
     preflight: ({ baseUrl, paths, projectArgument, workItemIdArgument }) =>
       runDesignPreflight({

@@ -3,10 +3,14 @@ import { createScarnEndConversationTool } from "./tools/scarn-end-conversation";
 import { createScarnSubmitArtifactTool } from "./tools/scarn-submit-artifact";
 import { createScarnSubmitStepFindingsTool } from "./tools/scarn-submit-step-findings";
 import { createPlaywrightTraceAnalyzerTool } from "./tools/playwright-trace-analyzer";
+import { createWorkItemTools } from "./tools/work-item-tools";
+import { tryLoadCurrentExecutionInfo } from "./tools/_shared/current-execution";
+import { resolveWorktree } from "./tools/_shared/resolve-worktree";
 import { SCARN_RPC_DEFINITION, describeRegisteredTools } from "./scarn-rpc";
 
 /**
- * The Scarn OpenCode plugin: registers Scarn's tools, and exposes a
+ * The Scarn OpenCode plugin: registers Scarn's tools (the work item tools only
+ * as the run's execution info at setup permits), and exposes a
  * `scarn.listTools` RPC so the worker can enumerate registered tool ids and
  * input schemas (v2 has no server route for that).
  *
@@ -21,11 +25,21 @@ const ScarnOpencodePlugin: Plugin.Plugin = {
     const submitArtifactTool = await createScarnSubmitArtifactTool(
       ctx.location.directory,
     );
+    const executionInfo = await tryLoadCurrentExecutionInfo(
+      await resolveWorktree(ctx.location.directory),
+    );
+    const workItemTools = createWorkItemTools(
+      ctx.location.directory,
+      executionInfo,
+    );
     await ctx.tool.transform((editor) => {
       editor.add(createScarnSubmitStepFindingsTool(ctx.location.directory));
       editor.add(createScarnEndConversationTool(ctx.location.directory));
       editor.add(submitArtifactTool);
       editor.add(createPlaywrightTraceAnalyzerTool());
+      for (const tool of workItemTools) {
+        editor.add(tool);
+      }
     });
     await ctx.rpc.register(SCARN_RPC_DEFINITION, {
       listTools: async () => ({
