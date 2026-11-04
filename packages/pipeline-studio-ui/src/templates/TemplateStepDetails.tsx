@@ -2,12 +2,12 @@ import { NodeDetailPanel } from "../graph/NodeDetailPanel";
 import type { StudioNode } from "../graph/studio-graph-types";
 import { InlineMarkdown } from "./MarkdownView";
 import {
+  detachedStepNotice,
   findTemplateStep,
   formatRepoAccess,
   formatRuntime,
-  handoffHeading,
 } from "./template-detail-model";
-import type { TemplateStepPreview } from "./templates-api";
+import type { TemplateEntryKind, TemplateStepPreview } from "./templates-api";
 
 function SchemaJson({
   title,
@@ -30,8 +30,8 @@ function SchemaJson({
 
 /**
  * A template step's prompt and settings, below the schema tables. Schemas
- * are shown raw only for nodes without a resolved step shape (hand-off
- * nodes), since `NodeDetailPanel` already shows them for graph steps.
+ * are shown raw only for nodes without a resolved step shape (detached
+ * steps), since `NodeDetailPanel` already shows them for graph steps.
  */
 function TemplateStepSections({
   step,
@@ -97,20 +97,21 @@ function TemplateStepSections({
 
 /**
  * The template detail page's side panel for a clicked preview node: the
- * shared `NodeDetailPanel` plus the step's prompt and settings. A hand-off
- * node is headed with who starts it. Read-only; nothing here is written.
+ * shared `NodeDetailPanel` plus the step's prompt and settings. A detached
+ * step is headed with what starts it. Read-only; nothing here is written.
  */
 export function TemplateStepDetails({
   node,
   steps,
+  entryKind,
   onClose,
 }: {
   node: StudioNode;
   steps: readonly TemplateStepPreview[];
+  entryKind: TemplateEntryKind;
   onClose: () => void;
 }) {
   const step = findTemplateStep(steps, node);
-  const startedBy = node.data.handoff?.startedBy;
   return (
     <NodeDetailPanel
       node={node}
@@ -118,7 +119,9 @@ export function TemplateStepDetails({
       backLabel="← Close"
       showIssues={false}
       notice={
-        startedBy ? <InlineMarkdown text={handoffHeading(startedBy)} /> : null
+        node.data.kind === "detached" ? (
+          <InlineMarkdown text={detachedStepNotice(entryKind)} />
+        ) : null
       }
     >
       {step ? (

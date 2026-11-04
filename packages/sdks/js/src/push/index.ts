@@ -8,8 +8,16 @@ export type {
   CollectedDefinitions,
   TolerantCollectedDefinitions,
 } from "./collect-definitions";
-export { collectPipelineDocuments } from "./collect-pipeline-documents";
-export type { PipelineDocumentFile } from "./collect-pipeline-documents";
+export {
+  collectAutomationDocuments,
+  collectBuiltDocuments,
+  collectPipelineDocuments,
+} from "./collect-pipeline-documents";
+export type {
+  BuiltDocumentFile,
+  BuiltDocumentKind,
+  PipelineDocumentFile,
+} from "./collect-pipeline-documents";
 export { pushFromDirectory } from "./push-from-directory";
 export type {
   PushFromDirectoryOptions,

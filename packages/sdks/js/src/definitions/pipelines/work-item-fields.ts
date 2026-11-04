@@ -3,18 +3,13 @@ import type { GetApiWorkItemsByWorkItemIdResponses } from "../../generated/types
 // ─── Work-item top-level fields ───────────────────────────────────────────────
 
 /**
- * Top-level work-item properties addressable by the default-pipeline-assignment
- * DSL's `workItem.<field>` accessor (`define-default-pipeline-assignment.ts`)
- * and, reversed, its `scarn pipelines pull` file generator
- * (`default-pipeline-assignment-file-generator.ts`). `fields` is deliberately excluded from this
- * list: it's reached via `.field(name)` on every one of those accessors, not
- * as a top-level property.
+ * Top-level work-item properties a server-side resolver publishes. `fields`
+ * is deliberately excluded from this list: it's reached via
+ * `fields.<name>` paths, not as a top-level property.
  *
  * This is the single source of truth for the list — it must stay in sync
- * with the `workItem` fact/context shape every corresponding server-side
- * resolver publishes (`buildFacts` in
- * `evaluate-default-pipeline-assignment.ts`; `buildResolvedWorkItemContext`
- * in `resolve-node-input.ts`).
+ * with the `workItem` context shape the server-side resolver publishes
+ * (`buildResolvedWorkItemContext` in `resolve-node-input.ts`).
  */
 export const WORK_ITEM_TOP_LEVEL_FIELDS = [
   "id",
@@ -47,9 +42,8 @@ type WorkItemPlatformLiteral =
 
 /**
  * Per-field value types for every member of `WORK_ITEM_TOP_LEVEL_FIELDS`,
- * mirroring exactly what the server-side resolvers publish at evaluation/
- * resolution time (`buildFacts` for default-pipeline-assignment;
- * `buildResolvedWorkItemContext` for regular pipeline/step input bindings).
+ * mirroring exactly what the server-side resolver publishes at resolution
+ * time (`buildResolvedWorkItemContext` for pipeline/step input bindings).
  * Notably, `sourceCreatedAt`/`sourceUpdatedAt`/`createdAt`/`updatedAt` are
  * serialized as ISO date strings (or `null`), never `Date` objects.
  */
@@ -75,11 +69,8 @@ export type WorkItemTopLevelFieldTypeMap = {
 /**
  * The path prefix marking a reference into a work item's platform-specific
  * `fields` bag (a Jira custom field, a GitHub label, etc.), as opposed to a
- * `WorkItemTopLevelField`. Shared by every accessor that authors these paths
- * (`workItem.field(name)` in the default-pipeline-assignment DSL) and every resolver that
- * reads them back (`resolveWorkItemFieldPath` below; the JSONPath-rooted
- * variant in `evaluate-default-pipeline-assignment.ts`, which layers a `$.`
- * prefix on top of this same convention).
+ * `WorkItemTopLevelField`. Shared by every resolver that reads these paths
+ * (`resolveWorkItemFieldPath` below).
  */
 export const WORK_ITEM_FIELDS_PATH_PREFIX = "fields.";
 
@@ -101,10 +92,8 @@ export const WORK_ITEM_FIELDS_PATH_PREFIX = "fields.";
  * This resolver sidesteps that hazard entirely: everything after `fields.`
  * is treated as one atomic, unsplit key. Every work-item path resolver in
  * the codebase must use this same convention for a field name to round-trip
- * correctly — see `evaluate-default-pipeline-assignment.ts`'s
- * `resolveWorkItemAssignmentPath` (which layers `$.` path-rooting on top of
- * this function) and `resolve-node-input.ts`'s `work_item` binding
- * resolution (which calls this function directly, replacing what used to be
+ * correctly — see `resolve-node-input.ts`'s `work_item` binding resolution
+ * (which calls this function directly, replacing what used to be
  * a dot-splitting walker shared with unrelated binding sources and
  * susceptible to the exact hazard described above).
  *

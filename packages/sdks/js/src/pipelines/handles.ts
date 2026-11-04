@@ -3,6 +3,7 @@
  * with the chain-starting methods attached. Step handles from `defineStep` /
  * `codeStep` and `stepRef` are built here, and so are wait handles.
  */
+import { stepOn } from "../automations/targets";
 import type { JsonSchema } from "../contracts/pipeline-document";
 import { attachChainMethods } from "./chain";
 import { AuthoringError } from "./errors";
@@ -30,10 +31,15 @@ function checkArgs(node: NodeDef, args: RawArgs | undefined): void {
 function targetFn(node: NodeDef): (args?: RawArgs) => object {
   return (args?: RawArgs) => {
     checkArgs(node, args);
-    return registerTarget(
-      Object.freeze({ _tag: "pipeline_target", to: node.id }),
-      { node, args, site: captureSite() },
-    );
+    const data = { node, args, site: captureSite() };
+    const value = { _tag: "pipeline_target", to: node.id };
+    if (node.kind === "step") {
+      Object.defineProperty(value, "on", {
+        value: stepOn(data),
+        enumerable: false,
+      });
+    }
+    return registerTarget(Object.freeze(value), data);
   };
 }
 

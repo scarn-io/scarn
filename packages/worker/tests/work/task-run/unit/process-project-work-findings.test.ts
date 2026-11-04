@@ -209,6 +209,7 @@ describe("processProjectWork findings persistence", () => {
         workItemId: null,
         workItemPermissions: [],
         api: null,
+        workItemLinks: null,
       });
       expect(
         await readFile(

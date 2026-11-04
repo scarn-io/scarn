@@ -189,109 +189,6 @@ export type GetApiProjectsResolveResponses = {
             createdAt: string;
             updatedAt: string;
         }>;
-        defaultPipelineAssignment: {
-            rulesJson: {
-                rules: Array<{
-                    conditions: {
-                        [key: string]: unknown;
-                    };
-                    event: {
-                        type: string;
-                        params?: {
-                            [key: string]: unknown;
-                        };
-                    };
-                    name?: string;
-                    priority?: number;
-                    [key: string]: unknown | {
-                        [key: string]: unknown;
-                    } | {
-                        type: string;
-                        params?: {
-                            [key: string]: unknown;
-                        };
-                    } | string | number | undefined;
-                }>;
-                [key: string]: unknown | Array<{
-                    conditions: {
-                        [key: string]: unknown;
-                    };
-                    event: {
-                        type: string;
-                        params?: {
-                            [key: string]: unknown;
-                        };
-                    };
-                    name?: string;
-                    priority?: number;
-                    [key: string]: unknown | {
-                        [key: string]: unknown;
-                    } | {
-                        type: string;
-                        params?: {
-                            [key: string]: unknown;
-                        };
-                    } | string | number | undefined;
-                }>;
-            };
-            defaultEventType: 'assign' | 'skip';
-            defaultEventParamsJson: {
-                [key: string]: unknown;
-            } | unknown;
-            allowedEventTypes: Array<'assign' | 'skip'>;
-            pipelineDefinitionId: string;
-        } | {
-            rulesJson: {
-                rules: Array<{
-                    conditions: {
-                        [key: string]: unknown;
-                    };
-                    event: {
-                        type: string;
-                        params?: {
-                            [key: string]: unknown;
-                        };
-                    };
-                    name?: string;
-                    priority?: number;
-                    [key: string]: unknown | {
-                        [key: string]: unknown;
-                    } | {
-                        type: string;
-                        params?: {
-                            [key: string]: unknown;
-                        };
-                    } | string | number | undefined;
-                }>;
-                [key: string]: unknown | Array<{
-                    conditions: {
-                        [key: string]: unknown;
-                    };
-                    event: {
-                        type: string;
-                        params?: {
-                            [key: string]: unknown;
-                        };
-                    };
-                    name?: string;
-                    priority?: number;
-                    [key: string]: unknown | {
-                        [key: string]: unknown;
-                    } | {
-                        type: string;
-                        params?: {
-                            [key: string]: unknown;
-                        };
-                    } | string | number | undefined;
-                }>;
-            };
-            defaultEventType: 'assign' | 'skip';
-            defaultEventParamsJson: {
-                [key: string]: unknown;
-            } | unknown;
-            allowedEventTypes: Array<'assign' | 'skip'>;
-            stepDefinitionKey: string;
-        } | unknown;
         visibility: 'private' | 'public';
         createdAt: string;
         updatedAt: string;
@@ -316,6 +213,7 @@ export type GetApiProjectsByProjectIdWorkItemsData = {
         agent?: string;
         status?: string;
         platform?: string;
+        labels?: string | Array<string>;
         sort?: string;
     };
     url: '/api/projects/{projectId}/work-items';
@@ -435,11 +333,13 @@ export type GetApiProjectsByProjectIdWorkItemsResponses = {
             url?: string | unknown;
             title: string;
             description: string;
+            descriptionVersion: number;
             sourceCreatedAt: string | unknown;
             sourceUpdatedAt: string | unknown;
             fields: {
                 [key: string]: unknown;
             } | unknown;
+            labels: Array<string>;
             createdByUserId: string | unknown;
             createdByUsername: string | unknown;
             createdByImage: string | unknown;
@@ -464,6 +364,7 @@ export type GetApiProjectsByProjectIdWorkItemsResponses = {
             } | unknown;
             taskStatusCounts: {
                 running: number;
+                queued: number;
                 waitingForPerson: number;
                 waitingOnYou: number;
                 waitingForWork: number;
@@ -602,6 +503,248 @@ export type GetApiProjectsByProjectIdWorkItemFieldOptionsResponses = {
 
 export type GetApiProjectsByProjectIdWorkItemFieldOptionsResponse = GetApiProjectsByProjectIdWorkItemFieldOptionsResponses[keyof GetApiProjectsByProjectIdWorkItemFieldOptionsResponses];
 
+export type GetApiProjectsByProjectIdWorkItemLabelsData = {
+    body?: never;
+    path: {
+        projectId: string;
+    };
+    query?: never;
+    url: '/api/projects/{projectId}/work-item-labels';
+};
+
+export type GetApiProjectsByProjectIdWorkItemLabelsErrors = {
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 404
+     */
+    404: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type GetApiProjectsByProjectIdWorkItemLabelsError = GetApiProjectsByProjectIdWorkItemLabelsErrors[keyof GetApiProjectsByProjectIdWorkItemLabelsErrors];
+
+export type GetApiProjectsByProjectIdWorkItemLabelsResponses = {
+    /**
+     * Response for status 200
+     */
+    200: Array<string>;
+};
+
+export type GetApiProjectsByProjectIdWorkItemLabelsResponse = GetApiProjectsByProjectIdWorkItemLabelsResponses[keyof GetApiProjectsByProjectIdWorkItemLabelsResponses];
+
+export type GetApiProjectsByProjectIdWorkItemStatusesData = {
+    body?: never;
+    path: {
+        projectId: string;
+    };
+    query?: {
+        ids?: string | Array<string>;
+    };
+    url: '/api/projects/{projectId}/work-item-statuses';
+};
+
+export type GetApiProjectsByProjectIdWorkItemStatusesErrors = {
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 404
+     */
+    404: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type GetApiProjectsByProjectIdWorkItemStatusesError = GetApiProjectsByProjectIdWorkItemStatusesErrors[keyof GetApiProjectsByProjectIdWorkItemStatusesErrors];
+
+export type GetApiProjectsByProjectIdWorkItemStatusesResponses = {
+    /**
+     * Response for status 200
+     */
+    200: Array<{
+        id: string;
+        title: string;
+        status: 'needs_person' | 'running' | 'ready' | 'blocked' | 'closed';
+    }>;
+};
+
+export type GetApiProjectsByProjectIdWorkItemStatusesResponse = GetApiProjectsByProjectIdWorkItemStatusesResponses[keyof GetApiProjectsByProjectIdWorkItemStatusesResponses];
+
 export type GetApiProjectsByProjectIdData = {
     body?: never;
     path: {
@@ -730,109 +873,6 @@ export type GetApiProjectsByProjectIdResponses = {
             createdAt: string;
             updatedAt: string;
         }>;
-        defaultPipelineAssignment: {
-            rulesJson: {
-                rules: Array<{
-                    conditions: {
-                        [key: string]: unknown;
-                    };
-                    event: {
-                        type: string;
-                        params?: {
-                            [key: string]: unknown;
-                        };
-                    };
-                    name?: string;
-                    priority?: number;
-                    [key: string]: unknown | {
-                        [key: string]: unknown;
-                    } | {
-                        type: string;
-                        params?: {
-                            [key: string]: unknown;
-                        };
-                    } | string | number | undefined;
-                }>;
-                [key: string]: unknown | Array<{
-                    conditions: {
-                        [key: string]: unknown;
-                    };
-                    event: {
-                        type: string;
-                        params?: {
-                            [key: string]: unknown;
-                        };
-                    };
-                    name?: string;
-                    priority?: number;
-                    [key: string]: unknown | {
-                        [key: string]: unknown;
-                    } | {
-                        type: string;
-                        params?: {
-                            [key: string]: unknown;
-                        };
-                    } | string | number | undefined;
-                }>;
-            };
-            defaultEventType: 'assign' | 'skip';
-            defaultEventParamsJson: {
-                [key: string]: unknown;
-            } | unknown;
-            allowedEventTypes: Array<'assign' | 'skip'>;
-            pipelineDefinitionId: string;
-        } | {
-            rulesJson: {
-                rules: Array<{
-                    conditions: {
-                        [key: string]: unknown;
-                    };
-                    event: {
-                        type: string;
-                        params?: {
-                            [key: string]: unknown;
-                        };
-                    };
-                    name?: string;
-                    priority?: number;
-                    [key: string]: unknown | {
-                        [key: string]: unknown;
-                    } | {
-                        type: string;
-                        params?: {
-                            [key: string]: unknown;
-                        };
-                    } | string | number | undefined;
-                }>;
-                [key: string]: unknown | Array<{
-                    conditions: {
-                        [key: string]: unknown;
-                    };
-                    event: {
-                        type: string;
-                        params?: {
-                            [key: string]: unknown;
-                        };
-                    };
-                    name?: string;
-                    priority?: number;
-                    [key: string]: unknown | {
-                        [key: string]: unknown;
-                    } | {
-                        type: string;
-                        params?: {
-                            [key: string]: unknown;
-                        };
-                    } | string | number | undefined;
-                }>;
-            };
-            defaultEventType: 'assign' | 'skip';
-            defaultEventParamsJson: {
-                [key: string]: unknown;
-            } | unknown;
-            allowedEventTypes: Array<'assign' | 'skip'>;
-            stepDefinitionKey: string;
-        } | unknown;
         visibility: 'private' | 'public';
         createdAt: string;
         updatedAt: string;
@@ -910,109 +950,6 @@ export type GetApiProjectsResponses = {
             createdAt: string;
             updatedAt: string;
         }>;
-        defaultPipelineAssignment: {
-            rulesJson: {
-                rules: Array<{
-                    conditions: {
-                        [key: string]: unknown;
-                    };
-                    event: {
-                        type: string;
-                        params?: {
-                            [key: string]: unknown;
-                        };
-                    };
-                    name?: string;
-                    priority?: number;
-                    [key: string]: unknown | {
-                        [key: string]: unknown;
-                    } | {
-                        type: string;
-                        params?: {
-                            [key: string]: unknown;
-                        };
-                    } | string | number | undefined;
-                }>;
-                [key: string]: unknown | Array<{
-                    conditions: {
-                        [key: string]: unknown;
-                    };
-                    event: {
-                        type: string;
-                        params?: {
-                            [key: string]: unknown;
-                        };
-                    };
-                    name?: string;
-                    priority?: number;
-                    [key: string]: unknown | {
-                        [key: string]: unknown;
-                    } | {
-                        type: string;
-                        params?: {
-                            [key: string]: unknown;
-                        };
-                    } | string | number | undefined;
-                }>;
-            };
-            defaultEventType: 'assign' | 'skip';
-            defaultEventParamsJson: {
-                [key: string]: unknown;
-            } | unknown;
-            allowedEventTypes: Array<'assign' | 'skip'>;
-            pipelineDefinitionId: string;
-        } | {
-            rulesJson: {
-                rules: Array<{
-                    conditions: {
-                        [key: string]: unknown;
-                    };
-                    event: {
-                        type: string;
-                        params?: {
-                            [key: string]: unknown;
-                        };
-                    };
-                    name?: string;
-                    priority?: number;
-                    [key: string]: unknown | {
-                        [key: string]: unknown;
-                    } | {
-                        type: string;
-                        params?: {
-                            [key: string]: unknown;
-                        };
-                    } | string | number | undefined;
-                }>;
-                [key: string]: unknown | Array<{
-                    conditions: {
-                        [key: string]: unknown;
-                    };
-                    event: {
-                        type: string;
-                        params?: {
-                            [key: string]: unknown;
-                        };
-                    };
-                    name?: string;
-                    priority?: number;
-                    [key: string]: unknown | {
-                        [key: string]: unknown;
-                    } | {
-                        type: string;
-                        params?: {
-                            [key: string]: unknown;
-                        };
-                    } | string | number | undefined;
-                }>;
-            };
-            defaultEventType: 'assign' | 'skip';
-            defaultEventParamsJson: {
-                [key: string]: unknown;
-            } | unknown;
-            allowedEventTypes: Array<'assign' | 'skip'>;
-            stepDefinitionKey: string;
-        } | unknown;
         visibility: 'private' | 'public';
         createdAt: string;
         updatedAt: string;
@@ -1239,109 +1176,6 @@ export type PostApiProjectsResponses = {
             createdAt: string;
             updatedAt: string;
         }>;
-        defaultPipelineAssignment: {
-            rulesJson: {
-                rules: Array<{
-                    conditions: {
-                        [key: string]: unknown;
-                    };
-                    event: {
-                        type: string;
-                        params?: {
-                            [key: string]: unknown;
-                        };
-                    };
-                    name?: string;
-                    priority?: number;
-                    [key: string]: unknown | {
-                        [key: string]: unknown;
-                    } | {
-                        type: string;
-                        params?: {
-                            [key: string]: unknown;
-                        };
-                    } | string | number | undefined;
-                }>;
-                [key: string]: unknown | Array<{
-                    conditions: {
-                        [key: string]: unknown;
-                    };
-                    event: {
-                        type: string;
-                        params?: {
-                            [key: string]: unknown;
-                        };
-                    };
-                    name?: string;
-                    priority?: number;
-                    [key: string]: unknown | {
-                        [key: string]: unknown;
-                    } | {
-                        type: string;
-                        params?: {
-                            [key: string]: unknown;
-                        };
-                    } | string | number | undefined;
-                }>;
-            };
-            defaultEventType: 'assign' | 'skip';
-            defaultEventParamsJson: {
-                [key: string]: unknown;
-            } | unknown;
-            allowedEventTypes: Array<'assign' | 'skip'>;
-            pipelineDefinitionId: string;
-        } | {
-            rulesJson: {
-                rules: Array<{
-                    conditions: {
-                        [key: string]: unknown;
-                    };
-                    event: {
-                        type: string;
-                        params?: {
-                            [key: string]: unknown;
-                        };
-                    };
-                    name?: string;
-                    priority?: number;
-                    [key: string]: unknown | {
-                        [key: string]: unknown;
-                    } | {
-                        type: string;
-                        params?: {
-                            [key: string]: unknown;
-                        };
-                    } | string | number | undefined;
-                }>;
-                [key: string]: unknown | Array<{
-                    conditions: {
-                        [key: string]: unknown;
-                    };
-                    event: {
-                        type: string;
-                        params?: {
-                            [key: string]: unknown;
-                        };
-                    };
-                    name?: string;
-                    priority?: number;
-                    [key: string]: unknown | {
-                        [key: string]: unknown;
-                    } | {
-                        type: string;
-                        params?: {
-                            [key: string]: unknown;
-                        };
-                    } | string | number | undefined;
-                }>;
-            };
-            defaultEventType: 'assign' | 'skip';
-            defaultEventParamsJson: {
-                [key: string]: unknown;
-            } | unknown;
-            allowedEventTypes: Array<'assign' | 'skip'>;
-            stepDefinitionKey: string;
-        } | unknown;
         visibility: 'private' | 'public';
         createdAt: string;
         updatedAt: string;
@@ -1473,349 +1307,6 @@ export type GetApiProjectsByProjectIdMembersResponses = {
 
 export type GetApiProjectsByProjectIdMembersResponse = GetApiProjectsByProjectIdMembersResponses[keyof GetApiProjectsByProjectIdMembersResponses];
 
-export type PutApiProjectsByProjectIdDefaultPipelineAssignmentData = {
-    body: {
-        defaultPipelineAssignment: {
-            rulesJson: {
-                rules: Array<{
-                    conditions: {
-                        [key: string]: unknown;
-                    };
-                    event: {
-                        type: string;
-                        params?: {
-                            [key: string]: unknown;
-                        };
-                    };
-                    name?: string;
-                    priority?: number;
-                    [key: string]: unknown | {
-                        [key: string]: unknown;
-                    } | {
-                        type: string;
-                        params?: {
-                            [key: string]: unknown;
-                        };
-                    } | string | number | undefined;
-                }>;
-                [key: string]: unknown | Array<{
-                    conditions: {
-                        [key: string]: unknown;
-                    };
-                    event: {
-                        type: string;
-                        params?: {
-                            [key: string]: unknown;
-                        };
-                    };
-                    name?: string;
-                    priority?: number;
-                    [key: string]: unknown | {
-                        [key: string]: unknown;
-                    } | {
-                        type: string;
-                        params?: {
-                            [key: string]: unknown;
-                        };
-                    } | string | number | undefined;
-                }>;
-            };
-            defaultEventType: 'assign' | 'skip';
-            defaultEventParamsJson: {
-                [key: string]: unknown;
-            } | unknown;
-            allowedEventTypes: Array<'assign' | 'skip'>;
-            pipelineDefinitionId: string;
-        } | {
-            rulesJson: {
-                rules: Array<{
-                    conditions: {
-                        [key: string]: unknown;
-                    };
-                    event: {
-                        type: string;
-                        params?: {
-                            [key: string]: unknown;
-                        };
-                    };
-                    name?: string;
-                    priority?: number;
-                    [key: string]: unknown | {
-                        [key: string]: unknown;
-                    } | {
-                        type: string;
-                        params?: {
-                            [key: string]: unknown;
-                        };
-                    } | string | number | undefined;
-                }>;
-                [key: string]: unknown | Array<{
-                    conditions: {
-                        [key: string]: unknown;
-                    };
-                    event: {
-                        type: string;
-                        params?: {
-                            [key: string]: unknown;
-                        };
-                    };
-                    name?: string;
-                    priority?: number;
-                    [key: string]: unknown | {
-                        [key: string]: unknown;
-                    } | {
-                        type: string;
-                        params?: {
-                            [key: string]: unknown;
-                        };
-                    } | string | number | undefined;
-                }>;
-            };
-            defaultEventType: 'assign' | 'skip';
-            defaultEventParamsJson: {
-                [key: string]: unknown;
-            } | unknown;
-            allowedEventTypes: Array<'assign' | 'skip'>;
-            stepDefinitionKey: string;
-        } | unknown;
-    };
-    path: {
-        projectId: string;
-    };
-    query?: never;
-    url: '/api/projects/{projectId}/default-pipeline-assignment';
-};
-
-export type PutApiProjectsByProjectIdDefaultPipelineAssignmentErrors = {
-    /**
-     * Response for status 401
-     */
-    401: {
-        type: string;
-        title: string;
-        status: number;
-        detail?: string;
-        instance?: string;
-        code?: string;
-        errors?: Array<{
-            path: string;
-            message: string;
-            summary?: string;
-        }>;
-        meta?: {
-            [key: string]: unknown;
-        };
-    };
-    /**
-     * Response for status 403
-     */
-    403: {
-        type: string;
-        title: string;
-        status: number;
-        detail?: string;
-        instance?: string;
-        code?: string;
-        errors?: Array<{
-            path: string;
-            message: string;
-            summary?: string;
-        }>;
-        meta?: {
-            [key: string]: unknown;
-        };
-    };
-    /**
-     * Response for status 404
-     */
-    404: {
-        type: string;
-        title: string;
-        status: number;
-        detail?: string;
-        instance?: string;
-        code?: string;
-        errors?: Array<{
-            path: string;
-            message: string;
-            summary?: string;
-        }>;
-        meta?: {
-            [key: string]: unknown;
-        };
-    };
-    /**
-     * Response for status 422
-     */
-    422: {
-        type: string;
-        title: string;
-        status: number;
-        detail?: string;
-        instance?: string;
-        code?: string;
-        errors?: Array<{
-            path: string;
-            message: string;
-            summary?: string;
-        }>;
-        meta?: {
-            [key: string]: unknown;
-        };
-    };
-    /**
-     * Response for status 500
-     */
-    500: {
-        type: string;
-        title: string;
-        status: number;
-        detail?: string;
-        instance?: string;
-        code?: string;
-        errors?: Array<{
-            path: string;
-            message: string;
-            summary?: string;
-        }>;
-        meta?: {
-            [key: string]: unknown;
-        };
-    };
-};
-
-export type PutApiProjectsByProjectIdDefaultPipelineAssignmentError = PutApiProjectsByProjectIdDefaultPipelineAssignmentErrors[keyof PutApiProjectsByProjectIdDefaultPipelineAssignmentErrors];
-
-export type PutApiProjectsByProjectIdDefaultPipelineAssignmentResponses = {
-    /**
-     * Response for status 200
-     */
-    200: {
-        id: string;
-        name: string;
-        slug: string;
-        description: string | unknown;
-        gitUrl: string;
-        createdByUserId: string;
-        orgId: string;
-        ownerUsername: string | unknown;
-        memberships: Array<{
-            userId: string;
-            permissions: Array<string>;
-            createdAt: string;
-            updatedAt: string;
-        }>;
-        defaultPipelineAssignment: {
-            rulesJson: {
-                rules: Array<{
-                    conditions: {
-                        [key: string]: unknown;
-                    };
-                    event: {
-                        type: string;
-                        params?: {
-                            [key: string]: unknown;
-                        };
-                    };
-                    name?: string;
-                    priority?: number;
-                    [key: string]: unknown | {
-                        [key: string]: unknown;
-                    } | {
-                        type: string;
-                        params?: {
-                            [key: string]: unknown;
-                        };
-                    } | string | number | undefined;
-                }>;
-                [key: string]: unknown | Array<{
-                    conditions: {
-                        [key: string]: unknown;
-                    };
-                    event: {
-                        type: string;
-                        params?: {
-                            [key: string]: unknown;
-                        };
-                    };
-                    name?: string;
-                    priority?: number;
-                    [key: string]: unknown | {
-                        [key: string]: unknown;
-                    } | {
-                        type: string;
-                        params?: {
-                            [key: string]: unknown;
-                        };
-                    } | string | number | undefined;
-                }>;
-            };
-            defaultEventType: 'assign' | 'skip';
-            defaultEventParamsJson: {
-                [key: string]: unknown;
-            } | unknown;
-            allowedEventTypes: Array<'assign' | 'skip'>;
-            pipelineDefinitionId: string;
-        } | {
-            rulesJson: {
-                rules: Array<{
-                    conditions: {
-                        [key: string]: unknown;
-                    };
-                    event: {
-                        type: string;
-                        params?: {
-                            [key: string]: unknown;
-                        };
-                    };
-                    name?: string;
-                    priority?: number;
-                    [key: string]: unknown | {
-                        [key: string]: unknown;
-                    } | {
-                        type: string;
-                        params?: {
-                            [key: string]: unknown;
-                        };
-                    } | string | number | undefined;
-                }>;
-                [key: string]: unknown | Array<{
-                    conditions: {
-                        [key: string]: unknown;
-                    };
-                    event: {
-                        type: string;
-                        params?: {
-                            [key: string]: unknown;
-                        };
-                    };
-                    name?: string;
-                    priority?: number;
-                    [key: string]: unknown | {
-                        [key: string]: unknown;
-                    } | {
-                        type: string;
-                        params?: {
-                            [key: string]: unknown;
-                        };
-                    } | string | number | undefined;
-                }>;
-            };
-            defaultEventType: 'assign' | 'skip';
-            defaultEventParamsJson: {
-                [key: string]: unknown;
-            } | unknown;
-            allowedEventTypes: Array<'assign' | 'skip'>;
-            stepDefinitionKey: string;
-        } | unknown;
-        visibility: 'private' | 'public';
-        createdAt: string;
-        updatedAt: string;
-    };
-};
-
-export type PutApiProjectsByProjectIdDefaultPipelineAssignmentResponse = PutApiProjectsByProjectIdDefaultPipelineAssignmentResponses[keyof PutApiProjectsByProjectIdDefaultPipelineAssignmentResponses];
-
 export type PutApiProjectsByProjectIdMembersByUserIdPermissionsData = {
     body?: never;
     path: {
@@ -1945,109 +1436,6 @@ export type PutApiProjectsByProjectIdMembersByUserIdPermissionsResponses = {
             createdAt: string;
             updatedAt: string;
         }>;
-        defaultPipelineAssignment: {
-            rulesJson: {
-                rules: Array<{
-                    conditions: {
-                        [key: string]: unknown;
-                    };
-                    event: {
-                        type: string;
-                        params?: {
-                            [key: string]: unknown;
-                        };
-                    };
-                    name?: string;
-                    priority?: number;
-                    [key: string]: unknown | {
-                        [key: string]: unknown;
-                    } | {
-                        type: string;
-                        params?: {
-                            [key: string]: unknown;
-                        };
-                    } | string | number | undefined;
-                }>;
-                [key: string]: unknown | Array<{
-                    conditions: {
-                        [key: string]: unknown;
-                    };
-                    event: {
-                        type: string;
-                        params?: {
-                            [key: string]: unknown;
-                        };
-                    };
-                    name?: string;
-                    priority?: number;
-                    [key: string]: unknown | {
-                        [key: string]: unknown;
-                    } | {
-                        type: string;
-                        params?: {
-                            [key: string]: unknown;
-                        };
-                    } | string | number | undefined;
-                }>;
-            };
-            defaultEventType: 'assign' | 'skip';
-            defaultEventParamsJson: {
-                [key: string]: unknown;
-            } | unknown;
-            allowedEventTypes: Array<'assign' | 'skip'>;
-            pipelineDefinitionId: string;
-        } | {
-            rulesJson: {
-                rules: Array<{
-                    conditions: {
-                        [key: string]: unknown;
-                    };
-                    event: {
-                        type: string;
-                        params?: {
-                            [key: string]: unknown;
-                        };
-                    };
-                    name?: string;
-                    priority?: number;
-                    [key: string]: unknown | {
-                        [key: string]: unknown;
-                    } | {
-                        type: string;
-                        params?: {
-                            [key: string]: unknown;
-                        };
-                    } | string | number | undefined;
-                }>;
-                [key: string]: unknown | Array<{
-                    conditions: {
-                        [key: string]: unknown;
-                    };
-                    event: {
-                        type: string;
-                        params?: {
-                            [key: string]: unknown;
-                        };
-                    };
-                    name?: string;
-                    priority?: number;
-                    [key: string]: unknown | {
-                        [key: string]: unknown;
-                    } | {
-                        type: string;
-                        params?: {
-                            [key: string]: unknown;
-                        };
-                    } | string | number | undefined;
-                }>;
-            };
-            defaultEventType: 'assign' | 'skip';
-            defaultEventParamsJson: {
-                [key: string]: unknown;
-            } | unknown;
-            allowedEventTypes: Array<'assign' | 'skip'>;
-            stepDefinitionKey: string;
-        } | unknown;
         visibility: 'private' | 'public';
         createdAt: string;
         updatedAt: string;
@@ -2176,6 +1564,10 @@ export type GetApiStepDefinitionsResponses = {
         }>;
         workItemPermissions: Array<'self' | 'children'>;
         maxTurns: number | unknown;
+        concurrency: {
+            max: number;
+            waiting: number;
+        } | unknown;
         opencodeMcpJson: {
             [key: string]: {
                 type: string;
@@ -2308,6 +1700,10 @@ export type PostApiStepDefinitionsData = {
         }>;
         workItemPermissions?: Array<'self' | 'children'>;
         maxTurns?: number | unknown;
+        concurrency?: {
+            max: number;
+            waiting: number;
+        } | unknown;
         opencodeMcpJson?: {
             [key: string]: {
                 type: string;
@@ -2581,6 +1977,10 @@ export type PostApiStepDefinitionsResponses = {
         }>;
         workItemPermissions: Array<'self' | 'children'>;
         maxTurns: number | unknown;
+        concurrency: {
+            max: number;
+            waiting: number;
+        } | unknown;
         opencodeMcpJson: {
             [key: string]: {
                 type: string;
@@ -2713,6 +2113,10 @@ export type PutApiStepDefinitionsData = {
         }>;
         workItemPermissions?: Array<'self' | 'children'>;
         maxTurns?: number | unknown;
+        concurrency?: {
+            max: number;
+            waiting: number;
+        } | unknown;
         opencodeMcpJson?: {
             [key: string]: {
                 type: string;
@@ -2948,6 +2352,10 @@ export type PutApiStepDefinitionsResponses = {
         }>;
         workItemPermissions: Array<'self' | 'children'>;
         maxTurns: number | unknown;
+        concurrency: {
+            max: number;
+            waiting: number;
+        } | unknown;
         opencodeMcpJson: {
             [key: string]: {
                 type: string;
@@ -3193,6 +2601,10 @@ export type GetApiStepDefinitionsByStepDefinitionIdResponses = {
         }>;
         workItemPermissions: Array<'self' | 'children'>;
         maxTurns: number | unknown;
+        concurrency: {
+            max: number;
+            waiting: number;
+        } | unknown;
         opencodeMcpJson: {
             [key: string]: {
                 type: string;
@@ -3438,6 +2850,10 @@ export type PutApiStepDefinitionsByStepDefinitionIdArchiveResponses = {
         }>;
         workItemPermissions: Array<'self' | 'children'>;
         maxTurns: number | unknown;
+        concurrency: {
+            max: number;
+            waiting: number;
+        } | unknown;
         opencodeMcpJson: {
             [key: string]: {
                 type: string;
@@ -3721,7 +3137,7 @@ export type PostApiTasksResponses = {
             maxTurns: number | unknown;
             heartbeatSeconds: number | unknown;
             executionTimeoutSeconds: number | unknown;
-            status: 'waiting_for_work' | 'queued' | 'running' | 'waiting_for_person' | 'succeeded' | 'failed' | 'cancelled';
+            status: 'waiting_for_concurrency_slot' | 'waiting_for_work' | 'queued' | 'running' | 'waiting_for_person' | 'succeeded' | 'failed' | 'cancelled';
             resultJson: unknown;
             errorJson: unknown;
             startedByUserId: string | unknown;
@@ -4012,7 +3428,7 @@ export type GetApiTasksByTaskIdResponses = {
         maxTurns: number | unknown;
         heartbeatSeconds: number | unknown;
         executionTimeoutSeconds: number | unknown;
-        status: 'waiting_for_work' | 'queued' | 'running' | 'waiting_for_person' | 'succeeded' | 'failed' | 'cancelled';
+        status: 'waiting_for_concurrency_slot' | 'waiting_for_work' | 'queued' | 'running' | 'waiting_for_person' | 'succeeded' | 'failed' | 'cancelled';
         resultJson: unknown;
         errorJson: unknown;
         startedByUserId: string | unknown;
@@ -4209,7 +3625,7 @@ export type GetApiProjectsByProjectIdTasksData = {
         projectId: string;
     };
     query?: {
-        status?: 'waiting_for_work' | 'queued' | 'running' | 'waiting_for_person' | 'succeeded' | 'failed' | 'cancelled' | Array<'waiting_for_work' | 'queued' | 'running' | 'waiting_for_person' | 'succeeded' | 'failed' | 'cancelled'>;
+        status?: 'waiting_for_concurrency_slot' | 'waiting_for_work' | 'queued' | 'running' | 'waiting_for_person' | 'succeeded' | 'failed' | 'cancelled' | Array<'waiting_for_concurrency_slot' | 'waiting_for_work' | 'queued' | 'running' | 'waiting_for_person' | 'succeeded' | 'failed' | 'cancelled'>;
         kind?: 'agent' | 'code';
         waitingOnMe?: boolean;
         startedByMe?: boolean;
@@ -4331,7 +3747,7 @@ export type GetApiProjectsByProjectIdTasksResponses = {
             projectId: string;
             kind: 'agent' | 'code';
             name: string | unknown;
-            status: 'waiting_for_work' | 'queued' | 'running' | 'waiting_for_person' | 'succeeded' | 'failed' | 'cancelled';
+            status: 'waiting_for_concurrency_slot' | 'waiting_for_work' | 'queued' | 'running' | 'waiting_for_person' | 'succeeded' | 'failed' | 'cancelled';
             createdAt: string;
             updatedAt: string;
             runNumber: number | unknown;
@@ -4846,6 +4262,7 @@ export type PostApiTaskRunsByTaskRunIdWorkerContextResponses = {
      */
     200: {
         projectId: string;
+        projectPath: string | unknown;
         gitUrl: string;
         baseWorkBranch: string | unknown;
         projectOpencodeConfig: {
@@ -5027,7 +4444,13 @@ export type PostApiTaskRunsByTaskRunIdCompletionsData = {
             fields?: {
                 [key: string]: unknown;
             };
+            labels?: Array<string>;
             blockedBy?: Array<string>;
+        } | {
+            kind: string;
+            workItemId: string;
+            add?: Array<string>;
+            remove?: Array<string>;
         } | {
             kind: string;
             blockedWorkItemId: string;
@@ -5235,7 +4658,13 @@ export type PostApiTaskRunsByTaskRunIdYieldsData = {
             fields?: {
                 [key: string]: unknown;
             };
+            labels?: Array<string>;
             blockedBy?: Array<string>;
+        } | {
+            kind: string;
+            workItemId: string;
+            add?: Array<string>;
+            remove?: Array<string>;
         } | {
             kind: string;
             blockedWorkItemId: string;
@@ -6571,6 +6000,7 @@ export type PostApiTaskRunsByTaskRunIdWorkItemReadsResponses = {
     200: {
         id: string;
         title: string;
+        labels: Array<string>;
         description: string | unknown;
         descriptionVersion: number;
         fields: {
@@ -6586,11 +6016,21 @@ export type PostApiTaskRunsByTaskRunIdWorkItemReadsResponses = {
             id: string;
             title: string;
             state: 'open' | 'closed';
+            labels: Array<string>;
+            closeReason: 'completed' | 'out_of_scope' | 'superseded' | unknown;
+            resolution: string | unknown;
+            blockedBy: Array<string>;
+            latestTaskStatus: 'waiting_for_concurrency_slot' | 'waiting_for_work' | 'queued' | 'running' | 'waiting_for_person' | 'succeeded' | 'failed' | 'cancelled' | unknown;
         }>;
         children: Array<{
             id: string;
             title: string;
             state: 'open' | 'closed';
+            labels: Array<string>;
+            closeReason: 'completed' | 'out_of_scope' | 'superseded' | unknown;
+            resolution: string | unknown;
+            blockedBy: Array<string>;
+            latestTaskStatus: 'waiting_for_concurrency_slot' | 'waiting_for_work' | 'queued' | 'running' | 'waiting_for_person' | 'succeeded' | 'failed' | 'cancelled' | unknown;
         }>;
     };
 };
@@ -8821,6 +8261,1103 @@ export type GetApiProjectsByProjectIdPipelineDefinitionsResponses = {
 };
 
 export type GetApiProjectsByProjectIdPipelineDefinitionsResponse = GetApiProjectsByProjectIdPipelineDefinitionsResponses[keyof GetApiProjectsByProjectIdPipelineDefinitionsResponses];
+
+export type GetApiProjectsByProjectIdAutomationsData = {
+    body?: never;
+    path: {
+        projectId: string;
+    };
+    query?: never;
+    url: '/api/projects/{projectId}/automations';
+};
+
+export type GetApiProjectsByProjectIdAutomationsErrors = {
+    /**
+     * Response for status 400
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 404
+     */
+    404: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type GetApiProjectsByProjectIdAutomationsError = GetApiProjectsByProjectIdAutomationsErrors[keyof GetApiProjectsByProjectIdAutomationsErrors];
+
+export type GetApiProjectsByProjectIdAutomationsResponses = {
+    /**
+     * Response for status 200
+     */
+    200: Array<{
+        id: string;
+        projectId: string;
+        key: string;
+        title: string | unknown;
+        scope: 'workItem' | 'project';
+        enabled: boolean;
+        latestVersion: {
+            id: string;
+            version: number;
+            schemaVersion: number;
+            contentHash: string;
+            document: {
+                [key: string]: unknown;
+            };
+            publishedAt: string;
+        } | unknown;
+        createdAt: string;
+        updatedAt: string;
+    }>;
+};
+
+export type GetApiProjectsByProjectIdAutomationsResponse = GetApiProjectsByProjectIdAutomationsResponses[keyof GetApiProjectsByProjectIdAutomationsResponses];
+
+export type GetApiWorkItemsByWorkItemIdAutomationsData = {
+    body?: never;
+    path: {
+        workItemId: string;
+    };
+    query?: never;
+    url: '/api/work-items/{workItemId}/automations';
+};
+
+export type GetApiWorkItemsByWorkItemIdAutomationsErrors = {
+    /**
+     * Response for status 400
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 404
+     */
+    404: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type GetApiWorkItemsByWorkItemIdAutomationsError = GetApiWorkItemsByWorkItemIdAutomationsErrors[keyof GetApiWorkItemsByWorkItemIdAutomationsErrors];
+
+export type GetApiWorkItemsByWorkItemIdAutomationsResponses = {
+    /**
+     * Response for status 200
+     */
+    200: Array<{
+        workItemId: string;
+        automation: {
+            id: string;
+            projectId: string;
+            key: string;
+            title: string | unknown;
+            scope: 'workItem' | 'project';
+            enabled: boolean;
+            latestVersion: {
+                id: string;
+                version: number;
+                schemaVersion: number;
+                contentHash: string;
+                document: {
+                    [key: string]: unknown;
+                };
+                publishedAt: string;
+            } | unknown;
+            createdAt: string;
+            updatedAt: string;
+        };
+        attachedByUserId: string;
+        attachedAt: string;
+    }>;
+};
+
+export type GetApiWorkItemsByWorkItemIdAutomationsResponse = GetApiWorkItemsByWorkItemIdAutomationsResponses[keyof GetApiWorkItemsByWorkItemIdAutomationsResponses];
+
+export type PutApiProjectsByProjectIdAutomationsByKeyData = {
+    body: {
+        document: {
+            [key: string]: unknown;
+        };
+    };
+    path: {
+        projectId: string;
+        key: string;
+    };
+    query?: never;
+    url: '/api/projects/{projectId}/automations/{key}';
+};
+
+export type PutApiProjectsByProjectIdAutomationsByKeyErrors = {
+    /**
+     * Response for status 400
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 404
+     */
+    404: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type PutApiProjectsByProjectIdAutomationsByKeyError = PutApiProjectsByProjectIdAutomationsByKeyErrors[keyof PutApiProjectsByProjectIdAutomationsByKeyErrors];
+
+export type PutApiProjectsByProjectIdAutomationsByKeyResponses = {
+    /**
+     * Response for status 200
+     */
+    200: {
+        published: boolean;
+        automation: {
+            id: string;
+            projectId: string;
+            key: string;
+            title: string | unknown;
+            scope: 'workItem' | 'project';
+            enabled: boolean;
+            latestVersion: {
+                id: string;
+                version: number;
+                schemaVersion: number;
+                contentHash: string;
+                document: {
+                    [key: string]: unknown;
+                };
+                publishedAt: string;
+            } | unknown;
+            createdAt: string;
+            updatedAt: string;
+        };
+    };
+};
+
+export type PutApiProjectsByProjectIdAutomationsByKeyResponse = PutApiProjectsByProjectIdAutomationsByKeyResponses[keyof PutApiProjectsByProjectIdAutomationsByKeyResponses];
+
+export type PostApiProjectsByProjectIdAutomationsByKeyEnableData = {
+    body?: never;
+    path: {
+        projectId: string;
+        key: string;
+    };
+    query?: never;
+    url: '/api/projects/{projectId}/automations/{key}/enable';
+};
+
+export type PostApiProjectsByProjectIdAutomationsByKeyEnableErrors = {
+    /**
+     * Response for status 400
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 404
+     */
+    404: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type PostApiProjectsByProjectIdAutomationsByKeyEnableError = PostApiProjectsByProjectIdAutomationsByKeyEnableErrors[keyof PostApiProjectsByProjectIdAutomationsByKeyEnableErrors];
+
+export type PostApiProjectsByProjectIdAutomationsByKeyEnableResponses = {
+    /**
+     * Response for status 200
+     */
+    200: {
+        id: string;
+        projectId: string;
+        key: string;
+        title: string | unknown;
+        scope: 'workItem' | 'project';
+        enabled: boolean;
+        latestVersion: {
+            id: string;
+            version: number;
+            schemaVersion: number;
+            contentHash: string;
+            document: {
+                [key: string]: unknown;
+            };
+            publishedAt: string;
+        } | unknown;
+        createdAt: string;
+        updatedAt: string;
+    };
+};
+
+export type PostApiProjectsByProjectIdAutomationsByKeyEnableResponse = PostApiProjectsByProjectIdAutomationsByKeyEnableResponses[keyof PostApiProjectsByProjectIdAutomationsByKeyEnableResponses];
+
+export type PostApiProjectsByProjectIdAutomationsByKeyDisableData = {
+    body?: never;
+    path: {
+        projectId: string;
+        key: string;
+    };
+    query?: never;
+    url: '/api/projects/{projectId}/automations/{key}/disable';
+};
+
+export type PostApiProjectsByProjectIdAutomationsByKeyDisableErrors = {
+    /**
+     * Response for status 400
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 404
+     */
+    404: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type PostApiProjectsByProjectIdAutomationsByKeyDisableError = PostApiProjectsByProjectIdAutomationsByKeyDisableErrors[keyof PostApiProjectsByProjectIdAutomationsByKeyDisableErrors];
+
+export type PostApiProjectsByProjectIdAutomationsByKeyDisableResponses = {
+    /**
+     * Response for status 200
+     */
+    200: {
+        id: string;
+        projectId: string;
+        key: string;
+        title: string | unknown;
+        scope: 'workItem' | 'project';
+        enabled: boolean;
+        latestVersion: {
+            id: string;
+            version: number;
+            schemaVersion: number;
+            contentHash: string;
+            document: {
+                [key: string]: unknown;
+            };
+            publishedAt: string;
+        } | unknown;
+        createdAt: string;
+        updatedAt: string;
+    };
+};
+
+export type PostApiProjectsByProjectIdAutomationsByKeyDisableResponse = PostApiProjectsByProjectIdAutomationsByKeyDisableResponses[keyof PostApiProjectsByProjectIdAutomationsByKeyDisableResponses];
+
+export type DeleteApiWorkItemsByWorkItemIdAutomationsByKeyData = {
+    body?: never;
+    path: {
+        workItemId: string;
+        key: string;
+    };
+    query?: never;
+    url: '/api/work-items/{workItemId}/automations/{key}';
+};
+
+export type DeleteApiWorkItemsByWorkItemIdAutomationsByKeyErrors = {
+    /**
+     * Response for status 400
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 404
+     */
+    404: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type DeleteApiWorkItemsByWorkItemIdAutomationsByKeyError = DeleteApiWorkItemsByWorkItemIdAutomationsByKeyErrors[keyof DeleteApiWorkItemsByWorkItemIdAutomationsByKeyErrors];
+
+export type DeleteApiWorkItemsByWorkItemIdAutomationsByKeyResponses = {
+    /**
+     * Response for status 200
+     */
+    200: {
+        detached: boolean;
+    };
+};
+
+export type DeleteApiWorkItemsByWorkItemIdAutomationsByKeyResponse = DeleteApiWorkItemsByWorkItemIdAutomationsByKeyResponses[keyof DeleteApiWorkItemsByWorkItemIdAutomationsByKeyResponses];
+
+export type PostApiWorkItemsByWorkItemIdAutomationsByKeyData = {
+    body?: never;
+    path: {
+        workItemId: string;
+        key: string;
+    };
+    query?: never;
+    url: '/api/work-items/{workItemId}/automations/{key}';
+};
+
+export type PostApiWorkItemsByWorkItemIdAutomationsByKeyErrors = {
+    /**
+     * Response for status 400
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 404
+     */
+    404: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type PostApiWorkItemsByWorkItemIdAutomationsByKeyError = PostApiWorkItemsByWorkItemIdAutomationsByKeyErrors[keyof PostApiWorkItemsByWorkItemIdAutomationsByKeyErrors];
+
+export type PostApiWorkItemsByWorkItemIdAutomationsByKeyResponses = {
+    /**
+     * Response for status 200
+     */
+    200: {
+        workItemId: string;
+        automation: {
+            id: string;
+            projectId: string;
+            key: string;
+            title: string | unknown;
+            scope: 'workItem' | 'project';
+            enabled: boolean;
+            latestVersion: {
+                id: string;
+                version: number;
+                schemaVersion: number;
+                contentHash: string;
+                document: {
+                    [key: string]: unknown;
+                };
+                publishedAt: string;
+            } | unknown;
+            createdAt: string;
+            updatedAt: string;
+        };
+        attachedByUserId: string;
+        attachedAt: string;
+    };
+};
+
+export type PostApiWorkItemsByWorkItemIdAutomationsByKeyResponse = PostApiWorkItemsByWorkItemIdAutomationsByKeyResponses[keyof PostApiWorkItemsByWorkItemIdAutomationsByKeyResponses];
 
 export type GetApiPipelineExecutionsData = {
     body?: never;
@@ -12379,11 +12916,13 @@ export type GetApiWorkItemsByWorkItemIdResponses = {
         url?: string | unknown;
         title: string;
         description: string;
+        descriptionVersion: number;
         sourceCreatedAt: string | unknown;
         sourceUpdatedAt: string | unknown;
         fields: {
             [key: string]: unknown;
         } | unknown;
+        labels: Array<string>;
         createdByUserId: string | unknown;
         createdByUsername: string | unknown;
         createdByImage: string | unknown;
@@ -12407,6 +12946,7 @@ export type PatchApiWorkItemsByWorkItemIdData = {
     body: {
         title?: string;
         description?: string;
+        descriptionVersion?: number;
         assigneeUserId?: string | unknown;
     };
     path: {
@@ -12494,6 +13034,25 @@ export type PatchApiWorkItemsByWorkItemIdErrors = {
         };
     };
     /**
+     * Response for status 409
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
      * Response for status 422
      */
     422: {
@@ -12548,11 +13107,13 @@ export type PatchApiWorkItemsByWorkItemIdResponses = {
         url?: string | unknown;
         title: string;
         description: string;
+        descriptionVersion: number;
         sourceCreatedAt: string | unknown;
         sourceUpdatedAt: string | unknown;
         fields: {
             [key: string]: unknown;
         } | unknown;
+        labels: Array<string>;
         createdByUserId: string | unknown;
         createdByUsername: string | unknown;
         createdByImage: string | unknown;
@@ -12694,11 +13255,13 @@ export type GetApiWorkItemsByWorkItemIdChildrenResponses = {
         url?: string | unknown;
         title: string;
         description: string;
+        descriptionVersion: number;
         sourceCreatedAt: string | unknown;
         sourceUpdatedAt: string | unknown;
         fields: {
             [key: string]: unknown;
         } | unknown;
+        labels: Array<string>;
         createdByUserId: string | unknown;
         createdByUsername: string | unknown;
         createdByImage: string | unknown;
@@ -12713,10 +13276,156 @@ export type GetApiWorkItemsByWorkItemIdChildrenResponses = {
         spawnedByTaskId: string | unknown;
         createdAt: string;
         updatedAt: string;
+        status: 'needs_person' | 'running' | 'ready' | 'blocked' | 'closed';
+        assignee: {
+            userId: string;
+            username: string | unknown;
+            image: string | unknown;
+        } | unknown;
+        openBlockers: Array<{
+            id: string;
+            title: string;
+        }>;
+        latestTask: {
+            id: string;
+            status: 'waiting_for_concurrency_slot' | 'waiting_for_work' | 'queued' | 'running' | 'waiting_for_person' | 'succeeded' | 'failed' | 'cancelled';
+            step: {
+                key: string;
+                name: string;
+            } | unknown;
+            startedAt: string | unknown;
+            updatedAt: string;
+            question: string | unknown;
+            failure: string | unknown;
+        } | unknown;
     }>;
 };
 
 export type GetApiWorkItemsByWorkItemIdChildrenResponse = GetApiWorkItemsByWorkItemIdChildrenResponses[keyof GetApiWorkItemsByWorkItemIdChildrenResponses];
+
+export type GetApiWorkItemsByWorkItemIdActivityData = {
+    body?: never;
+    path: {
+        workItemId: string;
+    };
+    query?: never;
+    url: '/api/work-items/{workItemId}/activity';
+};
+
+export type GetApiWorkItemsByWorkItemIdActivityErrors = {
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 404
+     */
+    404: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type GetApiWorkItemsByWorkItemIdActivityError = GetApiWorkItemsByWorkItemIdActivityErrors[keyof GetApiWorkItemsByWorkItemIdActivityErrors];
+
+export type GetApiWorkItemsByWorkItemIdActivityResponses = {
+    /**
+     * Response for status 200
+     */
+    200: Array<{
+        id: string;
+        workItemId: string;
+        kind: 'automation';
+        message: string;
+        createdAt: string;
+    }>;
+};
+
+export type GetApiWorkItemsByWorkItemIdActivityResponse = GetApiWorkItemsByWorkItemIdActivityResponses[keyof GetApiWorkItemsByWorkItemIdActivityResponses];
 
 export type PostApiWorkItemsData = {
     body: {
@@ -12733,6 +13442,8 @@ export type PostApiWorkItemsData = {
             [key: string]: unknown;
         } | unknown;
         state?: 'open' | 'closed';
+        labels?: Array<string>;
+        id?: string;
     };
     path?: never;
     query?: never;
@@ -12890,11 +13601,13 @@ export type PostApiWorkItemsResponses = {
         url?: string | unknown;
         title: string;
         description: string;
+        descriptionVersion: number;
         sourceCreatedAt: string | unknown;
         sourceUpdatedAt: string | unknown;
         fields: {
             [key: string]: unknown;
         } | unknown;
+        labels: Array<string>;
         createdByUserId: string | unknown;
         createdByUsername: string | unknown;
         createdByImage: string | unknown;
@@ -12929,6 +13642,7 @@ export type PutApiWorkItemsData = {
             [key: string]: unknown;
         } | unknown;
         state?: 'open' | 'closed';
+        labels?: Array<string>;
     };
     path?: never;
     query?: never;
@@ -13067,11 +13781,13 @@ export type PutApiWorkItemsResponses = {
         url?: string | unknown;
         title: string;
         description: string;
+        descriptionVersion: number;
         sourceCreatedAt: string | unknown;
         sourceUpdatedAt: string | unknown;
         fields: {
             [key: string]: unknown;
         } | unknown;
+        labels: Array<string>;
         createdByUserId: string | unknown;
         createdByUsername: string | unknown;
         createdByImage: string | unknown;
@@ -13224,6 +13940,7 @@ export type PostApiWorkItemsBatchData = {
             [key: string]: unknown;
         } | unknown;
         state?: 'open' | 'closed';
+        labels?: Array<string>;
     }>;
     path?: never;
     query?: never;
@@ -13381,11 +14098,13 @@ export type PostApiWorkItemsBatchResponses = {
         url?: string | unknown;
         title: string;
         description: string;
+        descriptionVersion: number;
         sourceCreatedAt: string | unknown;
         sourceUpdatedAt: string | unknown;
         fields: {
             [key: string]: unknown;
         } | unknown;
+        labels: Array<string>;
         createdByUserId: string | unknown;
         createdByUsername: string | unknown;
         createdByImage: string | unknown;
@@ -13420,6 +14139,7 @@ export type PutApiWorkItemsBatchData = {
             [key: string]: unknown;
         } | unknown;
         state?: 'open' | 'closed';
+        labels?: Array<string>;
     }>;
     path?: never;
     query?: never;
@@ -13558,11 +14278,13 @@ export type PutApiWorkItemsBatchResponses = {
         url?: string | unknown;
         title: string;
         description: string;
+        descriptionVersion: number;
         sourceCreatedAt: string | unknown;
         sourceUpdatedAt: string | unknown;
         fields: {
             [key: string]: unknown;
         } | unknown;
+        labels: Array<string>;
         createdByUserId: string | unknown;
         createdByUsername: string | unknown;
         createdByImage: string | unknown;
@@ -13581,6 +14303,195 @@ export type PutApiWorkItemsBatchResponses = {
 };
 
 export type PutApiWorkItemsBatchResponse = PutApiWorkItemsBatchResponses[keyof PutApiWorkItemsBatchResponses];
+
+export type PatchApiWorkItemsByWorkItemIdLabelsData = {
+    body: {
+        add?: Array<string>;
+        remove?: Array<string>;
+    };
+    path: {
+        workItemId: string;
+    };
+    query?: never;
+    url: '/api/work-items/{workItemId}/labels';
+};
+
+export type PatchApiWorkItemsByWorkItemIdLabelsErrors = {
+    /**
+     * Response for status 400
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 404
+     */
+    404: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 409
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type PatchApiWorkItemsByWorkItemIdLabelsError = PatchApiWorkItemsByWorkItemIdLabelsErrors[keyof PatchApiWorkItemsByWorkItemIdLabelsErrors];
+
+export type PatchApiWorkItemsByWorkItemIdLabelsResponses = {
+    /**
+     * Response for status 200
+     */
+    200: {
+        id: string;
+        projectId: string;
+        platform: 'jira' | 'github' | 'bitbucket' | 'linear' | 'scarn' | 'custom';
+        platformId?: string | unknown;
+        platformKey: string;
+        url?: string | unknown;
+        title: string;
+        description: string;
+        descriptionVersion: number;
+        sourceCreatedAt: string | unknown;
+        sourceUpdatedAt: string | unknown;
+        fields: {
+            [key: string]: unknown;
+        } | unknown;
+        labels: Array<string>;
+        createdByUserId: string | unknown;
+        createdByUsername: string | unknown;
+        createdByImage: string | unknown;
+        assigneeUserId: string | unknown;
+        parentWorkItemId: string | unknown;
+        state: 'open' | 'closed';
+        closeReason: 'completed' | 'out_of_scope' | 'superseded' | unknown;
+        resolution: string | unknown;
+        closedAt: string | unknown;
+        closedByUserId: string | unknown;
+        closedByTaskId: string | unknown;
+        spawnedByTaskId: string | unknown;
+        createdAt: string;
+        updatedAt: string;
+    };
+};
+
+export type PatchApiWorkItemsByWorkItemIdLabelsResponse = PatchApiWorkItemsByWorkItemIdLabelsResponses[keyof PatchApiWorkItemsByWorkItemIdLabelsResponses];
 
 export type PatchApiWorkItemsByWorkItemIdParentData = {
     body: {
@@ -13725,11 +14636,13 @@ export type PatchApiWorkItemsByWorkItemIdParentResponses = {
         url?: string | unknown;
         title: string;
         description: string;
+        descriptionVersion: number;
         sourceCreatedAt: string | unknown;
         sourceUpdatedAt: string | unknown;
         fields: {
             [key: string]: unknown;
         } | unknown;
+        labels: Array<string>;
         createdByUserId: string | unknown;
         createdByUsername: string | unknown;
         createdByImage: string | unknown;
@@ -13915,11 +14828,13 @@ export type PutApiWorkItemsByWorkItemIdStateResponses = {
         url?: string | unknown;
         title: string;
         description: string;
+        descriptionVersion: number;
         sourceCreatedAt: string | unknown;
         sourceUpdatedAt: string | unknown;
         fields: {
             [key: string]: unknown;
         } | unknown;
+        labels: Array<string>;
         createdByUserId: string | unknown;
         createdByUsername: string | unknown;
         createdByImage: string | unknown;
@@ -16881,6 +17796,21 @@ export type GetApiProjectsByProjectIdInboxWaitsResponses = {
                 body: 'optional' | 'required';
             }>;
         }>;
+        workItems: Array<{
+            id: string;
+            platformKey: string;
+            title: string;
+            labels: Array<string>;
+            parent: {
+                id: string;
+                title: string;
+            } | unknown;
+            waitingSince: string;
+            waitingOn: Array<{
+                userId: string;
+                username: string | unknown;
+            }>;
+        }>;
     };
 };
 
@@ -17003,6 +17933,7 @@ export type GetApiProjectsByProjectIdInboxSummaryResponses = {
         waitingOnMe: number;
         failedStartedByMe: number;
         pipelineWaitsOnMe: number;
+        workItemsWaitingOnMe: number;
         badgeCount: number;
         waitingOnOthers: number;
     };

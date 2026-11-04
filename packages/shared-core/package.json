@@ -13,6 +13,11 @@
       "types": "./src/pipelines/index.ts",
       "bun": "./src/pipelines/index.ts",
       "default": "./src/pipelines/index.ts"
+    },
+    "./automations": {
+      "types": "./src/automations/index.ts",
+      "bun": "./src/automations/index.ts",
+      "default": "./src/automations/index.ts"
     }
   },
   "scripts": {

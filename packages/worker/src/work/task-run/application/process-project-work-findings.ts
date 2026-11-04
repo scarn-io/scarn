@@ -39,6 +39,11 @@ export type CurrentExecutionInfo = {
    * and the run's claim token, which authorizes the read on its own.
    */
   api?: { baseUrl: string; claimToken: string } | undefined;
+  /**
+   * What the work item tools build an item's web page URL from:
+   * `<appBaseUrl>/<projectPath>/work-items/<id>`.
+   */
+  workItemLinks?: { appBaseUrl: string; projectPath: string } | undefined;
 };
 
 export function buildFindingsSubmissionPath(workspacePath: string): string {
@@ -86,6 +91,7 @@ export async function writeCurrentExecutionInfoFile(
         workItemId: input.workItemId ?? null,
         workItemPermissions: input.workItemPermissions ?? [],
         api: input.api ?? null,
+        workItemLinks: input.workItemLinks ?? null,
       },
       null,
       2,

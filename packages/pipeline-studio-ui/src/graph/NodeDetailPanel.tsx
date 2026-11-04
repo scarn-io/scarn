@@ -91,7 +91,7 @@ function SchemaFieldsTable({
  * schema fields and declared errors, plus the node's own issue messages.
  *
  * The template detail page reuses it for its read-only preview: `notice`
- * shows under the caption (a hand-off step's "started by" line), `children`
+ * shows under the caption (what starts a detached step), `children`
  * adds the template step's settings, and `showIssues={false}` drops the
  * issues section, which a template preview has none of.
  */

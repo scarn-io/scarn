@@ -8,7 +8,7 @@
 // - `GET /api/templates` and `GET /api/templates/:key`: the pipeline
 //   templates the CLI ships, each with the name conflicts a "Use" would hit
 //   (and, on the detail, a built preview).
-// - `POST /api/templates/:key/use`: writes the template's `<pipelineKey>.ts`
+// - `POST /api/templates/:key/use`: writes the template's `<entry key>.ts`
 //   into the builder directory (see `use-pipeline-template.ts`). This is the
 //   server's only write path, so the server binds to 127.0.0.1 and rejects
 //   requests whose `Host` or `Origin` isn't its own origin.
@@ -210,10 +210,14 @@ function jsonError(status: number, message: string, extra?: object): Response {
   return Response.json({ error: message, ...extra }, { status });
 }
 
+/**
+ * Automation keys aren't in the snapshot; their `<key>.json` files are
+ * counted by the conflict check's own directory listing.
+ */
 function existingDefinitions(state: StudioState): ExistingBuilderDefinitions {
   return {
     stepKeys: state.steps.map((step) => step.key),
-    pipelineKeys:
+    entryKeys:
       state.snapshot.status === "ok"
         ? state.snapshot.pipelines.map((pipeline) => pipeline.key)
         : [],
@@ -297,10 +301,7 @@ async function handleUseTemplate(
     existing: existingDefinitions(state),
   });
   if (result.ok) {
-    return Response.json({
-      file: result.file,
-      pipelineKey: result.pipelineKey,
-    });
+    return Response.json({ file: result.file, entry: result.entry });
   }
   if (result.reason === "step-keys-taken") {
     return jsonError(409, result.message, {

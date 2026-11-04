@@ -24,8 +24,10 @@ export function managedRuntimeConfigPath(id: ManagedRuntimeId): string {
 }
 
 /**
- * The config as JSON text: `image`, `remoteUser` and an `onCreateCommand` that
- * installs the pipeline-builder dependencies. No cache volume.
+ * The config as JSON text: `image`, `remoteUser` and, when
+ * `installPipelineBuilder` is set (a code step), an `onCreateCommand` that
+ * installs the pipeline-builder dependencies. An agent step only needs the
+ * clone, so its config carries no install. No cache volume.
  *
  * `patchDevcontainerEnv` strips `//...` with a regex before `JSON.parse`, so a
  * `//` inside any string (a URL in a command, say) would corrupt the config
@@ -34,6 +36,7 @@ export function managedRuntimeConfigPath(id: ManagedRuntimeId): string {
 export function renderManagedRuntimeConfig(input: {
   id: ManagedRuntimeId;
   lockfilePresence: ReadonlySet<PipelineBuilderLockfileName>;
+  installPipelineBuilder: boolean;
 }): string {
   const definition = MANAGED_RUNTIMES[input.id];
   const rendered = JSON.stringify(
@@ -41,10 +44,14 @@ export function renderManagedRuntimeConfig(input: {
       name: `scarn-managed-${input.id}`,
       image: definition.image,
       remoteUser: definition.remoteUser,
-      onCreateCommand: buildPipelineBuilderInstallCommand({
-        present: input.lockfilePresence,
-        definition,
-      }),
+      ...(input.installPipelineBuilder
+        ? {
+            onCreateCommand: buildPipelineBuilderInstallCommand({
+              present: input.lockfilePresence,
+              definition,
+            }),
+          }
+        : {}),
     },
     null,
     2,
@@ -82,11 +89,15 @@ async function readLockfilePresence(
 export async function writeManagedRuntimeConfig(input: {
   workspacePath: string;
   id: ManagedRuntimeId;
+  installPipelineBuilder: boolean;
 }): Promise<string> {
   const relativePath = managedRuntimeConfigPath(input.id);
   const content = renderManagedRuntimeConfig({
     id: input.id,
-    lockfilePresence: await readLockfilePresence(input.workspacePath),
+    lockfilePresence: input.installPipelineBuilder
+      ? await readLockfilePresence(input.workspacePath)
+      : new Set(),
+    installPipelineBuilder: input.installPipelineBuilder,
   });
   const absolutePath = path.join(input.workspacePath, relativePath);
   await mkdir(path.dirname(absolutePath), { recursive: true });

@@ -67,6 +67,11 @@ const buildTaskPlaneClient = (taskRuns: TaskRuns) => {
       unwrap(
         await taskRuns.getTaskRunWorkerContext({ path: { taskRunId }, body }),
       ),
+    readTaskRunWorkItem: async ({
+      taskRunId,
+      ...body
+    }: TaskRunRef & { claimToken: string; workItemId: string }) =>
+      unwrap(await taskRuns.readTaskRunWorkItem({ path: { taskRunId }, body })),
     completeTaskRun: async ({
       taskRunId,
       ...body

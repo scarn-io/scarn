@@ -118,7 +118,7 @@ Docker — see [Runtime](/scarn/getting-started/concepts/#runtime).
 
    It adapts the [default pipeline](/scarn/getting-started/concepts/#default-pipeline)
    to your answers and writes the
-   [default pipeline assignment](/scarn/getting-started/concepts/#default-pipeline-assignment)
+   [default automation](/scarn/getting-started/concepts/#default-automation)
    that routes new items to it. With no `.devcontainer/devcontainer.json`, it
    writes one ([Runtime](/scarn/getting-started/concepts/#runtime)). For a
    secret it asks only the variable name; you put the value in `.scarn/.env`
@@ -173,7 +173,7 @@ Docker — see [Runtime](/scarn/getting-started/concepts/#runtime).
     - pipeline-builder/
       - bug-pipeline.ts the pipeline and its steps
       - bug-pipeline.json the pipeline, built from the `.ts`
-      - default-pipeline-assignment.ts
+      - default.ts the default automation
       - package.json
       - …
   - .devcontainer/
@@ -195,7 +195,7 @@ skips `node_modules/`, `push.ts`, and
   when a step needs your code, it runs in your devcontainer.
 - [Automate intake](/scarn/how-to/integrations/) — connect GitHub, Bitbucket or Jira, and
   route new items with
-  [Default Pipeline Assignment](/scarn/guides/pipeline-assignment/).
+  [Project Automations](/scarn/guides/automations/).
 - [Scale workers](/scarn/guides/workers/) — concurrency, polling, and work
   branches.
 

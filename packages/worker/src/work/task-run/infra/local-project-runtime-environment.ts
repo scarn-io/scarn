@@ -152,6 +152,10 @@ export class DefaultLocalProjectRuntimeEnvironmentOrchestrator implements LocalP
     repo: RepoConfig;
     /** See `TaskRuntimeEnvironmentOrchestrator.launch`'s `stepInputJson`. */
     stepInputJson?: unknown;
+    /** See `TaskRuntimeEnvironmentOrchestrator.launch`'s `loadCommitWorkItem`. */
+    loadCommitWorkItem?:
+      | (() => Promise<{ title: string; platformKey: string } | null>)
+      | undefined;
     /** See `TaskRuntimeEnvironmentOrchestrator.launch`'s `previousRun`. */
     previousRun?: PreviousRunFilesInput | undefined;
     /**
@@ -253,10 +257,13 @@ export class DefaultLocalProjectRuntimeEnvironmentOrchestrator implements LocalP
 
       // Step 2: Resolve the devcontainer config + its workspace folder: the
       // cloned repo's, or for a managed runtime one synthesized into the clone.
+      // Only a code step (no agent) runs pipeline-builder code, so only it
+      // installs the pipeline-builder dependencies.
       const devcontainerConfigPath = managedRuntime
         ? await writeManagedRuntimeConfig({
             workspacePath,
             id: managedRuntime.id,
+            installPipelineBuilder: !input.startAgent,
           })
         : await resolveDevcontainerConfig({
             devcontainerLauncher: this.deps.devcontainerLauncher,
@@ -413,6 +420,7 @@ export class DefaultLocalProjectRuntimeEnvironmentOrchestrator implements LocalP
                 taskRunId: input.currentExecutionInfo.taskRunId,
                 message: input.repo.message,
                 inputJson: input.stepInputJson,
+                loadWorkItem: input.loadCommitWorkItem,
                 onPushFailure: input.repo.onPushFailure,
                 extraExcludePaths: [
                   devcontainerConfigPath,

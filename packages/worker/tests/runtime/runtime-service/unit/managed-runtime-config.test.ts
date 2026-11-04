@@ -33,6 +33,7 @@ describe("renderManagedRuntimeConfig", () => {
             renderManagedRuntimeConfig({
               id,
               lockfilePresence: new Set(lockfile ? [lockfile] : []),
+              installPipelineBuilder: true,
             }),
           ) as unknown,
         ]),
@@ -49,6 +50,7 @@ describe("renderManagedRuntimeConfig", () => {
         const text = renderManagedRuntimeConfig({
           id,
           lockfilePresence: new Set(lockfile ? [lockfile] : []),
+          installPipelineBuilder: true,
         });
 
         expect(text).not.toContain("//");
@@ -58,7 +60,11 @@ describe("renderManagedRuntimeConfig", () => {
 
   test("carries no cache volume, mounts or env of its own", () => {
     const config = JSON.parse(
-      renderManagedRuntimeConfig({ id: "bun1", lockfilePresence: new Set() }),
+      renderManagedRuntimeConfig({
+        id: "bun1",
+        lockfilePresence: new Set(),
+        installPipelineBuilder: true,
+      }),
     ) as Record<string, unknown>;
 
     expect(Object.keys(config).sort()).toEqual([
@@ -67,6 +73,22 @@ describe("renderManagedRuntimeConfig", () => {
       "onCreateCommand",
       "remoteUser",
     ]);
+  });
+
+  test("an agent step's config installs nothing", () => {
+    const config = JSON.parse(
+      renderManagedRuntimeConfig({
+        id: "bun1",
+        lockfilePresence: new Set(["bun.lock"]),
+        installPipelineBuilder: false,
+      }),
+    ) as Record<string, unknown>;
+
+    expect(config).toEqual({
+      name: "scarn-managed-bun1",
+      image: "oven/bun:1.4.0-debian",
+      remoteUser: "bun",
+    });
   });
 });
 
@@ -99,6 +121,7 @@ describe("writeManagedRuntimeConfig", () => {
     const relativePath = await writeManagedRuntimeConfig({
       workspacePath,
       id: "bun1",
+      installPipelineBuilder: true,
     });
 
     expect(relativePath).toBe(
@@ -122,6 +145,7 @@ describe("writeManagedRuntimeConfig", () => {
     const relativePath = await writeManagedRuntimeConfig({
       workspacePath,
       id: "node24",
+      installPipelineBuilder: true,
     });
 
     const written = JSON.parse(
@@ -136,6 +160,7 @@ describe("writeManagedRuntimeConfig", () => {
     const relativePath = await writeManagedRuntimeConfig({
       workspacePath,
       id: "bun1",
+      installPipelineBuilder: true,
     });
 
     const written = JSON.parse(
@@ -154,6 +179,7 @@ describe("writeManagedRuntimeConfig", () => {
     const relativePath = await writeManagedRuntimeConfig({
       workspacePath,
       id: "node24",
+      installPipelineBuilder: true,
     });
 
     expect(relativePath).toBe(
@@ -165,6 +191,7 @@ describe("writeManagedRuntimeConfig", () => {
     const relativePath = await writeManagedRuntimeConfig({
       workspacePath,
       id: "bun1",
+      installPipelineBuilder: true,
     });
 
     await patchDevcontainerEnv(workspacePath, relativePath, { API_KEY: "k" });

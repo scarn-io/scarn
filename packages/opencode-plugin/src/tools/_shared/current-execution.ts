@@ -14,11 +14,15 @@ export type CurrentExecutionInfo = {
   workItemPermissions: WorkItemPermission[];
   /** How the agent's tools reach the API live; `null` when unavailable. */
   api: CurrentExecutionApi | null;
+  /** What work item page URLs are built from; `null` when unknown. */
+  workItemLinks: WorkItemLinks | null;
 };
 
 export type WorkItemPermission = "self" | "children";
 
 export type CurrentExecutionApi = { baseUrl: string; claimToken: string };
+
+export type WorkItemLinks = { appBaseUrl: string; projectPath: string };
 
 const WORK_ITEM_PERMISSIONS: readonly WorkItemPermission[] = [
   "self",
@@ -52,6 +56,25 @@ function parseApi(record: Record<string, unknown>): CurrentExecutionApi | null {
     return null;
   }
   return { baseUrl, claimToken };
+}
+
+function parseWorkItemLinks(
+  record: Record<string, unknown>,
+): WorkItemLinks | null {
+  const value = record["workItemLinks"];
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  const { appBaseUrl, projectPath } = value as Record<string, unknown>;
+  if (
+    typeof appBaseUrl !== "string" ||
+    appBaseUrl.length === 0 ||
+    typeof projectPath !== "string" ||
+    projectPath.length === 0
+  ) {
+    return null;
+  }
+  return { appBaseUrl, projectPath };
 }
 
 /** Reads `.scarn/current-execution/execution.json` under the workspace. */
@@ -115,6 +138,7 @@ export async function loadCurrentExecutionInfo(
         : null,
     workItemPermissions: parseWorkItemPermissions(parsedRecord),
     api: parseApi(parsedRecord),
+    workItemLinks: parseWorkItemLinks(parsedRecord),
   };
 }
 

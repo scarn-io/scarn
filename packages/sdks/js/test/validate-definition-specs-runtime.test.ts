@@ -189,16 +189,16 @@ describe("validateDefinitionSpecs — managed runtime", () => {
     expect(issues[0]?.message).toContain("bun1, node24");
   });
 
-  test.concurrent("rejects a managed runtime on a non-code step", () => {
-    const issues = validate([
-      stepSpecWithOverrides("agent", {
-        kind: "user_defined",
-        managedRuntime: "bun1",
-      }),
-    ]);
-    expect(issues).toHaveLength(1);
-    expect(issues[0]?.check).toBe("runtime");
-    expect(issues[0]?.message).toContain("only supported for code steps");
+  test.concurrent("accepts a managed runtime on an agent step", () => {
+    expect(
+      validate([
+        stepSpecWithOverrides("agent", {
+          kind: "user_defined",
+          executionMode: "workspace",
+          managedRuntime: "bun1",
+        }),
+      ]),
+    ).toEqual([]);
   });
 
   test.concurrent(

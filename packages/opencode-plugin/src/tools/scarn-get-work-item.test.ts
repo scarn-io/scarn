@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { readWorkItemChanges } from "@scarn/sdk/contracts/work-item-changes";
 import { workItemTestWorkspace } from "./_shared/work-item-test-workspace";
 import {
+  invalidInputMessage,
   missingPermissionMessage,
   NO_WORK_ITEM_MESSAGE,
 } from "./_shared/work-item-tool-support";
@@ -33,7 +34,11 @@ describe("getWorkItem", () => {
         fetch,
       );
 
-      expect(JSON.parse(output)).toEqual({ id: "item-self", title: "T" });
+      expect(JSON.parse(output)).toEqual({
+        id: "item-self",
+        title: "T",
+        url: null,
+      });
       expect(calls).toHaveLength(1);
       expect(calls[0]?.url).toBe(
         "http://api.test/api/task-runs/task-run-1/work-item-reads",
@@ -44,6 +49,71 @@ describe("getWorkItem", () => {
         workItemId: "item-self",
       });
       expect(await readWorkItemChanges(workspacePath)).toEqual([]);
+    },
+  );
+
+  test.concurrent(
+    "reads the run's own work item when no id is given",
+    async () => {
+      const workspacePath = await workItemTestWorkspace();
+      const { fetch, calls } = fakeFetch(
+        new Response(JSON.stringify({ id: "item-self", title: "T" })),
+      );
+
+      await getWorkItem({}, workspacePath, fetch);
+
+      expect(JSON.parse(calls[0]?.init?.body as string)).toEqual({
+        claimToken: "claim-1",
+        workItemId: "item-self",
+      });
+    },
+  );
+
+  test.concurrent("refuses an empty id", async () => {
+    const workspacePath = await workItemTestWorkspace();
+    const { fetch, calls } = fakeFetch(new Response("{}"));
+
+    expect(await getWorkItem({ workItemId: " " }, workspacePath, fetch)).toBe(
+      invalidInputMessage(
+        "`workItemId` must be a non-empty string, or left out to read your own work item.",
+      ),
+    );
+    expect(calls).toHaveLength(0);
+  });
+
+  test.concurrent(
+    "adds the web page url to the item, its blockers and its children",
+    async () => {
+      const workspacePath = await workItemTestWorkspace({
+        workItemLinks: {
+          appBaseUrl: "https://app.test",
+          projectPath: "acme/web",
+        },
+      });
+      const { fetch } = fakeFetch(
+        new Response(
+          JSON.stringify({
+            id: "item-self",
+            title: "T",
+            blockers: [{ id: "item-b", title: "B" }],
+            children: [{ id: "item-c", title: "C" }],
+          }),
+        ),
+      );
+
+      const output = JSON.parse(
+        await getWorkItem({ workItemId: "item-self" }, workspacePath, fetch),
+      ) as unknown;
+
+      const page = (id: string): string =>
+        `https://app.test/acme/web/work-items/${id}`;
+      expect(output).toEqual({
+        id: "item-self",
+        title: "T",
+        url: page("item-self"),
+        blockers: [{ id: "item-b", title: "B", url: page("item-b") }],
+        children: [{ id: "item-c", title: "C", url: page("item-c") }],
+      });
     },
   );
 

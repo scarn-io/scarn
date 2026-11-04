@@ -2,7 +2,8 @@
 // each build and deleted after it.
 //
 // Imports each pipeline source file passed on the command line and prints
-// what its default export compiled to, as one JSON line after a marker. The
+// what its default export (`definePipeline` or `defineAutomation`) compiled
+// to, as one JSON line after a marker. The
 // CLI validates, formats and writes the `<key>.json` documents. This script
 // makes no network call and writes no files.
 
@@ -12,14 +13,22 @@ import { pathToFileURL } from "node:url";
 const MARKER = "__SCARN_BUILD__";
 
 type Result =
-  | { file: string; ok: true; pipeline?: Record<string, unknown> }
+  | {
+      file: string;
+      ok: true;
+      pipeline?: Record<string, unknown>;
+      automation?: Record<string, unknown>;
+    }
   | { file: string; ok: false; message: string; issues?: unknown[] };
 
-function isPipelineDocument(value: unknown): value is Record<string, unknown> {
+function hasTag(
+  value: unknown,
+  tag: "pipeline_document" | "automation_document",
+): value is Record<string, unknown> {
   return (
     typeof value === "object" &&
     value !== null &&
-    (value as { _tag?: unknown })._tag === "pipeline_document"
+    (value as { _tag?: unknown })._tag === tag
   );
 }
 
@@ -29,7 +38,11 @@ async function build(file: string): Promise<Result> {
       default?: unknown;
     };
     const exported = mod.default;
-    if (!isPipelineDocument(exported)) return { file, ok: true };
+    if (hasTag(exported, "automation_document")) {
+      const { key, document, sourceMap } = exported;
+      return { file, ok: true, automation: { key, document, sourceMap } };
+    }
+    if (!hasTag(exported, "pipeline_document")) return { file, ok: true };
     const { key, document, sourceMap, steps, warnings } = exported;
     return {
       file,

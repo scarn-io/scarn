@@ -111,9 +111,9 @@ export const evaluate = defineStep({
 
   agentPrompt: `
 Judge how actionable this bug report is. The report is the \`title\` and
-\`description\` in your input, and \`workItemComments\` holds the thread
-around it. A null \`description\` means the reporter wrote none. You cannot
-read code or open the app. Judge the text in front of you and nothing else.
+\`description\` in your input. A null \`description\` means the reporter wrote
+none. You cannot read code or open the app. Judge the text in front of you and
+nothing else.
 
 Look for: steps to reproduce, the expected behaviour versus what actually
 happened, the environment (URL, browser, account, version), and the scope (who

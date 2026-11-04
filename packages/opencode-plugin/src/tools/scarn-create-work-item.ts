@@ -7,11 +7,16 @@ import {
 import {
   DEFERRED_DESCRIPTION_NOTE,
   invalidInputMessage,
+  isLabelList,
   isNonEmptyString,
   loadWorkItemToolContext,
+  workItemUrl,
 } from "./_shared/work-item-tool-support";
 
 export const SCARN_CREATE_WORK_ITEM_TOOL = "scarn-create-work-item";
+
+export const CREATED_WORK_ITEM_NOTE =
+  "Recorded. The item is created only when this run succeeds; use this workItemId to refer to it in later calls. To link it in a description or comment, write `[title](url)`; the url works once the run succeeds.";
 
 export const CREATE_LIMIT_REACHED_MESSAGE = `This run has already created ${String(MAX_WORK_ITEMS_CREATED_PER_RUN)} work items, the most one run may create.`;
 
@@ -19,6 +24,7 @@ export type CreateWorkItemInput = {
   title?: unknown;
   description?: unknown;
   fields?: unknown;
+  labels?: unknown;
   blockedBy?: unknown;
 };
 
@@ -34,7 +40,7 @@ export async function createWorkItem(
   if (typeof context === "string") {
     return context;
   }
-  const { title, description, fields, blockedBy } = input;
+  const { title, description, fields, labels, blockedBy } = input;
   if (!isNonEmptyString(title)) {
     return invalidInputMessage("`title` must be a non-empty string.");
   }
@@ -46,6 +52,11 @@ export async function createWorkItem(
     (fields === null || typeof fields !== "object" || Array.isArray(fields))
   ) {
     return invalidInputMessage("`fields` must be a JSON object.");
+  }
+  if (labels !== undefined && !isLabelList(labels)) {
+    return invalidInputMessage(
+      "`labels` must be an array of non-empty strings.",
+    );
   }
   if (
     blockedBy !== undefined &&
@@ -73,11 +84,13 @@ export async function createWorkItem(
     ...(fields === undefined
       ? {}
       : { fields: fields as Record<string, unknown> }),
+    ...(labels === undefined || labels.length === 0 ? {} : { labels }),
     ...(blockedBy === undefined ? {} : { blockedBy }),
   });
   return JSON.stringify({
     workItemId,
-    note: "Recorded. The item is created only when this run succeeds; use this workItemId to refer to it in later calls.",
+    url: workItemUrl(context.info.workItemLinks, workItemId),
+    note: CREATED_WORK_ITEM_NOTE,
   });
 }
 
@@ -85,7 +98,7 @@ export async function createWorkItem(
 export function createScarnCreateWorkItemTool(directory: string): ToolInfo {
   return {
     name: SCARN_CREATE_WORK_ITEM_TOOL,
-    description: `Create a work item as a child of this Task's work item. Returns the new item's workItemId, which you can use right away in other work item tools (e.g. as a blocker). At most ${String(MAX_WORK_ITEMS_CREATED_PER_RUN)} per run. ${DEFERRED_DESCRIPTION_NOTE}`,
+    description: `Create a work item as a child of this Task's work item. Returns the new item's workItemId and url (its web page; link it in descriptions as [title](url)). The workItemId can be used right away in other work item tools (e.g. as a blocker). At most ${String(MAX_WORK_ITEMS_CREATED_PER_RUN)} per run. ${DEFERRED_DESCRIPTION_NOTE}`,
     input: {
       type: "object",
       properties: {
@@ -97,6 +110,11 @@ export function createScarnCreateWorkItemTool(directory: string): ToolInfo {
         fields: {
           type: "object",
           description: "Optional custom field values",
+        },
+        labels: {
+          type: "array",
+          items: { type: "string" },
+          description: "Labels for the new item (case-sensitive)",
         },
         blockedBy: {
           type: "array",

@@ -18,7 +18,7 @@ scans **this directory only** — not subdirectories.
 | `<pipeline-key>.ts`              | One pipeline. Must `export default definePipeline({ ... })`.          |
 | `<pipeline-key>.json`            | Written by `scarn pipelines build` from the `.ts`. Never edit by hand; rebuild it. |
 | `steps.ts`                       | Shared steps as **named** exports. Optional; steps may live inline.   |
-| `default-pipeline-assignment.ts` | Reserved. Routes incoming work items to a pipeline. Never a pipeline. |
+| `default.ts`                     | The project automation (`key: "default"`). Starts a pipeline when a work item is ready (§5). |
 | `push.ts`                        | Generated on every push. Never edit. Skipped by the scanner and by the typecheck. |
 | `package.json`, `tsconfig.json`  | Scaffolded. `@scarn/sdk` + `zod` are the only deps; import `z` from the SDK, not from `zod`. |
 
@@ -45,7 +45,7 @@ import {
   fail,
   equal,
 } from "@scarn/sdk/pipelines";
-import { defaultPipelineAssignment } from "@scarn/sdk/definitions/pipelines";
+import { defineAutomation, onEvent } from "@scarn/sdk/automations";
 ```
 
 ## 1. Steps — `defineStep`
@@ -483,11 +483,16 @@ export default definePipeline({
   reference
   used in a template string, a comparison or arithmetic throws at build time,
   and a field read but never used fails the build.
-- **`input.workItemComments` is not an arg.** The work item's comment thread
-  is added to every step's input at run time. Never pass it.
-- **Nothing else is added for you.** A step that needs the work item's title,
-  description or a form field gets it as an arg (`workItem.title`,
-  `workItem.description`, `workItemField(...)`).
+- **The work item is not in the step's input.** Nothing is added to a step's
+  input for you: no `input.workItem`, no `input.workItemComments`. An agent
+  reads its work item live with `scarn-get-work-item`, so its prompt should
+  say to. A step that needs the title, description or a form field as data
+  gets it as an arg (`workItem.title`, `workItem.description`,
+  `workItemField(...)`).
+- **A commit message names the work item with `workItem`, not `input`.**
+  ``repo: ({ workItem }) => Repo.readWrite({ message: `fix: ${workItem.title}` })``.
+  Only `workItem.title` and `workItem.platformKey` are allowed; the worker
+  reads them live when it commits.
 
 ## 4. Branching, decisions, lanes and errors
 
@@ -654,33 +659,42 @@ outside a split; `r.node(x)` past the merge of `x`'s lanes; a `.partial`
 route of an `all` node. Type errors: `.partial`/`each` in `start` or
 `.catch`, or `.partial` from `each`. No `toleratedFailures` on `all`.
 
-## 5. `default-pipeline-assignment.ts`
+## 5. `default.ts`
 
-Decides which pipeline starts when a work item arrives. Without it, nothing
-runs automatically — this file is what makes a pipeline real.
+The project automation: which pipeline starts when a work item is ready.
+Without it, nothing runs automatically. It builds to `default.json`.
 
 ```ts
-import { defaultPipelineAssignment } from "@scarn/sdk/definitions/pipelines";
+import { contains, equal } from "@scarn/sdk/pipelines";
+import { defineAutomation, onEvent, skip } from "@scarn/sdk/automations";
+import bugPipeline from "./bug-pipeline";
 
-export default defaultPipelineAssignment(
-  ({ workItem, context, all, assign, skip }) => ({
-    default: skip(),
-    rules: [
-      workItem.field("status").eq("resolved").then(skip()),
-      all(
-        workItem.field("issueType").eq("Bug"),
-        context.isNew.eq(true),
-      ).then(assign("bug-pipeline")),
-    ],
-  }),
-);
+export default defineAutomation({
+  key: "default",
+  title: "Default",
+  scope: "project",
+  rules: [
+    onEvent({
+      event: "workItem.ready",
+      routes: [
+        { when: (r) => contains(r.workItem.labels, "wontfix"), to: skip },
+        { when: (r) => equal(r.workItem.fields.kind, "Bug"), to: bugPipeline },
+      ],
+      otherwise: skip,
+    }),
+  ],
+});
 ```
 
-- `assign()` takes a pipeline **key**, or the value a pipeline file's
-  `definePipeline()` returns.
-- The pipeline must be published (§9) before a work item can run it.
-- Rules are ordered; first match wins; unmatched fall through to `default`.
-- `context.isNew` is `true` on first ingestion of the work item.
+- `workItem.ready`: a top-level item is open with no open blocker (on
+  arrival, last blocker closing, reopen). Also `workItem.created`,
+  `workItem.label.added` (`r.label`).
+- `r.workItem`: `title`, `description`, `labels`, `state`, `fields.<name>`.
+- Targets: a pipeline (a file's default export), a step call, or `skip`.
+  First matching route wins, else `otherwise`.
+- Started pipelines must be published (§9).
+- Push publishes it **disabled**; the user runs
+  `scarn automations enable default`.
 
 ## 6. Invariants — the things that actually break
 
@@ -703,9 +717,8 @@ export default defaultPipelineAssignment(
    checks the flow against them and writes `<key>.json`; `publish` uploads
    that JSON. A published pipeline that calls a step the server does not have
    is rejected.
-10. The scanner skips `push.ts` / `push.mjs` / `push.js` and
-    `default-pipeline-assignment.ts`, ignores subdirectories, and only reads
-    `.ts` / `.js` files.
+10. The scanner skips `push.ts` / `push.mjs` / `push.js`, ignores
+    subdirectories, and only reads `.ts` / `.js` files.
 11. Use `status: "active"` on steps. `"draft"` steps do not execute.
 12. Never edit `<key>.json` by hand. Change the `.ts` and rebuild.
 
@@ -894,7 +907,8 @@ cd ../.. && "$SCARN_CLI" pipelines publish .scarn/pipeline-builder/bug-pipeline.
 `$SCARN_CLI` is the absolute path to the running CLI. If it is unset, fall
 back to plain `scarn pipelines ...`.
 
-- `push` sends steps, publishes every built `<key>.json`, then the assignment.
+- `push` sends steps, then publishes every built `<key>.json`: pipelines,
+  then automations such as `default.json`.
 - `build` writes `<key>.json` next to each pipeline file and validates it. A
   build error names the `.ts` line and the JSON path; fix the `.ts` and build
   again. `build bug-pipeline.ts` builds one file.

@@ -134,8 +134,7 @@ describe("buildOpencodeTuiConfig", () => {
   test.concurrent(
     "lets the agent read an allowed external file without a prompt, and nothing beside it",
     () => {
-      const manifest =
-        "/home/u/.scarn/projects/acme/app/discovered-tools.json";
+      const manifest = "/home/u/.scarn/projects/acme/app/discovered-tools.json";
       const rules =
         buildOpencodeTuiConfig({
           description: "d",
@@ -356,7 +355,7 @@ describe("edit permission allowlist", () => {
     () => {
       for (const filePath of [
         `${PIPELINE_BUILDER_DIR}/reproduce-bug.ts`,
-        `${PIPELINE_BUILDER_DIR}/default-pipeline-assignment.ts`,
+        `${PIPELINE_BUILDER_DIR}/default.ts`,
         `${PIPELINE_BUILDER_DIR}/steps.ts`,
         `${PIPELINE_BUILDER_DIR}/nested/shared.ts`,
       ]) {

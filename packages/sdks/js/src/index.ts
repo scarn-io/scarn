@@ -5,6 +5,7 @@ export * from "./contracts/artifact-markers";
 export * from "./definitions/steps";
 export * from "./definitions/pipelines";
 export * from "./pipelines";
+export * from "./automations";
 // The authoring type wins at the root; the API response type of the same name
 // stays at `@scarn/sdk/definitions/pipelines`.
 export type { PipelineDefinition } from "./pipelines";

@@ -64,7 +64,10 @@ export type TemplateStepPreview = {
 };
 
 export type PipelineTemplatePreview = {
-  /** The pipeline's graph; `null` when the template failed to build. */
+  /**
+   * The pipeline's graph; `null` for an automation entry, or when the
+   * template failed to build.
+   */
   pipeline: PipelineGraphSnapshot | null;
   /** Every step the file exports, in the template's `stepKeys` order. */
   steps: TemplateStepPreview[];
@@ -120,7 +123,8 @@ export async function buildPipelineTemplatePreview(
 ): Promise<PipelineTemplatePreview> {
   const dir = makePreviewDir(options.builderDir);
   try {
-    const file = join(dir, `${template.pipelineKey}.ts`);
+    const { entry } = template;
+    const file = join(dir, `${entry.key}.ts`);
     writeFileSync(
       file,
       renderPipelineTemplate(template, { cliVersion: options.cliVersion }),
@@ -130,13 +134,18 @@ export async function buildPipelineTemplatePreview(
       files: [file],
     });
     const errors = build.files.flatMap((report) => report.errors);
+    const built = build.files.find((report) => report.key === entry.key);
+    if (built?.kind !== undefined && built.kind !== entry.kind) {
+      errors.push(
+        `${entry.key}: the template's entry is a ${entry.kind}, but the file exports a ${built.kind}.`,
+      );
+    }
 
     const { snapshot, steps } = await computeStudioState(dir);
     if (snapshot.status === "error") errors.push(snapshot.message);
     const pipeline =
-      snapshot.status === "ok"
-        ? (snapshot.pipelines.find((p) => p.key === template.pipelineKey) ??
-          null)
+      snapshot.status === "ok" && entry.kind === "pipeline"
+        ? (snapshot.pipelines.find((p) => p.key === entry.key) ?? null)
         : null;
     if (snapshot.status === "ok") {
       errors.push(
@@ -182,7 +191,9 @@ export function createPipelineTemplatePreviewCache(
         let kept = false;
         try {
           const preview = await buildPipelineTemplatePreview(template, options);
-          kept = preview.errors.length === 0 && preview.pipeline !== null;
+          kept =
+            preview.errors.length === 0 &&
+            (template.entry.kind === "automation" || preview.pipeline !== null);
           if (!kept) {
             logger.warn(
               { template: template.key, errors: preview.errors },

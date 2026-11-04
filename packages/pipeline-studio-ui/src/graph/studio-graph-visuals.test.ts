@@ -130,6 +130,35 @@ describe("nodeCaption", () => {
     );
     expect(nodeCaption({ ...base, kind: "succeed" })).toBe("succeed");
   });
+
+  test("captions automations-graph nodes by their event or target", () => {
+    const base = { label: "x", issues: [], shape: { kind: "none" as const } };
+    expect(nodeCaption({ ...base, kind: "event", event: "child.ready" })).toBe(
+      "event · child.ready",
+    );
+    expect(
+      nodeCaption({
+        ...base,
+        kind: "rule",
+        ruleIndex: 0,
+        event: "child.ready",
+      }),
+    ).toBe("rule · child.ready");
+    expect(
+      nodeCaption({ ...base, kind: "pipeline", targetKey: "triage" }),
+    ).toBe("pipeline · triage");
+    expect(
+      nodeCaption({
+        ...base,
+        kind: "action",
+        actionKind: "attach",
+        targetKey: "wayfinder",
+      }),
+    ).toBe("attach · wayfinder");
+    expect(nodeCaption({ ...base, kind: "action", actionKind: "skip" })).toBe(
+      "skip",
+    );
+  });
 });
 
 describe("forkMarker", () => {
@@ -199,15 +228,107 @@ describe("kindLabel", () => {
   });
 
   test("labels a step node with its step key", () => {
-    expect(kindLabel({ kind: "step", stepKey: "triage" })).toBe("Step · triage");
+    expect(kindLabel({ kind: "step", stepKey: "triage" })).toBe(
+      "Step · triage",
+    );
     expect(kindLabel({ kind: "step" })).toBe("Step");
+  });
+
+  test("labels an event node with the work item its event is about", () => {
+    expect(kindLabel({ kind: "event", event: "child.ready" })).toBe(
+      "Event · child work item",
+    );
+    expect(kindLabel({ kind: "event", event: "self.attached" })).toBe(
+      "Event · own work item",
+    );
+    expect(kindLabel({ kind: "event", event: "workItem.created" })).toBe(
+      "Event · top-level work item",
+    );
+    expect(kindLabel({ kind: "event" })).toBe("Event");
+  });
+
+  test("labels a rule node with its 1-based number and event", () => {
+    expect(
+      kindLabel({ kind: "rule", ruleIndex: 1, event: "child.ready" }),
+    ).toBe("Rule 2 · child.ready");
+    expect(kindLabel({ kind: "rule" })).toBe("Rule");
+  });
+
+  test("labels a pipeline node with its key, subject and resolution", () => {
+    expect(kindLabel({ kind: "pipeline", targetKey: "triage" })).toBe(
+      "Pipeline · triage",
+    );
+    expect(
+      kindLabel({ kind: "pipeline", targetKey: "triage", resolved: false }),
+    ).toBe("Pipeline · triage (not found)");
+    expect(
+      kindLabel({ kind: "pipeline", targetKey: "triage", subject: "child" }),
+    ).toBe("Pipeline · triage · on child");
+  });
+
+  test("labels an action node by what it does", () => {
+    expect(
+      kindLabel({
+        kind: "action",
+        actionKind: "step",
+        targetKey: "plan",
+        subject: "child",
+      }),
+    ).toBe("Step · plan · on child");
+    expect(
+      kindLabel({
+        kind: "action",
+        actionKind: "step",
+        targetKey: "plan",
+        subject: "workItem",
+      }),
+    ).toBe("Step · plan");
+    expect(
+      kindLabel({
+        kind: "action",
+        actionKind: "attach",
+        targetKey: "wayfinder",
+      }),
+    ).toBe("Attach · wayfinder");
+    expect(
+      kindLabel({
+        kind: "action",
+        actionKind: "attach",
+        targetKey: "wayfinder",
+        resolved: false,
+      }),
+    ).toBe("Attach · wayfinder (not found)");
+    expect(kindLabel({ kind: "action", actionKind: "skip" })).toBe("Skip");
+    expect(kindLabel({ kind: "action" })).toBe("Action");
+  });
+});
+
+describe("nodeLayoutSize", () => {
+  test("draws an event as a pill and the other automation kinds as cards", () => {
+    const card = nodeLayoutSize({ kind: "step" });
+    const event = nodeLayoutSize({ kind: "event" });
+    expect(event.height).toBeLessThan(card.height);
+    expect(event.height).toBe(nodeLayoutSize({ kind: "succeed" }).height);
+    for (const kind of ["rule", "pipeline", "action"] as const) {
+      expect(nodeLayoutSize({ kind })).toEqual(card);
+    }
+  });
+
+  test("adds a fork line to an all rule", () => {
+    expect(nodeLayoutSize({ kind: "rule", match: "all" }).height).toBe(
+      nodeLayoutSize({ kind: "rule" }).height + 16,
+    );
   });
 });
 
 describe("edgeTone", () => {
   test("catch wins over a loop route", () => {
-    expect(edgeTone({ kind: "catch", route: { kind: "loop", laneX: 0 } })).toBe("catch");
-    expect(edgeTone({ kind: "route", route: { kind: "loop", laneX: 0 } })).toBe("loop");
+    expect(edgeTone({ kind: "catch", route: { kind: "loop", laneX: 0 } })).toBe(
+      "catch",
+    );
+    expect(edgeTone({ kind: "route", route: { kind: "loop", laneX: 0 } })).toBe(
+      "loop",
+    );
     expect(edgeTone(undefined)).toBe("flow");
   });
 });

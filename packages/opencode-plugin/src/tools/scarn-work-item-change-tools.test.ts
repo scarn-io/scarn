@@ -15,6 +15,7 @@ import {
   buildCloseChange,
   buildCommentChange,
   buildDescribeChange,
+  buildLabelChange,
   buildStartTaskChange,
 } from "./scarn-work-item-change-tools";
 
@@ -60,6 +61,17 @@ const RECORDING_CASES: {
       workItemId: "item-a",
       description: "New",
       descriptionVersion: 2,
+    },
+  },
+  {
+    name: "label",
+    build: buildLabelChange,
+    input: { workItemId: "item-a", add: ["bug", "ui"], remove: ["triage"] },
+    change: {
+      kind: "label",
+      workItemId: "item-a",
+      add: ["bug", "ui"],
+      remove: ["triage"],
     },
   },
   {
@@ -159,6 +171,18 @@ describe("work item change tools", () => {
       }),
     ).toContain("descriptionVersion");
     expect(buildCommentChange({ workItemId: "a", body: "" })).toContain("body");
+    expect(buildLabelChange({ workItemId: "a" })).toContain("at least one");
+    expect(buildLabelChange({ workItemId: "a", add: ["ok", ""] })).toContain(
+      "`add`",
+    );
+    expect(buildLabelChange({ workItemId: "a", remove: "bug" })).toContain(
+      "`remove`",
+    );
+    expect(buildLabelChange({ workItemId: "a", add: ["bug"] })).toEqual({
+      kind: "label",
+      workItemId: "a",
+      add: ["bug"],
+    });
     expect(buildStartTaskChange({ workItemId: "a" })).toContain(
       "stepDefinitionKey",
     );

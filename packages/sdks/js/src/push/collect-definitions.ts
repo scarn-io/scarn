@@ -5,14 +5,9 @@
 // a real push performs can be exercised — and validated — with no server. The
 // upsert half lives in `push-from-directory.ts`.
 
-import { existsSync, readdirSync } from "node:fs";
+import { readdirSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import {
-  DEFAULT_PIPELINE_ASSIGNMENT_FILENAME,
-  isDefaultPipelineAssignmentSpec,
-  type DefaultPipelineAssignmentSpec,
-} from "../definitions/pipelines/define-default-pipeline-assignment";
 import type { StepDefinitionSpec } from "../definitions/steps";
 import { toStepSpec } from "../definitions/steps/step-handle";
 import { isStepDefinitionSpec, stepsInModule } from "./code-step-lookup";
@@ -45,8 +40,6 @@ export const PIPELINE_BUILDER_DIR = ".scarn/pipeline-builder";
 export type CollectedDefinitions = {
   /** Deduped by `key@vN`. */
   readonly steps: readonly StepDefinitionSpec[];
-  /** Present only when `default-pipeline-assignment.ts` exists in the directory. */
-  readonly defaultPipelineAssignment: DefaultPipelineAssignmentSpec | null;
 };
 
 /**
@@ -158,16 +151,12 @@ async function importModule(path: string): Promise<Record<string, unknown>> {
   return (await import(pathToFileURL(path).href)) as Record<string, unknown>;
 }
 
-/** `.ts`/`.js` files in `dir` that declare definitions — excludes internal scripts and `default-pipeline-assignment.ts`. */
+/** `.ts`/`.js` files in `dir` that declare definitions — excludes internal scripts. */
 export function listSourceFiles(absDir: string): string[] {
   const allFiles = readdirSync(absDir).filter(
     (file) => file.endsWith(".ts") || file.endsWith(".js"),
   );
-  return allFiles.filter(
-    (file) =>
-      !INTERNAL_SCRIPT_NAMES.has(file) &&
-      file !== DEFAULT_PIPELINE_ASSIGNMENT_FILENAME,
-  );
+  return allFiles.filter((file) => !INTERNAL_SCRIPT_NAMES.has(file));
 }
 
 /** Strips a source file's extension for use as a best-effort display key. */
@@ -203,10 +192,8 @@ async function collectFile(
 }
 
 /**
- * Imports every `.ts`/`.js` file in `dir` (except the push script itself and
- * `default-pipeline-assignment.ts`) and collects the step definitions they
- * export. The assignment file, when present, is imported and
- * validated too but returned separately — syncing it needs the server.
+ * Imports every `.ts`/`.js` file in `dir` (except the push script itself) and
+ * collects the step definitions they export.
  *
  * Designed to run on the user's native runtime (bun, node-with-tsx, deno), NOT
  * inside a `bun --compile`'d binary — that runtime can't resolve scoped package
@@ -238,10 +225,7 @@ export async function collectDefinitionsFromDirectory(
     await collectFile(join(absDir, file), absDir, state);
   }
 
-  return {
-    steps: [...state.stepMap.values()],
-    defaultPipelineAssignment: await collectDefaultPipelineAssignment(absDir),
-  };
+  return { steps: [...state.stepMap.values()] };
 }
 
 /**
@@ -273,37 +257,8 @@ export async function collectDefinitionsFromDirectoryTolerant(
     }
   }
 
-  let defaultPipelineAssignment: DefaultPipelineAssignmentSpec | null = null;
-  try {
-    defaultPipelineAssignment = await collectDefaultPipelineAssignment(absDir);
-  } catch (error) {
-    brokenPipelines.push({
-      key: fileNameWithoutExtension(DEFAULT_PIPELINE_ASSIGNMENT_FILENAME),
-      message: error instanceof Error ? error.message : String(error),
-    });
-  }
-
   return {
     steps: [...state.stepMap.values()],
-    defaultPipelineAssignment,
     brokenPipelines,
   };
-}
-
-async function collectDefaultPipelineAssignment(
-  absDir: string,
-): Promise<DefaultPipelineAssignmentSpec | null> {
-  const path = join(absDir, DEFAULT_PIPELINE_ASSIGNMENT_FILENAME);
-  if (!existsSync(path)) return null;
-
-  const mod = await importModule(path);
-  const spec = mod["default"];
-  if (!isDefaultPipelineAssignmentSpec(spec)) {
-    throw new Error(
-      `${DEFAULT_PIPELINE_ASSIGNMENT_FILENAME} must have a default export produced by ` +
-        `defaultPipelineAssignment(({ assign, skip, ... }) => ({ default: ..., rules: [...] })). ` +
-        `Got: ${typeof spec}`,
-    );
-  }
-  return spec;
 }

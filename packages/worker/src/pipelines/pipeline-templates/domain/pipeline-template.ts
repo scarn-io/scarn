@@ -1,7 +1,7 @@
 /**
  * A pipeline template: TypeScript source shipped with the CLI that renders
- * into one `<pipelineKey>.ts` file in the pipeline-builder directory, holding
- * one pipeline and every step it uses.
+ * into one `<entry key>.ts` file in the pipeline-builder directory, holding
+ * one entry (a pipeline or an automation) and every step it uses.
  *
  * The source carries two kinds of marker comment the renderer reads:
  *
@@ -9,8 +9,9 @@
  *   per parameter. `NAME` is the parameter's key in upper case, and the
  *   value is its default. Rendering replaces each value with the
  *   `JSON.stringify`ed parameter value, so values never touch prompt text.
- * - `// @scarn-template-pipeline-key` at the end of the `definePipeline`
- *   `key: "…",` line, so the key can be renamed without searching prompts.
+ * - `// @scarn-template-entry-key` at the end of the entry's `key: "…",` line
+ *   inside its `definePipeline(` or `defineAutomation(` call, so the key can
+ *   be renamed without searching prompts.
  */
 
 export type TemplateParameterType = "text" | "textarea";
@@ -24,12 +25,13 @@ export type TemplateParameter = {
   placeholder?: string | null;
 };
 
-/** A step the file exports but the graph doesn't contain: an agent starts it. */
-export type HandoffStep = {
+/** What the template's file defines as its entry point. */
+export type TemplateEntryKind = "pipeline" | "automation";
+
+export type TemplateEntry = {
+  kind: TemplateEntryKind;
+  /** The default file name and the `definePipeline`/`defineAutomation` key. */
   key: string;
-  /** The step key whose agent starts it. */
-  startedBy: string;
-  summary: string;
 };
 
 export type PipelineTemplate = {
@@ -40,22 +42,20 @@ export type PipelineTemplate = {
   /** The detail page body. */
   descriptionMarkdown: string;
   tags: string[];
-  /** The default file name and `definePipeline` key. */
-  pipelineKey: string;
+  entry: TemplateEntry;
   /** Every step the file exports, for collision checks. */
   stepKeys: string[];
-  handoffSteps: HandoffStep[];
   parameters: TemplateParameter[];
   /** The `.ts.tmpl` text. */
   source: string;
 };
 
 export const TEMPLATE_PARAMS_MARKER = "// @scarn-template-params";
-export const TEMPLATE_PIPELINE_KEY_MARKER = "// @scarn-template-pipeline-key";
+export const TEMPLATE_ENTRY_KEY_MARKER = "// @scarn-template-entry-key";
 export const TEMPLATE_MARKER_PREFIX = "@scarn-template-";
 
 /** The same shape a pipeline document's node ids take. */
-export const PIPELINE_KEY_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]*$/;
+export const ENTRY_KEY_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]*$/;
 
 export class PipelineTemplateRenderError extends Error {
   constructor(message: string) {

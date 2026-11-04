@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { pullPipelineDefinitions } from "../../../../src/pipelines/pipeline-definitions/application/pull-pipeline-definitions";
 
 /**
- * Mocks the four GET requests `pullPipelineDefinitions` issues via
+ * Mocks the three GET requests `pullPipelineDefinitions` issues via
  * `globalThis.fetch` (the underlying transport for every generated SDK
  * client), keyed by URL substring — mirroring the mocking style used by
  * `remote-artifact-store.test.ts`.
@@ -14,7 +14,6 @@ import { pullPipelineDefinitions } from "../../../../src/pipelines/pipeline-defi
 function mockFetch(responses: {
   steps?: unknown[];
   pipelines?: unknown[];
-  project?: Record<string, unknown>;
   fieldOptions?: unknown[];
 }): { calls: string[] } {
   const calls: string[] = [];
@@ -36,11 +35,7 @@ function mockFetch(responses: {
     if (url.includes("/step-definitions")) {
       return json(responses.steps ?? []);
     }
-    if (url.includes("/pipeline-definitions")) {
-      return json(responses.pipelines ?? []);
-    }
-    // GET /api/projects/{projectId}
-    return json(responses.project ?? {});
+    return json(responses.pipelines ?? []);
   }) as unknown as typeof fetch;
 
   return { calls };
@@ -82,7 +77,6 @@ describe("pullPipelineDefinitions / work-item-fields.ts", () => {
         },
       ],
       pipelines: [],
-      project: { id: "project-1", defaultPipelineAssignment: null },
       fieldOptions: [
         { key: "issueType", values: ["bug", "task"], truncated: false },
         { key: "status", values: ["open", "resolved"], truncated: false },
@@ -139,7 +133,6 @@ describe("pullPipelineDefinitions / work-item-fields.ts", () => {
         },
       ],
       pipelines: [],
-      project: { id: "project-1", defaultPipelineAssignment: null },
       fieldOptions: [],
     });
 
@@ -164,7 +157,6 @@ describe("pullPipelineDefinitions / work-item-fields.ts", () => {
     const { calls } = mockFetch({
       steps: [],
       pipelines: [],
-      project: { id: "project-1", defaultPipelineAssignment: null },
       fieldOptions: [{ key: "issueType", values: ["bug"], truncated: false }],
     });
 

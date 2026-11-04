@@ -196,6 +196,16 @@ export type TaskRunWorkerClient = {
     taskRunId: UuidV7;
     claimToken: string;
   }): Promise<TaskRunWorkerContextContract>;
+  /**
+   * A live read of a work item the run may see, with its claim token. Absent
+   * on clients with no API behind them, which renders a commit message's
+   * `{{workItem.…}}` tokens empty.
+   */
+  readTaskRunWorkItem?(input: {
+    taskRunId: string;
+    claimToken: string;
+    workItemId: string;
+  }): Promise<{ title: string; platformKey: string }>;
   createArtifactUploadUrl(input: {
     taskRunId: string;
     claimToken: string;
@@ -494,6 +504,13 @@ export type TaskRuntimeEnvironmentOrchestrator = {
      * `readWrite` commit message template.
      */
     stepInputJson?: unknown;
+    /**
+     * Reads the Task's work item live at commit time, the source of a
+     * `readWrite` commit message's `{{workItem.…}}` tokens; null on failure.
+     */
+    loadCommitWorkItem?:
+      | (() => Promise<{ title: string; platformKey: string } | null>)
+      | undefined;
     /**
      * Set for a steered rerun: the previous run's findings and transcript are
      * written into the workspace right after the current-execution metadata

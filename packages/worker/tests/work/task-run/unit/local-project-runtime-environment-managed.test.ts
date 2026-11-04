@@ -125,6 +125,51 @@ describe("launch with a managed runtime", () => {
     expect(env.workspaceFolder).toBe("/workspaces/repo");
   });
 
+  test("a code step's config installs the pipeline-builder dependencies", async () => {
+    const { orchestrator } = setup();
+
+    const env = await orchestrator.launch(launchInput("bun1"));
+
+    const config = JSON.parse(
+      await readFile(
+        path.join(workspacePath, env.devcontainerConfigPath),
+        "utf8",
+      ),
+    ) as Record<string, unknown>;
+    expect(config["onCreateCommand"]).toBeString();
+  });
+
+  test("an agent step launches the managed image with the agent and no install", async () => {
+    const { deps, orchestrator } = setup();
+    let configAtLaunch: Record<string, unknown> | undefined;
+    const launch = deps.devcontainerLauncher.launch.bind(
+      deps.devcontainerLauncher,
+    );
+    deps.devcontainerLauncher.launch = async (input) => {
+      configAtLaunch = JSON.parse(
+        await readFile(
+          path.join(input.workspacePath, input.devcontainerConfigPath),
+          "utf8",
+        ),
+      ) as Record<string, unknown>;
+      return launch(input);
+    };
+
+    const env = await orchestrator.launch({
+      ...buildLaunchInput(),
+      startAgent: true,
+      managedRuntime: "bun1",
+      repo: { mode: "readOnly" },
+    });
+
+    expect(deps.devcontainerLauncher.resolveConfigInputs).toEqual([]);
+    expect(env.devcontainerConfigPath).toBe(BUN1_CONFIG_PATH);
+    expect(env.agent).not.toBeNull();
+    expect(env.commitAndPushWorkBranch).toBeUndefined();
+    expect(configAtLaunch).toMatchObject({ image: "oven/bun:1.4.0-debian" });
+    expect(configAtLaunch).not.toHaveProperty("onCreateCommand");
+  });
+
   test("a null managed runtime resolves the config from the clone as before", async () => {
     const { deps, orchestrator } = setup();
 

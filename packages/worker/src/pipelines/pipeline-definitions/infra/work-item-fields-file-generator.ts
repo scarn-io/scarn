@@ -2,15 +2,10 @@
  * Generates `work-item-fields.ts`: a per-project snapshot of known work-item
  * field names, sourced from `GET /api/projects/{projectId}/work-item-field-options`.
  *
- * `workItem.field(name)` (see `define-default-pipeline-assignment.ts`) is
- * inherently untyped — work-item `fields` keys are platform- and
- * project-dependent (Jira custom field labels, GitHub-specific keys, etc.),
- * so there is no static schema to type them against. This file gives pipeline
- * authors an opt-in escape hatch: pass the generated `WorkItemFieldName`
- * union as `field`'s type parameter (`workItem.field<WorkItemFieldName>("issueType")`)
- * to get compile-time validation and editor autocomplete on field names
- * already seen for this project, while `workItem.field("issueType")` (no
- * type argument) keeps working exactly as before.
+ * Work-item `fields` keys are platform- and project-dependent (Jira custom
+ * field labels, GitHub-specific keys, etc.), so there is no static schema to
+ * type them against. This file gives pipeline authors the field names already
+ * seen for this project as a `WorkItemFieldName` union.
  *
  * The generated union is a best-effort snapshot as of the last
  * `scarn pipelines pull`, not an authoritative schema — new custom fields
@@ -71,8 +66,6 @@ export function generateWorkItemFieldsFileContent(
     "// Snapshot of work-item field names observed for this project as of the",
     "// last pull. Best-effort, not authoritative — new custom fields can appear",
     "// on the platform side at any time.",
-    "//",
-    "// Usage: workItem.field<WorkItemFieldName>(\"issueType\").eq(\"bug\")",
     "",
   ];
 

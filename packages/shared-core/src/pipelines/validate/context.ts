@@ -56,8 +56,13 @@ export interface Site {
 
 export type SitePart = "args" | "when" | "over";
 
+/** What reporting an error needs: the list errors go to. */
+export interface ReportContext {
+  errors: ValidationError[];
+}
+
 export function report(
-  ctx: ValidationContext,
+  ctx: ReportContext,
   site: Site,
   error: ValidationError,
 ): void {

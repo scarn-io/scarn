@@ -31,14 +31,28 @@ function makeBuilderDir(): string {
   return dir;
 }
 
-type BuiltNode = { kind: string; step?: string; maxTurns?: number };
+type BuiltRoute = {
+  kind: string;
+  to?: string;
+  on?: string;
+  when?: { value?: string };
+};
+type BuiltAutomation = {
+  kind: string;
+  key: string;
+  scope: string;
+  rules: {
+    event: string;
+    next: { routes: BuiltRoute[]; otherwise?: BuiltRoute };
+  }[];
+};
 
 describe("pipeline templates build", () => {
   for (const template of listPipelineTemplates()) {
     test(`"${template.key}" renders with defaults and builds with no errors`, async () => {
       const dir = makeBuilderDir();
       try {
-        const file = join(dir, `${template.pipelineKey}.ts`);
+        const file = join(dir, `${template.entry.key}.ts`);
         writeFileSync(
           file,
           renderPipelineTemplate(template, { cliVersion: "0.0.0" }),
@@ -51,14 +65,15 @@ describe("pipeline templates build", () => {
 
         expect(result.files.flatMap((report) => report.errors)).toEqual([]);
         expect(result.ok).toBe(true);
-        expect(result.files[0]?.key).toBe(template.pipelineKey);
+        expect(result.files[0]?.key).toBe(template.entry.key);
+        expect(result.files[0]?.kind).toBe(template.entry.kind);
       } finally {
         rmSync(dir, { recursive: true, force: true });
       }
     }, 30_000);
   }
 
-  test("wayfinder's graph is plan → done, with maxTurns on the plan node", async () => {
+  test("wayfinder builds, under a new key, as a work-item automation routing children by label", async () => {
     const dir = makeBuilderDir();
     try {
       const template = listPipelineTemplates().find(
@@ -70,7 +85,7 @@ describe("pipeline templates build", () => {
         file,
         renderPipelineTemplate(template, {
           cliVersion: "0.0.0",
-          pipelineKey: "wayfinder-2",
+          entryKey: "wayfinder-2",
         }),
       );
 
@@ -82,13 +97,46 @@ describe("pipeline templates build", () => {
 
       const document = JSON.parse(
         readFileSync(join(dir, "wayfinder-2.json"), "utf8"),
-      ) as { nodes: Record<string, BuiltNode> };
-      const stepNodes = Object.values(document.nodes).filter(
-        (node) => node.kind === "step",
-      );
-      expect(stepNodes).toHaveLength(1);
-      expect(stepNodes[0]?.step).toBe("plan");
-      expect(stepNodes[0]?.maxTurns).toBe(10);
+      ) as BuiltAutomation;
+      expect(document).toMatchObject({
+        kind: "automation",
+        key: "wayfinder-2",
+        scope: "workItem",
+      });
+      expect(
+        document.rules.map((rule) => ({
+          event: rule.event,
+          routes: rule.next.routes.map((route) => [route.to, route.on]),
+          otherwise: rule.next.otherwise,
+        })),
+      ).toEqual([
+        {
+          event: "self.attached",
+          routes: [["plan", "workItem"]],
+          otherwise: undefined,
+        },
+        {
+          event: "child.ready",
+          routes: [
+            ["research", "child"],
+            ["prototype", "child"],
+            ["grilling", "child"],
+          ],
+          otherwise: undefined,
+        },
+        {
+          event: "child.closed",
+          routes: [["plan", "workItem"]],
+          otherwise: undefined,
+        },
+      ]);
+      expect(
+        document.rules[1]?.next.routes.map((route) => route.when?.value),
+      ).toEqual([
+        "wayfinder:research",
+        "wayfinder:prototype",
+        "wayfinder:grilling",
+      ]);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

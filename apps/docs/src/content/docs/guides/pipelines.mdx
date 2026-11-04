@@ -67,14 +67,14 @@ Steps are written in TypeScript with `defineStep()` / `codeStep()` (see [Definin
 
 ```bash
 scarn pipelines build                                  # compile every pipeline .ts into <key>.json, and check it
-scarn pipelines push                                   # push the steps, publish every <key>.json, sync the assignment
+scarn pipelines push                                   # push the steps, publish every <key>.json
 scarn pipelines run code-quality-pipeline --work-item-id <work-item-id>
 ```
 
 | Command                                   | What it does                                                                                                                                                                      |
 | ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `pipelines build [file]`                  | Compiles each pipeline `.ts` file to `<key>.json` and validates it against the local steps. `--check` writes nothing and fails on a missing or stale JSON                         |
-| `pipelines push`                          | Upserts the steps, then publishes every built `<key>.json` in the directory like `publish` does, then syncs `default-pipeline-assignment.ts`. Unchanged documents publish nothing |
+| `pipelines push`                          | Upserts the steps, then publishes every built `<key>.json` in the directory like `publish` does, then every automation document. Unchanged documents publish nothing                |
 | `pipelines validate <file>`               | Runs the same validator the server runs on publish, against the project's active step definitions. Changes nothing                                                                |
 | `pipelines publish <file>`                | Creates the pipeline if its `key` is new, otherwise publishes the next version and makes it active. Publishing content identical to the latest version does nothing               |
 | `pipelines activate <key> <version>`      | Makes an earlier version active again, to roll back                                                                                                                               |
@@ -373,7 +373,7 @@ start: evaluate({
 
 `build` collects `workItemFields` from the `workItemField(alias, label)` calls; the same alias with two labels is a build error.
 
-The pipeline has no separate input schema. A run starts from the work item, and `start.args` is where its fields enter the pipeline. Every step Task also gets the work item's comment thread as `workItemComments`, alongside its args: the newest comments, oldest first, each with its author, body, and whether it is pinned, a question, or a reply.
+The pipeline has no separate input schema. A run starts from the work item, and `start.args` is where its fields enter the pipeline. A step Task's input holds its args and nothing else: the work item is not copied in. An agent reads its work item live with the `scarn-get-work-item` tool, which returns the item's current description, labels, state, blockers and children, each with its web page `url`.
 
 ## Conditions
 
@@ -517,6 +517,7 @@ A retry queues a new attempt straight away, and the next worker poll picks it up
 | `Scarn.HeartbeatTimeout` | The worker stopped heartbeating, for example because it died                             |
 | `Scarn.MaxRunsExceeded`  | The node would run more than `maxRuns` times in the same lane                            |
 | `Scarn.MaxTurnsExceeded` | The step handed over more than `maxTurns` times in one run of the node. It isn't retried |
+| `Scarn.ConcurrencyGroupFull` | The step's [concurrency group](/scarn/guides/steps/#concurrency-groups) on the work item had no place and no room to wait, so no Task was created |
 | `Scarn.ConditionError`   | A computed value had no inputs (`avg`, `min` or `max` of an empty array)                 |
 | `Scarn.LogArchiveFailed` | The step changed work items but its log archive couldn't be written, so nothing was applied |
 | `Scarn.WorkItemChangesInvalid` | One of the step's work item changes was invalid (permissions, limits, ids or a stale `descriptionVersion`), so nothing was applied |
@@ -842,4 +843,4 @@ Pipelines and steps don't configure OpenCode plugins. Add plugins to `.opencode/
 
 - [Pipeline Graph catalog](/scarn/catalog/pipeline-graph/): interactive graphs of branching, decisions, loops and lanes.
 - [Defining Steps](/scarn/guides/steps/): the input and result schemas the validator checks args against.
-- [Default Pipeline Assignment](/scarn/guides/pipeline-assignment/): routing incoming work items to a pipeline automatically.
+- [Project Automations](/scarn/guides/automations/): routing ready work items to a pipeline automatically.

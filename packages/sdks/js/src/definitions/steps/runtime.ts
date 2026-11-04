@@ -29,8 +29,8 @@ export type DevcontainerRuntimeSpec = {
 export type HostRuntimeSpec = { readonly kind: "host" };
 
 /**
- * A worker-supplied container (image, config and dependency install owned by
- * the worker). Build one with `Runtime.managed.<id>()`. `codeStep` only.
+ * A worker-supplied container (image and config owned by the worker). Build one
+ * with `Runtime.managed.<id>()`. Works with `codeStep` and `defineStep`.
  */
 export type ManagedRuntimeSpec<
   TId extends ManagedRuntimeId = ManagedRuntimeId,
@@ -45,8 +45,8 @@ export type RuntimeSpec =
 /**
  * How a step runs: its `runtime`, its environment `vars` and its `repo` access.
  * A union on the runtime kind, so a `repo` the runtime cannot honor is a type
- * error: a host step takes only `Repo.none()`, a devcontainer step takes
- * `Repo.readOnly()` or `Repo.readWrite()`.
+ * error: a host step takes only `Repo.none()`, a devcontainer or managed step
+ * takes `Repo.readOnly()` or `Repo.readWrite()`.
  *
  * Declare `vars` before `agentPrompt` so `TEnv` is inferred into the prompt's
  * `env`, which is then strict: only declared, non-secret keys.
@@ -58,7 +58,7 @@ export type StepEnvironment<
 > =
   | {
       /** Defaults to `Runtime.devcontainer()`. */
-      runtime?: DevcontainerRuntimeSpec;
+      runtime?: DevcontainerRuntimeSpec | ManagedRuntimeSpec;
       vars?: EnvFn<TInput, TEnv>;
       /** Defaults to `Repo.readWrite()`. */
       repo?: RepoField<TInput, TResult, DevcontainerRepoSpec>;
@@ -71,9 +71,8 @@ export type StepEnvironment<
     };
 
 /**
- * `codeStep`'s environment: `StepEnvironment`'s devcontainer variant plus
- * managed runtimes. A code step runs repo code, which needs a clone, and the
- * host runtime has none.
+ * `codeStep`'s environment: `StepEnvironment`'s workspace variant. A code step
+ * runs repo code, which needs a clone, and the host runtime has none.
  */
 export type CodeStepEnvironment<TInput, TResult = unknown> = {
   /**
@@ -106,10 +105,10 @@ const managedRuntimeFactories = Object.fromEntries(
 
 export const Runtime = {
   /**
-   * Worker-supplied containers for `codeStep`, one factory per identifier, for
-   * example `Runtime.managed.bun1()`. The worker owns the image and installs the
-   * pipeline-builder dependencies; the repo holds nothing. An unknown identifier
-   * is a type error. Not supported for `defineStep`.
+   * Worker-supplied containers, one factory per identifier, for example
+   * `Runtime.managed.bun1()`. The worker owns the image and clones the repo
+   * into it; the repo holds nothing. For a `codeStep` it also installs the
+   * pipeline-builder dependencies. An unknown identifier is a type error.
    */
   managed: managedRuntimeFactories,
 

@@ -150,7 +150,7 @@ describe("work item changes sent with completion", () => {
 
 describe("current execution info for the work item tools", () => {
   test.concurrent(
-    "writes the work item, its permissions and the API access",
+    "writes the work item, its permissions, the API access and the links",
     async () => {
       const workspacePath = await mkdtemp(
         path.join(os.tmpdir(), "scarn-current-execution-work-item-"),
@@ -163,6 +163,10 @@ describe("current execution info for the work item tools", () => {
         workItemId: "wi-1",
         workItemPermissions: ["self", "children"],
         api: { baseUrl: "https://scarn.example", claimToken: "claim-token" },
+        workItemLinks: {
+          appBaseUrl: "https://scarn.example",
+          projectPath: "acme/web",
+        },
       });
 
       expect(
@@ -176,6 +180,10 @@ describe("current execution info for the work item tools", () => {
         workItemId: "wi-1",
         workItemPermissions: ["self", "children"],
         api: { baseUrl: "https://scarn.example", claimToken: "claim-token" },
+        workItemLinks: {
+          appBaseUrl: "https://scarn.example",
+          projectPath: "acme/web",
+        },
       });
     },
   );

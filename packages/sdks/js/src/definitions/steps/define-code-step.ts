@@ -3,11 +3,13 @@ import type { $ZodType } from "zod/v4/core";
 import type { ZodObject, ZodRawShape, ZodType } from "zod";
 import type {
   EffectiveResult,
+  StepConcurrency,
   StepDefinitionSpec,
   StepRetryEntry,
 } from "./define-step";
 import type { BuiltInError } from "../../pipelines/types";
 import {
+  compileStepConcurrency,
   compileStepErrors,
   compileStepRetry,
   toStepHandle,
@@ -96,6 +98,8 @@ export type DefineCodeStepInput<
   errors?: readonly string[];
   /** As `defineStep()`'s `retry`: how a standalone Task of this step retries. */
   retry?: readonly StepRetryEntry[];
+  /** As `defineStep()`'s `concurrency`: the per-work-item concurrency limit. */
+  concurrency?: StepConcurrency;
 };
 
 /**
@@ -174,6 +178,11 @@ export function codeStep<
     ...(repo !== undefined ? { repo } : {}),
     errors: compileStepErrors(config.key, config.errors),
     retryJson: compileStepRetry(config.key, config.retry, config.errors ?? []),
+    ...(config.concurrency !== undefined
+      ? {
+          concurrency: compileStepConcurrency(config.key, config.concurrency),
+        }
+      : {}),
     entrypoint: { fn: config.fn },
   };
 

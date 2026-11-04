@@ -31,8 +31,9 @@ export function UseTemplateToast() {
         </li>
         <li>
           To start it on new work items by default, add{" "}
-          <code>{message.assignSnippet}</code> to{" "}
-          <code>{message.assignmentFile}</code>.
+          <code>{message.importSnippet}</code> and the route{" "}
+          <code>{message.routeSnippet}</code> to{" "}
+          <code>{message.automationFile}</code>.
         </li>
       </ol>
     </div>

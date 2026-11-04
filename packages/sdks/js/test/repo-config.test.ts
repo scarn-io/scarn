@@ -116,6 +116,8 @@ describe("commit message rule", () => {
     "{{result.summary}}",
     "{{input.a.b}} and {{result.c}}",
     "{{input}}",
+    "{{workItem.title}}",
+    "{{workItem.platformKey}}: {{result.summary}}",
     "no tokens at all",
     "unterminated {{env.X",
   ])("accepts %j", (message) => {
@@ -129,6 +131,10 @@ describe("commit message rule", () => {
     "{{ input.spaced }}",
     "{{inputs.title}}",
     "{{other}}",
+    "{{workItem}}",
+    "{{workItem.description}}",
+    "{{workItem.fields.size}}",
+    "{{workItem.title.length}}",
   ])("rejects the token root in %j", (message) => {
     const result = parse(message);
     expect(result.success).toBe(false);
@@ -141,6 +147,14 @@ describe("commit message rule", () => {
         "{{env.A}} {{input.b}} {{scarn.c}} {{result.d}}",
       ),
     ).toEqual(["env", "scarn"]);
+  });
+
+  test("lists a disallowed workItem token by its whole path", () => {
+    expect(
+      findDisallowedCommitMessageTokenRoots(
+        "{{workItem.title}} {{workItem.fields.size}}",
+      ),
+    ).toEqual(["workItem.fields.size"]);
   });
 });
 

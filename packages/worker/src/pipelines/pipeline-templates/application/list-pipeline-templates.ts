@@ -1,6 +1,6 @@
 import type {
-  HandoffStep,
   PipelineTemplate,
+  TemplateEntry,
   TemplateParameter,
 } from "../domain/pipeline-template";
 import { PIPELINE_TEMPLATES } from "../templates/registry";
@@ -22,18 +22,16 @@ export type PipelineTemplateCard = {
   name: string;
   summary: string;
   tags: string[];
-  /** Steps the file exports, hand-off steps included. */
+  entry: TemplateEntry;
+  /** Steps the file exports. */
   stepCount: number;
-  handoffStepCount: number;
   parameters: TemplateParameter[];
 };
 
 /** What a template's detail page shows, before its preview and conflicts. */
 export type PipelineTemplateDescription = PipelineTemplateCard & {
   descriptionMarkdown: string;
-  pipelineKey: string;
   stepKeys: string[];
-  handoffSteps: HandoffStep[];
 };
 
 export function toPipelineTemplateCard(
@@ -44,8 +42,8 @@ export function toPipelineTemplateCard(
     name: template.name,
     summary: template.summary,
     tags: [...template.tags],
+    entry: { ...template.entry },
     stepCount: template.stepKeys.length,
-    handoffStepCount: template.handoffSteps.length,
     parameters: template.parameters.map((param) => ({ ...param })),
   };
 }
@@ -56,8 +54,6 @@ export function describePipelineTemplate(
   return {
     ...toPipelineTemplateCard(template),
     descriptionMarkdown: template.descriptionMarkdown,
-    pipelineKey: template.pipelineKey,
     stepKeys: [...template.stepKeys],
-    handoffSteps: template.handoffSteps.map((step) => ({ ...step })),
   };
 }

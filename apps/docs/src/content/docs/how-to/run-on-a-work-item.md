@@ -35,8 +35,8 @@ offer at the end of a design session: run
 scarn pipelines design --work-item-id <id>
 ```
 
-and when the session exits cleanly, it asks whether to run the assigned
-pipeline on that item. Say yes and it queues the run and starts the worker in
+and when the session exits cleanly, it asks whether to run the pipeline the
+default automation routes to on that item. Say yes and it queues the run and starts the worker in
 the same terminal. Say no and it prints the `scarn work … --work-item-id`
 command; nothing is queued, so queue the run from the dashboard before you use
 it. See [The run offer](/scarn/reference/cli/#the-run-offer) for every case
@@ -52,12 +52,9 @@ several workers, see [Running Workers](/scarn/guides/workers/).
 
 ## Why a new item doesn't start by itself
 
-A [default pipeline assignment](/scarn/getting-started/concepts/#default-pipeline-assignment)
-is meant to start the right pipeline on every new work item. Today it is only
-evaluated for items that arrive through an
-[integration](/scarn/how-to/integrations/) sync. Items created by hand —
-the dashboard's create form, or a ticket you describe in the designer's
-picker — are never routed, so they sit with no run until you queue one as
-above. This is a known bug, tracked as issue #106, which also covers sync
-skipping assignment in some configurations. Until it's fixed, queue runs for
-hand-created items yourself.
+The [default automation](/scarn/getting-started/concepts/#default-automation)
+starts a pipeline when a work item becomes ready: it arrives, its last blocker
+closes, or it reopens. It is published disabled, so nothing starts until you
+run `scarn automations enable default`. Items that were already ready before
+then, including the one you designed the pipeline around, don't fire again;
+queue a run for them as above.

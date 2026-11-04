@@ -1,4 +1,8 @@
 import type { Edge, Node } from "@xyflow/react";
+import type {
+  AutomationEvent,
+  AutomationSubject,
+} from "@scarn/sdk/contracts/automation-document";
 import type { PipelineNode } from "@scarn/sdk/contracts/pipeline-document";
 
 // `Node`/`Edge` are imported `type`-only (see the top-level comment in
@@ -49,11 +53,22 @@ export type StudioNodeShape =
 
 /**
  * A document node's kind, `"start"` for the synthetic entry node the `start`
- * transition leaves from (id `START_NODE_ID`), or `"handoff"` for a step an
- * agent starts during its run rather than the pipeline (template previews
- * only; never executed by the graph).
+ * transition leaves from (id `START_NODE_ID`), or `"detached"` for a step the
+ * file exports but no graph runs (template previews only).
+ *
+ * An automation's graph uses its own kinds: an `"event"` the automation
+ * reacts to, one `"rule"` per event rule, and the rule's route targets — a
+ * `"pipeline"` it starts, or an `"action"` (a step Task, an attachment or a
+ * skip; see `actionKind`).
  */
-export type StudioNodeKind = PipelineNode["kind"] | "start" | "handoff";
+export type StudioNodeKind =
+  | PipelineNode["kind"]
+  | "start"
+  | "detached"
+  | "event"
+  | "rule"
+  | "pipeline"
+  | "action";
 
 /** Per-node data the designer renders inline next to the node itself. */
 export type StudioNodeData = {
@@ -69,18 +84,24 @@ export type StudioNodeData = {
   mergeWaitsFor?: string[];
   /** On a step node: its `maxTurns`, when the document sets it. */
   maxTurns?: number;
-  /** On a hand-off node: the step whose agent starts it, and what it's for. */
-  handoff?: { startedBy: string; summary: string };
+  /** On an event or rule node: the event it reacts to. */
+  event?: AutomationEvent;
+  /** On a rule node: its 0-based position in the automation's `rules`. */
+  ruleIndex?: number;
+  /** On an action node: what the route does. */
+  actionKind?: "step" | "attach" | "skip";
+  /** On a pipeline or action node: the step, pipeline or automation key it names. */
+  targetKey?: string;
+  /** On a step action or pipeline node: which work item it runs for. */
+  subject?: AutomationSubject;
+  /** On a pipeline or action node: false when `targetKey` names nothing known. */
+  resolved?: boolean;
   issues: StudioIssue[];
   shape: StudioNodeShape;
 };
 
-/**
- * How the engine leaves the source node along an edge, or `"handoff"` for the
- * link from a step to a hand-off step its agent starts (not a transition).
- */
-export type StudioEdgeKind =
-  "start" | "route" | "otherwise" | "catch" | "handoff";
+/** How the engine leaves the source node along an edge. */
+export type StudioEdgeKind = "start" | "route" | "otherwise" | "catch";
 
 export type StudioPoint = { x: number; y: number };
 
@@ -90,18 +111,11 @@ export type StudioPoint = { x: number; y: number };
  * reserved for its label (null when it has none). A `loop` edge (a back edge
  * or self loop) leaves the source's right side, runs up a vertical lane at
  * `laneX` clear of every node and label it passes, and enters the target's
- * right side; its label sits on that lane. A `handoff` edge leaves the
- * starting step's right side, runs along the lane at `laneX` to the hand-off
- * node's row and enters its left side, its label centred at `label`. A
- * `handoffReturn` edge leaves the top hand-off node's top, rises to `topY`,
- * runs left to the lane at `laneX`, drops to the starting step's right side
- * and enters it, its label centred at `label`.
+ * right side; its label sits on that lane.
  */
 export type StudioEdgeRoute =
   | { kind: "flow"; waypoints: StudioPoint[]; label: StudioPoint | null }
-  | { kind: "loop"; laneX: number }
-  | { kind: "handoff"; laneX: number; label: StudioPoint }
-  | { kind: "handoffReturn"; laneX: number; topY: number; label: StudioPoint };
+  | { kind: "loop"; laneX: number };
 
 export type StudioEdgeData = {
   kind: StudioEdgeKind;

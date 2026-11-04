@@ -12,6 +12,7 @@ export const BUILT_IN_ERRORS = [
   "Scarn.HeartbeatTimeout",
   "Scarn.MaxRunsExceeded",
   "Scarn.MaxTurnsExceeded",
+  "Scarn.ConcurrencyGroupFull",
   "Scarn.ConditionError",
   "Scarn.ArgsError",
   "Scarn.LogArchiveFailed",

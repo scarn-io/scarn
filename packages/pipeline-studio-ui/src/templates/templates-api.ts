@@ -16,12 +16,20 @@ export type TemplateParameter = {
   placeholder?: string | null;
 };
 
+export type TemplateEntryKind = "pipeline" | "automation";
+
+/** What the template's file defines as its entry point, and under which key. */
+export type TemplateEntry = {
+  kind: TemplateEntryKind;
+  key: string;
+};
+
 /** The names a "Use" would collide with in the builder directory right now. */
 export type TemplateConflicts = {
   takenStepKeys: string[];
-  pipelineKeyTaken: boolean;
-  /** The pipeline key a Use would write: the template's own, or the next free `-N`. */
-  nextPipelineKey: string;
+  entryKeyTaken: boolean;
+  /** The entry key a Use would write: the template's own, or the next free `-N`. */
+  nextEntryKey: string;
 };
 
 export type PipelineTemplateCard = {
@@ -29,18 +37,11 @@ export type PipelineTemplateCard = {
   name: string;
   summary: string;
   tags: string[];
-  /** Steps the file exports, hand-off steps included. */
+  entry: TemplateEntry;
+  /** Steps the file exports. */
   stepCount: number;
-  handoffStepCount: number;
   parameters: TemplateParameter[];
   conflicts: TemplateConflicts;
-};
-
-export type HandoffStep = {
-  key: string;
-  /** The step key whose agent starts it. */
-  startedBy: string;
-  summary: string;
 };
 
 export type TemplateStepRepoAccess =
@@ -70,6 +71,7 @@ export type TemplateStepPreview = {
 };
 
 export type TemplatePreview = {
+  /** `null` for an automation entry, or when the template failed to build. */
   pipeline: PipelineGraphSnapshot | null;
   steps: TemplateStepPreview[];
   errors: string[];
@@ -77,14 +79,12 @@ export type TemplatePreview = {
 
 export type TemplateDetail = PipelineTemplateCard & {
   descriptionMarkdown: string;
-  pipelineKey: string;
   stepKeys: string[];
-  handoffSteps: HandoffStep[];
   preview: TemplatePreview;
 };
 
 export type UseTemplateResult =
-  | { status: "ok"; file: string; pipelineKey: string }
+  | { status: "ok"; file: string; entry: TemplateEntry }
   | { status: "stepKeysTaken"; error: string; takenStepKeys: string[] }
   | {
       status: "invalidParameters";
@@ -159,9 +159,9 @@ export async function postUseTemplate(
   if (response.ok) {
     const body = (await response.json()) as {
       file: string;
-      pipelineKey: string;
+      entry: TemplateEntry;
     };
-    return { status: "ok", file: body.file, pipelineKey: body.pipelineKey };
+    return { status: "ok", file: body.file, entry: body.entry };
   }
   if (response.status === 409) {
     const body = (await response.json()) as {

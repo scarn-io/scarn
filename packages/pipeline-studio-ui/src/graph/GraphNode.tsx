@@ -9,6 +9,11 @@ import {
   LOOP_TARGET_HANDLE,
 } from "./edge-route";
 import { GraphIcon, type GraphIconName } from "./graph-icons";
+import {
+  hasInputHandle,
+  hasOutputHandle,
+  nodeKindStyle,
+} from "./graph-node-style";
 import { palette, tint } from "./graph-palette";
 import type { StudioNodeData } from "./studio-graph-types";
 import {
@@ -25,21 +30,6 @@ export type GraphNodeType = Node<GraphNodeData>;
 
 type NodeKind = StudioNodeData["kind"];
 
-/**
- * Each node kind's icon and identity color. Kind color only tints the icon
- * chip and the card's left stripe; the host's decoration keeps its own
- * channel (the corner badge and the border), so the two signals never
- * compete.
- */
-const KIND_STYLE: Record<NodeKind, { icon: GraphIconName; color: string }> = {
-  start: { icon: "start", color: palette.textMuted },
-  step: { icon: "step", color: palette.accent },
-  wait: { icon: "wait", color: palette.attention },
-  succeed: { icon: "succeed", color: palette.success },
-  fail: { icon: "fail", color: palette.danger },
-  handoff: { icon: "step", color: palette.textMuted },
-};
-
 export const truncate: CSSProperties = {
   overflow: "hidden",
   textOverflow: "ellipsis",
@@ -47,7 +37,9 @@ export const truncate: CSSProperties = {
 };
 
 export function selectionShadow(selected: boolean): string {
-  return selected ? `0 0 0 2px ${palette.accent}, ${palette.shadow}` : palette.shadow;
+  return selected
+    ? `0 0 0 2px ${palette.accent}, ${palette.shadow}`
+    : palette.shadow;
 }
 
 const BADGE_SIZE = 20;
@@ -73,7 +65,10 @@ function Badge({ badge }: { badge: NodeBadge | null }) {
   switch (badge.kind) {
     case "spinner":
       return (
-        <div aria-label={badge.label} style={{ ...badgeFrame, background: palette.bgElev }}>
+        <div
+          aria-label={badge.label}
+          style={{ ...badgeFrame, background: palette.bgElev }}
+        >
           <svg
             className="pipeline-graph-spinner"
             width={12}
@@ -96,7 +91,10 @@ function Badge({ badge }: { badge: NodeBadge | null }) {
       );
     case "icon":
       return (
-        <div aria-label={badge.label} style={{ ...badgeFrame, background: badge.color }}>
+        <div
+          aria-label={badge.label}
+          style={{ ...badgeFrame, background: badge.color }}
+        >
           <GraphIcon name={badge.icon} size={13} color="#fff" />
         </div>
       );
@@ -142,8 +140,8 @@ export const hiddenHandle: CSSProperties = {
 };
 
 function NodeHandles({ kind }: { kind: NodeKind }) {
-  const hasInput = kind !== "start";
-  const hasOutput = kind === "start" || kind === "step" || kind === "wait";
+  const hasInput = hasInputHandle(kind);
+  const hasOutput = hasOutputHandle(kind);
   return (
     <>
       {hasInput ? (
@@ -223,20 +221,27 @@ function cardCaption(data: GraphNodeData): string {
  * - **step / wait** — a card with a kind-colored left stripe and icon chip,
  *   the node's title and caption, a fork tag on a `match: "all"` node, a
  *   merge tag on a merge node and a pause tag on a step that sets `maxTurns`;
- * - **succeed / fail** — a rounded terminal pill tinted green or red.
+ * - **succeed / fail** — a rounded terminal pill tinted green or red;
+ * - **event** — the same pill, tinted amber, as an automation graph entry;
+ * - **rule / pipeline / action** — the card, captioned by `kindLabel`
+ *   (rule number, route target).
  *
  * The host's `NodeDecoration` (run status, validation issues) shows as the
  * border color, a corner badge and caption text.
  */
 export function GraphNode({ data, selected }: NodeProps<GraphNodeType>) {
   const { decoration } = data;
-  const { icon, color } = KIND_STYLE[data.kind];
+  const { icon, color } = nodeKindStyle(data);
   const size = nodeLayoutSize(data);
   const border = decoration.borderColor;
-  const title = decoration.tooltip ? `${data.label} — ${decoration.tooltip}` : data.label;
+  const title = decoration.tooltip
+    ? `${data.label} — ${decoration.tooltip}`
+    : data.label;
   const badge = (
     <>
-      {decoration.badge?.kind === "spinner" ? <style>{SPINNER_CSS}</style> : null}
+      {decoration.badge?.kind === "spinner" ? (
+        <style>{SPINNER_CSS}</style>
+      ) : null}
       <Badge badge={decoration.badge} />
     </>
   );
@@ -273,7 +278,11 @@ export function GraphNode({ data, selected }: NodeProps<GraphNodeType>) {
     );
   }
 
-  if (data.kind === "succeed" || data.kind === "fail") {
+  if (
+    data.kind === "succeed" ||
+    data.kind === "fail" ||
+    data.kind === "event"
+  ) {
     return (
       <div
         className="pipeline-graph-node"

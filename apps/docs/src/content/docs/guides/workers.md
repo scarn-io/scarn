@@ -28,7 +28,7 @@ Flags are in the [CLI reference](/scarn/reference/cli/#scarn-work-project).
 1. **Poll** — The worker calls the server to claim a batch of pending tasks.
 2. **Claim** — Each claimed task is assigned a lease. The worker sends heartbeats to extend the lease while processing.
 3. **Environment setup** — For `Runtime.devcontainer()` steps (the default), the worker clones your repository and launches a single Docker runtime from your devcontainer config: `.devcontainer/devcontainer.json` unless the step selects another with [`Runtime.devcontainer({ config })`](#devcontainer-config). Before bringing the container up, it injects mounts for a pinned, Scarn-managed OpenCode runtime payload and a session-scoped agent home. For `Runtime.host()` steps, this is skipped entirely — see [Runtime](/scarn/guides/steps/#runtime). [Code steps](/scarn/guides/steps/#code-steps) default to a worker-supplied [managed runtime](#managed-runtimes) instead of your devcontainer.
-4. **Agent startup** — For `Runtime.devcontainer()` steps, OpenCode runs **inside that same devcontainer** (same environment as your workspace), launched by absolute path from the mounted runtime payload — never the project's Node or a global `opencode`. There is no separate AI container, cross-container network, or MCP-host bridge. For `Runtime.host()` steps, the same Scarn-managed OpenCode runtime runs **directly on the worker host** against a temporary empty directory — no Docker, no clone.
+4. **Agent startup** — For `Runtime.devcontainer()` and agent `Runtime.managed.<id>()` steps, OpenCode runs **inside that same container** (same environment as your workspace), launched by absolute path from the mounted runtime payload — never the project's Node or a global `opencode`. There is no separate AI container, cross-container network, or MCP-host bridge. For `Runtime.host()` steps, the same Scarn-managed OpenCode runtime runs **directly on the worker host** against a temporary empty directory — no Docker, no clone.
 5. **Agent execution** — The step is handed to the in-container OpenCode agent with the step's prompt, input payload, and any configured MCP servers. Provider access is resolved through a normalized contract (currently `direct` mode: an explicit provider base URL + token, with your local OpenCode config as a fallback source).
 6. **Result parsing** — The agent's structured output is parsed and checked against the step's `result` schema.
 7. **Report** — The worker marks the task complete (or failed) and posts the result back to the server.
@@ -48,10 +48,10 @@ The worker patches the config it launches (mounts, ports, and `containerEnv`), a
 
 ### Managed runtimes
 
-A [code step](/scarn/guides/steps/#code-steps) runs in a managed runtime (`Runtime.managed.<id>()`, default `bun1`) unless it opts into `Runtime.devcontainer()`. The worker still clones your repository, but it launches its own container instead of your devcontainer config. For each run it:
+A [code step](/scarn/guides/steps/#code-steps) runs in a managed runtime (`Runtime.managed.<id>()`, default `bun1`) unless it opts into `Runtime.devcontainer()`. An agent step can opt into one explicitly (see [Managed runtimes for agent steps](/scarn/guides/steps/#managed-runtimes-for-agent-steps)). The worker still clones your repository, but it launches its own container instead of your devcontainer config. For each run it:
 
 1. Looks up the identifier in its registry for the image (`oven/bun:1.4.0-debian` for `bun1`, `node:24-bookworm-slim` for `node24`).
-2. Picks the dependency install from the lockfile in the clone's `.scarn/pipeline-builder` (see [Runtime for code steps](/scarn/guides/steps/#runtime-for-code-steps)).
+2. For a code step, picks the dependency install from the lockfile in the clone's `.scarn/pipeline-builder` (see [Runtime for code steps](/scarn/guides/steps/#runtime-for-code-steps)). An agent step gets no install; instead the worker mounts the OpenCode runtime payload and runs the agent inside the container, as it does for a devcontainer.
 3. Writes a generated `devcontainer.json` to `.scarn/managed-devcontainers/<id>/devcontainer.json` **inside the clone**, and launches from it.
 
 That directory exists only in the clone for the run. It is excluded from work-branch commits and is never committed to your repository. It holds a devcontainer config that names an image, not an image, and it is unrelated to the host-side `~/.scarn/runtimes/` directory where the worker caches the OpenCode runtime payload.
@@ -62,7 +62,7 @@ A worker only knows the identifiers its version ships. If a step names one it do
 Managed runtime "node26" is not supported by this worker. Supported managed runtimes: bun1, node24. Upgrade the Scarn CLI to a version that supports it.
 ```
 
-Upgrade the CLI on the worker host to fix it. Because image tags move with the worker version, a worker upgrade can also change the runtime under every managed code step.
+Upgrade the CLI on the worker host to fix it. Because image tags move with the worker version, a worker upgrade can also change the runtime under every managed step.
 
 ## Work branches
 

@@ -8,6 +8,7 @@ import dotenv from "dotenv";
 import { CoreError } from "@scarn/worker";
 
 import { authCommand } from "./commands/auth";
+import { automationsCommand } from "./commands/automations";
 import { executionCommand } from "./commands/execution";
 import { helloCommand } from "./commands/hello";
 import { initCommand } from "./commands/init";
@@ -82,6 +83,7 @@ export function createCli(
       dotenv.config({ path: ".scarn.env", override: false });
     })
     .command(authCommand)
+    .command(automationsCommand)
     .command(executionCommand)
     .command(helloCommand)
     .command(initCommand)

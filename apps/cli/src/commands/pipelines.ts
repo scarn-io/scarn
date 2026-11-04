@@ -198,13 +198,13 @@ const runPush = (args: ArgumentsCamelCase<PushArguments>): Promise<void> =>
       process.exit(exitCode);
     }
 
-    task.succeed("Pushed steps, built pipelines and the assignment");
+    task.succeed("Pushed steps, built pipelines and automations");
     captureMilestone(AnalyticsEvents.CliPipelinePushed);
   });
 
 const pushCommand: CommandModule<object, PushArguments> = {
   command: "push [project]",
-  describe: `Push the steps, built pipeline JSON and default assignment in ${PIPELINE_BUILDER_DIR} to the server`,
+  describe: `Push the steps, and the built pipeline and automation JSON in ${PIPELINE_BUILDER_DIR} to the server`,
   builder: (argv: Argv<object>) =>
     argv
       .positional("project", {
@@ -298,12 +298,7 @@ const runPullBuilderDirectory = (
       sdkVersion: CLI_VERSION,
     });
 
-    if (
-      result.stepFiles === 0 &&
-      result.pipelineFiles === 0 &&
-      !result.defaultPipelineAssignmentFile
-    )
-      return;
+    if (result.stepFiles === 0 && result.pipelineFiles === 0) return;
 
     const freshlyScaffolded = existingFiles.length === 0;
     if (freshlyScaffolded) {
@@ -312,12 +307,9 @@ const runPullBuilderDirectory = (
       );
     }
 
-    const assignmentMsg = result.defaultPipelineAssignmentFile
-      ? ", default-pipeline-assignment.ts"
-      : "";
     const fieldsMsg = result.workItemFieldsFile ? ", work-item-fields.ts" : "";
     reporter.success(
-      `Pull complete. ${String(result.pipelineFiles)} pipeline document(s), ${String(result.stepFiles)} step file(s)${assignmentMsg}${fieldsMsg}.`,
+      `Pull complete. ${String(result.pipelineFiles)} pipeline document(s), ${String(result.stepFiles)} step file(s)${fieldsMsg}.`,
     );
   });
 

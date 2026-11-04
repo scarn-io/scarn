@@ -39,6 +39,7 @@ The agent is automatically given the step's input as default context — the ful
 | `input`           | `ZodType`                         | No       | Zod schema for the args a pipeline passes when it calls the step |
 | `result`          | `ZodType`                         | No       | Zod schema for the step's output                                                |
 | `errors`          | `string[]`                        | No       | Error names the step can fail with. See [Declared errors](#declared-errors)     |
+| `concurrency`     | `{ max: number; waiting: number }` | No      | How many Tasks of this step may be live on one work item, and how many more may wait. See [Concurrency groups](#concurrency-groups) |
 | `mcps`            | `Record<string, McpHandle>`       | No       | The MCP servers the step runs with, each built with `defineMcp` together with its env vars and health checks. See [MCP servers](#mcp-servers) |
 | `healthChecks`    | `StepHealthCheck[]`               | No       | `cli` checks and non-MCP `tool` checks forced against the environment before the agent is prompted. See [Health checks](#health-checks) |
 | `features`        | `StepFeature[]`                   | No       | Built-in feature plugins that extend the result schema and prompt               |
@@ -126,6 +127,7 @@ Put config in the step only when it is about that step: a different devcontainer
 | Runtime                    | What the worker sets up                                                                                                | Use for                                                                                        |
 | -------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
 | `Runtime.devcontainer()`   | Clones your repository and launches your devcontainer; the agent runs **inside** that container. This is the default.  | Steps that read, run, or modify your code.                                                     |
+| `Runtime.managed.<id>()`   | Clones your repository into a worker-supplied image instead of your devcontainer; the agent runs **inside** that container. See [Managed runtimes for agent steps](#managed-runtimes-for-agent-steps). | Steps that read or change code but don't need your project's toolchain.                        |
 | `Runtime.host()`           | No clone and no dev container. The agent runs on the worker host against a temporary empty directory with only the prompt and its bound input. | Prompt-only steps: research, summarization, drafting, classification, or routing decisions. |
 
 ```typescript
@@ -233,9 +235,29 @@ Before managed runtimes, a code step's working directory was whatever the contai
 The default applies when a step is pushed. A code step already pushed keeps running in your project's devcontainer until you push it again with `scarn pipelines push`. To keep one on the devcontainer after a re-push, set `runtime: Runtime.devcontainer()` explicitly.
 :::
 
-Managed runtimes are for code steps only. `defineStep()` rejects them (a type error, and push validation) because an agent step needs your project's toolchain. A managed step has no `config`, and `repo` follows the usual rules: `Repo.readWrite()` (the default) or `Repo.readOnly()`.
+A managed step has no `config`, and `repo` follows the usual rules: `Repo.readWrite()` (the default) or `Repo.readOnly()`.
 
 With `Runtime.devcontainer()` the runner script executes in your container. A container selected with a non-default `config` must provide a JavaScript runtime for it: the runner uses `bun` if it is on `PATH`, otherwise `node`. That is up to the author of the config.
+
+#### Managed runtimes for agent steps
+
+`defineStep()` accepts `Runtime.managed.<id>()` too. The worker clones your repository into the managed image and runs the agent inside that container, with the same OpenCode runtime it mounts into a devcontainer. Unlike on a code step, it does not install `.scarn/pipeline-builder` dependencies.
+
+```typescript
+import { defineStep, Repo, Runtime } from "@scarn/sdk";
+
+export const reviewStep = defineStep({
+  key: "review",
+  name: "Review",
+  environment: { runtime: Runtime.managed.bun1(), repo: Repo.readOnly() },
+  agentPrompt: "Review the changes on this branch.",
+});
+```
+
+- The default for `defineStep()` stays `Runtime.devcontainer()`. Name the managed runtime explicitly.
+- `repo` is `Repo.readWrite()` (the default) or `Repo.readOnly()`, with the same commit and push behavior as a devcontainer step. `Repo.none()` is rejected.
+- The image has only the runtime its identifier names (Bun or Node) and the clone. If the agent needs your project's toolchain, services or setup commands, use `Runtime.devcontainer()`.
+- Multi-turn steps restore their agent session across hand-offs, as on a devcontainer.
 
 ### Repo access
 
@@ -283,14 +305,15 @@ export const implement = defineStep({
 
 #### `Repo.readWrite` options
 
-| Option          | Type                  | Default                          | Description                                                                                      |
-| --------------- | --------------------- | -------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `message`       | `string`              | `scarn: task <taskId>`         | The commit message, rendered from the step's input and result                                    |
-| `onPushFailure` | `"fail" \| "warn"`    | `"fail"`                         | Whether a failed push fails the step (`"fail"`) or is logged and ignored (`"warn"`)              |
+| Option          | Type               | Default                | Description                                                                                     |
+| --------------- | ------------------ | ---------------------- | ----------------------------------------------------------------------------------------------- |
+| `message`       | `string`           | `scarn: task <taskId>` | The commit message, rendered from the step's input, its result and the work item's title or key |
+| `onPushFailure` | `"fail" \| "warn"` | `"fail"`               | Whether a failed push fails the step (`"fail"`) or is logged and ignored (`"warn"`)             |
 
-**Commit message.** `repo` is a function of `{ input, result }`, the same way `vars` is a function of `{ input }`: both are typed from the step's `input` and `result` schemas, and a template literal built from them (`` `fix: ${result.summary}` ``) becomes a `{{result.summary}}` token that the worker renders when the step finishes. Write the string with a prefix before the interpolation, since a bare `` `${result.summary}` `` trips a lint rule. A static `Repo.readWrite({ message: "fix: {{result.summary}}" })` is the same thing, and the common case when the message needs no tokens.
+**Commit message.** `repo` is a function of `{ input, result, workItem }`, the same way `vars` is a function of `{ input }`: both are typed from the step's `input` and `result` schemas, and a template literal built from them (`` `fix: ${result.summary}` ``) becomes a `{{result.summary}}` token that the worker renders when the step finishes. Write the string with a prefix before the interpolation, since a bare `` `${result.summary}` `` trips a lint rule. A static `Repo.readWrite({ message: "fix: {{result.summary}}" })` is the same thing, and the common case when the message needs no tokens.
 
-- Only `{{input.…}}` and `{{result.…}}` tokens are allowed. `{{env.…}}` is rejected, so an environment value can never reach git history.
+- Only `{{input.…}}`, `{{result.…}}`, `{{workItem.title}}` and `{{workItem.platformKey}}` tokens are allowed. `{{env.…}}` is rejected, so an environment value can never reach git history.
+- `{{workItem.…}}` tokens are filled from a live read of the Task's work item when the worker commits (`` `wayfinder prototype: ${workItem.title}` ``). If the read fails, they render empty. No other work item field may be used.
 - The template is one line and at most 500 characters.
 - The rendered text carries agent output, so the worker reduces it to a safe subject: whitespace runs collapse to one space, control characters are stripped, and the subject is cut to 200 characters. If nothing is left (an empty template, or tokens that render empty), the message is `scarn: task <taskId>`.
 - The same message is used for the superproject commit and for each submodule commit.
@@ -445,6 +468,33 @@ export const investigate = defineStep({
 ```
 
 A pipeline's `.retry({ on })` and `.catch(on, …)` may name them; any other name is a type error. See [Errors, retries and timeouts](/scarn/guides/pipelines/#errors-retries-and-timeouts).
+
+## Concurrency groups
+
+A step can limit how many of its Tasks are live on one work item at a time. The step's Tasks on that work item form its concurrency group:
+
+```typescript
+export const plan = defineStep({
+  key: "plan",
+  name: "Plan",
+  agentPrompt: "Plan the next tickets.",
+  concurrency: { max: 1, waiting: 1 },
+});
+```
+
+- `max` (an integer, at least 1) is how many Tasks of the step may hold a place on the work item. A Task holds its place until it ends (succeeds, fails or is cancelled), including while it waits for a person or for the work item's blockers.
+- `waiting` (an integer, 0 or more) is how many more may wait for a place. A waiting Task shows as **Waiting for slot** and has no run yet. When a Task in the group ends, the oldest waiting Task starts.
+- A Task past both limits is dropped: it is never created.
+
+The group is the step's key on the work item, so every version of the step shares it, and so does every way its Tasks start: a pipeline step, a standalone Task (from the UI or `POST /tasks`), an agent's `startTask` change, and an automation. A new Task is checked against the limits of the version it starts from; when a place frees up, the step's latest active version decides how many waiting Tasks start.
+
+A dropped Task is reported where it was started:
+
+- `POST /tasks` responds `409 Scarn.ConcurrencyGroupFull`, and `meta.heldBy` lists the Tasks holding the group.
+- An agent's `startTask` change is skipped, and the run goes on.
+- A pipeline step fails with `Scarn.ConcurrencyGroupFull`, which `.catch` can handle. See [Errors, retries and timeouts](/scarn/guides/pipelines/#errors-retries-and-timeouts).
+
+Retries and continuations are more runs of a Task that already holds its place, so the group doesn't see them. A rerun starts a new Task, which joins the group like any other. Prompt Tasks (no step) and steps without `concurrency` have no group. Pipeline nodes can't set `concurrency`; it belongs to the step.
 
 ## MCP servers
 
@@ -1034,4 +1084,4 @@ Push steps from the repository root:
 scarn pipelines push
 ```
 
-This pushes every step exported from the `.ts` files in `.scarn/pipeline-builder/`, then publishes every built `<key>.json` pipeline and syncs the default pipeline assignment (see [Writing and publishing](/scarn/guides/pipelines/#writing-and-publishing)). The `key` + `version` pair uniquely identifies each step definition on the server.
+This pushes every step exported from the `.ts` files in `.scarn/pipeline-builder/`, then publishes every built `<key>.json` pipeline and automation (see [Writing and publishing](/scarn/guides/pipelines/#writing-and-publishing)). The `key` + `version` pair uniquely identifies each step definition on the server.

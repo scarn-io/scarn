@@ -5,6 +5,7 @@ import {
 import {
   loadCurrentExecutionInfo,
   type CurrentExecutionInfo,
+  type WorkItemLinks,
   type WorkItemPermission,
 } from "./current-execution";
 import { resolveWorktree } from "./resolve-worktree";
@@ -72,6 +73,25 @@ export async function recordWorkItemChange(
 // eslint-disable-next-line local/no-unknown-parameter-type -- a type guard
 export function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
+}
+
+// eslint-disable-next-line local/no-unknown-parameter-type -- a type guard
+export function isLabelList(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every(isNonEmptyString);
+}
+
+/**
+ * A work item's web page, `<appBaseUrl>/<projectPath>/work-items/<id>`, or
+ * null when the worker gave no links. The only place these URLs are built.
+ */
+export function workItemUrl(
+  links: WorkItemLinks | null,
+  workItemId: string,
+): string | null {
+  if (links === null) {
+    return null;
+  }
+  return `${links.appBaseUrl.replace(/\/+$/, "")}/${links.projectPath}/work-items/${encodeURIComponent(workItemId)}`;
 }
 
 export function invalidInputMessage(detail: string): string {

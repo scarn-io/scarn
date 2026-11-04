@@ -75,14 +75,14 @@ approve or reject, before the run moves on. The default pipeline branches on its
 reproduction confidence, and waits for a decision before the fix. See
 [Transitions](/scarn/guides/pipelines/#transitions).
 
-## Default pipeline assignment
+## Default automation
 
-Default pipeline assignment is the set of rules that picks a pipeline for each
-arriving work item. It lives in
-`.scarn/pipeline-builder/default-pipeline-assignment.ts`, and the designer
-writes one wired to the pipeline it builds. If no rule matches and the default
-is `skip()`, nothing starts. See
-[Default Pipeline Assignment](/scarn/guides/pipeline-assignment/).
+The default automation is the project automation that picks a pipeline for
+each work item when it becomes ready. It lives in
+`.scarn/pipeline-builder/default.ts`, and the designer writes one wired to the
+pipeline it builds. It is published disabled; nothing starts until you run
+`scarn automations enable default`. See
+[Project Automations](/scarn/guides/automations/).
 
 ## Worker
 

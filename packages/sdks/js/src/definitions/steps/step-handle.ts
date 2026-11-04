@@ -13,7 +13,11 @@
 import { makeHandle, stepCall, stepNode } from "../../pipelines/handles";
 import type { PipelineStep } from "../../pipelines/types";
 import { BUILT_IN_ERRORS } from "../../contracts/pipeline-document/built-ins";
-import type { StepDefinitionSpec, StepRetryEntry } from "./define-step";
+import type {
+  StepConcurrency,
+  StepDefinitionSpec,
+  StepRetryEntry,
+} from "./define-step";
 
 export type StepHandle<
   TInput = unknown,
@@ -81,6 +85,27 @@ export function compileStepMaxTurns(stepKey: string, maxTurns: number): number {
     throw new Error(`Step "${stepKey}": maxTurns must be a positive integer.`);
   }
   return maxTurns;
+}
+
+/**
+ * Checks a step's `concurrency` the way the server does on upsert: `max` an
+ * integer ≥ 1 and `waiting` an integer ≥ 0.
+ */
+export function compileStepConcurrency(
+  stepKey: string,
+  concurrency: StepConcurrency,
+): StepConcurrency {
+  if (!Number.isInteger(concurrency.max) || concurrency.max < 1) {
+    throw new Error(
+      `Step "${stepKey}": concurrency max must be an integer of at least 1.`,
+    );
+  }
+  if (!Number.isInteger(concurrency.waiting) || concurrency.waiting < 0) {
+    throw new Error(
+      `Step "${stepKey}": concurrency waiting must be a non-negative integer.`,
+    );
+  }
+  return { max: concurrency.max, waiting: concurrency.waiting };
 }
 
 /**

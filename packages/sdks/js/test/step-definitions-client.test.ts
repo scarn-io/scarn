@@ -119,6 +119,7 @@ describe("createStepDefinitionsClient.upsertFromSpec", () => {
         errors: [],
         retry: [],
         maxTurns: null,
+        concurrency: null,
         workItemPermissions: [],
         projectId: "proj-1",
       });
@@ -194,7 +195,7 @@ describe("createStepDefinitionsClient.upsertFromSpec", () => {
     }
   });
 
-  test("sends maxTurns and workItemPermissions in the request body", async () => {
+  test("sends maxTurns, concurrency and workItemPermissions in the request body", async () => {
     const { mockFetch, captured } = createMockFetch([
       { status: 200, body: { id: "step-id" } },
     ]);
@@ -207,6 +208,7 @@ describe("createStepDefinitionsClient.upsertFromSpec", () => {
         name: "Wayfinder",
         agentPrompt: "Find the way.",
         maxTurns: 40,
+        concurrency: { max: 1, waiting: 1 },
         workItemPermissions: ["children"],
       });
       await client.upsertFromSpec("proj-1", wayfinder, {
@@ -214,6 +216,7 @@ describe("createStepDefinitionsClient.upsertFromSpec", () => {
       });
       expect(captured[0]?.body).toMatchObject({
         maxTurns: 40,
+        concurrency: { max: 1, waiting: 1 },
         workItemPermissions: ["children"],
       });
     } finally {

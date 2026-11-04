@@ -47,7 +47,7 @@ function ignoresPath(rules: string[], path: string): boolean {
 
 describe("scaffoldPipelineBuilderDirectory", () => {
   describe("fresh directory", () => {
-    test("creates package.json, tsconfig.json, .gitignore, starter pipeline, and default assignment", () => {
+    test("creates package.json, tsconfig.json, .gitignore, starter pipeline, and default automation", () => {
       const dir = makeTempDir();
       try {
         const result = scaffoldPipelineBuilderDirectory(dir, "0.0.0");
@@ -57,7 +57,7 @@ describe("scaffoldPipelineBuilderDirectory", () => {
         expect(result.created).toContain(".gitignore");
         expect(result.created).toContain(STARTER_PIPELINE_FILENAME);
         expect(result.created).toContain(STARTER_PIPELINE_JSON_FILENAME);
-        expect(result.created).toContain("default-pipeline-assignment.ts");
+        expect(result.created).toContain("default.ts");
         expect(result.skipped).toEqual([]);
       } finally {
         rmSync(dir, { recursive: true, force: true });
@@ -76,9 +76,7 @@ describe("scaffoldPipelineBuilderDirectory", () => {
         expect(existsSync(join(dir, STARTER_PIPELINE_JSON_FILENAME))).toBe(
           true,
         );
-        expect(existsSync(join(dir, "default-pipeline-assignment.ts"))).toBe(
-          true,
-        );
+        expect(existsSync(join(dir, "default.ts"))).toBe(true);
       } finally {
         rmSync(dir, { recursive: true, force: true });
       }
@@ -142,7 +140,7 @@ describe("scaffoldPipelineBuilderDirectory", () => {
         for (const committable of [
           STARTER_PIPELINE_FILENAME,
           STARTER_PIPELINE_JSON_FILENAME,
-          "default-pipeline-assignment.ts",
+          "default.ts",
           "steps.ts",
           "my-custom-pipeline.ts",
           "package.json",
@@ -383,17 +381,17 @@ describe("scaffoldPipelineBuilderDirectory", () => {
       );
     });
 
-    test("default assignment file assigns the starter pipeline by default", () => {
+    test("default automation starts the starter pipeline when a work item is ready", () => {
       const dir = makeTempDir();
       try {
         scaffoldPipelineBuilderDirectory(dir, "0.0.0");
-        const content = readFileSync(
-          join(dir, "default-pipeline-assignment.ts"),
-          "utf-8",
+        const content = readFileSync(join(dir, "default.ts"), "utf-8");
+        expect(content).toContain('scope: "project"');
+        expect(content).toContain('key: "default"');
+        expect(content).toContain(
+          'onEvent({ event: "workItem.ready", to: bugPipeline })',
         );
-        expect(content).toContain("defaultPipelineAssignment(");
-        expect(content).toContain('default: assign("bug-pipeline")');
-        expect(content.match(/^import /gm)).toHaveLength(1);
+        expect(content).toContain('import bugPipeline from "./bug-pipeline";');
       } finally {
         rmSync(dir, { recursive: true, force: true });
       }

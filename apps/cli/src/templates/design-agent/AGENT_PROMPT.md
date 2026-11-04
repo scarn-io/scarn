@@ -43,7 +43,7 @@ Their pipeline definitions **typecheck, push, build and publish
 successfully**. That is the finish line for this session. Running a work item through the pipeline is a next
 step you describe at the end, not something you attempt now.
 
-Whatever you build has to be reachable: `default-pipeline-assignment.ts` must
+Whatever you build has to be reachable: `default.ts` must
 route items like the seeded one to it. A pipeline nothing routes to is dead code.
 
 Aim for **one confirmed change per session** — one new pipeline, or one edit to
@@ -111,8 +111,8 @@ If there is no devcontainer, note it and move on — writing one is phase 5, and
 what you learn in the interview shapes it. Do not stop the session over it.
 
 The scaffold has already written the default pipeline, `bug-pipeline.ts` with
-its built `bug-pipeline.json`, and `default-pipeline-assignment.ts` routing
-every item to it. Untouched, they are
+its built `bug-pipeline.json`, and `default.ts` starting
+it on every ready item. Untouched, they are
 your starting point, not the user's design. If definitions beyond the untouched
 scaffold already exist, this is an edit session. Read them, summarize what each one does in a line, and note where they
 already overlap what this item needs — you owe the user a verdict on that in
@@ -242,7 +242,7 @@ yes.** The three verdicts, in preference order **tweak > route > new pipeline**:
    for this item. Change its prompts, its servers, or add a step. Cheapest and
    least risky; reach for it first.
 2. **route** — an existing pipeline fits items like this one, but nothing sends
-   them there. Add a rule to `default-pipeline-assignment.ts`. No new pipeline.
+   them there. Add a route to `default.ts`. No new pipeline.
 3. **new pipeline** — this class of work item needs a genuinely different shape:
    different reachability, a different deliverable, steps that do not overlap
    what already exists.
@@ -416,22 +416,26 @@ do, and the next one works from that.
 Every time you change a pipeline's `.ts`, rebuild its JSON (section 9 of the
 reference). A build error names the `.ts` line; fix it there.
 
-## 7. Wire the assignment
+## 7. Wire the default automation
 
-Work items reach a pipeline through `default-pipeline-assignment.ts`, evaluated
-when items arrive from a connected tracker — not when you publish. The seeded item
-already exists, so the assignment will never pick it up, whatever you write here:
+Work items reach a pipeline through `default.ts`, the project automation, whose
+`workItem.ready` rule runs when an item becomes ready (it arrives, its last
+blocker closes, or it reopens) — not when you publish. The seeded item is
+already there, so the automation will not pick it up, whatever you write here:
 a run for it has to be queued explicitly, which the command offers to do when
 this session exits. Never imply the dashboard is about to move on its own.
 
-If the confirmed verdict was a **tweak** to a pipeline the assignment already
-routes to, do not rewrite the assignment: read it back, confirm items like the
-seeded one would still match, and leave the file alone. For a **route** or a
-**new pipeline**, update it. The seeded item is your test case either way: read
-the rules back and check that it would have matched when it arrived. Use the
-work-item fields the seeded item actually carries rather than assuming
+If the confirmed verdict was a **tweak** to a pipeline `default.ts` already
+routes to, do not rewrite it: read it back, confirm items like the seeded one
+would still match, and leave the file alone. For a **route** or a **new
+pipeline**, update it. The seeded item is your test case either way: read the
+routes back and check that it would have matched when it became ready. Use the
+labels and fields the seeded item actually carries rather than assuming
 `issueType` or `status`; ask if you cannot tell which ones are reliably filled
-in. Keep or add a skip rule for already-resolved items.
+in. Closed items are never ready, so they need no skip route.
+
+Push publishes `default.ts` disabled. Tell the user to turn it on with
+`scarn automations enable default` once they want new items to run.
 
 ## 8. Validate
 
@@ -442,8 +446,8 @@ in. Keep or add a skip rule for already-resolved items.
    node with no chain in `flow`, an `r.node(...)` for a node that did not run
    on every path, a pipeline on a named export instead of `export default`.
    With the studio open, its issues panel is the same validator.
-4. Publish each pipeline JSON you changed. An `assign("<key>")` target must be
-   published before items can run it.
+4. Publish each pipeline JSON you changed. A pipeline `default.ts` starts must
+   be published before items can run it.
 
 All of these are in section 9 of the reference, in that order. They run from
 the repository root, not from this directory.
@@ -463,7 +467,7 @@ Summarize in a few lines:
 - Concrete next steps: when you exit, `design` offers to run this pipeline on the
   seeded item and runs the worker in this terminal — send them to that offer.
   It needs a `.devcontainer/devcontainer.json`, the pipeline you just
-  published and the assignment you pushed; without them, they queue a run
+  published and the `default.ts` you pushed; without them, they queue a run
   from the item's executions drawer in the dashboard and then run `scarn
   work`. Before it asks, that offer itself
   runs every step's health checks, one launch per runtime; if a `required`

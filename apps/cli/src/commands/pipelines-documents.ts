@@ -36,12 +36,12 @@ import { syncIdentityFromDisk } from "../lib/telemetry";
  * resolves the project from `--project` or `.scarn/scarn.jsonc`.
  */
 
-interface ProjectArguments {
+export interface ProjectArguments {
   project: string | undefined;
   baseUrl: string | undefined;
 }
 
-const withProjectOptions = <T>(argv: Argv<T>) =>
+export const withProjectOptions = <T>(argv: Argv<T>) =>
   argv
     .option("project", {
       type: "string",
@@ -54,7 +54,7 @@ const withProjectOptions = <T>(argv: Argv<T>) =>
       describe: "Scarn app base URL",
     });
 
-async function connectProject(
+export async function connectProject(
   args: ProjectArguments,
   action: ProjectAction,
 ): Promise<

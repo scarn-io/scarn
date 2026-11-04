@@ -1,6 +1,7 @@
 import * as clack from "@clack/prompts";
 import { z } from "zod";
 import { AnalyticsEvents } from "@scarn/observability/analytics/events";
+import { automationDocumentSchema } from "@scarn/sdk/contracts/automation-document";
 import {
   listPinnedStepDefinitionIds,
   readActivePipelineVersion,
@@ -26,30 +27,50 @@ import { CliError } from "./cli-error";
  *
  * Deliberately thin — every branch lives in `design-run-offer.ts`, where it is
  * unit-tested without a terminal or a network. The one exception is
- * {@link readAssignedPipelineId}, which has to compensate for a generated type
+ * {@link firstPipelineKeyOf}, which has to compensate for a generated type
  * and so is tested directly.
  */
 
 /**
- * The one field of the assignment the run offer needs.
+ * The pipeline the project's `default` automation starts: its first pipeline
+ * target, in rule and route order (`otherwise` after the routes). Deciding
+ * which pipeline a given item would get needs the item; the first target is
+ * the pipeline the design session just pushed. `undefined` when the
+ * automation starts no pipeline.
  *
- * A project's default assignment names exactly one pipeline definition; its
- * `rulesJson` only decides *whether* to assign, never *which*. So the id is
- * readable without evaluating any rules — it is the pipeline the design session
- * just pushed.
- *
- * Parsed rather than read because the generated SDK types nullable fields as
+ * Parsed rather than read because the generated SDK types the version as
  * `T | unknown`, which TypeScript collapses to plain `unknown`. The compiler
- * offers no help at this boundary, so the schema is the only thing pinning the
- * field name.
+ * offers no help at this boundary, so the schema is the only thing pinning
+ * the document's shape.
  */
-export const assignedPipelineSchema = z.object({
-  pipelineDefinitionId: z.string().min(1),
+export function firstPipelineKeyOf(
+  // eslint-disable-next-line local/no-unknown-parameter-type -- parses an untyped API field
+  latestVersion: unknown,
+): string | undefined {
+  const parsed = defaultAutomationVersionSchema.safeParse(latestVersion);
+  if (!parsed.success) return undefined;
+  for (const rule of parsed.data.document.rules) {
+    const targets = [
+      ...rule.next.routes,
+      ...(rule.next.otherwise === undefined ? [] : [rule.next.otherwise]),
+    ];
+    const pipeline = targets.find((target) => target.kind === "pipeline");
+    if (pipeline?.kind === "pipeline") return pipeline.to;
+  }
+  return undefined;
+}
+
+const defaultAutomationVersionSchema = z.object({
+  document: automationDocumentSchema,
 });
 
+/** The project automation the starter scaffolds and the designer edits. */
+export const DEFAULT_AUTOMATION_KEY = "default";
+
 /**
- * The pipeline this project's work items are assigned to. `undefined` when the
- * project has no assignment — which the offer reads as nothing to run.
+ * The pipeline definition the project's `default` automation starts (see
+ * {@link firstPipelineKeyOf}). `undefined` when there is no such automation
+ * or pipeline — which the offer reads as nothing to run.
  */
 export async function resolveAssignedPipeline(input: {
   baseUrl: string;
@@ -57,25 +78,38 @@ export async function resolveAssignedPipeline(input: {
 }): Promise<string | undefined> {
   const { client, headers } = await connectApi(input.baseUrl);
 
-  const { data, error } = await client.projects.getProject({
+  const automations = await client.automations.listAutomations({
     path: { projectId: input.projectId },
     headers,
   });
-
-  if (error !== undefined) {
-    throw new Error(`Could not read the project: ${describeApiError(error)}`);
+  if (automations.error !== undefined) {
+    throw new Error(
+      `Could not read the project's automations: ${describeApiError(automations.error)}`,
+    );
   }
 
-  // Parsed at the boundary, before the id crosses into the offer.
-  const assignment = assignedPipelineSchema.safeParse(
-    data.defaultPipelineAssignment,
+  const automation = automations.data.find(
+    (candidate) =>
+      candidate.key === DEFAULT_AUTOMATION_KEY && candidate.scope === "project",
   );
-  return assignment.success ? assignment.data.pipelineDefinitionId : undefined;
+  const pipelineKey = firstPipelineKeyOf(automation?.latestVersion);
+  if (pipelineKey === undefined) return undefined;
+
+  const pipelines = await client.pipelineDefinitions.listPipelineDefinitions({
+    path: { projectId: input.projectId },
+    headers,
+  });
+  if (pipelines.error !== undefined) {
+    throw new Error(
+      `Could not read the project's pipelines: ${describeApiError(pipelines.error)}`,
+    );
+  }
+  return pipelines.data.find((pipeline) => pipeline.key === pipelineKey)?.id;
 }
 
 /**
  * The two step-definition fields that decide where a step executes. Parsed for
- * the same reason as {@link assignedPipelineSchema}: the generated type
+ * the same reason as {@link firstPipelineKeyOf}: the generated type
  * collapses the nullable `managedRuntime` to `unknown`.
  */
 export const stepRuntimeTargetSchema = z.object({

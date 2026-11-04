@@ -8,13 +8,19 @@ import {
   type EdgeLegendKind,
 } from "./studio-graph-visuals";
 
-const LEGEND_STROKE: Record<EdgeLegendKind, { color: string; dash?: string }> = {
-  flow: { color: TONE_COLOR.flow },
-  loop: { color: TONE_COLOR.loop },
-  catch: { color: TONE_COLOR.catch, dash: edgeDashArray({ kind: "catch", lane: null }) },
-  each: { color: TONE_COLOR.flow, dash: edgeDashArray({ kind: "route", lane: "each" }) },
-  handoff: { color: TONE_COLOR.flow, dash: edgeDashArray({ kind: "handoff", lane: null }) },
-};
+const LEGEND_STROKE: Record<EdgeLegendKind, { color: string; dash?: string }> =
+  {
+    flow: { color: TONE_COLOR.flow },
+    loop: { color: TONE_COLOR.loop },
+    catch: {
+      color: TONE_COLOR.catch,
+      dash: edgeDashArray({ kind: "catch", lane: null }),
+    },
+    each: {
+      color: TONE_COLOR.flow,
+      dash: edgeDashArray({ kind: "route", lane: "each" }),
+    },
+  };
 
 /**
  * A compact key for the edge styles in the graph, pinned to the top-right
@@ -38,7 +44,10 @@ export function GraphLegend({ edges }: { edges: readonly StudioEdge[] }) {
         }}
       >
         {kinds.map((kind) => (
-          <span key={kind} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span
+            key={kind}
+            style={{ display: "flex", alignItems: "center", gap: 6 }}
+          >
             <svg width="22" height="6" aria-hidden>
               <line
                 x1="0"

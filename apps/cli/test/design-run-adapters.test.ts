@@ -1,46 +1,78 @@
 import { describe, expect, test } from "bun:test";
 import {
-  assignedPipelineSchema,
+  firstPipelineKeyOf,
   stepRuntimeTargetSchema,
   stepNeedsProjectDevcontainer,
 } from "../src/lib/design-run-adapters";
 
 /**
- * `assignedPipelineSchema` is the only thing pinning how the run offer finds the
- * pipeline to run. The generated SDK types a project's `defaultPipelineAssignment`
- * as `T | unknown`, which TypeScript collapses to plain `unknown`, so the compiler
+ * `firstPipelineKeyOf` is the only thing pinning how the run offer finds the
+ * pipeline to run. The generated SDK types an automation's `latestVersion` as
+ * `T | unknown`, which TypeScript collapses to plain `unknown`, so the compiler
  * cannot catch a wrong field name here — and a wrong read fails open: the offer
- * would silently decide "no pipeline is assigned" and never appear.
+ * would silently decide "no pipeline to run" and never appear.
  *
  * These tests are that missing type check.
  */
 
-describe("assignedPipelineSchema", () => {
-  test("reads the assigned pipeline definition id", () => {
-    const parsed = assignedPipelineSchema.safeParse({
-      pipelineDefinitionId: "019ed1c9-2222-7170-a08a-1ff912085f7b",
-      defaultEventType: "assign",
-    });
+const version = (rules: unknown[]) => ({
+  document: {
+    kind: "automation",
+    schemaVersion: 1,
+    key: "default",
+    scope: "project",
+    rules,
+  },
+});
 
-    expect(parsed.success).toBe(true);
-    expect(parsed.data?.pipelineDefinitionId).toBe(
-      "019ed1c9-2222-7170-a08a-1ff912085f7b",
-    );
+describe("firstPipelineKeyOf", () => {
+  test("reads the first pipeline a route starts", () => {
+    expect(
+      firstPipelineKeyOf(
+        version([
+          {
+            event: "workItem.ready",
+            next: {
+              routes: [
+                {
+                  kind: "skip",
+                  when: { path: "event.workItem.title", op: "exists" },
+                },
+                { kind: "pipeline", to: "bug-pipeline", on: "workItem" },
+              ],
+            },
+          },
+        ]),
+      ),
+    ).toBe("bug-pipeline");
   });
 
-  test("rejects a project with no assignment", () => {
-    // The field is nullable server-side: a project without a default pipeline.
-    expect(assignedPipelineSchema.safeParse(null).success).toBe(false);
-    expect(assignedPipelineSchema.safeParse(undefined).success).toBe(false);
+  test("reads an otherwise pipeline", () => {
+    expect(
+      firstPipelineKeyOf(
+        version([
+          {
+            event: "workItem.ready",
+            next: {
+              routes: [{ kind: "attach", automation: "wayfinder" }],
+              otherwise: { kind: "pipeline", to: "triage", on: "workItem" },
+            },
+          },
+        ]),
+      ),
+    ).toBe("triage");
   });
 
-  test("rejects an assignment whose id is missing or empty", () => {
+  test("is undefined with no version, or no pipeline target", () => {
+    expect(firstPipelineKeyOf(null)).toBeUndefined();
+    expect(firstPipelineKeyOf(undefined)).toBeUndefined();
     expect(
-      assignedPipelineSchema.safeParse({ defaultEventType: "assign" }).success,
-    ).toBe(false);
-    expect(
-      assignedPipelineSchema.safeParse({ pipelineDefinitionId: "" }).success,
-    ).toBe(false);
+      firstPipelineKeyOf(
+        version([
+          { event: "workItem.created", next: { routes: [{ kind: "skip" }] } },
+        ]),
+      ),
+    ).toBeUndefined();
   });
 });
 

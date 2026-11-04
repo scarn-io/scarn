@@ -1,6 +1,6 @@
-import { DEFAULT_PIPELINE_ASSIGNMENT_FILENAME } from "@scarn/sdk/definitions/pipelines";
 import {
-  STARTER_DEFAULT_PIPELINE_ASSIGNMENT_FILE,
+  STARTER_DEFAULT_AUTOMATION_FILE,
+  STARTER_DEFAULT_AUTOMATION_FILENAME,
   STARTER_PIPELINE_FILE,
   STARTER_PIPELINE_FILENAME,
 } from "@scarn/worker";
@@ -55,7 +55,7 @@ const GENERATED_FILES: readonly string[] = ["push.ts"];
  */
 const SCAFFOLDED_FILES: ReadonlyMap<string, string> = new Map([
   [STARTER_PIPELINE_FILENAME, STARTER_PIPELINE_FILE],
-  [DEFAULT_PIPELINE_ASSIGNMENT_FILENAME, STARTER_DEFAULT_PIPELINE_ASSIGNMENT_FILE],
+  [STARTER_DEFAULT_AUTOMATION_FILENAME, STARTER_DEFAULT_AUTOMATION_FILE],
 ]);
 
 /**
@@ -65,7 +65,7 @@ const SCAFFOLDED_FILES: ReadonlyMap<string, string> = new Map([
  * the agent actually needs to know — so untouched scaffold files have to be
  * discounted. Counting every `.ts` file would report "definitions already
  * exist" on a first run, since the preflight has just written the starter
- * pipeline and the default assignment.
+ * pipeline and the default automation.
  *
  * Takes filenames and a reader rather than a directory so the rule is testable
  * without one. `readFile` returns `undefined` when a file cannot be read, which

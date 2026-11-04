@@ -20,7 +20,7 @@ Update the documentation whenever you make changes in these areas:
 | Changes to project init flow                                                 | `src/content/docs/reference/cli.md#scarn-init` first, then `src/content/docs/getting-started/quickstart.mdx` — the Quickstart shows only what the user types and sees |
 | New step concepts (declared errors, artifacts, MCP)                          | `src/content/docs/guides/steps.md`                                                                                                                                      |
 | New `definePipeline()` concepts (node kinds, conditions, lanes, JSON format) | `src/content/docs/guides/pipelines.mdx`                                                                                                                                 |
-| New default-pipeline-assignment concepts                                     | `src/content/docs/guides/pipeline-assignment.md`                                                                                                                        |
+| New project automation concepts                                              | `src/content/docs/guides/automations.md`                                                                                                                                |
 | New worker flags                                                             | `src/content/docs/reference/cli.md#scarn-work-project`                                                                                                                |
 | New worker execution behavior                                                | `src/content/docs/guides/workers.md`                                                                                                                                    |
 | New dev container guidance                                                   | `src/content/docs/how-to/devcontainer.md`                                                                                                                               |
@@ -99,7 +99,7 @@ apps/docs/
 │       │   ├── guides/                     ← the "SDK" sidebar group
 │       │   │   ├── steps.md                ← defineStep()/codeStep() deep dive
 │       │   │   ├── pipelines.mdx           ← definePipeline() node graph and its JSON format
-│       │   │   ├── pipeline-assignment.md  ← default-pipeline-assignment.ts routing
+│       │   │   ├── automations.md          ← project automations, default.ts routing
 │       │   │   └── workers.md              ← scarn work and worker options
 │       │   ├── reference/
 │       │   │   ├── cli.md                  ← complete CLI command reference

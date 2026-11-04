@@ -40,6 +40,12 @@ console.log(
     `${String(result.unchangedPipelines.length)} unchanged.`,
 );
 
-if (result.syncedDefaultPipelineAssignment) {
-  console.log("Default pipeline assignment synced.");
+if (
+  result.publishedAutomations.length > 0 ||
+  result.unchangedAutomations.length > 0
+) {
+  console.log(
+    `Published ${String(result.publishedAutomations.length)} automation(s), ` +
+      `${String(result.unchangedAutomations.length)} unchanged.`,
+  );
 }

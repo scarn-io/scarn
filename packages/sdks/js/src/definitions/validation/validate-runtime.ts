@@ -60,9 +60,8 @@ export function checkRuntime(
 }
 
 /**
- * A step's `managedRuntime` is a known identifier and is only set on a `code`
- * step that runs in a workspace with no devcontainer config. Kept as one
- * function so the code-step-only rule can relax in one place.
+ * A step's `managedRuntime` is a known identifier and is only set on a step
+ * that runs in a workspace with no devcontainer config.
  */
 function checkManagedRuntime(
   step: StepDefinitionSpec,
@@ -75,11 +74,6 @@ function checkManagedRuntime(
   if (!isManagedRuntimeId(step.managedRuntime)) {
     problems.push(
       `unknown managed runtime; expected one of ${MANAGED_RUNTIME_IDS.join(", ")}`,
-    );
-  }
-  if (step.kind !== "code") {
-    problems.push(
-      "managed runtimes are only supported for code steps. Use Runtime.devcontainer() or Runtime.host() for defineStep",
     );
   }
   if (step.executionMode === "no_workspace") {

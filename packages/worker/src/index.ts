@@ -194,7 +194,8 @@ export {
   PIPELINE_BUILDER_TSCONFIG,
   PIPELINE_BUILDER_TYPECHECK_SCRIPT,
   PIPELINE_BUILDER_TYPECHECK_SCRIPT_NAME,
-  STARTER_DEFAULT_PIPELINE_ASSIGNMENT_FILE,
+  STARTER_DEFAULT_AUTOMATION_FILE,
+  STARTER_DEFAULT_AUTOMATION_FILENAME,
   STARTER_PIPELINE_FILE,
   STARTER_PIPELINE_FILENAME,
   STARTER_PIPELINE_JSON_FILE,
@@ -237,11 +238,6 @@ export {
   listPipelineTemplates,
 } from "./pipelines/pipeline-templates/application/list-pipeline-templates";
 export { renderPipelineTemplate } from "./pipelines/pipeline-templates/application/render-pipeline-template";
-export {
-  UnsupportedRuleError,
-  generateDefaultPipelineAssignmentFileContent,
-} from "./pipelines/pipeline-definitions/infra/default-pipeline-assignment-file-generator";
-export type { DefaultPipelineAssignmentContract } from "./pipelines/pipeline-definitions/infra/default-pipeline-assignment-file-generator";
 export { LocalArtifactStore } from "./artifacts/artifact-store/infra/local-artifact-store";
 export { RemoteArtifactStore } from "./artifacts/artifact-store/infra/remote-artifact-store";
 export { CompositeArtifactStore } from "./artifacts/artifact-store/infra/composite-artifact-store";

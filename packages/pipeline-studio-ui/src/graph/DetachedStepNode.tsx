@@ -1,44 +1,32 @@
-import { Handle, Position, type NodeProps } from "@xyflow/react";
+import type { NodeProps } from "@xyflow/react";
 import { fonts } from "@scarn/design-tokens";
-import { HANDOFF_SOURCE_HANDLE, HANDOFF_TARGET_HANDLE } from "./edge-route";
 import { GraphIcon } from "./graph-icons";
 import { palette } from "./graph-palette";
+import { selectionShadow, truncate, type GraphNodeType } from "./GraphNode";
 import {
-  hiddenHandle,
-  selectionShadow,
-  truncate,
-  type GraphNodeType,
-} from "./GraphNode";
-import {
-  HANDOFF_DASH_ARRAY,
+  DETACHED_DASH_ARRAY,
   kindLabel,
   nodeLayoutSize,
 } from "./studio-graph-visuals";
 
-const [DASH, GAP] = HANDOFF_DASH_ARRAY.split(" ").map(Number);
+const [DASH, GAP] = DETACHED_DASH_ARRAY.split(" ").map(Number);
 
 /**
- * A step an agent starts during its run, registered as
- * `nodeTypes.handoffNode` in `PipelineGraphView.tsx`. Drawn as a dashed,
- * transparent card so it never reads as a graph node the engine runs; its
- * only outgoing handle, on top, carries the dashed "resumes" edge back to its
- * starter. Its border is an SVG rect, since CSS `dashed` borders can't take a
- * dash length.
+ * A step the template's file exports but no graph runs, registered as
+ * `nodeTypes.detachedNode` in `PipelineGraphView.tsx`: an automation's
+ * steps, or steps an agent starts by key. Drawn as a dashed, transparent card
+ * with no handles, so it never reads as a node the engine runs. Its border is
+ * an SVG rect, since CSS `dashed` borders can't take a dash length.
  */
-export function HandoffNode({ data, selected }: NodeProps<GraphNodeType>) {
+export function DetachedStepNode({ data, selected }: NodeProps<GraphNodeType>) {
   const size = nodeLayoutSize(data);
-  const summary = data.handoff?.summary ?? "";
-  const startedBy = data.handoff?.startedBy;
-  const title = startedBy
-    ? `${data.label} — started by ${startedBy} during a round; ${startedBy} resumes when its ticket closes`
-    : data.label;
 
   return (
     <div
       className="pipeline-graph-node"
-      data-kind="handoff"
+      data-kind="detached"
       data-selected={selected ? "true" : undefined}
-      title={summary ? `${title}\n${summary}` : title}
+      title={`${data.label} — not run by a pipeline graph`}
       style={{
         ...size,
         boxSizing: "border-box",
@@ -97,32 +85,6 @@ export function HandoffNode({ data, selected }: NodeProps<GraphNodeType>) {
       >
         {kindLabel(data)}
       </div>
-      {summary ? (
-        <div
-          style={{
-            ...truncate,
-            fontSize: 11,
-            lineHeight: "15px",
-            color: palette.textDim,
-          }}
-        >
-          {summary}
-        </div>
-      ) : null}
-      <Handle
-        id={HANDOFF_TARGET_HANDLE}
-        type="target"
-        position={Position.Left}
-        isConnectable={false}
-        style={hiddenHandle}
-      />
-      <Handle
-        id={HANDOFF_SOURCE_HANDLE}
-        type="source"
-        position={Position.Top}
-        isConnectable={false}
-        style={hiddenHandle}
-      />
     </div>
   );
 }

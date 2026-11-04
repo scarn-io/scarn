@@ -131,6 +131,56 @@ describe("step handles", () => {
     ).toThrow('Step "s": maxTurns must be a positive integer.');
   });
 
+  test("concurrency compiles onto defineStep and codeStep specs", () => {
+    const step = defineStep({
+      key: "s",
+      name: "S",
+      agentPrompt: "p",
+      concurrency: { max: 1, waiting: 1 },
+    });
+    expect(toStepSpec(step).concurrency).toEqual({ max: 1, waiting: 1 });
+
+    const code = codeStep({
+      key: "c",
+      name: "C",
+      fn: () => ({}),
+      concurrency: { max: 2, waiting: 0 },
+    });
+    expect(toStepSpec(code).concurrency).toEqual({ max: 2, waiting: 0 });
+
+    const plain = toStepSpec(
+      defineStep({ key: "t", name: "T", agentPrompt: "p" }),
+    );
+    expect("concurrency" in plain).toBe(false);
+  });
+
+  test("rejects a concurrency with a bad max or waiting", () => {
+    expect(() =>
+      defineStep({
+        key: "s",
+        name: "S",
+        agentPrompt: "p",
+        concurrency: { max: 0, waiting: 1 },
+      }),
+    ).toThrow('Step "s": concurrency max must be an integer of at least 1.');
+    expect(() =>
+      codeStep({
+        key: "c",
+        name: "C",
+        fn: () => ({}),
+        concurrency: { max: 1.5, waiting: 1 },
+      }),
+    ).toThrow('Step "c": concurrency max must be an integer of at least 1.');
+    expect(() =>
+      defineStep({
+        key: "s",
+        name: "S",
+        agentPrompt: "p",
+        concurrency: { max: 1, waiting: -1 },
+      }),
+    ).toThrow('Step "s": concurrency waiting must be a non-negative integer.');
+  });
+
   test("rejects a retry on an undeclared error or with a bad maxAttempts", () => {
     expect(() =>
       defineStep({

@@ -159,6 +159,68 @@ export default definePipeline({
 });
 `;
 
+const AUTOMATION = `import { contains } from "@scarn/sdk/pipelines";
+import { defineAutomation, onEvent, skip } from "@scarn/sdk/automations";
+import { classify, ticket } from "./steps";
+
+export default defineAutomation({
+  key: "triage-children",
+  title: "Triage children",
+  scope: "workItem",
+  rules: [
+    onEvent({ event: "self.attached", to: (r) => ticket().on(r.workItem) }),
+    onEvent({
+      event: "child.ready",
+      routes: [
+        {
+          when: (r) => contains(r.child.labels, "bug"),
+          to: (r) => classify({ title: r.child.title }).on(r.child),
+        },
+      ],
+      otherwise: skip,
+    }),
+  ],
+});
+`;
+
+const EXPECTED_AUTOMATION_JSON = {
+  kind: "automation",
+  schemaVersion: 1,
+  key: "triage-children",
+  title: "Triage children",
+  scope: "workItem",
+  rules: [
+    {
+      event: "self.attached",
+      next: { routes: [{ kind: "step", to: "ticket", on: "workItem" }] },
+    },
+    {
+      event: "child.ready",
+      next: {
+        routes: [
+          {
+            when: { path: "event.child.labels", op: "contains", value: "bug" },
+            kind: "step",
+            to: "classify",
+            args: { title: "event.child.title" },
+            on: "child",
+          },
+        ],
+        otherwise: { kind: "skip" },
+      },
+    },
+  ],
+};
+
+const AUTOMATION_ERROR = `import { defineAutomation, onEvent, skip } from "@scarn/sdk/automations";
+
+export default defineAutomation({
+  key: "wrong-scope",
+  scope: "project",
+  rules: [onEvent({ event: "child.ready", to: skip }) as never],
+});
+`;
+
 const OLD_SDK = `export default { key: "old", name: "Old", version: 1, nodeDefinitions: [] };
 `;
 
@@ -240,6 +302,39 @@ describe("scarn pipelines build", () => {
     { timeout: 20_000 },
   );
 
+  test("writes an automation's <key>.json next to the pipelines", async () => {
+    const { root, builder, home } = project({
+      "incident.ts": VALID,
+      "triage-children.ts": AUTOMATION,
+    });
+
+    const result = await build(root, home);
+
+    expect(result.exitCode).toBe(0);
+    const text = readFileSync(join(builder, "triage-children.json"), "utf8");
+    expect(text).toBe(`${JSON.stringify(EXPECTED_AUTOMATION_JSON, null, 2)}\n`);
+    expect(existsSync(join(builder, "incident.json"))).toBe(true);
+    expect(output(result)).toContain("Wrote");
+
+    const upToDate = await build(root, home, ["--check"]);
+    expect(upToDate.exitCode).toBe(0);
+    expect(output(upToDate)).toContain("triage-children.json is up to date");
+  });
+
+  test("an automation build error prints its TS location", async () => {
+    const { root, builder, home } = project({
+      "wrong-scope.ts": AUTOMATION_ERROR,
+    });
+
+    const result = await build(root, home);
+
+    expect(result.exitCode).toBe(1);
+    expect(output(result)).toMatch(
+      /wrong-scope\.ts:\d+ \(\/rules\/0\/event\): "child\.ready" isn't an event of a project automation/,
+    );
+    expect(existsSync(join(builder, "wrong-scope.json"))).toBe(false);
+  });
+
   test("binds workItem.description into the start args", async () => {
     const { root, builder, home } = project({ "described.ts": DESCRIPTION });
 
@@ -296,7 +391,7 @@ describe("scarn pipelines build", () => {
     const result = await build(root, home);
 
     expect(result.exitCode).toBe(0);
-    expect(output(result)).toContain("No pipelines found");
+    expect(output(result)).toContain("No pipelines or automations found");
     expect(existsSync(join(builder, "old.json"))).toBe(false);
   });
 

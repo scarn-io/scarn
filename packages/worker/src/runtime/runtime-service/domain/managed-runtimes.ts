@@ -6,8 +6,8 @@ import {
 import { PIPELINE_BUILDER_DIR } from "@scarn/sdk/push";
 
 /**
- * Worker-side registry of managed runtimes: the containers a `codeStep` can run
- * in instead of the project's devcontainer. The SDK owns the identifier list;
+ * Worker-side registry of managed runtimes: the containers a step can run in
+ * instead of the project's devcontainer. The SDK owns the identifier list;
  * this registry owns what each identifier means (image, user, runtime binary),
  * so an identifier the SDK adds without a worker entry fails type-check here.
  *

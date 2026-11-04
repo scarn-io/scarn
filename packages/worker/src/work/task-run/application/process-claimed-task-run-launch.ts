@@ -14,6 +14,7 @@ import type {
 import type { TaskRunWorkerContextContract } from "../contracts/task-run-contracts";
 import type { WorkReporter } from "../contracts/work-reporter";
 import type { PreviousRunFilesInput } from "./write-previous-run-files";
+import { logWorkWarn } from "./work-logger";
 
 export async function fetchWorkerContext(
   client: TaskRunWorkerClient,
@@ -144,6 +145,13 @@ export async function launchRuntimeEnvironment(
             claimToken: input.claimToken,
           }
         : undefined,
+      workItemLinks:
+        deps.workerClient.apiBaseUrl && input.workerContext.projectPath
+          ? {
+              appBaseUrl: deps.workerClient.apiBaseUrl,
+              projectPath: input.workerContext.projectPath,
+            }
+          : undefined,
     },
     reporter: input.reporter,
     taskRunId: input.taskRunId,
@@ -158,12 +166,51 @@ export async function launchRuntimeEnvironment(
     managedRuntime: input.workerContext.runtime.managedRuntime,
     repo: input.workerContext.runtime.repo,
     stepInputJson: input.workerContext.task.inputJson,
+    loadCommitWorkItem: buildLoadCommitWorkItem(deps, input),
     previousRun: buildPreviousRunFilesInput(
       deps.workerClient,
       input.workerContext,
     ),
     logger: deps.logger,
   });
+}
+
+/**
+ * The live read behind a commit message's `{{workItem.…}}` tokens. A failed
+ * read is logged and yields null, so the tokens render empty rather than
+ * failing a step whose work is done.
+ */
+function buildLoadCommitWorkItem(
+  deps: ProcessProjectWorkDeps,
+  input: {
+    claimToken: string;
+    workerContext: TaskRunWorkerContextContract;
+  },
+): (() => Promise<{ title: string; platformKey: string } | null>) | undefined {
+  const client = deps.workerClient;
+  const { task } = input.workerContext;
+  const { workItemId } = task;
+  if (!client.readTaskRunWorkItem || !workItemId) return undefined;
+  return async () => {
+    try {
+      const item = await client.readTaskRunWorkItem?.({
+        taskRunId: task.id,
+        claimToken: input.claimToken,
+        workItemId,
+      });
+      return item ? { title: item.title, platformKey: item.platformKey } : null;
+    } catch (error) {
+      logWorkWarn(
+        "runtime",
+        "Reading the work item for the commit message failed",
+        {
+          taskRunId: task.id,
+          error: error instanceof Error ? error.message : String(error),
+        },
+      );
+      return null;
+    }
+  };
 }
 
 function buildPreviousRunFilesInput(

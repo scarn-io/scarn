@@ -8,10 +8,15 @@ export function defaultCommitMessage(taskRunId: string): string {
   return `scarn: task ${taskRunId}`;
 }
 
+/** The work item values a commit message's `{{workItem.…}}` tokens may use. */
+export type CommitMessageWorkItem = { title: string; platformKey: string };
+
 /**
- * Render a `readWrite` step's commit message. The template (`{{input.…}}` and
- * `{{result.…}}` tokens) is rendered against the step's additional input and
- * the findings the agent submitted. The rendered text carries agent output, so
+ * Render a `readWrite` step's commit message. The template (`{{input.…}}`,
+ * `{{result.…}}` and `{{workItem.title}}` / `{{workItem.platformKey}}` tokens)
+ * is rendered against the step's additional input, the findings the agent
+ * submitted and the work item read live at commit time (absent tokens render
+ * empty when the read was skipped or failed). The rendered text carries agent output, so
  * it is reduced to a safe single-line subject: whitespace runs collapse to one
  * space, remaining control characters (NUL included, which Node rejects in an
  * argv entry) are stripped, and the subject is cut to
@@ -24,6 +29,7 @@ export function renderCommitMessage(input: {
   taskRunId: string;
   inputJson: unknown;
   result: AnyJsonValue;
+  workItem?: CommitMessageWorkItem | null | undefined;
 }): string {
   const fallback = defaultCommitMessage(input.taskRunId);
   if (input.template === null) return fallback;
@@ -31,6 +37,9 @@ export function renderCommitMessage(input: {
   const rendered = renderPromptTemplate(input.template, {
     input: input.inputJson,
     result: input.result,
+    workItem: input.workItem
+      ? { title: input.workItem.title, platformKey: input.workItem.platformKey }
+      : null,
   });
   const singleLine = rendered
     .replace(/\s+/gu, " ")

@@ -18,9 +18,8 @@ const FAKE: PipelineTemplate = {
   summary: "A fake.",
   descriptionMarkdown: "A fake.",
   tags: [],
-  pipelineKey: "fake",
+  entry: { kind: "pipeline", key: "fake" },
   stepKeys: [],
-  handoffSteps: [],
   parameters: [
     { key: "greeting", label: "Greeting", type: "text", required: false },
   ],
@@ -29,7 +28,29 @@ const FAKE: PipelineTemplate = {
     'const GREETING = "hi";',
     "",
     "export default definePipeline({",
-    '  key: "fake", // @scarn-template-pipeline-key',
+    '  key: "fake", // @scarn-template-entry-key',
+    "});",
+  ].join("\n"),
+};
+
+const FAKE_AUTOMATION: PipelineTemplate = {
+  key: "fake-automation",
+  name: "Fake automation",
+  summary: "A fake automation.",
+  descriptionMarkdown: "A fake automation.",
+  tags: [],
+  entry: { kind: "automation", key: "fake-automation" },
+  stepKeys: ["research"],
+  parameters: [],
+  source: [
+    "export const research = defineStep({",
+    '  key: "research",',
+    "});",
+    "",
+    "export default defineAutomation({",
+    '  key: "fake-automation", // @scarn-template-entry-key',
+    '  scope: "workItem",',
+    '  rules: [onEvent("self.attached", () => research)],',
     "});",
   ].join("\n"),
 };
@@ -47,10 +68,6 @@ describe("listPipelineTemplates", () => {
       for (const key of t.stepKeys) {
         expect(t.source).toContain(`key: "${key}",`);
       }
-      for (const handoff of t.handoffSteps) {
-        expect(t.stepKeys).toContain(handoff.key);
-        expect(t.stepKeys).toContain(handoff.startedBy);
-      }
     }
   });
 });
@@ -63,7 +80,7 @@ describe("renderPipelineTemplate", () => {
         `// Created from the "${t.key}" pipeline template (scarn 1.2.3).`,
       );
       expect(rendered).not.toContain("@scarn-template-");
-      expect(rendered).toContain(`key: "${t.pipelineKey}",`);
+      expect(rendered).toContain(`key: "${t.entry.key}",`);
     }
   });
 
@@ -83,14 +100,79 @@ describe("renderPipelineTemplate", () => {
     expect(rendered).toContain('const GREETING = "hi";');
   });
 
-  test("renames the pipeline key on the marker line only", () => {
+  test("renames wayfinder's automation key on its defineAutomation marker line only", () => {
     const rendered = renderPipelineTemplate(template("wayfinder"), {
       cliVersion: "0.0.0",
-      pipelineKey: "wayfinder-2",
+      entryKey: "wayfinder-2",
     });
-    expect(rendered).toContain('  key: "wayfinder-2",\n');
+    expect(rendered).toContain(
+      'export default defineAutomation({\n  key: "wayfinder-2",\n',
+    );
     expect(rendered).not.toContain('key: "wayfinder",');
-    expect(rendered).toContain('key: "plan",');
+    for (const step of ["plan", "research", "prototype", "grilling"]) {
+      expect(rendered).toContain(`  key: "${step}",`);
+    }
+  });
+
+  test("renders wayfinder as an automation with no pipeline or step input", () => {
+    const t = template("wayfinder");
+    expect(t.entry).toEqual({ kind: "automation", key: "wayfinder" });
+    const rendered = renderPipelineTemplate(t, { cliVersion: "0.0.0" });
+    expect(rendered).not.toContain("definePipeline");
+    expect(rendered).not.toContain("input:");
+    expect(rendered).not.toContain("scarn-start-task");
+    expect(rendered).not.toContain("scarn-wait-for-work");
+    expect(rendered).not.toContain("WORK_ITEM_INPUT");
+  });
+
+  test("renames an automation's key on its defineAutomation marker line", () => {
+    const rendered = renderPipelineTemplate(FAKE_AUTOMATION, {
+      cliVersion: "0.0.0",
+      entryKey: "fake-automation-2",
+    });
+    expect(rendered).toContain(
+      'export default defineAutomation({\n  key: "fake-automation-2",\n',
+    );
+    expect(rendered).not.toContain('key: "fake-automation",');
+    expect(rendered).toContain('  key: "research",');
+    expect(rendered).not.toContain("@scarn-template-");
+  });
+
+  test("keeps an automation's own key by default", () => {
+    const rendered = renderPipelineTemplate(FAKE_AUTOMATION, {
+      cliVersion: "0.0.0",
+    });
+    expect(rendered).toContain('  key: "fake-automation",\n');
+  });
+
+  test("rejects an entry-key marker outside the call its kind names", () => {
+    expect(() =>
+      renderPipelineTemplate(
+        { ...FAKE_AUTOMATION, entry: { kind: "pipeline", key: "x" } },
+        { cliVersion: "0.0.0" },
+      ),
+    ).toThrow("must be inside the definePipeline(…) call");
+    expect(() =>
+      renderPipelineTemplate(
+        { ...FAKE, entry: { kind: "automation", key: "fake" } },
+        { cliVersion: "0.0.0" },
+      ),
+    ).toThrow("must be inside the defineAutomation(…) call");
+  });
+
+  test("rejects an entry-key marker on a step inside the automation's file", () => {
+    const source = FAKE_AUTOMATION.source
+      .replace(" // @scarn-template-entry-key", "")
+      .replace(
+        '  key: "research",',
+        '  key: "research", // @scarn-template-entry-key',
+      );
+    expect(() =>
+      renderPipelineTemplate(
+        { ...FAKE_AUTOMATION, source },
+        { cliVersion: "0.0.0" },
+      ),
+    ).toThrow("must be inside the defineAutomation(…) call");
   });
 
   test("rejects an unknown parameter", () => {
@@ -102,11 +184,11 @@ describe("renderPipelineTemplate", () => {
     ).toThrow('unknown parameter "nope"');
   });
 
-  test("rejects an invalid pipeline key", () => {
+  test("rejects an invalid entry key", () => {
     expect(() =>
       renderPipelineTemplate(FAKE, {
         cliVersion: "0.0.0",
-        pipelineKey: 'bad"key',
+        entryKey: 'bad"key',
       }),
     ).toThrow("may only contain");
   });
@@ -120,12 +202,12 @@ describe("renderPipelineTemplate", () => {
     ).toThrow('missing "const GREETING"');
   });
 
-  test("rejects a source without a pipeline-key marker", () => {
+  test("rejects a source without an entry-key marker", () => {
     expect(() =>
       renderPipelineTemplate(
         {
           ...FAKE,
-          source: FAKE.source.replace(" // @scarn-template-pipeline-key", ""),
+          source: FAKE.source.replace(" // @scarn-template-entry-key", ""),
         },
         { cliVersion: "0.0.0" },
       ),

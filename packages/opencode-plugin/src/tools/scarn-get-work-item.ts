@@ -3,7 +3,9 @@ import {
   invalidInputMessage,
   isNonEmptyString,
   loadWorkItemToolContext,
+  workItemUrl,
 } from "./_shared/work-item-tool-support";
+import type { CurrentExecutionInfo } from "./_shared/current-execution";
 
 export const SCARN_GET_WORK_ITEM_TOOL = "scarn-get-work-item";
 
@@ -11,8 +13,8 @@ export const NO_API_MESSAGE =
   "Work items can't be read live in this run: the worker gave no API access.";
 
 /**
- * Reads a work item live from the API with the run's claim token. Records
- * nothing.
+ * Reads a work item live from the API with the run's claim token: the given
+ * one, or the run's own when `workItemId` is left out. Records nothing.
  */
 export async function getWorkItem(
   input: { workItemId?: unknown },
@@ -27,9 +29,12 @@ export async function getWorkItem(
   if (api === null) {
     return NO_API_MESSAGE;
   }
-  if (!isNonEmptyString(input.workItemId)) {
-    return invalidInputMessage("`workItemId` must be a non-empty string.");
+  if (input.workItemId !== undefined && !isNonEmptyString(input.workItemId)) {
+    return invalidInputMessage(
+      "`workItemId` must be a non-empty string, or left out to read your own work item.",
+    );
   }
+  const workItemId = input.workItemId ?? context.info.workItemId;
 
   const url = `${api.baseUrl.replace(/\/+$/, "")}/api/task-runs/${encodeURIComponent(taskRunId)}/work-item-reads`;
   let response: Response;
@@ -39,7 +44,7 @@ export async function getWorkItem(
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         claimToken: api.claimToken,
-        workItemId: input.workItemId,
+        workItemId,
       }),
     });
   } catch (error) {
@@ -49,7 +54,55 @@ export async function getWorkItem(
   if (!response.ok) {
     return `Reading the work item failed (HTTP ${String(response.status)}): ${text}`;
   }
-  return text;
+  return withWorkItemUrls(text, context.info.workItemLinks);
+}
+
+type ReadItem = {
+  [key: string]: unknown;
+  id?: unknown;
+  blockers?: unknown;
+  children?: unknown;
+};
+
+// eslint-disable-next-line local/no-unknown-parameter-type -- a type guard
+function isReadItem(value: unknown): value is ReadItem {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+/**
+ * Adds each item's web page `url` to the read: the item's own, and every
+ * blocker's and child's. The API read carries no URLs; they are built here
+ * from the run's links so there is one place that knows their shape.
+ */
+function withWorkItemUrls(
+  text: string,
+  links: CurrentExecutionInfo["workItemLinks"],
+): string {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    return text;
+  }
+  if (!isReadItem(parsed)) {
+    return text;
+  }
+  const root = parsed;
+  const addUrl = (item: ReadItem): ReadItem => ({
+    ...item,
+    url: typeof item.id === "string" ? workItemUrl(links, item.id) : null,
+  });
+  const addUrls = (list: unknown[]): unknown[] =>
+    list.map((entry) => (isReadItem(entry) ? addUrl(entry) : entry));
+  return JSON.stringify({
+    ...addUrl(root),
+    ...(Array.isArray(root.blockers)
+      ? { blockers: addUrls(root.blockers) }
+      : {}),
+    ...(Array.isArray(root.children)
+      ? { children: addUrls(root.children) }
+      : {}),
+  });
 }
 
 /** The `scarn-get-work-item` tool, bound to the plugin's directory. */
@@ -57,13 +110,16 @@ export function createScarnGetWorkItemTool(directory: string): ToolInfo {
   return {
     name: SCARN_GET_WORK_ITEM_TOOL,
     description:
-      "Read a work item live: title, description with its descriptionVersion, fields, state, blockers and children. Works on this Task's own item and, with permission, its children. Changes nothing. Items created earlier in this run don't exist until the run succeeds.",
+      "Read a work item live: url (its web page), title, labels, description with its descriptionVersion, fields, state, blockers and children. Each blocker and child has its url, labels, state, close reason, open blockers (`blockedBy`) and newest Task's status (`latestTaskStatus`, null if it never had one). Works on this Task's own item and, with permission, its children. Changes nothing. Items created earlier in this run don't exist until the run succeeds.",
     input: {
       type: "object",
       properties: {
-        workItemId: { type: "string", description: "Id of the work item" },
+        workItemId: {
+          type: "string",
+          description:
+            "Id of the work item. Leave out to read this Task's own work item. Not the task run id.",
+        },
       },
-      required: ["workItemId"],
     },
     options: { codemode: false },
     execute: async (input) => ({

@@ -49,7 +49,7 @@ export const PHASE = {
   changeSize: "## 4. Name the change size",
   devcontainer: "## 5. Author a devcontainer if there is none",
   build: "## 6. Build it",
-  assignment: "## 7. Wire the assignment",
+  assignment: "## 7. Wire the default automation",
   validate: "## 8. Validate",
   close: "## 9. Close",
 } as const;

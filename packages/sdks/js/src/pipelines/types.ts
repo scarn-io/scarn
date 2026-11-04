@@ -4,6 +4,11 @@
  * `docs/plans/pipeline-ts-sdk.md`), so an unfinished or misordered chain is
  * a type error rather than a build error.
  */
+import type { AutomationTarget, EventWorkItem } from "../automations/types";
+import type {
+  AutomationScope,
+  AutomationSubject,
+} from "../contracts/automation-document";
 import type {
   BUILT_IN_ERRORS,
   ToleratedFailures,
@@ -62,6 +67,22 @@ export type CallArgs<I> = unknown extends I
 export type Call<I> = NoKeys extends I
   ? (args?: CallArgs<I>) => Target
   : (args: CallArgs<I>) => Target;
+
+/**
+ * A step called with its args. In a pipeline it's a target; in an
+ * automation rule, `.on(r.workItem | r.child)` picks the work item its Task
+ * is for.
+ */
+export interface StepTarget extends Target {
+  on(
+    workItem: EventWorkItem<AutomationSubject>,
+  ): AutomationTarget<AutomationScope>;
+}
+
+/** Calling a step handle: like `Call`, but the target also has `.on(...)`. */
+export type StepCall<I> = NoKeys extends I
+  ? (args?: CallArgs<I>) => StepTarget
+  : (args: CallArgs<I>) => StepTarget;
 
 /** A bare handle is a target only when its input has no required keys. */
 export interface Bare<I> {
@@ -180,7 +201,7 @@ export interface StepChain<I, R, E extends string> extends StepAfterRetry<
 }
 
 /** A step in a pipeline: callable as a target, and the start of its chain. */
-export type PipelineStep<I, R, E extends string = string> = Call<I> &
+export type PipelineStep<I, R, E extends string = string> = StepCall<I> &
   Bare<I> &
   StepRef<I, R, E> &
   StepChain<I, R, E> &

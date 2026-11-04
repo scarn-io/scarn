@@ -4,7 +4,11 @@ import { pipelinePath, TEMPLATES_PATH } from "../router";
 import { Link, navigate } from "../router-react";
 import type { StudioTheme } from "../theme";
 import { Markdown } from "./MarkdownView";
-import { formatSetupLabel, formatStepCount } from "./template-card-labels";
+import {
+  formatEntryKind,
+  formatSetupLabel,
+  formatStepCount,
+} from "./template-card-labels";
 import {
   buildTemplateGraph,
   decideUseAction,
@@ -104,6 +108,8 @@ function TemplateSideCard({
         </ul>
       ) : null}
       <dl className="studio-template-facts">
+        <dt>Kind</dt>
+        <dd>{formatEntryKind(template)}</dd>
         <dt>Setup</dt>
         <dd>{formatSetupLabel(template.parameters)}</dd>
         <dt>Steps</dt>
@@ -113,7 +119,7 @@ function TemplateSideCard({
           <code>{target.file}</code>
           {target.renamed ? (
             <span className="studio-template-renamed">
-              {` "${template.pipelineKey}" is taken, so the pipeline is named "${target.pipelineKey}".`}
+              {` "${template.entry.key}" is taken, so the ${template.entry.kind} is named "${target.entryKey}".`}
             </span>
           ) : null}
         </dd>
@@ -195,7 +201,9 @@ function TemplateDetailView({
     setSubmitting(false);
     if (result.status === "ok") {
       showUseToast(useSuccessMessage(result));
-      navigate(pipelinePath(result.pipelineKey), { replace: true });
+      if (result.entry.kind === "pipeline") {
+        navigate(pipelinePath(result.entry.key), { replace: true });
+      }
       return;
     }
     if (fromDialog && result.status === "invalidParameters") {
@@ -235,7 +243,7 @@ function TemplateDetailView({
               refitKey={selectedNode ? "panel" : "full"}
             />
           ) : (
-            <p className="studio-status">No pipeline graph to preview.</p>
+            <p className="studio-status">No steps to preview.</p>
           )}
         </div>
         {selectedNode ? (
@@ -243,6 +251,7 @@ function TemplateDetailView({
             <TemplateStepDetails
               node={selectedNode}
               steps={template.preview.steps}
+              entryKind={template.entry.kind}
               onClose={() => {
                 setSelectedNodeId(null);
               }}
@@ -289,8 +298,8 @@ function TemplateDetailView({
 }
 
 /**
- * `/templates/:key`: a read-only preview graph (hand-off steps in their own
- * dashed lane), a sticky side card with the Use button, and the template's
+ * `/templates/:key`: a read-only preview graph (steps no graph runs shown
+ * as dashed, detached nodes), a sticky side card with the Use button, and the template's
  * written description. `refreshToken` is the live snapshot's timestamp, so
  * the conflicts follow the builder directory.
  */

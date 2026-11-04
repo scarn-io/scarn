@@ -15,7 +15,7 @@ import {
   type WaitNode,
 } from "@scarn/sdk/contracts/pipeline-document";
 import { checkArgs } from "./check-args";
-import { checkCondition } from "./check-condition";
+import { checkCondition, type ConditionContext } from "./check-condition";
 import {
   inputSchemaOf,
   siteFor,
@@ -318,6 +318,11 @@ export function validatePipeline(
     reachBacks: [],
     waitInputs: new Map(),
   };
+  const conditionContext: ConditionContext = {
+    errors,
+    resolveReference: (site, text, pointer) =>
+      resolveReferenceSchema(ctx, site, text, pointer),
+  };
   checkNodeShapes(ctx);
   checkUnreachable(ctx);
   checkErrorNames(ctx);
@@ -325,10 +330,12 @@ export function validatePipeline(
     checkEach(ctx, edge);
     const transition = transitionOf(ctx, edge);
     if ("when" in transition && transition.when !== undefined) {
-      checkCondition(ctx, siteFor(ctx, edge, "when"), transition.when, [
-        ...edge.pointer,
-        "when",
-      ]);
+      checkCondition(
+        conditionContext,
+        siteFor(ctx, edge, "when"),
+        transition.when,
+        [...edge.pointer, "when"],
+      );
     }
     checkArgs(ctx, edge);
   }

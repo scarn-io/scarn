@@ -33,7 +33,7 @@ yes:
 | Verdict          | What changes                                                                                     |
 | ---------------- | ------------------------------------------------------------------------------------------------ |
 | **tweak**        | An existing pipeline: its prompts, its servers, an added step                                     |
-| **route**        | `default-pipeline-assignment.ts`, or a `route(...)` outcome, so items like this one reach an existing pipeline |
+| **route**        | A route in `default.ts`, or a `route(...)` outcome, so items like this one reach an existing pipeline |
 | **new pipeline** | A new file, for a class of work item that needs a genuinely different shape                      |
 
 It prefers them in that order, and a pipeline that would duplicate most of an
@@ -71,5 +71,5 @@ scarn pipelines publish .scarn/pipeline-builder/bug-pipeline.json
 
 For what you can write, see [Defining Steps](/scarn/guides/steps/),
 [Building Pipelines](/scarn/guides/pipelines/), and
-[Default Pipeline Assignment](/scarn/guides/pipeline-assignment/). Then
+[Project Automations](/scarn/guides/automations/). Then
 [commit your changes](/scarn/how-to/commit-your-pipeline/).

@@ -22,9 +22,21 @@ export type BuiltPipeline = {
   warnings: BuildIssue[];
 };
 
+/** What a `defineAutomation` default export carries across the process boundary. */
+export type BuiltAutomation = {
+  key: string;
+  document: Record<string, unknown>;
+  sourceMap: Record<string, SourceSite>;
+};
+
 /** One source file's outcome, as printed by `build-script.ts.tmpl`. */
 export type BuildScriptResult =
-  | { file: string; ok: true; pipeline?: BuiltPipeline }
+  | {
+      file: string;
+      ok: true;
+      pipeline?: BuiltPipeline;
+      automation?: BuiltAutomation;
+    }
   | { file: string; ok: false; message: string; issues?: BuildIssue[] };
 
 /** The site of `pointer`, or of its closest ancestor in the source map. */

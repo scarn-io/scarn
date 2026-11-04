@@ -227,7 +227,12 @@ function buildRuntimeProperty(step: StepDefContract): string | null {
     return "    runtime: Runtime.host(),";
   }
   if (step.managedRuntime) {
-    if (step.managedRuntime === DEFAULT_CODE_STEP_RUNTIME_ID) return null;
+    if (
+      step.kind === "code" &&
+      step.managedRuntime === DEFAULT_CODE_STEP_RUNTIME_ID
+    ) {
+      return null;
+    }
     const factory = isValidIdentifier(step.managedRuntime)
       ? `.${step.managedRuntime}`
       : `[${JSON.stringify(step.managedRuntime)}]`;

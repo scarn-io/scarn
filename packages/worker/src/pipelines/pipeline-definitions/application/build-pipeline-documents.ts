@@ -1,13 +1,19 @@
 /**
- * `scarn pipelines build`: compile each `definePipeline` default export in
- * the pipeline-builder directory to `<key>.json` next to its source, then
- * validate the documents against the local steps' contracts plus, for
- * `stepRef` keys, the server's catalog. With `check`, nothing is written and
- * missing or stale JSON is reported instead.
+ * `scarn pipelines build`: compile each `definePipeline` and
+ * `defineAutomation` default export in the pipeline-builder directory to
+ * `<key>.json` next to its source. Pipeline documents are validated against
+ * the local steps' contracts plus, for `stepRef` keys, the server's catalog.
+ * Automation documents (`kind: "automation"`) are checked against their
+ * schema only; their targets are checked when they're published. With
+ * `check`, nothing is written and missing or stale JSON is reported instead.
  */
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
-import type { StepCatalog } from "@scarn/sdk/contracts/pipeline-document";
+import { automationDocumentSchema } from "@scarn/sdk/contracts/automation-document";
+import {
+  jsonPointer,
+  type StepCatalog,
+} from "@scarn/sdk/contracts/pipeline-document";
 import { formatIssue } from "@scarn/sdk/pipelines";
 import { validatePipeline } from "@scarn/shared-core/pipelines";
 import {
@@ -15,6 +21,7 @@ import {
   formatLocatedValidationError,
   mergeCatalogs,
   missingStepKeys,
+  type BuiltAutomation,
   type BuiltPipeline,
 } from "../domain/pipeline-build";
 import { BUILD_SCRIPT_FILENAME } from "../infra/build-script";
@@ -43,6 +50,8 @@ export type BuiltFileStatus =
 export type BuiltFileReport = {
   /** The source file, absolute. */
   source: string;
+  /** What the source default-exports; unset when it failed to build. */
+  kind?: "pipeline" | "automation";
   key?: string;
   /** The `<key>.json` path, absolute. */
   jsonPath?: string;
@@ -61,7 +70,6 @@ export type BuildPipelineDocumentsResult = {
 const NON_PIPELINE_SOURCES = new Set([
   "push.ts",
   BUILD_SCRIPT_FILENAME,
-  "default-pipeline-assignment.ts",
   "work-item-fields.ts",
 ]);
 
@@ -83,12 +91,13 @@ function readIfExists(path: string): string | undefined {
 }
 
 function emit(
-  pipeline: BuiltPipeline,
+  kind: "pipeline" | "automation",
+  built: BuiltPipeline | BuiltAutomation,
   source: string,
   check: boolean,
 ): BuiltFileReport {
-  const jsonPath = join(dirname(source), `${pipeline.key}.json`);
-  const text = serializePipelineDocument(pipeline.document);
+  const jsonPath = join(dirname(source), `${built.key}.json`);
+  const text = serializePipelineDocument(built.document);
   const existing = readIfExists(jsonPath);
   let status: BuiltFileStatus = "unchanged";
   if (existing !== text) {
@@ -101,12 +110,28 @@ function emit(
   }
   return {
     source,
-    key: pipeline.key,
+    kind,
+    key: built.key,
     jsonPath,
     status,
     errors: [],
-    warnings: pipeline.warnings.map(formatIssue),
+    warnings: "warnings" in built ? built.warnings.map(formatIssue) : [],
   };
+}
+
+function validateAutomation(automation: BuiltAutomation): string[] {
+  const result = automationDocumentSchema.safeParse(automation.document);
+  if (result.success) return [];
+  return result.error.issues.map((issue) =>
+    formatLocatedValidationError(automation.sourceMap, {
+      path: jsonPointer(
+        issue.path.filter(
+          (segment): segment is string | number => typeof segment !== "symbol",
+        ),
+      ),
+      message: issue.message,
+    }),
+  );
 }
 
 async function serverCatalogFor(
@@ -157,7 +182,7 @@ function duplicateKeyErrors(reports: BuiltFileReport[]): void {
     for (const report of group) {
       report.status = "failed";
       report.errors.push(
-        `Pipeline "${report.key ?? ""}" is defined in more than one file (${sources}).`,
+        `"${report.key ?? ""}" is defined in more than one file (${sources}); pipelines and automations share one key space.`,
       );
     }
   }
@@ -190,8 +215,14 @@ export async function buildPipelineDocuments(
       });
       continue;
     }
+    if (result.automation) {
+      const report = emit("automation", result.automation, result.file, check);
+      report.errors.push(...validateAutomation(result.automation));
+      reports.push(report);
+      continue;
+    }
     if (!result.pipeline) continue;
-    const report = emit(result.pipeline, result.file, check);
+    const report = emit("pipeline", result.pipeline, result.file, check);
     report.errors.push(...validate(result.pipeline, server));
     reports.push(report);
   }

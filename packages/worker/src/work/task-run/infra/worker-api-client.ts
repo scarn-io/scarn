@@ -83,5 +83,7 @@ export async function createTaskPlaneWorkerClient(
         input,
       )) as TaskRunWorkerContextContract,
     loadTaskLogLines: buildLoadTaskLogLines(planeClient),
+    readTaskRunWorkItem: async (input) =>
+      await planeClient.readTaskRunWorkItem(input),
   };
 }

@@ -3,160 +3,14 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pushFromDirectory } from "../src/push/push-from-directory";
-
-type CapturedRequest = {
-  url: string;
-  method: string;
-  body: unknown;
-};
-
-async function readRequest(
-  input: string | URL | Request,
-): Promise<CapturedRequest> {
-  const req = input as Request;
-  const text = await req.clone().text();
-  return {
-    url: req.url,
-    method: req.method,
-    body: text.length > 0 ? JSON.parse(text) : undefined,
-  };
-}
-
-const BASE_URL = "https://scarn.example.com";
-
-function json(body: object, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
-}
-
-type ServerPipeline = {
-  id: string;
-  key: string;
-  versions: string[];
-};
-
-/**
- * Mock fetch that records every request and keeps just enough server state
- * for a push: upserted steps, and pipelines whose versions are compared by
- * serialized document, the way the server compares content hashes.
- */
-function makeMockFetch(captured: CapturedRequest[]): typeof globalThis.fetch {
-  const upsertedSteps: Array<{ id: string; key: string; version: number }> = [];
-  const pipelines: ServerPipeline[] = [];
-  let nextId = 1;
-
-  const versionContract = (pipeline: ServerPipeline) => ({
-    id: `${pipeline.id}-v${String(pipeline.versions.length)}`,
-    pipelineDefinitionId: pipeline.id,
-    version: pipeline.versions.length,
-  });
-  const pipelineContract = (pipeline: ServerPipeline) => ({
-    id: pipeline.id,
-    key: pipeline.key,
-    currentVersion: versionContract(pipeline),
-  });
-
-  return (async (input: string | URL | Request) => {
-    const req = await readRequest(input);
-    captured.push(req);
-    const path = new URL(req.url).pathname;
-
-    if (req.method === "GET" && path === "/api/step-definitions") {
-      return json(upsertedSteps);
-    }
-    if (req.method === "PUT" && path === "/api/step-definitions") {
-      const body = req.body as { key: string; version: number };
-      const id = `step-${String(nextId++)}`;
-      upsertedSteps.push({ id, key: body.key, version: body.version });
-      return json({ id, key: body.key, version: body.version });
-    }
-    if (req.method === "GET" && path.endsWith("/pipeline-definitions")) {
-      return json(pipelines.map(pipelineContract));
-    }
-    if (req.method === "POST" && path === "/api/pipeline-definitions") {
-      const body = req.body as { key: string; document: unknown };
-      const pipeline: ServerPipeline = {
-        id: `pipe-${String(nextId++)}`,
-        key: body.key,
-        versions: [JSON.stringify(body.document)],
-      };
-      pipelines.push(pipeline);
-      return json(pipelineContract(pipeline));
-    }
-    const versions = /^\/api\/pipeline-definitions\/([^/]+)\/versions$/.exec(
-      path,
-    );
-    if (req.method === "POST" && versions) {
-      const pipeline = pipelines.find((p) => p.id === versions[1]);
-      if (!pipeline) return json({ title: "Not found" }, 404);
-      const document = JSON.stringify(
-        (req.body as { document: unknown }).document,
-      );
-      const published = pipeline.versions.at(-1) !== document;
-      if (published) pipeline.versions.push(document);
-      return json({
-        published,
-        version: versionContract(pipeline),
-        pipelineDefinition: pipelineContract(pipeline),
-      });
-    }
-    if (req.method === "GET") {
-      return json([]);
-    }
-    return json({ id: "x" });
-  }) as unknown as typeof globalThis.fetch;
-}
-
-const STEP_A_JS = `
-export const stepA = {
-  key: "step-a",
-  name: "Step A",
-  description: null,
-  version: 1,
-  kind: "user_defined",
-  status: "active",
-  prompt: null,
-  inputSchemaJson: null,
-  resultSchemaJson: null,
-  opencodeMcpJson: null,
-};
-`;
-
-const STEP_AND_PIPELINE_JS = (key: string) => `
-${STEP_A_JS}
-export default {
-  key: ${JSON.stringify(key)},
-  name: ${JSON.stringify(key)},
-  start: "step-a",
-  nodes: { "step-a": { type: "step", step: "step-a" } },
-};
-`;
-
-const PIPELINE_DOCUMENT = (key: string, title: string) => ({
-  schemaVersion: 1,
-  key,
-  title,
-  start: { node: "a" },
-  nodes: { a: { kind: "step", step: "step-a" } },
-});
-
-/** A built assignment spec; the real file imports `defaultPipelineAssignment`. */
-const ASSIGNMENT_JS = (defaultKey: string, ruleKey: string) => `
-export default {
-  _tag: "default_pipeline_assignment",
-  default: { _tag: "assign", pipelineKey: ${JSON.stringify(defaultKey)} },
-  rules: [
-    {
-      _tag: "assignment_rule",
-      mode: "all",
-      conditions: [{ _tag: "leaf", fact: "workItem", path: "$.fields.demo", operator: "equal", value: "x" }],
-      outcome: { _tag: "assign", pipelineKey: ${JSON.stringify(ruleKey)} },
-    },
-  ],
-};
-`;
+import {
+  BASE_URL,
+  makeMockFetch,
+  STEP_A_JS,
+  STEP_AND_PIPELINE_JS,
+  PIPELINE_DOCUMENT,
+  type CapturedRequest,
+} from "./push-from-directory-fixtures";
 
 const isPipelineWrite = (r: CapturedRequest) =>
   r.method === "POST" && r.url.includes("/api/pipeline-definitions");
@@ -235,9 +89,8 @@ describe("pushFromDirectory", () => {
   });
 });
 
-// On a fresh project the assignment needs its pipelines on the server, and
-// publishing a pipeline needs its steps there: one push has to do all three,
-// in that order.
+// Publishing a pipeline needs its steps on the server: one push has to do
+// both, in that order.
 describe("pushFromDirectory publishing built pipelines", () => {
   const previousFetch = globalThis.fetch;
   let dir: string;
@@ -256,10 +109,6 @@ describe("pushFromDirectory publishing built pipelines", () => {
     );
     writeFileSync(join(dir, "package.json"), JSON.stringify({ name: "x" }));
     writeFileSync(join(dir, "fixture.json"), JSON.stringify({ rows: [] }));
-    writeFileSync(
-      join(dir, "default-pipeline-assignment.ts"),
-      ASSIGNMENT_JS("triage", "escalate"),
-    );
     globalThis.fetch = makeMockFetch(captured);
   });
 
@@ -276,14 +125,15 @@ describe("pushFromDirectory publishing built pipelines", () => {
       log: () => undefined,
     });
 
-  test("creates every built pipeline after the steps and before the assignment, on a fresh project", async () => {
+  test("creates every built pipeline after the steps, on a fresh project", async () => {
     const result = await push();
 
     expect(result).toEqual({
       pushedSteps: 1,
       publishedPipelines: ["escalate", "triage"],
       unchangedPipelines: [],
-      syncedDefaultPipelineAssignment: true,
+      publishedAutomations: [],
+      unchangedAutomations: [],
     });
 
     const order = captured
@@ -293,7 +143,6 @@ describe("pushFromDirectory publishing built pipelines", () => {
       "PUT /api/step-definitions",
       "POST /api/pipeline-definitions",
       "POST /api/pipeline-definitions",
-      "PUT /api/projects/proj-5/default-pipeline-assignment",
     ]);
     expect(captured.filter(isPipelineWrite).map((r) => r.body)).toEqual([
       {

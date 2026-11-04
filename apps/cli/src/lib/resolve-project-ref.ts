@@ -24,6 +24,7 @@ export const PROJECT_ACTIONS = {
   publish: "publish pipelines to",
   activate: "activate pipelines in",
   run: "run pipelines in",
+  automations: "manage automations in",
 } as const;
 
 export type ProjectAction =

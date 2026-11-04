@@ -87,9 +87,7 @@ function pipelineDocument(key: string): string {
 
 type TemplateDetail = PipelineTemplateCard & {
   descriptionMarkdown: string;
-  pipelineKey: string;
   stepKeys: string[];
-  handoffSteps: { key: string; startedBy: string; summary: string }[];
   preview: PipelineTemplatePreview;
   conflicts: PipelineTemplateConflicts;
 };
@@ -114,17 +112,17 @@ describe("pipeline studio template endpoints", () => {
     const wayfinder = cards.find((card) => card.key === "wayfinder");
     expect(wayfinder).toMatchObject({
       name: "Wayfinder",
+      entry: { kind: "automation", key: "wayfinder" },
       stepCount: 4,
-      handoffStepCount: 3,
       conflicts: {
         takenStepKeys: [],
-        pipelineKeyTaken: false,
-        nextPipelineKey: "wayfinder",
+        entryKeyTaken: false,
+        nextEntryKey: "wayfinder",
       },
     });
     expect(Object.keys(wayfinder ?? {}).sort()).toEqual([
       "conflicts",
-      "handoffStepCount",
+      "entry",
       "key",
       "name",
       "parameters",
@@ -148,31 +146,24 @@ describe("pipeline studio template endpoints", () => {
       "prototype",
       "grilling",
     ]);
-    expect(detail.handoffSteps.map((step) => step.key)).toEqual([
-      "research",
-      "prototype",
-      "grilling",
-    ]);
+    expect(detail.entry).toEqual({ kind: "automation", key: "wayfinder" });
     expect(detail.descriptionMarkdown).toContain("Wayfinder");
     expect(detail.preview.errors).toEqual([]);
 
-    const stepNodes = (detail.preview.pipeline?.nodes ?? []).filter(
-      (node) => node.data.kind === "step",
-    );
-    expect(stepNodes.map((node) => node.data.stepKey)).toEqual(["plan"]);
+    expect(detail.preview.pipeline).toBeNull();
     expect(detail.preview.steps.map((step) => step.key)).toEqual(
       detail.stepKeys,
     );
     const plan = detail.preview.steps.find((step) => step.key === "plan");
-    expect(plan?.maxTurns).toBe(10);
+    expect(plan?.maxTurns).toBe(30);
     expect(plan?.workItemPermissions).toEqual(["children"]);
     expect(plan?.repo).toEqual({ mode: "readOnly" });
     expect(plan?.prompt).toBeTruthy();
 
     expect(detail.conflicts).toEqual({
       takenStepKeys: [],
-      pipelineKeyTaken: false,
-      nextPipelineKey: "wayfinder",
+      entryKeyTaken: false,
+      nextEntryKey: "wayfinder",
     });
   }, 60_000);
 
@@ -188,7 +179,7 @@ describe("pipeline studio template endpoints", () => {
     expect(first.status).toBe(200);
     expect(await first.json()).toEqual({
       file: "wayfinder.ts",
-      pipelineKey: "wayfinder",
+      entry: { kind: "automation", key: "wayfinder" },
     });
     const written = readFileSync(
       join(studio.builderDir, "wayfinder.ts"),
@@ -213,17 +204,17 @@ describe("pipeline studio template endpoints", () => {
     const detail = (await (
       await fetch(`${studio.handle.url}/api/templates/wayfinder`)
     ).json()) as TemplateDetail;
-    expect(detail.conflicts.pipelineKeyTaken).toBe(true);
+    expect(detail.conflicts.entryKeyTaken).toBe(true);
 
     const cards = (await (
       await fetch(`${studio.handle.url}/api/templates`)
     ).json()) as { key: string; conflicts: PipelineTemplateConflicts }[];
     expect(
       cards.find((card) => card.key === "wayfinder")?.conflicts,
-    ).toMatchObject({ pipelineKeyTaken: true, nextPipelineKey: "wayfinder-2" });
+    ).toMatchObject({ entryKeyTaken: true, nextEntryKey: "wayfinder-2" });
   }, 60_000);
 
-  test("POST use numbers the pipeline key past the highest taken suffix", async () => {
+  test("POST use numbers the entry key past the highest taken suffix", async () => {
     writeFileSync(
       join(studio.builderDir, "web-repro-playwright.json"),
       pipelineDocument("web-repro-playwright"),
@@ -238,7 +229,7 @@ describe("pipeline studio template endpoints", () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({
       file: "web-repro-playwright-4.ts",
-      pipelineKey: "web-repro-playwright-4",
+      entry: { kind: "pipeline", key: "web-repro-playwright-4" },
     });
     const written = readFileSync(
       join(studio.builderDir, "web-repro-playwright-4.ts"),

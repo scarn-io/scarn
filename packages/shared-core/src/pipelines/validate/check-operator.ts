@@ -6,7 +6,7 @@ import {
   ORDERING_OPERATORS,
   STRING_OPERATORS,
 } from "@scarn/sdk/contracts/pipeline-document";
-import { report, type Site, type ValidationContext } from "./context";
+import { report, type ReportContext, type Site } from "./context";
 import type { Segment } from "./graph";
 import {
   allowsType,
@@ -20,7 +20,7 @@ import {
 import { describeSchema, valueMatches } from "./schema-relations";
 
 export function operatorError(
-  ctx: ValidationContext,
+  ctx: ReportContext,
   site: Site,
   pointer: Segment[],
   op: string,
@@ -36,7 +36,7 @@ export function operatorError(
 }
 
 export function checkOperator(
-  ctx: ValidationContext,
+  ctx: ReportContext,
   site: Site,
   pointer: Segment[],
   op: string,
@@ -162,7 +162,7 @@ export function checkOperator(
 }
 
 export function checkLiteral(
-  ctx: ValidationContext,
+  ctx: ReportContext,
   site: Site,
   pointer: Segment[],
   op: string,

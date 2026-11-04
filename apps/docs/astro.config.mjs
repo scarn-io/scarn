@@ -20,6 +20,7 @@ export default defineConfig({
     "/guides/devcontainer/": `${base}/how-to/devcontainer/`,
     "/guides/integrations/": `${base}/how-to/integrations/`,
     "/guides/pipeline-advancement/": `${base}/guides/pipelines/`,
+    "/guides/pipeline-assignment/": `${base}/guides/automations/`,
   },
   vite: {
     plugins: [tailwindcss()],
@@ -205,10 +206,7 @@ export default defineConfig({
           items: [
             { label: "Defining Steps", slug: "guides/steps" },
             { label: "Building Pipelines", slug: "guides/pipelines" },
-            {
-              label: "Default Pipeline Assignment",
-              slug: "guides/pipeline-assignment",
-            },
+            { label: "Project Automations", slug: "guides/automations" },
             { label: "Running Workers", slug: "guides/workers" },
           ],
         },

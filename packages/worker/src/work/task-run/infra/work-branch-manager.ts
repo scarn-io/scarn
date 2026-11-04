@@ -2,7 +2,10 @@ import type { GitCommitPushService } from "../../../runtime/runtime-service/appl
 import type { SubmoduleService } from "../../../runtime/runtime-service/application/submodule-service";
 import { sanitizeGitRefFragment } from "../../../runtime/runtime-service/domain/git-ref-name";
 import { MANAGED_DEVCONTAINERS_DIR } from "../../../runtime/runtime-service/domain/managed-runtimes";
-import type { RepoOnPushFailure } from "@scarn/sdk/repo-config";
+import {
+  commitMessageUsesWorkItem,
+  type RepoOnPushFailure,
+} from "@scarn/sdk/repo-config";
 import { startStopwatch } from "../../../lib/elapsed";
 import { logWork } from "../application/work-logger";
 import type {
@@ -13,6 +16,7 @@ import type {
 import {
   defaultCommitMessage,
   renderCommitMessage,
+  type CommitMessageWorkItem,
 } from "./work-branch-commit-message";
 
 /** The commit message for work saved when the agent yields with a question. */
@@ -285,7 +289,8 @@ async function processSubmodules(input: {
  * recorded by the superproject commit. Commit "nothing to commit" is a success.
  *
  * The commit message (superproject and submodules alike) is `message` rendered
- * against the step's input and the submitted `result`, or `scarn: task <id>`;
+ * against the step's input, the submitted `result` and (for `{{workItem.…}}`
+ * tokens) a live read of the work item, or `scarn: task <id>`;
  * see {@link renderCommitMessage}. A yield (`{ yielded: true }`) has no result,
  * so it always uses {@link yieldCommitMessage}.
  *
@@ -313,6 +318,11 @@ export function buildCommitAndPushWorkBranch(input: {
   message?: string | null | undefined;
   /** The step's additional input, the `{{input.…}}` token source. */
   inputJson?: unknown;
+  /**
+   * Reads the Task's work item live, the `{{workItem.…}}` token source. Called
+   * only when the template has such a token; null when the read fails.
+   */
+  loadWorkItem?: (() => Promise<CommitMessageWorkItem | null>) | undefined;
   onPushFailure?: RepoOnPushFailure | undefined;
   /**
    * Extra repo-relative paths to keep out of the commit, beyond
@@ -327,14 +337,21 @@ export function buildCommitAndPushWorkBranch(input: {
   const onPushFailure = input.onPushFailure ?? "fail";
 
   return async (ctx) => {
+    const template = input.message ?? null;
     const message =
       "yielded" in ctx
         ? yieldCommitMessage(input.taskRunId)
         : renderCommitMessage({
-            template: input.message ?? null,
+            template,
             taskRunId: input.taskRunId,
             inputJson: input.inputJson,
             result: ctx.result,
+            workItem:
+              template !== null &&
+              input.loadWorkItem &&
+              commitMessageUsesWorkItem(template)
+                ? await input.loadWorkItem()
+                : null,
           });
 
     const submoduleResult = await processSubmodules({

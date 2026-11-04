@@ -53,6 +53,7 @@ Return a summary and quality score.
 | `result`          | `ZodType`                         | No       | Output payload schema                                                     |
 | `errors`          | `string[]`                        | No       | Error names the step can fail with; a pipeline can `.retry`/`.catch` them by name |
 | `retry`           | `{ on: string[]; maxAttempts: number }[]` | No | How a standalone Task of this step retries: a failure named in `on` (built-in or in `errors`) gets up to `maxAttempts` more runs. In a pipeline, the node's `.retry` applies instead. Compiled onto the handle as `retryJson` |
+| `concurrency`     | `{ max: number; waiting: number }` | No      | The step's concurrency group on a work item: at most `max` (≥ 1) live Tasks, and up to `waiting` (≥ 0) more waiting for a place; a Task past both is dropped. Pipeline nodes can't override it. See [Concurrency groups](/scarn/guides/steps/#concurrency-groups) |
 | `mcps`            | `Record<string, McpHandle>`       | No       | MCP servers defined with [`defineMcp`](#definemcp), keyed by the name the step runs them under. The only way to give a step an MCP server |
 | `healthChecks`    | `StepHealthCheck[]`               | No       | `cli` checks and non-MCP `tool` checks forced against the environment before the agent is prompted. See [`healthChecks`](#healthchecks) |
 | `features`        | `StepFeature[]`                   | No       | Built-in feature plugins (e.g. `Features.notifications()`)                |
@@ -146,7 +147,7 @@ Runtime.host(): HostRuntimeSpec;
 
 #### `Runtime.managed`
 
-`codeStep()` also accepts `Runtime.managed.<id>()`: a container the worker supplies (image, config and dependency install), so the step does not boot your project's devcontainer. `defineStep()` rejects it. It is the default for `codeStep()`: omit `runtime` and you get `Runtime.managed.bun1()`. Use `Runtime.devcontainer()` to run a code step in your project's devcontainer instead.
+`Runtime.managed.<id>()` is a container the worker supplies (image, config and, for code steps, dependency install), so the step does not boot your project's devcontainer. It is the default for `codeStep()`: omit `runtime` and you get `Runtime.managed.bun1()`. Use `Runtime.devcontainer()` to run a code step in your project's devcontainer instead. `defineStep()` accepts it explicitly: the agent runs inside the managed container against the clone, and no dependencies are installed (see [Managed runtimes for agent steps](/scarn/guides/steps/#managed-runtimes-for-agent-steps)).
 
 ```typescript
 import { codeStep, Runtime } from "@scarn/sdk/definitions/steps";
@@ -170,7 +171,7 @@ Runtime.managed: { [K in ManagedRuntimeId]: () => ManagedRuntimeSpec<K> };
 | `Runtime.managed.bun1()`   | `oven/bun:1.4.0-debian` | The default for `codeStep()`. Runs `bun install --production` in `.scarn/pipeline-builder`, then runs the step with Bun. Skips dependency `postinstall` scripts unless listed in `trustedDependencies`. |
 | `Runtime.managed.node24()` | `node:24-bookworm-slim` | Runs `npm install --omit=dev` (or `corepack pnpm install --prod` for `pnpm-lock.yaml`), then runs the step with Node 24. Runs `postinstall` scripts. Does not resolve extensionless relative imports. |
 
-`Runtime.managed.nope` is a type error: the identifiers come from `MANAGED_RUNTIME_IDS` in `@scarn/sdk/managed-runtimes`. A managed step has no `config`. See [Runtime for code steps](/scarn/guides/steps/#runtime-for-code-steps) for the lockfile handling and runtime differences, and [Running Workers](/scarn/guides/workers/#managed-runtimes) for the worker side.
+The install and the runner apply to code steps only. `Runtime.managed.nope` is a type error: the identifiers come from `MANAGED_RUNTIME_IDS` in `@scarn/sdk/managed-runtimes`. A managed step has no `config`. See [Runtime for code steps](/scarn/guides/steps/#runtime-for-code-steps) for the lockfile handling and runtime differences, and [Running Workers](/scarn/guides/workers/#managed-runtimes) for the worker side.
 
 The wire form is derived from `runtime`: `executionMode` (`"workspace"` for the devcontainer and managed runtimes, `"no_workspace"` for host), `devcontainerConfigPath` (`config`, or `null`), and `managedRuntime` (the identifier for a managed runtime, otherwise `null`). The path schema is `devcontainerConfigPathSchema` from `@scarn/sdk/devcontainer-config-path`.
 
@@ -554,6 +555,7 @@ export const sumScores = codeStep({
 | `resultSchema` | `ZodType`                                         | No       | Zod schema for `fn`'s return value                                   |
 | `errors`       | `string[]`                                        | No       | Error names the step can fail with; a pipeline can `.retry`/`.catch` them by name |
 | `retry`        | `{ on: string[]; maxAttempts: number }[]`         | No       | As `defineStep`'s `retry`: how a standalone Task of this step retries |
+| `concurrency`  | `{ max: number; waiting: number }`                | No       | As `defineStep`'s `concurrency`                                      |
 | `features`     | `AnyStepFeature[]`                                | No       | Feature plugins from `Features`; only each feature's result extension applies (no prompt on a code step) |
 | `environment`  | `{ runtime?: DevcontainerRuntimeSpec \| ManagedRuntimeSpec; vars?: ({ input }) => Record<string, string \| EnvEntry>; repo?: DevcontainerRepoSpec \| (({ input, result }) => DevcontainerRepoSpec) }` | No | `runtime` is `Runtime.managed.<id>()` or `Runtime.devcontainer({ config? })`; the default is `Runtime.managed.bun1()`. `Runtime.host()` is not supported. `vars` are environment variables for the runner process, read by `fn` through `process.env`. `repo` is `Repo.readWrite()` (default) or `Repo.readOnly()`. See [`Runtime`](#runtime), [`Env`](#env) and [`Repo`](#repo) |
 | `status`       | `"draft" \| "active"`                             | No       | Draft steps are not executed; defaults to `"active"`                |
@@ -718,56 +720,37 @@ Install `eslint` and `typescript-eslint` as dev dependencies first. To pick the 
 
 ---
 
-## `defaultPipelineAssignment(callback)`
+## `defineAutomation(config)`
 
-Define which pipeline is automatically started when a work item arrives. This goes in the reserved file `.scarn/pipeline-builder/default-pipeline-assignment.ts`.
+Define an automation: rules that react to events and start pipelines. Import it with `onEvent`, `attach` and `skip` from `@scarn/sdk/automations`; conditions come from `@scarn/sdk/pipelines`. The project's `default` automation lives in `.scarn/pipeline-builder/default.ts`.
 
 ```typescript
-import { defaultPipelineAssignment } from "@scarn/sdk/definitions/pipelines";
+import { contains } from "@scarn/sdk/pipelines";
+import { defineAutomation, onEvent } from "@scarn/sdk/automations";
+import bugTriage from "./bug-triage";
+import triage from "./triage";
 
-export default defaultPipelineAssignment(({ workItem, any, assign, skip }) => ({
-  default: assign("bug-triage"),
+export default defineAutomation({
+  key: "default",
+  scope: "project",
   rules: [
-    any(
-      workItem.field("status").eq("resolved"),
-      workItem.field("status").eq("manual support"),
-    ).then(skip()),
-    workItem.title.contains("[urgent]").then(assign("bug-triage")),
-    workItem.field("issueType").eq("bug").then(assign("bug-triage")),
-    workItem
-      .field("labels")
-      .contains("regression")
-      .then(assign("regression-review")),
+    onEvent({
+      event: "workItem.ready",
+      routes: [{ when: (r) => contains(r.workItem.labels, "bug"), to: bugTriage }],
+      otherwise: triage,
+    }),
   ],
-}));
+});
 ```
 
-The callback receives a context object. Only `defaultPipelineAssignment` needs to be imported.
+| Field    | Type                      | Description                                                                   |
+| -------- | ------------------------- | ----------------------------------------------------------------------------- |
+| `key`    | `string`                  | Stable identity; `default` for the project's default automation               |
+| `title`  | `string` (optional)       | Display name                                                                  |
+| `scope`  | `"project" \| "workItem"` | Project automations react to project events; work-item ones are attached to an item |
+| `rules`  | `onEvent(...)[]`          | `onEvent({ event, to })`, or `onEvent({ event, match?, routes, otherwise? })` |
 
-### Callback context
-
-| Property                       | Description                                                                                        |
-| ------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `workItem.<property>`          | Comparator ref for a top-level work item property (`id`, `platform`, `title`, `url`, etc.)          |
-| `workItem.field(name)`         | Returns a comparator ref for the named work item field (`fields` bag), typed via `field<TName, TValue>` |
-| `context.isNew`                | Comparator ref; `true` when the work item is new             |
-| `assign(key)`                  | Outcome: start the published pipeline with that key. Also accepts the value a pipeline file's `definePipeline()` returns |
-| `skip()`                       | Outcome: do not assign any pipeline                          |
-| `all(...refs)`                 | All nested conditions must match                             |
-| `any(...refs)`                 | Any nested condition must match                              |
-
-`workItem`'s top-level properties are `id`, `projectId`, `platform`, `platformId`, `platformKey`, `url`, `title`, `description`, `sourceCreatedAt`, `sourceUpdatedAt`, `createdByUserId`, `parentWorkItemId`, `createdAt`, `updatedAt`. `platform` is typed to the real platform literal union; the date-like fields are ISO strings (or `null`), not `Date` objects. See the [pipeline assignment guide](/scarn/guides/pipeline-assignment/#work-item-properties) for details.
-
-### Return value shape
-
-| Field     | Type                           | Description                                                  |
-| --------- | ------------------------------ | ------------------------------------------------------------ |
-| `default` | `AssignOutcome \| SkipOutcome` | Outcome when no rule matches; `assign(key)` or `skip()`      |
-| `rules`   | `AssignmentRule[]`             | Ordered rules; first match wins                              |
-
-### Comparators
-
-Refs support `.eq`, `.ne`, `.gt`, `.gte`, `.lt`, `.lte`, `.in`, `.notIn`, `.contains`, `.doesNotContain`. Not every comparator applies to every field — `.gt`/`.gte`/`.lt`/`.lte` only exist on numeric fields, so e.g. `workItem.title.gt(...)` is a compile error.
+A rule's target is a pipeline, `attach(automation)` (project scope only) or `skip`. See [Project Automations](/scarn/guides/automations/) for the events and what `r` holds.
 
 ---
 

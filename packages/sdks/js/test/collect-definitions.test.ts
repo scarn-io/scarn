@@ -9,9 +9,7 @@ import {
 } from "../src/push/collect-definitions";
 
 function makeTempDir(): string {
-  return realpathSync(
-    mkdtempSync(join(tmpdir(), "scarn-collect-defs-test-")),
-  );
+  return realpathSync(mkdtempSync(join(tmpdir(), "scarn-collect-defs-test-")));
 }
 
 // Absolute path to `define-code-step.ts`, computed from this test file's own
@@ -245,7 +243,6 @@ export const goodStep = codeStep({ key: "good-step", name: "Good", fn: () => 1 }
       expect(collected).toMatchObject({
         steps: [],
         brokenPipelines: [],
-        defaultPipelineAssignment: null,
       });
     } finally {
       rmSync(dir, { recursive: true, force: true });

@@ -1,6 +1,5 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { DEFAULT_PIPELINE_ASSIGNMENT_FILENAME } from "@scarn/sdk/definitions/pipelines";
 import { PIPELINE_BUILDER_DIR } from "@scarn/sdk/push";
 // Inlined at build time, so the compiled CLI carries the starter as strings.
 import starterPipelineJson from "./bug-pipeline.json.tmpl" with { type: "text" };
@@ -210,22 +209,33 @@ export const STARTER_PIPELINE_FILE = starterPipeline;
  */
 export const STARTER_PIPELINE_JSON_FILE = starterPipelineJson;
 
-// Scaffolded alongside the pipeline so new projects start with automatic
-// assignment wired up: every new work item runs the starter pipeline.
-export const STARTER_DEFAULT_PIPELINE_ASSIGNMENT_FILE = `import { defaultPipelineAssignment } from "@scarn/sdk/definitions/pipelines";
+export const STARTER_DEFAULT_AUTOMATION_FILENAME = "default.ts";
 
-// This reserved file controls which pipeline starts automatically when a new
-// work item arrives (created in the dashboard or ingested from GitHub/Jira).
-// Rules run top to bottom; the first match wins, otherwise \`default\` applies.
-export default defaultPipelineAssignment(({ workItem, assign, skip }) => ({
-  default: assign("${STARTER_PIPELINE_KEY}"),
+/**
+ * Scaffolded alongside the pipeline: the project automation that starts the
+ * starter pipeline on every work item once it's ready. Push publishes it
+ * disabled, so nothing runs until `scarn automations enable default`.
+ */
+export const STARTER_DEFAULT_AUTOMATION_FILE = `import { defineAutomation, onEvent } from "@scarn/sdk/automations";
+import bugPipeline from "./${STARTER_PIPELINE_KEY}";
+
+// The project automation: which pipeline starts when a work item is ready
+// (open, top level, nothing open blocking it). Push publishes it disabled;
+// turn it on with \`scarn automations enable default\`.
+export default defineAutomation({
+  key: "default",
+  title: "Default",
+  scope: "project",
   rules: [
-    // Don't start a pipeline for items that arrive already resolved.
-    workItem.field("status").eq("resolved").then(skip()),
-    // As you add pipelines, route work items to them here, e.g.:
-    //   workItem.field("issueType").eq("feature").then(assign("feature-pipeline")),
+    onEvent({ event: "workItem.ready", to: bugPipeline }),
+    // As you add pipelines, route work items to them with \`routes\`, e.g.:
+    //   onEvent({
+    //     event: "workItem.ready",
+    //     routes: [{ when: (r) => contains(r.workItem.labels, "feature"), to: featurePipeline }],
+    //     otherwise: bugPipeline,
+    //   }),
   ],
-}));
+});
 `;
 
 export function scaffoldPipelineBuilderDirectory(
@@ -253,10 +263,9 @@ export function scaffoldPipelineBuilderDirectory(
   writeFile(".gitignore", PIPELINE_BUILDER_GITIGNORE);
   writeFile(STARTER_PIPELINE_FILENAME, STARTER_PIPELINE_FILE);
   writeFile(STARTER_PIPELINE_JSON_FILENAME, STARTER_PIPELINE_JSON_FILE);
-  // Scaffold the reserved default pipeline assignment file
   writeFile(
-    DEFAULT_PIPELINE_ASSIGNMENT_FILENAME,
-    STARTER_DEFAULT_PIPELINE_ASSIGNMENT_FILE,
+    STARTER_DEFAULT_AUTOMATION_FILENAME,
+    STARTER_DEFAULT_AUTOMATION_FILE,
   );
 
   return result;

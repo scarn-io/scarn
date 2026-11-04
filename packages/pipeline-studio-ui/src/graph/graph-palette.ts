@@ -24,6 +24,7 @@ export const palette = {
   shadow: themed("shadow", "0 1px 2px rgba(1, 4, 9, 0.6)"),
   borderStrong: colors.borderStrong,
   accent: colors.accent,
+  violet: colors.accent2,
   success: colors.successFg,
   danger: colors.dangerFg,
   attention: colors.attentionFg,

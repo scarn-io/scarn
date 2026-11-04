@@ -1,157 +1,82 @@
 /**
  * The template detail page's logic, kept free of React so it's unit tested:
- * the preview graph with its hand-off lane, the Use button's state, what a
+ * the preview graph with its detached steps, the Use button's state, what a
  * click on Use does, and the text shown after a successful Use.
  */
-import {
-  graphBounds,
-  HANDOFF_SOURCE_HANDLE,
-  HANDOFF_TARGET_HANDLE,
-  LOOP_SOURCE_HANDLE,
-  LOOP_TARGET_HANDLE,
-} from "../graph/edge-route";
+import { graphBounds } from "../graph/edge-route";
 import type { StudioEdge, StudioNode } from "../graph/studio-graph-types";
 import {
-  HANDOFF_NODE_TYPE,
+  DETACHED_NODE_TYPE,
   nodeLayoutSize,
 } from "../graph/studio-graph-visuals";
 import type {
   TemplateDetail,
+  TemplateEntryKind,
   TemplateParameter,
   TemplateStepPreview,
   TemplateStepRepoAccess,
 } from "./templates-api";
 
 export const BUILDER_DIR = ".scarn/pipeline-builder";
-export const HANDOFF_EDGE_LABEL = "starts via hand-off";
-export const HANDOFF_RETURN_LABEL = "resumes when tickets close";
-const HANDOFF_NODE_ID_PREFIX = "handoff:";
-/** Gap between the graph's right edge and the vertical lane hand-off edges share. */
-const HANDOFF_LANE_GAP = 40;
-/** Gap between the graph's right edge and the lane return edges drop down; inside the hand-off lane. */
-const HANDOFF_RETURN_LANE_GAP = 20;
-/** How far above its starter's top a return edge runs across. */
-const HANDOFF_RETURN_RISE = 28;
-/** Gap between that lane and the hand-off column; wide enough for the edge label. */
-const HANDOFF_COLUMN_GAP = 190;
-const HANDOFF_ROW_GAP = 24;
+const DETACHED_NODE_ID_PREFIX = "detached:";
+/** Gap between the graph's right edge and the detached-step column. */
+const DETACHED_COLUMN_GAP = 80;
+const DETACHED_ROW_GAP = 24;
 
-export function handoffNodeId(stepKey: string): string {
-  return `${HANDOFF_NODE_ID_PREFIX}${stepKey}`;
+export function detachedNodeId(stepKey: string): string {
+  return `${DETACHED_NODE_ID_PREFIX}${stepKey}`;
 }
 
 /**
  * The preview graph: `preview.pipeline`'s laid-out nodes and edges, plus one
- * dashed `handoff` node per hand-off step in a column to the right of
- * everything, stacked from the row of the step that starts them, each joined
- * to that step by a dashed edge labelled "starts via hand-off". Each starter
- * also gets one dashed edge back from the top of its hand-off stack,
- * labelled "resumes when tickets close": the step pauses while its tickets
- * run and a later round picks up when they close. That edge is display only;
- * the pipeline has no such transition. A hand-off step whose starter isn't in
- * the graph gets its node but no edges.
+ * dashed `detached` node, with no edges, for each step the file exports that
+ * the graph doesn't run, stacked in a column to the right of everything. For
+ * an automation entry there is no graph, so every step is detached.
  */
-export function buildTemplateGraph(
-  detail: Pick<TemplateDetail, "handoffSteps" | "preview">,
-): { nodes: StudioNode[]; edges: StudioEdge[] } {
+export function buildTemplateGraph(detail: Pick<TemplateDetail, "preview">): {
+  nodes: StudioNode[];
+  edges: StudioEdge[];
+} {
   const baseNodes = detail.preview.pipeline?.nodes ?? [];
   const baseEdges = detail.preview.pipeline?.edges ?? [];
-  if (detail.handoffSteps.length === 0) {
+  const inGraph = new Set(
+    baseNodes.flatMap((node) =>
+      node.data.kind === "step" && node.data.stepKey !== undefined
+        ? [node.data.stepKey]
+        : [],
+    ),
+  );
+  const detachedSteps = detail.preview.steps.filter(
+    (step) => !inGraph.has(step.key),
+  );
+  if (detachedSteps.length === 0) {
     return { nodes: baseNodes, edges: baseEdges };
   }
 
   const bounds = graphBounds(baseNodes, baseEdges);
-  const right = bounds ? bounds.x + bounds.width : 0;
-  const returnLaneX = right + HANDOFF_RETURN_LANE_GAP;
-  const laneX = right + HANDOFF_LANE_GAP;
-  const columnX = laneX + HANDOFF_COLUMN_GAP;
-  const stepNames = new Map(
-    detail.preview.steps.map((step) => [step.key, step.name]),
-  );
-  const nextRowY = new Map<string, number>();
-
-  const returned = new Set<string>();
-  const nodes: StudioNode[] = [];
-  const edges: StudioEdge[] = [];
-  const returnEdges: StudioEdge[] = [];
-  for (const handoff of detail.handoffSteps) {
-    const starter = baseNodes.find(
-      (node) =>
-        node.data.kind === "step" && node.data.stepKey === handoff.startedBy,
-    );
-    const laneKey = starter?.id ?? "";
-    const y = nextRowY.get(laneKey) ?? starter?.position.y ?? bounds?.y ?? 0;
+  const columnX = bounds ? bounds.x + bounds.width + DETACHED_COLUMN_GAP : 0;
+  let y = bounds?.y ?? 0;
+  const nodes = detachedSteps.map((step): StudioNode => {
     const data: StudioNode["data"] = {
-      label: stepNames.get(handoff.key) ?? handoff.key,
-      kind: "handoff",
-      stepKey: handoff.key,
-      handoff: { startedBy: handoff.startedBy, summary: handoff.summary },
+      label: step.name,
+      kind: "detached",
+      stepKey: step.key,
       issues: [],
       shape: { kind: "none" },
     };
-    const size = nodeLayoutSize(data);
-    nextRowY.set(laneKey, y + size.height + HANDOFF_ROW_GAP);
-    const id = handoffNodeId(handoff.key);
-    nodes.push({
-      id,
-      type: HANDOFF_NODE_TYPE,
+    const node: StudioNode = {
+      id: detachedNodeId(step.key),
+      type: DETACHED_NODE_TYPE,
       position: { x: columnX, y },
       data,
-    });
-    if (!starter) continue;
-    if (!returned.has(starter.id)) {
-      returned.add(starter.id);
-      const topY = starter.position.y - HANDOFF_RETURN_RISE;
-      returnEdges.push({
-        id: `${id}->${starter.id}`,
-        source: id,
-        target: starter.id,
-        sourceHandle: HANDOFF_SOURCE_HANDLE,
-        targetHandle: LOOP_TARGET_HANDLE,
-        label: HANDOFF_RETURN_LABEL,
-        data: {
-          kind: "handoff",
-          index: 0,
-          lane: null,
-          order: null,
-          issues: [],
-          route: {
-            kind: "handoffReturn",
-            laneX: returnLaneX,
-            topY,
-            label: { x: (returnLaneX + columnX + size.width / 2) / 2, y: topY },
-          },
-        },
-      });
-    }
-    edges.push({
-      id: `${starter.id}->${id}`,
-      source: starter.id,
-      target: id,
-      sourceHandle: LOOP_SOURCE_HANDLE,
-      targetHandle: HANDOFF_TARGET_HANDLE,
-      label: HANDOFF_EDGE_LABEL,
-      data: {
-        kind: "handoff",
-        index: 0,
-        lane: null,
-        order: null,
-        issues: [],
-        route: {
-          kind: "handoff",
-          laneX,
-          label: { x: (laneX + columnX) / 2, y: y + size.height / 2 },
-        },
-      },
-    });
-  }
-  return {
-    nodes: [...baseNodes, ...nodes],
-    edges: [...baseEdges, ...edges, ...returnEdges],
-  };
+    };
+    y += nodeLayoutSize(data).height + DETACHED_ROW_GAP;
+    return node;
+  });
+  return { nodes: [...baseNodes, ...nodes], edges: baseEdges };
 }
 
-/** The template step a preview graph node shows, hand-off or not. */
+/** The template step a preview graph node shows, detached or not. */
 export function findTemplateStep(
   steps: readonly TemplateStepPreview[],
   node: Pick<StudioNode, "data">,
@@ -161,22 +86,24 @@ export function findTemplateStep(
   return steps.find((step) => step.key === stepKey) ?? null;
 }
 
-/** The heading over a hand-off step's detail panel. */
-export function handoffHeading(startedBy: string): string {
-  return `Started by \`${startedBy}\` during a round; \`${startedBy}\` resumes when its ticket closes`;
+/** The note over a detached step's detail panel. */
+export function detachedStepNotice(kind: TemplateEntryKind): string {
+  return kind === "automation"
+    ? "Started by the automation's rules, not by a pipeline graph."
+    : "Not part of the pipeline graph; an agent starts it by key.";
 }
 
-/** The pipeline key and builder file a Use writes right now. */
+/** The entry key and builder file a Use writes right now. */
 export function useTarget(detail: Pick<TemplateDetail, "conflicts">): {
-  pipelineKey: string;
+  entryKey: string;
   file: string;
   renamed: boolean;
 } {
-  const { nextPipelineKey, pipelineKeyTaken } = detail.conflicts;
+  const { nextEntryKey, entryKeyTaken } = detail.conflicts;
   return {
-    pipelineKey: nextPipelineKey,
-    file: `${BUILDER_DIR}/${nextPipelineKey}.ts`,
-    renamed: pipelineKeyTaken,
+    entryKey: nextEntryKey,
+    file: `${BUILDER_DIR}/${nextEntryKey}.ts`,
+    renamed: entryKeyTaken,
   };
 }
 
@@ -238,27 +165,43 @@ export function parameterValuesToSubmit(
 
 export type UseSuccessMessage = {
   path: string;
-  pipelineKey: string;
+  entryKey: string;
   pushCommand: string;
-  assignSnippet: string;
-  assignmentFile: string;
+  importSnippet: string;
+  routeSnippet: string;
+  automationFile: string;
 };
+
+/** `wayfinder-2` → `wayfinder2`: the default import's name for a key. */
+function importNameOf(key: string): string {
+  const name = key
+    .split(/[^A-Za-z0-9]+/u)
+    .filter((part) => part !== "")
+    .map((part, index) =>
+      index === 0 ? part : `${part[0]?.toUpperCase() ?? ""}${part.slice(1)}`,
+    )
+    .join("");
+  return /^[A-Za-z_$]/u.test(name) ? name : `_${name}`;
+}
 
 /**
  * The toast after a Use: where the file went, and the two next steps. The
- * studio never edits `default-pipeline-assignment.ts`; it only shows the line
- * to add.
+ * studio never edits `default.ts`; it only shows the route to add: `to: x`
+ * for a pipeline, `to: attach(x)` for a work-item automation.
  */
 export function useSuccessMessage(result: {
   file: string;
-  pipelineKey: string;
+  entry: { kind: TemplateEntryKind; key: string };
 }): UseSuccessMessage {
+  const name = importNameOf(result.entry.key);
+  const target = result.entry.kind === "automation" ? `attach(${name})` : name;
   return {
     path: `${BUILDER_DIR}/${result.file}`,
-    pipelineKey: result.pipelineKey,
+    entryKey: result.entry.key,
     pushCommand: "scarn pipelines push",
-    assignSnippet: `assign(${JSON.stringify(result.pipelineKey)})`,
-    assignmentFile: "default-pipeline-assignment.ts",
+    importSnippet: `import ${name} from "./${result.file.replace(/\.ts$/u, "")}";`,
+    routeSnippet: `{ when: (r) => …, to: ${target} }`,
+    automationFile: "default.ts",
   };
 }
 

@@ -91,6 +91,7 @@ const buildStepDefinitionsClient = (stepDefinitions: StepDefinitions) => {
           maxAttempts: entry.maxAttempts,
         })),
         maxTurns: spec.maxTurns ?? null,
+        concurrency: spec.concurrency ?? null,
         workItemPermissions: [...(spec.workItemPermissions ?? [])],
         status: spec.status,
         projectId,

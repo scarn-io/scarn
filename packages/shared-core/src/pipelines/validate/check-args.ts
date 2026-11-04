@@ -36,12 +36,12 @@ import { closest, quoteList } from "./suggest";
 
 type ArgElement = ListArg["list"][number];
 
-function requiredNames(input: RootedSchema): string[] {
+export function requiredNames(input: RootedSchema): string[] {
   const { schema } = deref(input);
   return typeof schema === "object" ? (schema.required ?? []) : [];
 }
 
-function acceptsExtras(input: RootedSchema): boolean {
+export function acceptsExtras(input: RootedSchema): boolean {
   const { schema } = deref(input);
   if (typeof schema !== "object") {
     return schema;

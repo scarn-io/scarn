@@ -6,6 +6,7 @@ import {
   createScarnBlockWorkItemTool,
   createScarnCloseWorkItemTool,
   createScarnCommentOnWorkItemTool,
+  createScarnLabelWorkItemTool,
   createScarnSetWorkItemDescriptionTool,
   createScarnStartTaskTool,
 } from "./scarn-work-item-change-tools";
@@ -28,6 +29,7 @@ export function createWorkItemTools(
     tools.push(
       createScarnGetWorkItemTool(directory),
       createScarnSetWorkItemDescriptionTool(directory),
+      createScarnLabelWorkItemTool(directory),
       createScarnCommentOnWorkItemTool(directory),
       createScarnCloseWorkItemTool(directory),
       createScarnBlockWorkItemTool(directory),

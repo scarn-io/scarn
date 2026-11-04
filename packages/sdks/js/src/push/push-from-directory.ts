@@ -1,19 +1,17 @@
 import {
+  AutomationsApiError,
+  createAutomationsClient,
+} from "../definitions/automations";
+import {
   createPipelineDefinitionsClient,
   PipelineDefinitionsApiError,
 } from "../definitions/pipelines";
-import {
-  DEFAULT_PIPELINE_ASSIGNMENT_FILENAME,
-  serializeDefaultPipelineAssignment,
-  type DefaultPipelineAssignmentSpec,
-} from "../definitions/pipelines/define-default-pipeline-assignment";
 import { createStepDefinitionsClient } from "../definitions/steps";
 import { assertValidDefinitionSpecs } from "../definitions/validation";
-import { createClient } from "../generated/client";
-import { Projects } from "../generated/sdk.gen";
+import { z } from "zod";
 import { collectDefinitionsFromDirectory } from "./collect-definitions";
 import {
-  collectPipelineDocuments,
+  collectBuiltDocuments,
   type PipelineDocumentFile,
 } from "./collect-pipeline-documents";
 
@@ -31,26 +29,33 @@ export interface PushFromDirectoryResult {
   publishedPipelines: string[];
   /** Keys of the pipelines whose document matched their latest version. */
   unchangedPipelines: string[];
-  /** true if the default pipeline assignment was synced to the server. */
-  syncedDefaultPipelineAssignment: boolean;
+  /** Keys of the automations that got a new version. */
+  publishedAutomations: string[];
+  /** Keys of the automations whose document matched their latest version. */
+  unchangedAutomations: string[];
 }
 
 type PipelinesClient = ReturnType<typeof createPipelineDefinitionsClient>;
+type AutomationsClient = ReturnType<typeof createAutomationsClient>;
 type Headers = { Authorization: string };
+
+const latestVersionSchema = z.object({ version: z.number() });
 
 /**
  * Pushes a pipeline-builder directory to the server, in three passes:
  *
  * 1. Upserts every step exported from the `.ts`/`.js` files (except the push
- *    script itself and `default-pipeline-assignment.ts`).
+ *    script itself).
  * 2. Publishes every built pipeline document (`<key>.json`, from
  *    `scarn pipelines build`), creating the pipeline when its key is new.
  *    The server pins each document to the steps just pushed; a document
  *    identical to its latest version publishes nothing.
- * 3. Syncs `default-pipeline-assignment.ts`, when present, as the project
- *    default pipeline assignment. Every pipeline it assigns must exist by now.
+ * 3. Publishes every built automation document (`<key>.json` with
+ *    `kind: "automation"`). Work-item automations go first, since a project
+ *    automation's `attach` targets must already exist. A new automation starts
+ *    disabled; deleting a source file unpublishes nothing.
  *
- * Collection (`collectDefinitionsFromDirectory`, `collectPipelineDocuments`)
+ * Collection (`collectDefinitionsFromDirectory`, `collectBuiltDocuments`)
  * and step validation (`validateDefinitionSpecs`) are offline and run before
  * the first mutating request, so an invalid batch fails without half-pushing.
  *
@@ -69,12 +74,19 @@ export async function pushFromDirectory(
     });
   const headers = { Authorization: `Bearer ${opts.accessToken}` };
 
-  const collected = await collectDefinitionsFromDirectory(dir);
-  const { steps } = collected;
-  const documents = collectPipelineDocuments(dir);
+  const { steps } = await collectDefinitionsFromDirectory(dir);
+  const built = collectBuiltDocuments(dir);
+  const documents = built.filter((file) => file.kind === "pipeline");
+  const automations = built
+    .filter((file) => file.kind === "automation")
+    .sort(
+      (a, b) =>
+        Number(a.document["scope"] === "project") -
+        Number(b.document["scope"] === "project"),
+    );
 
   log(
-    `Found ${String(steps.length)} step(s) and ${String(documents.length)} pipeline document(s).`,
+    `Found ${String(steps.length)} step(s), ${String(documents.length)} pipeline document(s) and ${String(automations.length)} automation document(s).`,
   );
 
   assertValidDefinitionSpecs(steps);
@@ -107,21 +119,28 @@ export async function pushFromDirectory(
     }
   }
 
-  const syncedDefaultPipelineAssignment = collected.defaultPipelineAssignment
-    ? await syncDefaultPipelineAssignment(
-        collected.defaultPipelineAssignment,
-        opts,
-        headers,
-        pipelinesClient,
-        log,
-      )
-    : false;
+  const automationsClient = createAutomationsClient(opts.baseUrl);
+  const publishedAutomations: string[] = [];
+  const unchangedAutomations: string[] = [];
+  for (const document of automations) {
+    const published = await publishAutomationDocument(
+      document,
+      opts.projectId,
+      headers,
+      automationsClient,
+      log,
+    );
+    (published ? publishedAutomations : unchangedAutomations).push(
+      document.key,
+    );
+  }
 
   return {
     pushedSteps: steps.length,
     publishedPipelines,
     unchangedPipelines,
-    syncedDefaultPipelineAssignment,
+    publishedAutomations,
+    unchangedAutomations,
   };
 }
 
@@ -156,131 +175,56 @@ async function publishPipelineDocument(
     );
     return result.published;
   } catch (error) {
-    if (error instanceof PipelineDefinitionsApiError) {
-      const issues = error.issues.map((issue) =>
-        issue.hint === undefined
-          ? `  ${issue.path || "/"}: ${issue.message}`
-          : `  ${issue.path || "/"}: ${issue.message}. ${issue.hint}`,
-      );
-      throw new Error(
-        [`Could not publish ${file}: ${error.message}`, ...issues].join("\n"),
-        { cause: error },
-      );
-    }
-    throw error;
+    rethrowPublishError(file, error);
   }
 }
 
-async function syncDefaultPipelineAssignment(
-  spec: DefaultPipelineAssignmentSpec,
-  opts: PushFromDirectoryOptions,
+/** Returns false when the document matched the automation's latest version. */
+async function publishAutomationDocument(
+  { file, key, document }: PipelineDocumentFile,
+  projectId: string,
   headers: Headers,
-  pipelinesClient: PipelinesClient,
+  automationsClient: AutomationsClient,
   log: (msg: string) => void,
 ): Promise<boolean> {
-  const serialized = serializeDefaultPipelineAssignment(spec);
-
-  // Fetch all server pipelines to resolve pipeline key → pipelineDefinitionId
-  const serverPipelines = await pipelinesClient.listByProjectId(
-    opts.projectId,
-    {
+  try {
+    const result = await automationsClient.publish(projectId, key, document, {
       headers,
-    },
-  );
-
-  // Build key → id map from all referenced pipeline keys (assign outcomes)
-  const pipelineKeyToId = new Map<string, string>(
-    serverPipelines.map((p) => [p.key, p.id]),
-  );
-
-  // Collect all pipeline keys referenced in the spec (assign outcomes)
-  const referencedKeys = new Set<string>();
-  referencedKeys.add(serialized.pipelineDefinitionKey);
-  for (const rule of serialized.rulesJson.rules) {
-    if (
-      rule.event.type === "assign" &&
-      typeof rule.event.params?.["pipelineKey"] === "string"
-    ) {
-      referencedKeys.add(rule.event.params["pipelineKey"]);
-    }
-  }
-
-  // Validate all referenced pipeline keys exist on the server
-  for (const key of referencedKeys) {
-    if (!pipelineKeyToId.has(key)) {
-      throw new Error(
-        `${DEFAULT_PIPELINE_ASSIGNMENT_FILENAME} references pipeline "${key}", ` +
-          `but no pipeline with that key was found on the server. ` +
-          `Run \`scarn pipelines build\` to write ${key}.json next to its source, then push again.`,
-      );
-    }
-  }
-
-  // Resolve the primary pipelineDefinitionId
-  const pipelineDefinitionId = pipelineKeyToId.get(
-    serialized.pipelineDefinitionKey,
-  );
-  if (!pipelineDefinitionId) {
-    throw new Error(
-      `Pipeline key "${serialized.pipelineDefinitionKey}" was not found on the server.`,
+    });
+    const latest = latestVersionSchema.safeParse(
+      result.automation.latestVersion,
     );
-  }
-
-  // Rewrite assign event params: replace pipelineKey → pipelineDefinitionId
-  const resolvedRules = serialized.rulesJson.rules.map((rule) => {
-    if (
-      rule.event.type === "assign" &&
-      typeof rule.event.params?.["pipelineKey"] === "string"
-    ) {
-      const pKey = rule.event.params["pipelineKey"];
-      const pId = pipelineKeyToId.get(pKey);
-      if (!pId) {
-        throw new Error(
-          `${DEFAULT_PIPELINE_ASSIGNMENT_FILENAME} assign() references pipeline "${pKey}" ` +
-            `which was not found on the server.`,
-        );
-      }
-      return {
-        ...rule,
-        event: {
-          ...rule.event,
-          params: {
-            ...rule.event.params,
-            pipelineDefinitionId: pId,
-          },
-        },
-      };
-    }
-    return rule;
-  });
-
-  // Call the server API
-  const projectsClient = new Projects({
-    client: createClient({ baseUrl: opts.baseUrl }),
-  });
-
-  const result = await projectsClient.updateProjectDefaultPipelineAssignment({
-    path: { projectId: opts.projectId },
-    body: {
-      defaultPipelineAssignment: {
-        pipelineDefinitionId,
-        rulesJson: { rules: resolvedRules },
-        defaultEventType: serialized.defaultEventType,
-        defaultEventParamsJson: serialized.defaultEventParamsJson,
-        allowedEventTypes: serialized.allowedEventTypes,
-      },
-    },
-    headers,
-  });
-
-  if (result.error) {
-    throw new Error(
-      `Failed to update project default pipeline assignment: ${JSON.stringify(result.error)}`,
+    const version = latest.success ? ` v${String(latest.data.version)}` : "";
+    log(
+      result.published
+        ? `✓ automation ${key}${version} → published (${file})`
+        : `✓ automation ${key}${version} → unchanged (${file})`,
     );
+    return result.published;
+  } catch (error) {
+    rethrowPublishError(file, error);
   }
+}
 
-  log(
-    `✓ default pipeline assignment → synced (primary pipeline: ${serialized.pipelineDefinitionKey})`,
+/** Rethrows an API rejection naming the file, with each document issue on its own line. */
+function rethrowPublishError(
+  file: string,
+  // eslint-disable-next-line local/no-unknown-parameter-type -- a caught error
+  error: unknown,
+): never {
+  if (
+    !(error instanceof PipelineDefinitionsApiError) &&
+    !(error instanceof AutomationsApiError)
+  ) {
+    throw error;
+  }
+  const issues = error.issues.map((issue) =>
+    issue.hint === undefined
+      ? `  ${issue.path || "/"}: ${issue.message}`
+      : `  ${issue.path || "/"}: ${issue.message}. ${issue.hint}`,
   );
-  return true;
+  throw new Error(
+    [`Could not publish ${file}: ${error.message}`, ...issues].join("\n"),
+    { cause: error },
+  );
 }

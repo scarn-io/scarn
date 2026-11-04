@@ -1,31 +1,36 @@
 /**
  * "Use template": write a pipeline template's rendered source into the
- * pipeline-builder directory as `<pipelineKey>.ts`. The studio's file watcher
+ * pipeline-builder directory as `<entry key>.ts`. The studio's file watcher
  * builds and shows it from there.
  *
  * Step keys are project-wide and the template's prompts name each other by
- * key, so a step-key collision refuses the write. A pipeline-key collision
- * doesn't: the file gets the next free `<pipelineKey>-N` (highest suffix + 1).
- * An existing file is never overwritten. The file name always comes from the
- * template's `pipelineKey`, never from the caller.
+ * key, so a step-key collision refuses the write. An entry-key collision
+ * doesn't: the file gets the next free `<entry key>-N` (highest suffix + 1).
+ * Pipelines and automations share one key space. An existing file is never
+ * overwritten. The file name always comes from the template's `entry.key`,
+ * never from the caller.
  */
 import { linkSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { extname, join } from "node:path";
-import type { PipelineTemplate } from "../domain/pipeline-template";
+import type {
+  PipelineTemplate,
+  TemplateEntry,
+} from "../domain/pipeline-template";
 import { renderPipelineTemplate } from "./render-pipeline-template";
 
 export type PipelineTemplateConflicts = {
   /** Template step keys already defined in the builder directory. */
   takenStepKeys: string[];
-  pipelineKeyTaken: boolean;
+  entryKeyTaken: boolean;
   /** The key "Use" would write: the template's own, or the next free `-N`. */
-  nextPipelineKey: string;
+  nextEntryKey: string;
 };
 
 /** What's already defined in the builder directory. */
 export type ExistingBuilderDefinitions = {
   stepKeys: Iterable<string>;
-  pipelineKeys: Iterable<string>;
+  /** Pipeline and automation keys. */
+  entryKeys: Iterable<string>;
 };
 
 export type UsePipelineTemplateInput = {
@@ -37,7 +42,7 @@ export type UsePipelineTemplateInput = {
 };
 
 export type UsePipelineTemplateResult =
-  | { ok: true; file: string; pipelineKey: string }
+  | { ok: true; file: string; entry: TemplateEntry }
   | {
       ok: false;
       reason: "step-keys-taken";
@@ -66,7 +71,7 @@ function escapeRegExp(text: string): string {
 }
 
 /** `base` when free, otherwise `base-N` one past the highest suffix in use. */
-export function nextFreePipelineKey(
+export function nextFreeEntryKey(
   base: string,
   taken: ReadonlySet<string>,
 ): string {
@@ -86,14 +91,14 @@ export function checkPipelineTemplateConflicts(
   existing: ExistingBuilderDefinitions,
 ): PipelineTemplateConflicts {
   const stepKeys = new Set(existing.stepKeys);
-  const pipelineKeys = new Set([
-    ...existing.pipelineKeys,
+  const entryKeys = new Set([
+    ...existing.entryKeys,
     ...listFileKeys(builderDir),
   ]);
   return {
     takenStepKeys: template.stepKeys.filter((key) => stepKeys.has(key)),
-    pipelineKeyTaken: pipelineKeys.has(template.pipelineKey),
-    nextPipelineKey: nextFreePipelineKey(template.pipelineKey, pipelineKeys),
+    entryKeyTaken: entryKeys.has(template.entry.key),
+    nextEntryKey: nextFreeEntryKey(template.entry.key, entryKeys),
   };
 }
 
@@ -173,26 +178,30 @@ export function usePipelineTemplate(
   }
 
   const taken = new Set([
-    ...input.existing.pipelineKeys,
+    ...input.existing.entryKeys,
     ...listFileKeys(input.builderDir),
   ]);
-  let pipelineKey = conflicts.nextPipelineKey;
+  let entryKey = conflicts.nextEntryKey;
   for (let attempt = 1; ; attempt += 1) {
-    const file = `${pipelineKey}.ts`;
+    const file = `${entryKey}.ts`;
     const source = renderPipelineTemplate(template, {
       cliVersion: input.cliVersion,
       parameterValues: params.values,
-      pipelineKey,
+      entryKey,
     });
     if (writeFileExclusive(join(input.builderDir, file), source)) {
-      return { ok: true, file, pipelineKey };
+      return {
+        ok: true,
+        file,
+        entry: { kind: template.entry.kind, key: entryKey },
+      };
     }
     if (attempt >= MAX_WRITE_ATTEMPTS) {
       throw new Error(
-        `Couldn't find a free file name for pipeline "${template.pipelineKey}".`,
+        `Couldn't find a free file name for ${template.entry.kind} "${template.entry.key}".`,
       );
     }
-    taken.add(pipelineKey);
-    pipelineKey = nextFreePipelineKey(template.pipelineKey, taken);
+    taken.add(entryKey);
+    entryKey = nextFreeEntryKey(template.entry.key, taken);
   }
 }

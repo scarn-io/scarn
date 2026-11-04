@@ -1,7 +1,4 @@
-import {
-  ProjectRefError,
-  type ProjectRefErrorKind,
-} from "@scarn/sdk/defaults";
+import { ProjectRefError, type ProjectRefErrorKind } from "@scarn/sdk/defaults";
 import { CoreError, SetupErrorCodes } from "@scarn/worker";
 
 /**
@@ -38,6 +35,7 @@ export const CLI_ERROR_CODES = [
   "pipeline_invalid",
   "pipeline_not_found",
   "pipeline_publish_failed",
+  "automation_request_failed",
   "build_failed",
   "build_check_failed",
   "designer_exited_nonzero",

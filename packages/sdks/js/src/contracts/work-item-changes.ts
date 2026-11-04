@@ -28,8 +28,10 @@ export type WorkItemChange =
       title: string;
       description: string;
       fields?: Record<string, unknown>;
+      labels?: string[];
       blockedBy?: string[];
     }
+  | { kind: "label"; workItemId: string; add?: string[]; remove?: string[] }
   | {
       kind: "block";
       blockedWorkItemId: string;
@@ -56,6 +58,7 @@ const workItemChangesFileSchema = z.object({
     z.looseObject({
       kind: z.enum([
         "create",
+        "label",
         "block",
         "describe",
         "comment",

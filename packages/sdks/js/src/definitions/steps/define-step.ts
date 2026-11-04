@@ -21,6 +21,7 @@ import type { McpHandle } from "./define-mcp";
 import type { BuiltInError, ConversationResult } from "../../pipelines/types";
 import type { PutApiStepDefinitionsData } from "../../generated/types.gen";
 import {
+  compileStepConcurrency,
   compileStepErrors,
   compileStepMaxTurns,
   compileStepRetry,
@@ -93,8 +94,20 @@ export type DefineStepInput<
    * `.settings({ maxTurns })` instead.
    */
   maxTurns?: number;
+  /**
+   * How many live Tasks of this step may run on one work item (`max`), and
+   * how many more may wait for a slot (`waiting`). Anything past that is
+   * dropped. Omitted means no limit. Pipeline nodes can't override it.
+   */
+  concurrency?: StepConcurrency;
   /** Work item permissions the step's Tasks get on top of `self`. */
   workItemPermissions?: readonly WorkItemPermission[];
+};
+
+/** A step's per-work-item concurrency limit. */
+export type StepConcurrency = {
+  max: number;
+  waiting: number;
 };
 
 /** A work item permission a step's Tasks may be granted. */
@@ -156,6 +169,8 @@ export type StepDefinitionSpec = {
   retryJson?: StepRetryEntry[];
   /** How many times a standalone Task of this step may hand over; omitted means the server default. */
   maxTurns?: number;
+  /** The step's per-work-item concurrency limit; omitted means no limit. */
+  concurrency?: StepConcurrency;
   /** Work item permissions the step's Tasks get on top of `self`. */
   workItemPermissions?: readonly WorkItemPermission[];
   /**
@@ -326,6 +341,11 @@ export function defineStep<
     retryJson: compileStepRetry(config.key, config.retry, config.errors ?? []),
     ...(config.maxTurns !== undefined
       ? { maxTurns: compileStepMaxTurns(config.key, config.maxTurns) }
+      : {}),
+    ...(config.concurrency !== undefined
+      ? {
+          concurrency: compileStepConcurrency(config.key, config.concurrency),
+        }
       : {}),
     ...(config.workItemPermissions !== undefined
       ? { workItemPermissions: [...config.workItemPermissions] }

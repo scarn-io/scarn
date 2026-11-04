@@ -225,4 +225,4 @@ if that issue is already Done.
 
 Nothing stops you connecting more than one to the same project — issues from any
 land as work items and route through the same
-[default pipeline assignment](/scarn/guides/pipeline-assignment/).
+[default automation](/scarn/guides/automations/).

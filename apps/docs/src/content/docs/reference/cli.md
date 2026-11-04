@@ -211,7 +211,7 @@ After checking for an [interactive terminal](#terminal-requirements), every step
 10. **TUI** — launches the OpenCode TUI in `.scarn/pipeline-builder/` with an injected `pipeline-designer`
     agent, seeded with the work item. It reads the repository, interviews you goal-first, adapts the
     [default pipeline](/scarn/getting-started/concepts/#default-pipeline) (`bug-pipeline.ts`, already
-    scaffolded by the builder-folder check) plus `default-pipeline-assignment.ts` in place, typechecks, then runs
+    scaffolded by the builder-folder check) plus the `default.ts` [project automation](/scarn/guides/automations/) in place, typechecks, then runs
     `scarn pipelines push`, [`build`](#scarn-pipelines-build-file) and
     [`publish`](#scarn-pipelines-publish-file).
 
@@ -260,14 +260,14 @@ surfaces automatically at the start of your next `pipelines design` session, bef
 #### The run offer
 
 When the session exits cleanly, `design` asks _Run your new pipeline on “&lt;work item title&gt;” now?_. On
-yes it queues a run of the assigned pipeline against that work item and runs the worker in this terminal.
+yes it queues a run of the first pipeline the project's `default` automation routes to against that work item and runs the worker in this terminal.
 
 | Situation                                                                                   | What happens                                                                       |
 | ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| Pipeline assigned, any devcontainer it needs present, health checks passed                  | The confirm appears; accepting queues the run and runs the worker here             |
+| `default` routes to a pipeline, any devcontainer it needs present, health checks passed      | The confirm appears; accepting queues the run and runs the worker here             |
 | You decline                                                                                 | Prints `scarn work <owner/slug> --work-item-id <id>` and notes nothing is queued |
 | A step runs in your project's devcontainer and `.devcontainer/devcontainer.json` is missing | No offer: prints why, plus that same command                                       |
-| No pipeline assigned to the project                                                         | No offer — the session never got as far as pushing one                             |
+| No `default` project automation that routes to a pipeline                                   | No offer — the session never got as far as pushing one                             |
 | A step's blocking health check fails the dry run                                            | No offer: prints why plus the same command; the next `design` session surfaces it  |
 | The session did not exit cleanly                                                            | No offer. A non-zero designer exit code still passes through                       |
 
@@ -279,7 +279,7 @@ this is said up front. It keeps polling until you stop it, because later steps q
 #### Edit sessions
 
 When definitions already exist, the agent states a change-size verdict and gets your confirmation before it
-edits a file: **tweak** an existing pipeline, add a **route** in `default-pipeline-assignment.ts`, or create a
+edits a file: **tweak** an existing pipeline, add a **route** in `default.ts`, or create a
 **new pipeline** — preferred in that order, escalating only when the cheaper change can't express the
 difference. A pipeline that would duplicate most of an existing one's steps is a tweak or a route instead.
 One confirmed change per session is the norm, not a limit.
@@ -304,7 +304,7 @@ redirect, or a CI runner, because the TUI owns the terminal for the session.
 
 ### `scarn pipelines init`
 
-Scaffold `.scarn/pipeline-builder/` with a starter `package.json`, `tsconfig.json`, the [default pipeline](/scarn/getting-started/concepts/#default-pipeline) (`bug-pipeline.ts` and its built `bug-pipeline.json`), and a `default-pipeline-assignment.ts` that routes every new work item to it, then edit them by hand. Use `scarn pipelines design` unless you specifically want to author everything yourself.
+Scaffold `.scarn/pipeline-builder/` with a starter `package.json`, `tsconfig.json`, the [default pipeline](/scarn/getting-started/concepts/#default-pipeline) (`bug-pipeline.ts` and its built `bug-pipeline.json`), and a `default.ts` [project automation](/scarn/guides/automations/) that routes every ready work item to it, then edit them by hand. Use `scarn pipelines design` unless you specifically want to author everything yourself.
 
 Project root: the current directory, which must contain `.git`. It does not walk up from a subdirectory.
 
@@ -373,7 +373,6 @@ What gets written:
 | `.gitignore`                     | Ignores `node_modules/`, lockfiles, and `push.ts` (only on first pull)        |
 | `steps.ts`                       | One `defineStep()` export per step definition (latest version of each key)    |
 | `<pipeline-key>.json`            | Each pipeline's active version, as a JSON document                            |
-| `default-pipeline-assignment.ts` | Project routing policy (written if configured on the server; removed if not)  |
 
 After pulling, run `npm install` or `bun install` inside `.scarn/pipeline-builder/` to install dependencies. Edit the files, run `npm run typecheck` there to validate them, then [`scarn pipelines push`](#scarn-pipelines-push-project). The files are source code — commit them (see [`pipelines init`](#scarn-pipelines-init) for what the `.gitignore` leaves out).
 
@@ -383,9 +382,9 @@ Push `.scarn/pipeline-builder/` to the server, in order:
 
 1. Upsert every step definition.
 2. Publish every built `<key>.json` pipeline document, as [`publish`](#scarn-pipelines-publish-file) would. A new key creates the pipeline; a document identical to its latest version publishes nothing. Run [`build`](#scarn-pipelines-build-file) first, or push publishes stale JSON.
-3. Sync `default-pipeline-assignment.ts`, if present. Every pipeline it assigns must be on the server by now.
+3. Publish every built automation document (`<key>.json` with `"kind": "automation"`), work-item automations before project ones, since a project automation can only attach automations that exist. A new automation starts disabled; turn it on with [`scarn automations enable`](#scarn-automations). A document identical to its latest version publishes nothing.
 
-Every file is read and the steps are validated before the first write. Other `.json` files (`package.json`, `tsconfig.json`, any without `nodes`) are skipped. Absent files are ignored; they do not clear server configuration.
+Every file is read and the steps are validated before the first write. Other `.json` files (`package.json`, `tsconfig.json`, any without `nodes` or `"kind": "automation"`) are skipped. Absent files are ignored; they do not clear server configuration, and deleting an automation's source doesn't unpublish it.
 
 ```bash
 scarn pipelines push
@@ -455,6 +454,30 @@ scarn pipelines run bug-pipeline --work-item-id <work-item-id>
 | --------------------- | ---------------------------------------------------- |
 | `--work-item-id <id>` | Required. The work item to run the pipeline against  |
 | `--version <n>`       | Run this published version instead of the active one |
+
+---
+
+## `scarn automations`
+
+Turn project automations on and off, and attach work-item automations to work items. Automations are published by [`scarn pipelines push`](#scarn-pipelines-push-project). Every subcommand accepts `--base-url <url>`; `enable` and `disable` take the project from `--project <owner/slug>` (defaults to `project` in `.scarn/scarn.jsonc`).
+
+### `scarn automations enable <key>` / `disable <key>`
+
+Turn a project automation on or off. A work-item automation can't be enabled; attach it to a work item instead.
+
+```bash
+scarn automations enable attach-wayfinder
+scarn automations disable attach-wayfinder
+```
+
+### `scarn automations attach <workItem> <key>` / `detach <workItem> <key>`
+
+Attach a work-item automation to a work item, or detach it. `<workItem>` is the work item's id, or its ticket URL; a URL is looked up in the project from `--project`.
+
+```bash
+scarn automations attach 0196a000-0000-7000-8000-0000000000aa wayfinder
+scarn automations detach https://github.com/acme/app/issues/7 wayfinder
+```
 
 ---
 
@@ -597,6 +620,7 @@ unless noted above.
 | `builder_install_failed`         | Installing the builder's dependencies failed                                                            |
 | `run_queue_failed`               | The run offer could not queue the run                                                                   |
 | `push_failed`                    | `pipelines push` failed: no builder directory, missing dependencies, or the push script exited non-zero |
+| `automation_request_failed`      | The server rejected an `automations` command, e.g. enabling a work-item automation                      |
 | `build_failed`                   | `pipelines build` couldn't run: no builder directory, missing dependencies, or no runtime               |
 | `build_check_failed`             | `pipelines build --check` found missing, out-of-date or invalid pipeline JSON                           |
 | `designer_exited_nonzero`        | The designer TUI exited with a non-zero code                                                            |

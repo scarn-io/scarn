@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
-  STARTER_DEFAULT_PIPELINE_ASSIGNMENT_FILE,
+  STARTER_DEFAULT_AUTOMATION_FILE,
   STARTER_PIPELINE_FILE,
   STARTER_PIPELINE_FILENAME,
 } from "@scarn/worker";
@@ -176,7 +176,7 @@ describe("buildDesignSeedPrompt", () => {
 describe("hasAuthoredDefinitions", () => {
   const scaffold: Record<string, string> = {
     [STARTER_PIPELINE_FILENAME]: STARTER_PIPELINE_FILE,
-    "default-pipeline-assignment.ts": STARTER_DEFAULT_PIPELINE_ASSIGNMENT_FILE,
+    "default.ts": STARTER_DEFAULT_AUTOMATION_FILE,
   };
   const reader =
     (files: Record<string, string>) =>
@@ -189,7 +189,7 @@ describe("hasAuthoredDefinitions", () => {
 
   test("a freshly scaffolded directory has none", () => {
     // The regression this pins: the preflight scaffolds the starter pipeline
-    // and `default-pipeline-assignment.ts` immediately before the flag is read,
+    // and `default.ts` immediately before the flag is read,
     // so counting every `.ts` file reported "definitions already exist" on a
     // first run and told the agent to review boilerplate as if it were the
     // user's own design.
@@ -200,7 +200,7 @@ describe("hasAuthoredDefinitions", () => {
           "tsconfig.json",
           ".gitignore",
           STARTER_PIPELINE_FILENAME,
-          "default-pipeline-assignment.ts",
+          "default.ts",
         ],
         reader(scaffold),
       ),

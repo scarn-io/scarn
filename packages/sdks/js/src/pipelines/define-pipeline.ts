@@ -5,6 +5,12 @@
  * it reports what only the TS source can show, and throws
  * `PipelineBuildError` when anything is wrong.
  */
+import { pipelineOn } from "../automations/targets";
+import type { AutomationTarget, EventWorkItem } from "../automations/types";
+import type {
+  AutomationScope,
+  AutomationSubject,
+} from "../contracts/automation-document";
 import type {
   PipelineDocument,
   StepCatalog,
@@ -43,6 +49,13 @@ export interface PipelineDefinition {
   readonly steps: StepCatalog;
   /** Problems that don't stop the build, such as chains left out of `flow`. */
   readonly warnings: readonly BuildIssue[];
+  /**
+   * In an automation rule: a run of this pipeline for `workItem`
+   * (`r.workItem` or `r.child`). The bare pipeline runs for `r.workItem`.
+   */
+  on(
+    workItem: EventWorkItem<AutomationSubject>,
+  ): AutomationTarget<AutomationScope>;
 }
 
 function nodeJson(placed: PlacedNode): Record<string, unknown> {
@@ -148,7 +161,7 @@ function compile(
     start,
     nodes,
   } as PipelineDocument;
-  return {
+  const definition = {
     _tag: "pipeline_document",
     key: config.key,
     document,
@@ -158,7 +171,12 @@ function compile(
     },
     steps: stepCatalog(state),
     warnings,
-  };
+  } as const;
+  Object.defineProperty(definition, "on", {
+    value: pipelineOn(config.key),
+    enumerable: false,
+  });
+  return definition as typeof definition & Pick<PipelineDefinition, "on">;
 }
 
 /** Compiles a pipeline to its JSON document. Throws `PipelineBuildError`. */

@@ -43,7 +43,7 @@ Their pipeline definitions **typecheck, push, build and publish
 successfully**. That is the finish line for this session. Running a work item through the pipeline is a next
 step you describe at the end, not something you attempt now.
 
-Whatever you build has to be reachable: `default-pipeline-assignment.ts` must
+Whatever you build has to be reachable: `default.ts` must
 route items like the seeded one to it. A pipeline nothing routes to is dead code.
 
 Aim for **one confirmed change per session** — one new pipeline, or one edit to
@@ -111,8 +111,8 @@ If there is no devcontainer, note it and move on — writing one is phase 5, and
 what you learn in the interview shapes it. Do not stop the session over it.
 
 The scaffold has already written the default pipeline, `bug-pipeline.ts` with
-its built `bug-pipeline.json`, and `default-pipeline-assignment.ts` routing
-every item to it. Untouched, they are
+its built `bug-pipeline.json`, and `default.ts` starting
+it on every ready item. Untouched, they are
 your starting point, not the user's design. If definitions beyond the untouched
 scaffold already exist, this is an edit session. Read them, summarize what each one does in a line, and note where they
 already overlap what this item needs — you owe the user a verdict on that in
@@ -242,7 +242,7 @@ yes.** The three verdicts, in preference order **tweak > route > new pipeline**:
    for this item. Change its prompts, its servers, or add a step. Cheapest and
    least risky; reach for it first.
 2. **route** — an existing pipeline fits items like this one, but nothing sends
-   them there. Add a rule to `default-pipeline-assignment.ts`. No new pipeline.
+   them there. Add a route to `default.ts`. No new pipeline.
 3. **new pipeline** — this class of work item needs a genuinely different shape:
    different reachability, a different deliverable, steps that do not overlap
    what already exists.
@@ -416,22 +416,26 @@ do, and the next one works from that.
 Every time you change a pipeline's `.ts`, rebuild its JSON (section 9 of the
 reference). A build error names the `.ts` line; fix it there.
 
-## 7. Wire the assignment
+## 7. Wire the default automation
 
-Work items reach a pipeline through `default-pipeline-assignment.ts`, evaluated
-when items arrive from a connected tracker — not when you publish. The seeded item
-already exists, so the assignment will never pick it up, whatever you write here:
+Work items reach a pipeline through `default.ts`, the project automation, whose
+`workItem.ready` rule runs when an item becomes ready (it arrives, its last
+blocker closes, or it reopens) — not when you publish. The seeded item is
+already there, so the automation will not pick it up, whatever you write here:
 a run for it has to be queued explicitly, which the command offers to do when
 this session exits. Never imply the dashboard is about to move on its own.
 
-If the confirmed verdict was a **tweak** to a pipeline the assignment already
-routes to, do not rewrite the assignment: read it back, confirm items like the
-seeded one would still match, and leave the file alone. For a **route** or a
-**new pipeline**, update it. The seeded item is your test case either way: read
-the rules back and check that it would have matched when it arrived. Use the
-work-item fields the seeded item actually carries rather than assuming
+If the confirmed verdict was a **tweak** to a pipeline `default.ts` already
+routes to, do not rewrite it: read it back, confirm items like the seeded one
+would still match, and leave the file alone. For a **route** or a **new
+pipeline**, update it. The seeded item is your test case either way: read the
+routes back and check that it would have matched when it became ready. Use the
+labels and fields the seeded item actually carries rather than assuming
 `issueType` or `status`; ask if you cannot tell which ones are reliably filled
-in. Keep or add a skip rule for already-resolved items.
+in. Closed items are never ready, so they need no skip route.
+
+Push publishes `default.ts` disabled. Tell the user to turn it on with
+`scarn automations enable default` once they want new items to run.
 
 ## 8. Validate
 
@@ -442,8 +446,8 @@ in. Keep or add a skip rule for already-resolved items.
    node with no chain in `flow`, an `r.node(...)` for a node that did not run
    on every path, a pipeline on a named export instead of `export default`.
    With the studio open, its issues panel is the same validator.
-4. Publish each pipeline JSON you changed. An `assign("<key>")` target must be
-   published before items can run it.
+4. Publish each pipeline JSON you changed. A pipeline `default.ts` starts must
+   be published before items can run it.
 
 All of these are in section 9 of the reference, in that order. They run from
 the repository root, not from this directory.
@@ -463,7 +467,7 @@ Summarize in a few lines:
 - Concrete next steps: when you exit, `design` offers to run this pipeline on the
   seeded item and runs the worker in this terminal — send them to that offer.
   It needs a `.devcontainer/devcontainer.json`, the pipeline you just
-  published and the assignment you pushed; without them, they queue a run
+  published and the `default.ts` you pushed; without them, they queue a run
   from the item's executions drawer in the dashboard and then run `scarn
   work`. Before it asks, that offer itself
   runs every step's health checks, one launch per runtime; if a `required`
@@ -518,7 +522,7 @@ scans **this directory only** — not subdirectories.
 | `<pipeline-key>.ts`              | One pipeline. Must `export default definePipeline({ ... })`.          |
 | `<pipeline-key>.json`            | Written by `scarn pipelines build` from the `.ts`. Never edit by hand; rebuild it. |
 | `steps.ts`                       | Shared steps as **named** exports. Optional; steps may live inline.   |
-| `default-pipeline-assignment.ts` | Reserved. Routes incoming work items to a pipeline. Never a pipeline. |
+| `default.ts`                     | The project automation (`key: "default"`). Starts a pipeline when a work item is ready (§5). |
 | `push.ts`                        | Generated on every push. Never edit. Skipped by the scanner and by the typecheck. |
 | `package.json`, `tsconfig.json`  | Scaffolded. `@scarn/sdk` + `zod` are the only deps; import `z` from the SDK, not from `zod`. |
 
@@ -545,7 +549,7 @@ import {
   fail,
   equal,
 } from "@scarn/sdk/pipelines";
-import { defaultPipelineAssignment } from "@scarn/sdk/definitions/pipelines";
+import { defineAutomation, onEvent } from "@scarn/sdk/automations";
 ```
 
 ## 1. Steps — `defineStep`
@@ -983,11 +987,16 @@ export default definePipeline({
   reference
   used in a template string, a comparison or arithmetic throws at build time,
   and a field read but never used fails the build.
-- **`input.workItemComments` is not an arg.** The work item's comment thread
-  is added to every step's input at run time. Never pass it.
-- **Nothing else is added for you.** A step that needs the work item's title,
-  description or a form field gets it as an arg (`workItem.title`,
-  `workItem.description`, `workItemField(...)`).
+- **The work item is not in the step's input.** Nothing is added to a step's
+  input for you: no `input.workItem`, no `input.workItemComments`. An agent
+  reads its work item live with `scarn-get-work-item`, so its prompt should
+  say to. A step that needs the title, description or a form field as data
+  gets it as an arg (`workItem.title`, `workItem.description`,
+  `workItemField(...)`).
+- **A commit message names the work item with `workItem`, not `input`.**
+  ``repo: ({ workItem }) => Repo.readWrite({ message: `fix: ${workItem.title}` })``.
+  Only `workItem.title` and `workItem.platformKey` are allowed; the worker
+  reads them live when it commits.
 
 ## 4. Branching, decisions, lanes and errors
 
@@ -1154,33 +1163,42 @@ outside a split; `r.node(x)` past the merge of `x`'s lanes; a `.partial`
 route of an `all` node. Type errors: `.partial`/`each` in `start` or
 `.catch`, or `.partial` from `each`. No `toleratedFailures` on `all`.
 
-## 5. `default-pipeline-assignment.ts`
+## 5. `default.ts`
 
-Decides which pipeline starts when a work item arrives. Without it, nothing
-runs automatically — this file is what makes a pipeline real.
+The project automation: which pipeline starts when a work item is ready.
+Without it, nothing runs automatically. It builds to `default.json`.
 
 ```ts
-import { defaultPipelineAssignment } from "@scarn/sdk/definitions/pipelines";
+import { contains, equal } from "@scarn/sdk/pipelines";
+import { defineAutomation, onEvent, skip } from "@scarn/sdk/automations";
+import bugPipeline from "./bug-pipeline";
 
-export default defaultPipelineAssignment(
-  ({ workItem, context, all, assign, skip }) => ({
-    default: skip(),
-    rules: [
-      workItem.field("status").eq("resolved").then(skip()),
-      all(
-        workItem.field("issueType").eq("Bug"),
-        context.isNew.eq(true),
-      ).then(assign("bug-pipeline")),
-    ],
-  }),
-);
+export default defineAutomation({
+  key: "default",
+  title: "Default",
+  scope: "project",
+  rules: [
+    onEvent({
+      event: "workItem.ready",
+      routes: [
+        { when: (r) => contains(r.workItem.labels, "wontfix"), to: skip },
+        { when: (r) => equal(r.workItem.fields.kind, "Bug"), to: bugPipeline },
+      ],
+      otherwise: skip,
+    }),
+  ],
+});
 ```
 
-- `assign()` takes a pipeline **key**, or the value a pipeline file's
-  `definePipeline()` returns.
-- The pipeline must be published (§9) before a work item can run it.
-- Rules are ordered; first match wins; unmatched fall through to `default`.
-- `context.isNew` is `true` on first ingestion of the work item.
+- `workItem.ready`: a top-level item is open with no open blocker (on
+  arrival, last blocker closing, reopen). Also `workItem.created`,
+  `workItem.label.added` (`r.label`).
+- `r.workItem`: `title`, `description`, `labels`, `state`, `fields.<name>`.
+- Targets: a pipeline (a file's default export), a step call, or `skip`.
+  First matching route wins, else `otherwise`.
+- Started pipelines must be published (§9).
+- Push publishes it **disabled**; the user runs
+  `scarn automations enable default`.
 
 ## 6. Invariants — the things that actually break
 
@@ -1203,9 +1221,8 @@ export default defaultPipelineAssignment(
    checks the flow against them and writes `<key>.json`; `publish` uploads
    that JSON. A published pipeline that calls a step the server does not have
    is rejected.
-10. The scanner skips `push.ts` / `push.mjs` / `push.js` and
-    `default-pipeline-assignment.ts`, ignores subdirectories, and only reads
-    `.ts` / `.js` files.
+10. The scanner skips `push.ts` / `push.mjs` / `push.js`, ignores
+    subdirectories, and only reads `.ts` / `.js` files.
 11. Use `status: "active"` on steps. `"draft"` steps do not execute.
 12. Never edit `<key>.json` by hand. Change the `.ts` and rebuild.
 
@@ -1451,9 +1468,9 @@ export const evaluate = defineStep({
 
   agentPrompt: `
 Judge how actionable this bug report is. The report is the \`title\` and
-\`description\` in your input, and \`workItemComments\` holds the thread
-around it. A null \`description\` means the reporter wrote none. You cannot
-read code or open the app. Judge the text in front of you and nothing else.
+\`description\` in your input. A null \`description\` means the reporter wrote
+none. You cannot read code or open the app. Judge the text in front of you and
+nothing else.
 
 Look for: steps to reproduce, the expected behaviour versus what actually
 happened, the environment (URL, browser, account, version), and the scope (who
@@ -1964,7 +1981,8 @@ cd ../.. && "$SCARN_CLI" pipelines publish .scarn/pipeline-builder/bug-pipeline.
 `$SCARN_CLI` is the absolute path to the running CLI. If it is unset, fall
 back to plain `scarn pipelines ...`.
 
-- `push` sends steps, publishes every built `<key>.json`, then the assignment.
+- `push` sends steps, then publishes every built `<key>.json`: pipelines,
+  then automations such as `default.json`.
 - `build` writes `<key>.json` next to each pipeline file and validates it. A
   build error names the `.ts` line and the JSON path; fix the `.ts` and build
   again. `build bug-pipeline.ts` builds one file.

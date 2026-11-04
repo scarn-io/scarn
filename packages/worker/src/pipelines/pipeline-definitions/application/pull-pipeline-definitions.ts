@@ -1,15 +1,8 @@
-import {
-  existsSync,
-  mkdirSync,
-  readdirSync,
-  unlinkSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { createStepDefinitionsClient } from "@scarn/sdk/definitions/steps";
 import {
   createPipelineDefinitionsClient,
-  DEFAULT_PIPELINE_ASSIGNMENT_FILENAME,
   type PipelineDefinition,
 } from "@scarn/sdk/definitions/pipelines";
 import { createScarnClient } from "@scarn/sdk/client";
@@ -17,11 +10,6 @@ import {
   generateStepsFileContent,
   type StepDefContract,
 } from "../../../steps/step-definitions/infra/step-file-generator";
-import {
-  generateDefaultPipelineAssignmentFileContent,
-  UnsupportedRuleError,
-  type DefaultPipelineAssignmentContract,
-} from "../infra/default-pipeline-assignment-file-generator";
 import {
   generateWorkItemFieldsFileContent,
   type WorkItemFieldOption,
@@ -52,8 +40,6 @@ export interface PullPipelineDefinitionsResult {
   stepFiles: number;
   /** `<key>.json` documents written, one per pipeline with an active version. */
   pipelineFiles: number;
-  /** true if default-pipeline-assignment.ts was written. */
-  defaultPipelineAssignmentFile: boolean;
   /** true if work-item-fields.ts was written. */
   workItemFieldsFile: boolean;
 }
@@ -79,9 +65,6 @@ function resolveOutputFiles(dir: string, pipelineKeys: string[]): string[] {
   for (const key of pipelineKeys) {
     const name = pipelineDocumentFileName(key);
     if (existsSync(join(dir, name))) files.push(name);
-  }
-  if (existsSync(join(dir, DEFAULT_PIPELINE_ASSIGNMENT_FILENAME))) {
-    files.push(DEFAULT_PIPELINE_ASSIGNMENT_FILENAME);
   }
   if (existsSync(join(dir, WORK_ITEM_FIELDS_FILENAME))) {
     files.push(WORK_ITEM_FIELDS_FILENAME);
@@ -109,21 +92,18 @@ export async function pullPipelineDefinitions(
   const pipelineDefsClient = createPipelineDefinitionsClient(baseUrl);
   const scarnClient = createScarnClient(baseUrl);
 
-  const [rawSteps, pipelines, projectResult, fieldOptionsResult] =
-    (await Promise.all([
-      stepDefsClient.listByProjectId(projectId, { headers }),
-      pipelineDefsClient.listByProjectId(projectId, { headers }),
-      scarnClient.projects.getProject({ path: { projectId }, headers }),
-      scarnClient.projects.listProjectWorkItemFieldOptions({
-        path: { projectId },
-        headers,
-      }),
-    ])) as unknown as [
-      StepDefContract[],
-      PipelineDefinition[],
-      { data?: { defaultPipelineAssignment?: unknown }; error?: unknown },
-      { data?: WorkItemFieldOption[]; error?: unknown },
-    ];
+  const [rawSteps, pipelines, fieldOptionsResult] = (await Promise.all([
+    stepDefsClient.listByProjectId(projectId, { headers }),
+    pipelineDefsClient.listByProjectId(projectId, { headers }),
+    scarnClient.projects.listProjectWorkItemFieldOptions({
+      path: { projectId },
+      headers,
+    }),
+  ])) as unknown as [
+    StepDefContract[],
+    PipelineDefinition[],
+    { data?: WorkItemFieldOption[]; error?: unknown },
+  ];
 
   const stepDefs = rawSteps;
 
@@ -135,7 +115,6 @@ export async function pullPipelineDefinitions(
     return {
       stepFiles: 0,
       pipelineFiles: 0,
-      defaultPipelineAssignmentFile: false,
       workItemFieldsFile: false,
     };
   }
@@ -148,10 +127,6 @@ export async function pullPipelineDefinitions(
       latestSteps.set(step.key, step);
   }
   const dedupedSteps = [...latestSteps.values()];
-
-  const pipelineIdToKey = new Map<string, string>(
-    pipelines.map((pipeline) => [pipeline.id, pipeline.key]),
-  );
 
   ensureScaffold(dir, sdkVersion);
 
@@ -188,55 +163,8 @@ export async function pullPipelineDefinitions(
     pipelineFiles++;
   }
 
-  // Handle default pipeline assignment
-  let defaultPipelineAssignmentFile = false;
-  const assignmentFilePath = join(dir, DEFAULT_PIPELINE_ASSIGNMENT_FILENAME);
-
-  const project = (
-    projectResult as { data?: { defaultPipelineAssignment?: unknown } }
-  ).data;
-  const rawAssignment = project?.defaultPipelineAssignment;
-
-  const assignment = isDefaultPipelineAssignmentContract(rawAssignment)
-    ? rawAssignment
-    : null;
-
-  if (assignment) {
-    try {
-      const content = generateDefaultPipelineAssignmentFileContent(
-        assignment,
-        pipelineIdToKey,
-      );
-      writeFileSync(assignmentFilePath, content, "utf-8");
-      logger.info(
-        { file: DEFAULT_PIPELINE_ASSIGNMENT_FILENAME },
-        `✓ ${DEFAULT_PIPELINE_ASSIGNMENT_FILENAME}`,
-      );
-      defaultPipelineAssignmentFile = true;
-    } catch (err) {
-      if (err instanceof UnsupportedRuleError) {
-        throw new Error(
-          `Project default pipeline assignment contains rules that cannot be rendered ` +
-            `with the fluent SDK: ${err.message}\n` +
-            `Re-author the policy with the SDK and push again.`,
-          { cause: err },
-        );
-      }
-      throw err;
-    }
-  } else {
-    // No server assignment — remove the generated reserved file if it exists
-    if (existsSync(assignmentFilePath)) {
-      unlinkSync(assignmentFilePath);
-      logger.info(
-        { file: DEFAULT_PIPELINE_ASSIGNMENT_FILENAME },
-        `Removed ${DEFAULT_PIPELINE_ASSIGNMENT_FILENAME} (no server assignment configured).`,
-      );
-    }
-  }
-
-  // Write work-item-fields.ts: a per-project WorkItemFieldName snapshot for
-  // typed workItem.field<WorkItemFieldName>(...) usage. Always written (even
+  // Write work-item-fields.ts: a per-project WorkItemFieldName snapshot.
+  // Always written (even
   // when the project has no observed fields yet, as `never`) so its
   // presence never depends on project state.
   const fieldOptions = fieldOptionsResult.data ?? [];
@@ -254,7 +182,6 @@ export async function pullPipelineDefinitions(
   return {
     stepFiles,
     pipelineFiles,
-    defaultPipelineAssignmentFile,
     workItemFieldsFile: true,
   };
 }
@@ -270,22 +197,6 @@ function activeDefinitionOf(
     definition?: Record<string, unknown>;
   } | null;
   return current?.definition ?? null;
-}
-
-function isDefaultPipelineAssignmentContract(
-  // eslint-disable-next-line local/no-unknown-parameter-type
-  value: unknown,
-): value is DefaultPipelineAssignmentContract {
-  if (typeof value !== "object" || value === null) return false;
-  const obj = value as Record<string, unknown>;
-  return (
-    typeof obj["pipelineDefinitionId"] === "string" &&
-    typeof obj["rulesJson"] === "object" &&
-    obj["rulesJson"] !== null &&
-    (obj["defaultEventType"] === "assign" ||
-      obj["defaultEventType"] === "skip") &&
-    Array.isArray(obj["allowedEventTypes"])
-  );
 }
 
 export function getExistingOutputFiles(

@@ -9,17 +9,18 @@ function plural(
   return `${String(count)} ${count === 1 ? singular : pluralForm}`;
 }
 
-/**
- * "N step(s)" for the steps in the graph, plus "+M hand-off" for the steps an
- * agent starts. The server's `stepCount` includes hand-off steps.
- */
+/** "N step(s)": every step the template's file exports. */
 export function formatStepCount(
-  card: Pick<PipelineTemplateCard, "stepCount" | "handoffStepCount">,
+  card: Pick<PipelineTemplateCard, "stepCount">,
 ): string {
-  const graphSteps = plural(card.stepCount - card.handoffStepCount, "step");
-  return card.handoffStepCount > 0
-    ? `${graphSteps} +${String(card.handoffStepCount)} hand-off`
-    : graphSteps;
+  return plural(card.stepCount, "step");
+}
+
+/** "Pipeline" or "Automation": what the template's file defines. */
+export function formatEntryKind(
+  card: Pick<PipelineTemplateCard, "entry">,
+): string {
+  return card.entry.kind === "automation" ? "Automation" : "Pipeline";
 }
 
 /** "No setup" with no required parameters, else "N required setting(s)". */

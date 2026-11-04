@@ -10,45 +10,32 @@ const wayfinder: PipelineTemplate = {
   key: "wayfinder",
   name: "Wayfinder",
   summary:
-    "Turns a fuzzy goal into a plan by spawning research, prototype and grilling tickets until the way is clear.",
+    "Turns a fuzzy goal into a plan by charting child work items for research, prototypes and decisions until the way is clear.",
   descriptionMarkdown: `\
-Wayfinder takes a goal that isn't clear enough to build yet and finds the way.
+Wayfinder takes a goal that isn't clear enough to build yet and finds the way. It's a work-item automation with four steps.
 
-The **plan** step keeps a map on its work item: the goal, notes, decisions so far, the open questions ("fog") and, once the fog clears, the plan. Each round it creates child tickets for the open questions, starts a Task on each, blocks its own item on them and waits. When every ticket is closed it reads their resolutions, updates the map and starts the next round, until nothing is left open.
+The **plan** step keeps a map in its work item's description: the goal, notes, decisions so far, what's not yet specified and, once nothing is, the plan. It charts the map by creating child work items, each asking one question, with one label and the blockers it needs answered first.
 
-### Hand-off steps
+### Labels
 
-The pipeline graph is just \`plan\`. The planner starts these steps on its child tickets itself, by key:
+When a child work item becomes ready (open, nothing open blocking it), the automation starts the step its label names:
 
-- **research** answers one factual question with evidence from the code, its docs or the web. Read-only.
-- **prototype** builds a throwaway spike on its own work branch to find out whether an approach works.
-- **grilling** asks a person, round by round, to settle a decision only they can make.
+- \`wayfinder:research\` → **research** answers one factual question with evidence from the code, its docs or the web. Read-only.
+- \`wayfinder:prototype\` → **prototype** builds a throwaway spike on its own work branch to find out whether an approach works.
+- \`wayfinder:grilling\` → **grilling** asks a person, round by round, to settle a decision only they can make.
+- \`wayfinder:task\` starts nothing. It's work only a person can do before a decision can be made, such as signing up for a service, provisioning access or moving data. Its description says why, lists the steps and says what to record when you close it. Do it by hand, then close it with those facts in the resolution.
 
-### When to use it
+### A fresh round per close
 
-Use Wayfinder for work that needs investigating and deciding before anyone can build it. Assign it with \`assign("wayfinder")\` in \`default-pipeline-assignment.ts\`.
+Every time a child work item closes, the automation starts a fresh **plan** Task that reads the map live. It folds every closed child into the decisions, then charts new children, waits, or writes the plan and closes the map. At most one round runs and one waits; more closes while one waits are folded into that round. Closing the map stops the automation.
+
+### Attaching it
+
+Attach Wayfinder to a work item from the work item page, or with \`scarn automations attach <workItem> wayfinder\`. To attach it from a project automation, add a route in \`default.ts\`, e.g. \`{ when: (r) => contains(r.label, "wayfinder"), to: attach(wayfinder) }\` on \`workItem.label.added\`.
 `,
   tags: ["planning", "agents"],
-  pipelineKey: "wayfinder",
+  entry: { kind: "automation", key: "wayfinder" },
   stepKeys: ["plan", "research", "prototype", "grilling"],
-  handoffSteps: [
-    {
-      key: "research",
-      startedBy: "plan",
-      summary: "Answers one question on the map with evidence.",
-    },
-    {
-      key: "prototype",
-      startedBy: "plan",
-      summary:
-        "Builds a throwaway spike to find out whether an approach works.",
-    },
-    {
-      key: "grilling",
-      startedBy: "plan",
-      summary: "Settles a decision with a person, round by round.",
-    },
-  ],
   parameters: [
     {
       key: "planning_guidance",
@@ -81,9 +68,8 @@ When it lacks something only your team knows, such as credentials or a purchasin
 Tell it how to reach your application in **Application Access Instructions**: the URL, test credentials and any environment details.
 `,
   tags: ["bugs", "browser"],
-  pipelineKey: "web-repro-playwright",
+  entry: { kind: "pipeline", key: "web-repro-playwright" },
   stepKeys: ["web-repro-playwright"],
-  handoffSteps: [],
   parameters: [
     {
       key: "app_access_instructions",

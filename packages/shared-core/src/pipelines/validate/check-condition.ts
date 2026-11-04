@@ -11,8 +11,7 @@ import {
   ORDERING_OPERATORS,
 } from "@scarn/sdk/contracts/pipeline-document";
 import { splitPath } from "../references/parse";
-import { report, type Site, type ValidationContext } from "./context";
-import { resolveReferenceSchema } from "./reference-schema";
+import { report, type ReportContext, type Site } from "./context";
 import type { Segment } from "./graph";
 import {
   ANY,
@@ -29,19 +28,31 @@ import { describeSchema } from "./schema-relations";
 import { closest } from "./suggest";
 import { checkOperator, operatorError } from "./check-operator";
 
+/**
+ * What checking a condition needs: where errors go and how a reference is
+ * typed. Pipelines type `result.*`, `nodes.*`, …; automations type `event.*`.
+ */
+export interface ConditionContext extends ReportContext {
+  resolveReference(
+    site: Site,
+    text: string,
+    pointer: Segment[],
+  ): RootedSchema | null;
+}
+
 type Scope = { element?: RootedSchema; label?: string };
 
 const NUMBER_SCHEMA = rooted({ type: "number" });
 
 function readLeft(
-  ctx: ValidationContext,
+  ctx: ConditionContext,
   site: Site,
   scope: Scope,
   path: string,
   pointer: Segment[],
 ): RootedSchema | null {
   if (scope.element === undefined) {
-    return resolveReferenceSchema(ctx, site, path, pointer);
+    return ctx.resolveReference(site, path, pointer);
   }
   const segments = splitPath(path);
   const found =
@@ -64,7 +75,7 @@ function readLeft(
 }
 
 function checkComputed(
-  ctx: ValidationContext,
+  ctx: ConditionContext,
   site: Site,
   scope: Scope,
   fn: string,
@@ -178,7 +189,7 @@ function checkComputed(
 }
 
 function checkConditionIn(
-  ctx: ValidationContext,
+  ctx: ConditionContext,
   site: Site,
   scope: Scope,
   condition: Condition,
@@ -199,7 +210,7 @@ function checkConditionIn(
   const right =
     condition.ref === undefined
       ? null
-      : resolveReferenceSchema(ctx, site, condition.ref, [...pointer, "ref"]);
+      : ctx.resolveReference(site, condition.ref, [...pointer, "ref"]);
   const fn = COMPUTED_FUNCTIONS.find((name) => condition[name] !== undefined);
   if (fn !== undefined) {
     checkComputed(
@@ -269,7 +280,7 @@ function checkConditionIn(
 }
 
 export function checkCondition(
-  ctx: ValidationContext,
+  ctx: ConditionContext,
   site: Site,
   condition: Condition,
   pointer: Segment[],

@@ -27,6 +27,7 @@ type CommitOptions = {
   message?: string | null;
   inputJson?: Record<string, string>;
   onPushFailure?: RepoOnPushFailure;
+  loadWorkItem?: () => Promise<{ title: string; platformKey: string } | null>;
 };
 
 async function runCommitWithOutcome(
@@ -78,6 +79,44 @@ describe("commit message", () => {
     expect(commitPush.commitAllMessages).toEqual([
       "fix(api): handle empty payloads",
     ]);
+  });
+
+  test("renders {{workItem.title}} and {{workItem.platformKey}} from a live read", async () => {
+    let reads = 0;
+    const commitPush = await runCommit({
+      message: "{{workItem.platformKey}}: {{workItem.title}}",
+      loadWorkItem: () => {
+        reads += 1;
+        return Promise.resolve({ title: "Fix login", platformKey: "SCARN-7" });
+      },
+    });
+
+    expect(commitPush.commitAllMessages).toEqual(["SCARN-7: Fix login"]);
+    expect(reads).toBe(1);
+  });
+
+  test("skips the work item read when the template has no workItem token", async () => {
+    let reads = 0;
+    const commitPush = await runCommit({
+      message: "fix: {{result.summary}}",
+      result: { summary: "x" },
+      loadWorkItem: () => {
+        reads += 1;
+        return Promise.resolve({ title: "T", platformKey: "K" });
+      },
+    });
+
+    expect(commitPush.commitAllMessages).toEqual(["fix: x"]);
+    expect(reads).toBe(0);
+  });
+
+  test("renders workItem tokens empty when the read yields nothing", async () => {
+    const commitPush = await runCommit({
+      message: "work on {{workItem.title}}",
+      loadWorkItem: () => Promise.resolve(null),
+    });
+
+    expect(commitPush.commitAllMessages).toEqual(["work on"]);
   });
 
   test("falls back to the default when the template renders empty", async () => {

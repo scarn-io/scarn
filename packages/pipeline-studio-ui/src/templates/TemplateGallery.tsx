@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { templatePath } from "../router";
 import { Link } from "../router-react";
 import {
+  formatEntryKind,
   formatOptionalSettings,
   formatSetupLabel,
   formatStepCount,
@@ -51,6 +52,7 @@ function TemplateCard({ card }: { card: PipelineTemplateCard }) {
         <h2 className="studio-template-card-name">{card.name}</h2>
         <p className="studio-template-card-summary">{card.summary}</p>
         <div className="studio-template-card-meta">
+          <span>{formatEntryKind(card)}</span>
           <span>{formatStepCount(card)}</span>
           <span>{formatSetupLabel(card.parameters)}</span>
         </div>

@@ -10,7 +10,7 @@ import { captureMilestone } from "./telemetry";
  *
  * A design session used to end in prose: a count of definition files and a
  * command to type. But the session already knows everything needed to run what
- * it just built — the project, the pipeline the assignment points at, and the
+ * it just built — the project, the pipeline its `default` automation starts, and the
  * one work item the whole interview was about (see `design-preflight.ts`). So
  * it offers to run it, and the user never has to learn that
  * `--work-item-id` exists.
@@ -18,7 +18,7 @@ import { captureMilestone } from "./telemetry";
  * Three things gate the offer, and all of them are honest about it rather than
  * failing halfway:
  *
- * - A pipeline for the assignment to point at. Absent, the session never got as
+ * - A pipeline for the `default` automation to start. Absent, the session never got as
  *   far as pushing, so there is nothing to run.
  * - A devcontainer, but only when the pipeline has a step that executes inside
  *   the project's own one (a `workspace` step without a managed runtime).
@@ -70,9 +70,9 @@ export type DryRunGateResult = {
 
 export interface DesignRunOfferPorts {
   /**
-   * The pipeline definition the project's default assignment points at — what
-   * the session just pushed. `undefined` when the project has no assignment,
-   * which means nothing was pushed.
+   * The pipeline definition the project's `default` automation starts — what
+   * the session just pushed. `undefined` when the automation starts no
+   * pipeline, which means nothing was pushed.
    */
   resolveAssignedPipeline(): Promise<string | undefined>;
   /**
@@ -152,9 +152,9 @@ export const DEVCONTAINER_MISSING_MESSAGE =
   "session, or add one by hand.";
 
 export const NO_PIPELINE_MESSAGE =
-  "No pipeline is assigned to this project yet, so there is nothing to run. " +
+  "This project's default automation starts no pipeline yet, so there is nothing to run. " +
   "Re-run the design session and let the agent finish — it pushes the pipeline " +
-  "and its assignment together.";
+  "and default.ts together.";
 
 /** Heads the health-check gate's failure; the failing steps follow, one per line. */
 export const HEALTH_DRY_RUN_FAILED_MESSAGE =

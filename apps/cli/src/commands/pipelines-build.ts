@@ -23,9 +23,9 @@ import {
 } from "../lib/resolve-project-ref";
 
 /**
- * `scarn pipelines build [file]`: compile the `definePipeline` default
- * exports in `.scarn/pipeline-builder/` to `<key>.json` next to their
- * sources, and validate them. `--check` writes nothing and fails on missing
+ * `scarn pipelines build [file]`: compile the `definePipeline` and
+ * `defineAutomation` default exports in `.scarn/pipeline-builder/` to
+ * `<key>.json` next to their sources, and validate them. `--check` writes nothing and fails on missing
  * or out-of-date JSON, for CI.
  */
 
@@ -153,7 +153,7 @@ const runBuild = (args: ArgumentsCamelCase<BuildArguments>) =>
 
     if (result.files.length === 0) {
       reporter.info(
-        `No pipelines found${file === undefined ? ` in ${PIPELINE_BUILDER_DIR}` : ` in ${display(file)}`}: no file default-exports \`definePipeline(...)\` from "@scarn/sdk/pipelines".`,
+        `No pipelines or automations found${file === undefined ? ` in ${PIPELINE_BUILDER_DIR}` : ` in ${display(file)}`}: no file default-exports \`definePipeline(...)\` from "@scarn/sdk/pipelines" or \`defineAutomation(...)\` from "@scarn/sdk/automations".`,
       );
       return;
     }
@@ -163,14 +163,14 @@ const runBuild = (args: ArgumentsCamelCase<BuildArguments>) =>
         args.check ? "build_check_failed" : "pipeline_invalid",
         args.check
           ? "Pipeline JSON is missing, out of date or invalid."
-          : "Some pipelines failed to build or validate.",
+          : "Some pipelines or automations failed to build or validate.",
       );
     }
   });
 
 export const buildCommand: CommandModule<object, BuildArguments> = {
   command: "build [file]",
-  describe: `Compile TypeScript pipelines in ${PIPELINE_BUILDER_DIR} to <key>.json documents and validate them`,
+  describe: `Compile TypeScript pipelines and automations in ${PIPELINE_BUILDER_DIR} to <key>.json documents and validate them`,
   builder: (argv: Argv<object>) =>
     argv
       .positional("file", {

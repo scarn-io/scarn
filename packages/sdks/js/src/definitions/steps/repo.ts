@@ -25,8 +25,9 @@ export type ReadOnlyRepoSpec = { readonly mode: "readOnly" };
 export type ReadWriteRepoSpec = {
   readonly mode: "readWrite";
   /**
-   * Commit message template; `{{input.…}}` and `{{result.…}}` tokens only, one
-   * line, at most 500 characters. Defaults to `scarn: task <taskId>`.
+   * Commit message template; `{{input.…}}`, `{{result.…}}`,
+   * `{{workItem.title}}` and `{{workItem.platformKey}}` tokens only, one line,
+   * at most 500 characters. Defaults to `scarn: task <taskId>`.
    */
   readonly message?: string;
   /** Defaults to `"fail"`: a failed push fails the step. */
@@ -35,16 +36,21 @@ export type ReadWriteRepoSpec = {
 
 export type RepoSpec = NoneRepoSpec | ReadOnlyRepoSpec | ReadWriteRepoSpec;
 
-/** What `Runtime.devcontainer()` accepts. */
+/** What `Runtime.devcontainer()` and `Runtime.managed.<id>()` accept. */
 export type DevcontainerRepoSpec = ReadOnlyRepoSpec | ReadWriteRepoSpec;
 
 /** What `Runtime.host()` accepts. */
 export type HostRepoSpec = NoneRepoSpec;
 
 /** Runs once at definition time, against the same proxies `agentPrompt` and `vars` use. */
+/** The work item values a commit message may name, read live at commit time. */
+export type CommitMessageWorkItem = { title: string; platformKey: string };
+
 export type RepoFn<TInput, TResult, TSpec extends RepoSpec> = (context: {
   input: PromptInputProxy<TInput>;
   result: PromptInputProxy<TResult>;
+  /** The Task's work item: `{{workItem.title}}` and `{{workItem.platformKey}}`. */
+  workItem: PromptInputProxy<CommitMessageWorkItem>;
 }) => TSpec;
 
 export type RepoField<TInput, TResult, TSpec extends RepoSpec> =
@@ -106,6 +112,7 @@ export function compileRepo<TInput, TResult>(
       ? repo({
           input: createPromptInputProxy<TInput>(["input"]),
           result: createPromptInputProxy<TResult>(["result"]),
+          workItem: createPromptInputProxy<CommitMessageWorkItem>(["workItem"]),
         })
       : repo;
 

@@ -203,17 +203,32 @@ describe("defineStep — runtime", () => {
     expect(spec.managedRuntime).toBeUndefined();
   });
 
-  test("a managed runtime is a type error and fails validation", () => {
-    const spec = defineStep({
-      ...base,
-      // @ts-expect-error managed runtimes are for codeStep only
-      environment: { runtime: Runtime.managed.bun1() },
-    });
-    const issues = validateDefinitionSpecs([spec]);
-    expect(spec.managedRuntime).toBe("bun1");
-    expect(issues).toHaveLength(1);
-    expect(issues[0]?.check).toBe("runtime");
-    expect(issues[0]?.message).toContain("only supported for code steps");
+  test.each([
+    ["readOnly", Repo.readOnly()],
+    ["readWrite", Repo.readWrite()],
+  ] as const)(
+    "a managed runtime with Repo.%s() emits workspace and passes validation",
+    (mode, repo) => {
+      const spec = defineStep({
+        ...base,
+        environment: { runtime: Runtime.managed.bun1(), repo },
+      });
+      expect(spec.executionMode).toBe("workspace");
+      expect(spec.devcontainerConfigPath).toBeNull();
+      expect(spec.managedRuntime).toBe("bun1");
+      expect(spec.repo?.mode).toBe(mode);
+      expect(validateDefinitionSpecs([spec])).toEqual([]);
+    },
+  );
+
+  test("a managed runtime with Repo.none() is a type error and throws", () => {
+    expect(() =>
+      defineStep({
+        ...base,
+        // @ts-expect-error a managed runtime clones the repo, so it takes no Repo.none()
+        environment: { runtime: Runtime.managed.bun1(), repo: Repo.none() },
+      }),
+    ).toThrow();
   });
 
   test("Runtime.host() emits no_workspace", () => {

@@ -32,6 +32,8 @@ export type TaskRunContract = {
 
 export type TaskRunWorkerContextContract = {
   projectId: string;
+  /** The project's `<ownerUsername>/<slug>` web path; null without an owner username. */
+  projectPath?: string | null;
   gitUrl: string;
   /**
    * The previous step's work branch that this (later) step must be created off

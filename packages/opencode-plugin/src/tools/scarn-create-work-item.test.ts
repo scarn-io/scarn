@@ -10,6 +10,7 @@ import {
 } from "./_shared/work-item-tool-support";
 import {
   CREATE_LIMIT_REACHED_MESSAGE,
+  CREATED_WORK_ITEM_NOTE,
   createWorkItem,
 } from "./scarn-create-work-item";
 
@@ -28,6 +29,7 @@ describe("createWorkItem", () => {
             title: "Child",
             description: "Do it",
             fields: { size: "s" },
+            labels: ["bug"],
             blockedBy: ["item-other"],
           },
           workspacePath,
@@ -42,11 +44,47 @@ describe("createWorkItem", () => {
           title: "Child",
           description: "Do it",
           fields: { size: "s" },
+          labels: ["bug"],
           blockedBy: ["item-other"],
         },
       ]);
     },
   );
+
+  test.concurrent(
+    "returns the new item's web page url and a note on linking it",
+    async () => {
+      const workspacePath = await workItemTestWorkspace({
+        workItemLinks: {
+          appBaseUrl: "https://app.test/",
+          projectPath: "acme/web",
+        },
+      });
+
+      const output = JSON.parse(
+        await createWorkItem(
+          { title: "Child", description: "" },
+          workspacePath,
+        ),
+      ) as { workItemId: string; url: string; note: string };
+
+      expect(output.url).toBe(
+        `https://app.test/acme/web/work-items/${output.workItemId}`,
+      );
+      expect(output.note).toBe(CREATED_WORK_ITEM_NOTE);
+      expect(output.note).toContain("[title](url)");
+    },
+  );
+
+  test.concurrent("returns a null url without work item links", async () => {
+    const workspacePath = await workItemTestWorkspace();
+
+    const output = JSON.parse(
+      await createWorkItem({ title: "Child", description: "" }, workspacePath),
+    ) as { url: unknown };
+
+    expect(output.url).toBeNull();
+  });
 
   test.concurrent("omits absent optional fields", async () => {
     const workspacePath = await workItemTestWorkspace();
@@ -107,6 +145,18 @@ describe("createWorkItem", () => {
     expect(
       await createWorkItem({ title: " ", description: "" }, workspacePath),
     ).toContain("Invalid input");
+    expect(await readWorkItemChanges(workspacePath)).toEqual([]);
+  });
+
+  test.concurrent("rejects labels that are not strings", async () => {
+    const workspacePath = await workItemTestWorkspace();
+
+    expect(
+      await createWorkItem(
+        { title: "Child", description: "", labels: ["bug", 3] },
+        workspacePath,
+      ),
+    ).toContain("`labels`");
     expect(await readWorkItemChanges(workspacePath)).toEqual([]);
   });
 });

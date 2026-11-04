@@ -26,9 +26,9 @@ import { GraphLegend } from "./GraphLegend";
 import { GraphNode, type GraphNodeType } from "./GraphNode";
 import { palette, tint } from "./graph-palette";
 import type { StudioEdge, StudioNode } from "./studio-graph-types";
-import { HandoffNode } from "./HandoffNode";
+import { DetachedStepNode } from "./DetachedStepNode";
 import {
-  HANDOFF_NODE_TYPE,
+  DETACHED_NODE_TYPE,
   nodeLayoutSize,
   PIPELINE_NODE_TYPE,
 } from "./studio-graph-visuals";
@@ -40,7 +40,7 @@ import {
 // identity is stable across renders.
 const nodeTypes: NodeTypes = {
   [PIPELINE_NODE_TYPE]: GraphNode,
-  [HANDOFF_NODE_TYPE]: HandoffNode,
+  [DETACHED_NODE_TYPE]: DetachedStepNode,
 };
 const edgeTypes: EdgeTypes = { pipelineEdge: GraphEdge };
 
@@ -164,8 +164,8 @@ export function PipelineGraphView({
         return {
           ...node,
           type:
-            node.data.kind === "handoff"
-              ? HANDOFF_NODE_TYPE
+            node.data.kind === "detached"
+              ? DETACHED_NODE_TYPE
               : PIPELINE_NODE_TYPE,
           // The nodes never receive measured sizes back (no
           // `onNodesChange`), and `<MiniMap>` reads sizes off them.

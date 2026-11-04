@@ -83,6 +83,16 @@ describe("generateStepsFileContent code step runtime", () => {
     expect(content).not.toContain("Runtime.devcontainer(),");
   });
 
+  test("emits Runtime.managed.bun1() for an agent step, where bun1 is not the default", () => {
+    const content = generateStepsFileContent([
+      makeStep({ kind: "user_defined", managedRuntime: "bun1" }),
+    ]);
+
+    expect(content).toContain(
+      "environment: {\n    runtime: Runtime.managed.bun1(),\n  }",
+    );
+  });
+
   test("leaves agent steps unchanged whatever kind or managedRuntime they carry", () => {
     const content = generateStepsFileContent([
       makeStep({ key: "plain-agent", kind: "user_defined" }),

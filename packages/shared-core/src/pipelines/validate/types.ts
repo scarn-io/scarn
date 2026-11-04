@@ -6,6 +6,8 @@ export type ValidationErrorCode =
   | "unknown_node"
   | "unreachable_node"
   | "unknown_step"
+  | "unknown_pipeline"
+  | "unknown_automation"
   | "route_without_when"
   | "missing_arg"
   | "extra_arg"

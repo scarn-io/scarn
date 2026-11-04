@@ -24,7 +24,7 @@ describe("composed prompt covers the required sections", () => {
     // Interview / behaviour, from AGENT_PROMPT.md
     ...Object.values(PHASE),
     "One question at a time",
-    "default-pipeline-assignment.ts",
+    "`default.ts`",
     "typecheck, push, build and publish",
   ])("agent-prompt section present: %s", (needle) => {
     expect(prompt).toContain(needle);
@@ -310,12 +310,10 @@ describe("the devcontainer phase is write-only", () => {
   });
 });
 
-describe("the assignment phase tells the truth about when it fires", () => {
-  // `POST /api/work-items` — the endpoint the design preflight creates the
-  // seeded item through — does not evaluate the default assignment
-  // (`create-work-item.ts` never calls `maybeAssignDefaultPipelines`; only the
-  // upsert path does). A prompt that promises the seeded item is about to move
-  // sends the user to watch a dashboard where nothing happens.
+describe("the default-automation phase tells the truth about when it fires", () => {
+  // The project automation reacts to `workItem.ready`, which the seeded item
+  // emitted before the session started. A prompt that promises the seeded item
+  // is about to move sends the user to watch a dashboard where nothing happens.
   const assignment = sectionBetween(
     buildPipelineDesignerPrompt(),
     PHASE.build,
@@ -323,7 +321,7 @@ describe("the assignment phase tells the truth about when it fires", () => {
   );
 
   test("does not claim pushing starts a run for the seeded item", () => {
-    expectPhrase(assignment, "the assignment will never pick it up");
+    expectPhrase(assignment, "the automation will not pick it up");
     expectNoPhrase(assignment, "starts the pipeline on its own");
   });
 
@@ -336,9 +334,9 @@ describe("the assignment phase tells the truth about when it fires", () => {
     expectPhrase(assignment, "run `scarn work`");
   });
 
-  test("a confirmed tweak does not also mandate rewriting the assignment", () => {
+  test("a confirmed tweak does not also mandate rewriting default.ts", () => {
     // Phase 4 defines `route` as the escalation from `tweak`, so an
-    // unconditional "update the assignment" here would contradict a confirmed
+    // unconditional "update default.ts" here would contradict a confirmed
     // tweak — the agent would edit the file it was just told to leave alone.
     expectPhrase(assignment, "If the confirmed verdict was a **tweak**");
     expectPhrase(assignment, "leave the file alone");
