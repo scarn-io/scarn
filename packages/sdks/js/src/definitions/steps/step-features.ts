@@ -1,17 +1,79 @@
 import { z } from "zod";
 import type { ZodObject, ZodRawShape } from "zod";
 
+// ─── Grants ───────────────────────────────────────────────────────────────────
+//
+// Declared here rather than derived from the generated API types: the OpenAPI
+// 3.0 document can't carry `const`, so the generated `grants` element has
+// `action: string` and loses the discriminant. The step-definitions client
+// assigns `Grant[]` to the generated body type, which keeps the two in step.
+
+export const grantActionValues = [
+  "read",
+  "update",
+  "comment",
+  "label",
+  "block",
+  "close",
+  "create",
+] as const;
+export const grantScopeValues = ["self", "children"] as const;
+
+/** What a grant lets the agent do to a work item. */
+export type GrantAction = (typeof grantActionValues)[number];
+/** `self`: the Task's own work item. `children`: its child work items. */
+export type GrantScope = (typeof grantScopeValues)[number];
+
+/**
+ * One thing a step's Tasks may do to a work item. `label` and `create` name
+ * the labels they may set; `create` only covers `children`.
+ */
+export type Grant =
+  | {
+      resource: "workItem";
+      action: "read" | "update" | "comment" | "block" | "close";
+      scope: GrantScope;
+    }
+  | {
+      resource: "workItem";
+      action: "label";
+      scope: GrantScope;
+      labels: string[];
+    }
+  | {
+      resource: "workItem";
+      action: "create";
+      scope: "children";
+      labels: string[];
+    };
+
 // ─── Core types ───────────────────────────────────────────────────────────────
 
 export type StepFeature<
   TResultExtension extends Record<string, unknown> = Record<string, unknown>,
+  TGrant extends Grant | undefined = undefined,
 > = {
-  readonly _resultExtension: ZodObject<ZodRawShape>;
+  /** Fields the feature adds to the step's result; omitted when it adds none. */
+  readonly _resultExtension?: ZodObject<ZodRawShape>;
   readonly _promptAddition: string;
+  /** The grant the feature gives the step's Tasks, if any. */
+  readonly _grant?: TGrant;
   readonly __resultExtension?: TResultExtension; // phantom
 };
 
-export type AnyStepFeature = StepFeature;
+export type AnyStepFeature = StepFeature<
+  Record<string, unknown>,
+  Grant | undefined
+>;
+
+/** A feature that grants a work item action. Adds nothing to the result. */
+export type WorkItemFeature<TGrant extends Grant = Grant> = StepFeature<
+  Record<never, never>,
+  TGrant
+> & { readonly _grant: TGrant };
+
+/** A feature a code step may attach: no grant, since it has no agent tools. */
+export type CodeStepFeature = StepFeature;
 
 type UnionToIntersection<U> = (
   U extends unknown ? (x: U) => void : never
@@ -25,7 +87,9 @@ export type FeatureResultExtensions<
 > = [TFeatures[number]] extends [never]
   ? Record<never, never>
   : UnionToIntersection<
-      TFeatures[number] extends StepFeature<infer R> ? R : never
+      TFeatures[number] extends StepFeature<infer R, Grant | undefined>
+        ? R
+        : never
     >;
 
 // ─── Built-in: notifications (general user notification primitive) ─────────────
@@ -177,6 +241,133 @@ const feedbackRequestsFeature: NotificationsFeature = {
   ].join("\n"),
 };
 
+// ─── Built-in: workItems (one grant per feature) ──────────────────────────────
+
+const WORK_ITEM_TOOLS: Record<GrantAction, string> = {
+  read: "scarn-get-work-item",
+  update: "scarn-set-work-item-description",
+  comment: "scarn-comment-on-work-item",
+  label: "scarn-label-work-item",
+  block: "scarn-block-work-item",
+  close: "scarn-close-work-item",
+  create: "scarn-create-work-item",
+};
+
+const WORK_ITEM_ACTION_TEXT: Record<GrantAction, string> = {
+  read: "read",
+  update: "replace the description of",
+  comment: "comment on",
+  label: "add or remove labels on",
+  block: "mark as blocked",
+  close: "close",
+  create: "create",
+};
+
+const scopeText = (action: GrantAction, scope: GrantScope): string => {
+  if (action === "create") return "child work items of your work item";
+  return scope === "self" ? "your work item" : "its child work items";
+};
+
+const scopeHeading: Record<GrantScope, string> = {
+  self: "Your Work Item",
+  children: "Child Work Items",
+};
+
+const actionHeading: Record<GrantAction, string> = {
+  read: "Read",
+  update: "Update",
+  comment: "Comment on",
+  label: "Label",
+  block: "Block",
+  close: "Close",
+  create: "Create",
+};
+
+function workItemPrompt(grant: Grant): string {
+  const heading =
+    grant.action === "create"
+      ? "## Work Items: Create Child Work Items"
+      : `## Work Items: ${actionHeading[grant.action]} ${scopeHeading[grant.scope]}`;
+  const lines = [
+    heading,
+    "",
+    `You may ${WORK_ITEM_ACTION_TEXT[grant.action]} ${scopeText(grant.action, grant.scope)}. Use the \`${WORK_ITEM_TOOLS[grant.action]}\` tool.`,
+  ];
+  if (grant.action === "label" || grant.action === "create") {
+    lines.push(
+      "",
+      "Allowed labels:",
+      ...grant.labels.map((label) => `- \`${label}\``),
+      "",
+      "Any other label is rejected.",
+    );
+  }
+  return lines.join("\n");
+}
+
+function workItemFeature<TGrant extends Grant>(
+  grant: TGrant,
+): WorkItemFeature<TGrant> {
+  return { _grant: grant, _promptAddition: workItemPrompt(grant) };
+}
+
+type ScopeOptions = { scope: GrantScope };
+type LabelsOptions<TLabels extends readonly string[]> = {
+  scope: GrantScope;
+  labels: TLabels;
+};
+
+/**
+ * Work item grants. Each builder gives the step's Tasks one action on their
+ * work item (`scope: "self"`) or its children (`scope: "children"`), and adds
+ * a prompt section naming the tool to use. A step may attach at most one per
+ * action and scope.
+ */
+const workItems = {
+  read: ({ scope }: ScopeOptions) =>
+    workItemFeature({ resource: "workItem", action: "read", scope } as const),
+  update: ({ scope }: ScopeOptions) =>
+    workItemFeature({ resource: "workItem", action: "update", scope } as const),
+  comment: ({ scope }: ScopeOptions) =>
+    workItemFeature({
+      resource: "workItem",
+      action: "comment",
+      scope,
+    } as const),
+  block: ({ scope }: ScopeOptions) =>
+    workItemFeature({ resource: "workItem", action: "block", scope } as const),
+  close: ({ scope }: ScopeOptions) =>
+    workItemFeature({ resource: "workItem", action: "close", scope } as const),
+  /** Add or remove the given labels; the agent may not touch any other. */
+  label: <const TLabels extends readonly [string, ...string[]]>({
+    scope,
+    labels,
+  }: LabelsOptions<TLabels>): WorkItemFeature<
+    Extract<Grant, { action: "label" }> & { labels: [...TLabels] }
+  > =>
+    workItemFeature({
+      resource: "workItem",
+      action: "label",
+      scope,
+      labels: [...labels] as [...TLabels],
+    }),
+  /** Create child work items, each with labels from `labels` only. */
+  create: <const TLabels extends readonly [string, ...string[]]>({
+    labels,
+  }: {
+    scope: "children";
+    labels: TLabels;
+  }): WorkItemFeature<
+    Extract<Grant, { action: "create" }> & { labels: [...TLabels] }
+  > =>
+    workItemFeature({
+      resource: "workItem",
+      action: "create",
+      scope: "children",
+      labels: [...labels] as [...TLabels],
+    }),
+} as const;
+
 // ─── Features namespace — attach a capability to a step definition ────────────
 //
 // `Features.*` is exclusively for `features: [...]`. It never carries value
@@ -192,6 +383,7 @@ export const Features = {
    * `$scarn_notifications_v1` result field.
    */
   feedbackRequests: (): NotificationsFeature => feedbackRequestsFeature,
+  workItems,
 } as const;
 
 // ─── Notify — construct a notification result value at runtime ────────────────

@@ -222,9 +222,8 @@ function cardCaption(data: GraphNodeData): string {
  *   the node's title and caption, a fork tag on a `match: "all"` node, a
  *   merge tag on a merge node and a pause tag on a step that sets `maxTurns`;
  * - **succeed / fail** — a rounded terminal pill tinted green or red;
- * - **event** — the same pill, tinted amber, as an automation graph entry;
- * - **rule / pipeline / action** — the card, captioned by `kindLabel`
- *   (rule number, route target).
+ * - **pipeline / action** — the card, captioned by `kindLabel` (the route
+ *   target), as the automation round view draws them.
  *
  * The host's `NodeDecoration` (run status, validation issues) shows as the
  * border color, a corner badge and caption text.
@@ -278,11 +277,7 @@ export function GraphNode({ data, selected }: NodeProps<GraphNodeType>) {
     );
   }
 
-  if (
-    data.kind === "succeed" ||
-    data.kind === "fail" ||
-    data.kind === "event"
-  ) {
+  if (data.kind === "succeed" || data.kind === "fail") {
     return (
       <div
         className="pipeline-graph-node"

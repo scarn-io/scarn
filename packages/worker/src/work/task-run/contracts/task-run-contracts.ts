@@ -1,3 +1,4 @@
+import type { Grant } from "@scarn/sdk";
 import type { EnvVarSpec } from "@scarn/sdk/env-vars";
 import type { HealthCheck } from "@scarn/sdk/health-checks";
 import type { RepoConfig } from "@scarn/sdk/repo-config";
@@ -21,9 +22,6 @@ export type TaskRunStatus =
  * generated API types so the two cannot drift.
  */
 export type TaskKind = "agent" | "code";
-
-/** Mirrors the server's work item permissions: what a Task's agent may change. */
-export type WorkItemPermission = "self" | "children";
 
 export type TaskRunContract = {
   id: string;
@@ -84,8 +82,8 @@ export type TaskRunWorkerContextContract = {
     /** How many more turns the agent may hand to a person; null outside a pipeline run. */
     turnsRemaining?: number | null;
     workItemId?: string;
-    /** Which work items the agent's work item tools may change. */
-    workItemPermissions?: readonly WorkItemPermission[];
+    /** What the agent's work item tools may do, and to which work items. */
+    grants: Grant[];
   };
   runtime: {
     /**

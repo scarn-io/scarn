@@ -21,7 +21,7 @@ import {
   Runtime,
   type CodeStepEnvironment,
 } from "./runtime";
-import type { AnyStepFeature } from "./step-features";
+import type { CodeStepFeature } from "./step-features";
 
 /** What the worker passes a code step besides its input. */
 export type CodeStepContext = {
@@ -41,7 +41,7 @@ export type CodeStepFn<TInput, TResult> = (
 export type DefineCodeStepInput<
   TInput extends ZodType = ZodType,
   TResult extends ZodType = ZodType,
-  TFeatures extends ReadonlyArray<AnyStepFeature> = never[],
+  TFeatures extends ReadonlyArray<CodeStepFeature> = never[],
 > = {
   key: string;
   name: string;
@@ -69,7 +69,8 @@ export type DefineCodeStepInput<
   /**
    * Step features to attach — unlike `defineStep()`, only each feature's
    * `_resultExtension` applies here (there is no prompt to append
-   * to on a `kind: "code"` step).
+   * to on a `kind: "code"` step). `Features.workItems.*` is rejected: a code
+   * step has no agent tools to use a grant with.
    */
   features?: TFeatures;
   /**
@@ -112,7 +113,7 @@ export type DefineCodeStepInput<
 export function codeStep<
   TInput extends ZodType = ZodType,
   TResult extends ZodType = ZodType,
-  const TFeatures extends ReadonlyArray<AnyStepFeature> = never[],
+  const TFeatures extends ReadonlyArray<CodeStepFeature> = never[],
   const TErrors extends string = never,
 >(
   config: Omit<
@@ -130,13 +131,14 @@ export function codeStep<
   EffectiveResult<TResult["_output"], TFeatures>,
   TErrors
 > {
-  const features = (config.features ?? []) as AnyStepFeature[];
+  const features = (config.features ?? []) as CodeStepFeature[];
 
   // Merge each feature's result extension into the base schema — same
   // approach as `defineStep()`, minus the prompt-append step (code steps
   // have no prompt).
   let effectiveResult: ZodType | undefined = config.resultSchema;
   for (const feature of features) {
+    if (!feature._resultExtension) continue;
     effectiveResult = effectiveResult
       ? (effectiveResult as ZodObject<ZodRawShape>).extend(
           feature._resultExtension.shape,

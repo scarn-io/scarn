@@ -1,3 +1,4 @@
+import type { Grant } from "@scarn/sdk/definitions/steps";
 import type { PipelineGraphSnapshot } from "../graph/studio-graph-types";
 
 /**
@@ -64,7 +65,7 @@ export type TemplateStepPreview = {
     managedRuntime: string | null;
   };
   repo: TemplateStepRepoAccess | null;
-  workItemPermissions: string[];
+  grants: Grant[];
   maxTurns: number | null;
   inputSchema: Record<string, unknown> | null;
   resultSchema: Record<string, unknown> | null;

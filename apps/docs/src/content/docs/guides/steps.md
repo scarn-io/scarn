@@ -29,22 +29,22 @@ The agent is automatically given the step's input as default context — the ful
 
 ## `defineStep` options
 
-| Field             | Type                              | Required | Description                                                                     |
-| ----------------- | --------------------------------- | -------- | ------------------------------------------------------------------------------- |
-| `key`             | `string`                          | Yes      | Unique identifier for this step within the project                              |
-| `name`            | `string`                          | Yes      | Human-readable display name                                                     |
-| `version`         | `number`                          | No       | Version number (defaults to 1)                                                  |
-| `description`     | `string`                          | No       | Brief description shown in the UI                                               |
-| `agentPrompt`     | `string \| ((context) => string)` | Yes      | AI prompt given to the worker agent when executing this step                    |
-| `input`           | `ZodType`                         | No       | Zod schema for the args a pipeline passes when it calls the step |
-| `result`          | `ZodType`                         | No       | Zod schema for the step's output                                                |
-| `errors`          | `string[]`                        | No       | Error names the step can fail with. See [Declared errors](#declared-errors)     |
-| `concurrency`     | `{ max: number; waiting: number }` | No      | How many Tasks of this step may be live on one work item, and how many more may wait. See [Concurrency groups](#concurrency-groups) |
-| `mcps`            | `Record<string, McpHandle>`       | No       | The MCP servers the step runs with, each built with `defineMcp` together with its env vars and health checks. See [MCP servers](#mcp-servers) |
-| `healthChecks`    | `StepHealthCheck[]`               | No       | `cli` checks and non-MCP `tool` checks forced against the environment before the agent is prompted. See [Health checks](#health-checks) |
-| `features`        | `StepFeature[]`                   | No       | Built-in feature plugins that extend the result schema and prompt               |
-| `status`          | `"draft" \| "active"`             | No       | Draft steps are not executed; defaults to `"active"`                            |
-| `environment`     | `{ runtime?, vars?, repo? }`      | No       | Where the step runs, which environment variables it gets, and what it does to your repository. Declare it before `agentPrompt`. See [Environment](#environment) |
+| Field          | Type                               | Required | Description                                                                                                                                                     |
+| -------------- | ---------------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `key`          | `string`                           | Yes      | Unique identifier for this step within the project                                                                                                              |
+| `name`         | `string`                           | Yes      | Human-readable display name                                                                                                                                     |
+| `version`      | `number`                           | No       | Version number (defaults to 1)                                                                                                                                  |
+| `description`  | `string`                           | No       | Brief description shown in the UI                                                                                                                               |
+| `agentPrompt`  | `string \| ((context) => string)`  | Yes      | AI prompt given to the worker agent when executing this step                                                                                                    |
+| `input`        | `ZodType`                          | No       | Zod schema for the args a pipeline passes when it calls the step                                                                                                |
+| `result`       | `ZodType`                          | No       | Zod schema for the step's output                                                                                                                                |
+| `errors`       | `string[]`                         | No       | Error names the step can fail with. See [Declared errors](#declared-errors)                                                                                     |
+| `concurrency`  | `{ max: number; waiting: number }` | No       | How many Tasks of this step may be live on one work item, and how many more may wait. See [Concurrency groups](#concurrency-groups)                             |
+| `mcps`         | `Record<string, McpHandle>`        | No       | The MCP servers the step runs with, each built with `defineMcp` together with its env vars and health checks. See [MCP servers](#mcp-servers)                   |
+| `healthChecks` | `StepHealthCheck[]`                | No       | `cli` checks and non-MCP `tool` checks forced against the environment before the agent is prompted. See [Health checks](#health-checks)                         |
+| `features`     | `StepFeature[]`                    | No       | Built-in feature plugins that extend the result schema and prompt                                                                                               |
+| `status`       | `"draft" \| "active"`              | No       | Draft steps are not executed; defaults to `"active"`                                                                                                            |
+| `environment`  | `{ runtime?, vars?, repo? }`       | No       | Where the step runs, which environment variables it gets, and what it does to your repository. Declare it before `agentPrompt`. See [Environment](#environment) |
 
 ## Prompt context
 
@@ -67,11 +67,11 @@ Save traces and screenshots to ${scarn.artifactsDir}.
 
 Available scopes:
 
-| Scope     | Use for                                                         |
-| --------- | --------------------------------------------------------------- |
-| `input`   | Fields from the `input` schema and any pipeline-bound step input |
-| `env`     | The worker's environment, or the step's `environment.vars` (below) |
-| `scarn` | Scarn-provided runtime values                                 |
+| Scope   | Use for                                                            |
+| ------- | ------------------------------------------------------------------ |
+| `input` | Fields from the `input` schema and any pipeline-bound step input   |
+| `env`   | The worker's environment, or the step's `environment.vars` (below) |
+| `scarn` | Scarn-provided runtime values                                      |
 
 Scarn currently provides `scarn.artifactsDir`, which points to the directory whose contents will be uploaded as step artifacts after the run. For a file you want to show in a comment, prefer the `scarn-submit-artifact` tool (see [Attaching artifacts to comments](#attaching-artifacts-to-comments)).
 
@@ -104,10 +104,10 @@ export const buildFrontend = defineStep({
 });
 ```
 
-| Field                 | Type                                                   | Default                  |
-| --------------------- | ------------------------------------------------------ | ------------------------ |
-| `environment.runtime` | `Runtime.devcontainer({ config? })` or `Runtime.host()` | `Runtime.devcontainer()` |
-| `environment.vars`    | `({ input }) => Record<string, string \| EnvEntry>`     | none                     |
+| Field                 | Type                                                                                         | Default                                                 |
+| --------------------- | -------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| `environment.runtime` | `Runtime.devcontainer({ config? })` or `Runtime.host()`                                      | `Runtime.devcontainer()`                                |
+| `environment.vars`    | `({ input }) => Record<string, string \| EnvEntry>`                                          | none                                                    |
 | `environment.repo`    | `Repo.readWrite()`, `Repo.readOnly()` or `Repo.none()`, or `({ input, result }) => RepoSpec` | The runtime's default (see [Repo access](#repo-access)) |
 
 :::caution
@@ -124,11 +124,11 @@ Put config in the step only when it is about that step: a different devcontainer
 
 `runtime` controls whether a step gets a checkout of your repository, and which container it runs in.
 
-| Runtime                    | What the worker sets up                                                                                                | Use for                                                                                        |
-| -------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| `Runtime.devcontainer()`   | Clones your repository and launches your devcontainer; the agent runs **inside** that container. This is the default.  | Steps that read, run, or modify your code.                                                     |
-| `Runtime.managed.<id>()`   | Clones your repository into a worker-supplied image instead of your devcontainer; the agent runs **inside** that container. See [Managed runtimes for agent steps](#managed-runtimes-for-agent-steps). | Steps that read or change code but don't need your project's toolchain.                        |
-| `Runtime.host()`           | No clone and no dev container. The agent runs on the worker host against a temporary empty directory with only the prompt and its bound input. | Prompt-only steps: research, summarization, drafting, classification, or routing decisions. |
+| Runtime                  | What the worker sets up                                                                                                                                                                                | Use for                                                                                     |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
+| `Runtime.devcontainer()` | Clones your repository and launches your devcontainer; the agent runs **inside** that container. This is the default.                                                                                  | Steps that read, run, or modify your code.                                                  |
+| `Runtime.managed.<id>()` | Clones your repository into a worker-supplied image instead of your devcontainer; the agent runs **inside** that container. See [Managed runtimes for agent steps](#managed-runtimes-for-agent-steps). | Steps that read or change code but don't need your project's toolchain.                     |
+| `Runtime.host()`         | No clone and no dev container. The agent runs on the worker host against a temporary empty directory with only the prompt and its bound input.                                                         | Prompt-only steps: research, summarization, drafting, classification, or routing decisions. |
 
 ```typescript
 import { defineStep, Runtime } from "@scarn/sdk";
@@ -205,10 +205,10 @@ export const needsProjectToolchain = codeStep({
 });
 ```
 
-| Identifier | Image                   | Runtime      | Install, run in `.scarn/pipeline-builder`                                                                                                            |
-| ---------- | ----------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `bun1`     | `oven/bun:1.4.0-debian` | Bun 1.x      | `bun install --production`, whichever lockfile is present or none                                                                                      |
-| `node24`   | `node:24-bookworm-slim` | Node 24      | `npm install --omit=dev --no-audit --no-fund` for `package-lock.json`, `yarn.lock` or no lockfile; `corepack pnpm install --prod` for `pnpm-lock.yaml`; `bun.lock` or `bun.lockb` is not read by npm, so it installs without it and logs a notice |
+| Identifier | Image                   | Runtime | Install, run in `.scarn/pipeline-builder`                                                                                                                                                                                                         |
+| ---------- | ----------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `bun1`     | `oven/bun:1.4.0-debian` | Bun 1.x | `bun install --production`, whichever lockfile is present or none                                                                                                                                                                                 |
+| `node24`   | `node:24-bookworm-slim` | Node 24 | `npm install --omit=dev --no-audit --no-fund` for `package-lock.json`, `yarn.lock` or no lockfile; `corepack pnpm install --prod` for `pnpm-lock.yaml`; `bun.lock` or `bun.lockb` is not read by npm, so it installs without it and logs a notice |
 
 `bun1` is the default: omit `runtime` and you get `Runtime.managed.bun1()`. An identifier is the runtime plus its major line. Within a line the worker floats minor and patch versions, so a worker upgrade can move the image under your step. A new major is a new identifier.
 
@@ -263,19 +263,19 @@ export const reviewStep = defineStep({
 
 `repo` controls what the worker does with the repository clone: whether the step gets a [work branch](/scarn/guides/workers/#work-branches), and whether its changes are committed and pushed. Pick one of three modes:
 
-| Mode                | What the worker does                                                                                                                  | Use for                                                       |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| `Repo.readWrite()`  | Creates a work branch, then commits the agent's changes and pushes the branch when the step succeeds. This is the devcontainer default. | Steps that change code.                                       |
-| `Repo.readOnly()`   | Clones and checks out the base branch, but creates no work branch, commits nothing, pushes nothing, and reports no `workBranch`.       | Steps that only read code: triage, analysis, review.          |
-| `Repo.none()`       | No repository. The worker does not clone, branch, commit, or push. This is the `Runtime.host()` default.                               | Prompt-only steps on `Runtime.host()`.                        |
+| Mode               | What the worker does                                                                                                                    | Use for                                              |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| `Repo.readWrite()` | Creates a work branch, then commits the agent's changes and pushes the branch when the step succeeds. This is the devcontainer default. | Steps that change code.                              |
+| `Repo.readOnly()`  | Clones and checks out the base branch, but creates no work branch, commits nothing, pushes nothing, and reports no `workBranch`.        | Steps that only read code: triage, analysis, review. |
+| `Repo.none()`      | No repository. The worker does not clone, branch, commit, or push. This is the `Runtime.host()` default.                                | Prompt-only steps on `Runtime.host()`.               |
 
 Which modes a runtime accepts, and its default:
 
-| Runtime                  | `readWrite`            | `readOnly`             | `none`                                       | Default     |
-| ------------------------ | ---------------------- | ---------------------- | -------------------------------------------- | ----------- |
-| `Runtime.devcontainer()` | Yes                    | Yes                    | No: the config is read from the clone        | `readWrite` |
-| `Runtime.managed.<id>()` | Yes                    | Yes                    | No: the worker writes its config into the clone | `readWrite` |
-| `Runtime.host()`         | No: there is no clone  | No: there is no clone  | Yes                                          | `none`      |
+| Runtime                  | `readWrite`           | `readOnly`            | `none`                                          | Default     |
+| ------------------------ | --------------------- | --------------------- | ----------------------------------------------- | ----------- |
+| `Runtime.devcontainer()` | Yes                   | Yes                   | No: the config is read from the clone           | `readWrite` |
+| `Runtime.managed.<id>()` | Yes                   | Yes                   | No: the worker writes its config into the clone | `readWrite` |
+| `Runtime.host()`         | No: there is no clone | No: there is no clone | Yes                                             | `none`      |
 
 A pair the runtime does not accept is a type error where TypeScript can express it. `scarn pipelines push` validation and the server (a `422`) reject it otherwise. A step that omits `repo` gets its runtime's default, so `Repo.readWrite()` on a devcontainer step and `Repo.none()` on a host step are redundant. [`codeStep()`](#code-steps) accepts `repo` with the same rules.
 
@@ -296,8 +296,7 @@ export const implement = defineStep({
   input: z.object({ title: z.string() }),
   result: z.object({ summary: z.string() }),
   environment: {
-    repo: ({ result }) =>
-      Repo.readWrite({ message: `fix: ${result.summary}` }),
+    repo: ({ result }) => Repo.readWrite({ message: `fix: ${result.summary}` }),
   },
   agentPrompt: ({ input }) => `Fix: ${input.title}`,
 });
@@ -355,11 +354,11 @@ export const accountInvestigation = defineStep({
 
 #### The three forms
 
-| Form                                                   | Source                                                                                      | Stored in the definition | Masked in logs |
-| ------------------------------------------------------ | ------------------------------------------------------------------------------------------- | ------------------------ | -------------- |
-| A bare string                                          | The literal, which may interpolate `input`                                                  | The template, plaintext  | No             |
-| `Env.value({ value, secret?, applies? })`                        | Same, with an explicit secret flag                                                          | The template, plaintext  | When `secret`  |
-| `Env.inherit({ from?, secret?, optional?, default?, applies? })` | The **worker**. The name defaults to the key; `from` reads a differently named variable     | The name only            | When `secret`  |
+| Form                                                             | Source                                                                                  | Stored in the definition | Masked in logs |
+| ---------------------------------------------------------------- | --------------------------------------------------------------------------------------- | ------------------------ | -------------- |
+| A bare string                                                    | The literal, which may interpolate `input`                                              | The template, plaintext  | No             |
+| `Env.value({ value, secret?, applies? })`                        | Same, with an explicit secret flag                                                      | The template, plaintext  | When `secret`  |
+| `Env.inherit({ from?, secret?, optional?, default?, applies? })` | The **worker**. The name defaults to the key; `from` reads a differently named variable | The name only            | When `secret`  |
 
 `applies` says which process gets the variable; see [Setup variables](#setup-variables). A bare string always applies to the agent.
 
@@ -384,12 +383,12 @@ The step wins over the devcontainer's `containerEnv` as well. A single entry is 
 
 Resolution happens once, in the worker, before anything launches. Only injection differs by [runtime](#runtime):
 
-|             | `Runtime.devcontainer()` (container)                                            | `Runtime.host()` (host process)                                                               |
-| ----------- | ------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| `value`     | Passed to the OpenCode process with `docker exec -e`                            | Merged into the OpenCode process's environment                                                |
-| `inherit`   | The only way a worker value reaches the container                               | The host process already inherits the worker's `process.env`; `inherit` adds `.scarn/.env`, preflight, renaming, and masking |
-| `secret`    | Masked in logs                                                                  | Masked in logs                                                                                |
-| Code steps  | `docker exec -e` on the runner; the function reads `process.env`                | Passed to the runner process's environment; the function reads `process.env`                   |
+|            | `Runtime.devcontainer()` (container)                             | `Runtime.host()` (host process)                                                                                              |
+| ---------- | ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `value`    | Passed to the OpenCode process with `docker exec -e`             | Merged into the OpenCode process's environment                                                                               |
+| `inherit`  | The only way a worker value reaches the container                | The host process already inherits the worker's `process.env`; `inherit` adds `.scarn/.env`, preflight, renaming, and masking |
+| `secret`   | Masked in logs                                                   | Masked in logs                                                                                                               |
+| Code steps | `docker exec -e` on the runner; the function reads `process.env` | Passed to the runner process's environment; the function reads `process.env`                                                 |
 
 Step `vars` also feed MCP `{env:VAR}` substitution (see [Secrets](#secrets)), because OpenCode reads it from its own process environment — this works for the generated `OPENCODE_CONFIG_CONTENT` as well as for config files (verified on OpenCode 2.0.28).
 
@@ -397,11 +396,11 @@ Step `vars` also feed MCP `{env:VAR}` substitution (see [Secrets](#secrets)), be
 
 By default a variable reaches the agent (or a code step's function) only. `applies` changes that:
 
-| `applies`         | Reaches                                                                                         |
-| ----------------- | ----------------------------------------------------------------------------------------------- |
-| `"agent"` (default) | The agent or code step process, with `docker exec -e`                                         |
-| `"setup"`         | Only the `devcontainer up` process, so your devcontainer's `initializeCommand` sees it          |
-| `"both"`          | Both                                                                                            |
+| `applies`           | Reaches                                                                                |
+| ------------------- | -------------------------------------------------------------------------------------- |
+| `"agent"` (default) | The agent or code step process, with `docker exec -e`                                  |
+| `"setup"`           | Only the `devcontainer up` process, so your devcontainer's `initializeCommand` sees it |
+| `"both"`            | Both                                                                                   |
 
 A setup variable overrides the worker's own variable of the same name for `devcontainer up`. Scarn does not add it to the container's `containerEnv`; if the container needs it too, forward it from `devcontainer.json` with `${localEnv:NAME:default}`.
 
@@ -418,7 +417,7 @@ environment: {
 ```jsonc title=".devcontainer/devcontainer.json"
 {
   "initializeCommand": "./scripts/init-subrepos.sh",
-  "containerEnv": { "INIT_SUBREPOS": "${localEnv:INIT_SUBREPOS:true}" }
+  "containerEnv": { "INIT_SUBREPOS": "${localEnv:INIT_SUBREPOS:true}" },
 }
 ```
 
@@ -486,12 +485,12 @@ export const plan = defineStep({
 - `waiting` (an integer, 0 or more) is how many more may wait for a place. A waiting Task shows as **Waiting for slot** and has no run yet. When a Task in the group ends, the oldest waiting Task starts.
 - A Task past both limits is dropped: it is never created.
 
-The group is the step's key on the work item, so every version of the step shares it, and so does every way its Tasks start: a pipeline step, a standalone Task (from the UI or `POST /tasks`), an agent's `startTask` change, and an automation. A new Task is checked against the limits of the version it starts from; when a place frees up, the step's latest active version decides how many waiting Tasks start.
+The group is the step's key on the work item, so every version of the step shares it, and so does every way its Tasks start: a pipeline step, a standalone Task (from the UI or `POST /tasks`), and an automation. A new Task is checked against the limits of the version it starts from; when a place frees up, the step's latest active version decides how many waiting Tasks start.
 
 A dropped Task is reported where it was started:
 
 - `POST /tasks` responds `409 Scarn.ConcurrencyGroupFull`, and `meta.heldBy` lists the Tasks holding the group.
-- An agent's `startTask` change is skipped, and the run goes on.
+- An automation skips the step, and its activity line says `skipped: concurrency group full`.
 - A pipeline step fails with `Scarn.ConcurrencyGroupFull`, which `.catch` can handle. See [Errors, retries and timeouts](/scarn/guides/pipelines/#errors-retries-and-timeouts).
 
 Retries and continuations are more runs of a Task that already holds its place, so the group doesn't see them. A rerun starts a new Task, which joins the group like any other. Prompt Tasks (no step) and steps without `concurrency` have no group. Pipeline nodes can't set `concurrency`; it belongs to the step.
@@ -502,11 +501,11 @@ Steps can be given access to MCP (Model Context Protocol) servers, giving the ag
 
 `defineMcp` takes a `type`:
 
-| `type`     | The server                                                                          |
-| ---------- | ----------------------------------------------------------------------------------- |
+| `type`     | The server                                                                                                                       |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------- |
 | `"ref"`    | One your repository already defines. See [Referencing a server from your repository](#referencing-a-server-from-your-repository) |
-| `"local"`  | Written in TypeScript and launched as a subprocess. See [Local servers](#local-servers) |
-| `"remote"` | Written in TypeScript and reached over HTTP. See [Remote servers](#remote-servers)   |
+| `"local"`  | Written in TypeScript and launched as a subprocess. See [Local servers](#local-servers)                                          |
+| `"remote"` | Written in TypeScript and reached over HTTP. See [Remote servers](#remote-servers)                                               |
 
 ```typescript
 import { defineMcp, defineStep } from "@scarn/sdk/definitions/steps";
@@ -516,7 +515,11 @@ const postgres = defineMcp({
   name: "postgres",
   healthChecks: {
     listSchemas: { tool: "list_schemas" },
-    listTables: { tool: "list_tables", args: { schema: "public" }, enabled: false },
+    listTables: {
+      tool: "list_tables",
+      args: { schema: "public" },
+      enabled: false,
+    },
   },
 });
 
@@ -530,16 +533,16 @@ export const triage = defineStep({
 
 ### The definition
 
-| Field          | Type                       | Required | Description |
-| -------------- | -------------------------- | -------- | ----------- |
-| `type`         | `"ref" \| "local" \| "remote"` | Yes  | Which kind of server, as above |
-| `name`         | `string`                   | Yes      | For a `ref`, the server's name in your repository's MCP config. For `local` and `remote`, a label used in error messages; the `mcps` key names the server at runtime |
-| `env`          | `string[]`                 | No       | Worker variables the server needs. Only for a server that reads `process.env` itself: every `{env:VAR}` in the server's definition is required automatically |
-| `optionalEnv`  | `string[]`                 | No       | Worker variables passed to the server when they are set. A `{env:VAR}` listed here is not made required |
-| `healthChecks` | `Record<string, McpCheck>` | No       | Checks keyed by name: `{ tool, args?, timeoutSeconds?, severity?, serialGroup?, enabled? }`, as in [Health checks](#health-checks) but without `mcp` or `name` |
-| `timeout`      | `{ startup?, catalog?, execution? }` | No | Timeouts in milliseconds: connecting, listing tools, and each tool call |
-| `codemode`     | `boolean`                  | No       | Defaults to `false` for step servers, so the agent and [health checks](#health-checks) can call each tool by name. `true` routes the tools through OpenCode's Code Mode instead |
-| `protocol`     | `"legacy" \| "auto" \| "2026-07-28"` | No | MCP protocol version to negotiate |
+| Field          | Type                                 | Required | Description                                                                                                                                                                     |
+| -------------- | ------------------------------------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `type`         | `"ref" \| "local" \| "remote"`       | Yes      | Which kind of server, as above                                                                                                                                                  |
+| `name`         | `string`                             | Yes      | For a `ref`, the server's name in your repository's MCP config. For `local` and `remote`, a label used in error messages; the `mcps` key names the server at runtime            |
+| `env`          | `string[]`                           | No       | Worker variables the server needs. Only for a server that reads `process.env` itself: every `{env:VAR}` in the server's definition is required automatically                    |
+| `optionalEnv`  | `string[]`                           | No       | Worker variables passed to the server when they are set. A `{env:VAR}` listed here is not made required                                                                         |
+| `healthChecks` | `Record<string, McpCheck>`           | No       | Checks keyed by name: `{ tool, args?, timeoutSeconds?, severity?, serialGroup?, enabled? }`, as in [Health checks](#health-checks) but without `mcp` or `name`                  |
+| `timeout`      | `{ startup?, catalog?, execution? }` | No       | Timeouts in milliseconds: connecting, listing tools, and each tool call                                                                                                         |
+| `codemode`     | `boolean`                            | No       | Defaults to `false` for step servers, so the agent and [health checks](#health-checks) can call each tool by name. `true` routes the tools through OpenCode's Code Mode instead |
+| `protocol`     | `"legacy" \| "auto" \| "2026-07-28"` | No       | MCP protocol version to negotiate                                                                                                                                               |
 
 `local` and `remote` add the fields in their sections below. `defineMcp` throws on an unknown field, so OpenCode v1 keys (`enabled`, a numeric `timeout`, camelCase `oauth` fields) are rejected. There is no `disabled`: a step that shouldn't run a server doesn't mount it.
 
@@ -595,11 +598,11 @@ const postgres = defineMcp({
 });
 ```
 
-| Field         | Type                     | Required | Description                                                        |
-| ------------- | ------------------------ | -------- | ------------------------------------------------------------------ |
+| Field         | Type                     | Required | Description                                                                                |
+| ------------- | ------------------------ | -------- | ------------------------------------------------------------------------------------------ |
 | `command`     | `string[]`               | Yes      | Executable plus arguments; must have at least one entry. There is no separate `args` field |
-| `cwd`         | `string`                 | No       | Working directory for the subprocess                               |
-| `environment` | `Record<string, string>` | No       | Environment variables. Every value must be written as `{env:VAR}` |
+| `cwd`         | `string`                 | No       | Working directory for the subprocess                                                       |
+| `environment` | `Record<string, string>` | No       | Environment variables. Every value must be written as `{env:VAR}`                          |
 
 The command must be resolvable where the step runs: inside the devcontainer for a `Runtime.devcontainer()` step, on the worker host for a `Runtime.host()` step.
 
@@ -616,10 +619,10 @@ const linear = defineMcp({
 });
 ```
 
-| Field     | Type                     | Required | Description                                              |
-| --------- | ------------------------ | -------- | -------------------------------------------------------- |
-| `url`     | `string`                 | Yes      | Server URL                                               |
-| `headers` | `Record<string, string>` | No       | Extra request headers. Every value must be written as `{env:VAR}`, optionally after an auth scheme (`Bearer {env:TOKEN}`) |
+| Field     | Type                     | Required | Description                                                                                                                              |
+| --------- | ------------------------ | -------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `url`     | `string`                 | Yes      | Server URL                                                                                                                               |
+| `headers` | `Record<string, string>` | No       | Extra request headers. Every value must be written as `{env:VAR}`, optionally after an auth scheme (`Bearer {env:TOKEN}`)                |
 | `oauth`   | `object \| false`        | No       | OAuth config (`client_id`, `client_secret`, `scope`, `callback_port`, `redirect_uri`, `auth_server_metadata_url`), or `false` to disable |
 
 ### Variables in inline servers
@@ -649,13 +652,13 @@ export const explain = defineStep({
 
 Every method returns a new handle and leaves the one it was called on unchanged, so any number of steps can chain off one definition.
 
-| Method                        | Effect |
-| ----------------------------- | ------ |
+| Method                        | Effect                                                                                                                                           |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `.overrideCheck(name, patch)` | Changes `tool`, `args`, `timeoutSeconds`, `severity` or `serialGroup`. `args` is replaced whole, not merged; later patches of the same field win |
-| `.disableCheck(name)`         | Turns a check off. A disabled check stays off whatever `overrideCheck` does, in either order |
-| `.enableCheck(name)`          | Turns a check on. Between `enableCheck` and `disableCheck`, the last call wins |
-| `.addCheck(name, check)`      | Adds a check for this step. The name must be new |
-| `.disableAllChecks()`         | Turns off every check defined so far; a later `enableCheck` or `addCheck` turns one back on |
+| `.disableCheck(name)`         | Turns a check off. A disabled check stays off whatever `overrideCheck` does, in either order                                                     |
+| `.enableCheck(name)`          | Turns a check on. Between `enableCheck` and `disableCheck`, the last call wins                                                                   |
+| `.addCheck(name, check)`      | Adds a check for this step. The name must be new                                                                                                 |
+| `.disableAllChecks()`         | Turns off every check defined so far; a later `enableCheck` or `addCheck` turns one back on                                                      |
 
 `name` is typed from the definition's check names (plus any added earlier in the chain), so a typo is a type error; an unknown name also throws at runtime.
 
@@ -672,7 +675,9 @@ const datadog = defineMcp({
 });
 
 // or, on one step only:
-mcps: { datadog: datadog.overrideCheck("monitors", { severity: "warn" }) }
+mcps: {
+  datadog: datadog.overrideCheck("monitors", { severity: "warn" });
+}
 ```
 
 A failed `warn` check is reported, and the step still runs with the server.
@@ -749,7 +754,11 @@ export const browserStep = defineStep({
   name: "Browser Repro",
   mcps: { playwright },
   healthChecks: [
-    { kind: "cli", command: ["npx", "--no-install", "playwright", "--version"], severity: "warn" },
+    {
+      kind: "cli",
+      command: ["npx", "--no-install", "playwright", "--version"],
+      severity: "warn",
+    },
   ],
   agentPrompt: "Reproduce the reported bug.",
 });
@@ -757,17 +766,17 @@ export const browserStep = defineStep({
 
 A `tool` check's `tool` is a flat plugin/standalone/built-in tool id. A step's `healthChecks` doesn't accept `mcp`; on a `defineMcp` check, `tool` is the bare tool name, resolved to `<mcpsKey>_<tool>` at runtime (OpenCode's MCP tool-naming convention).
 
-| Field         | Type                      | Required | Description                                                                          |
-| ------------- | ------------------------- | -------- | ------------------------------------------------------------------------------------- |
-| `kind`        | `"tool" \| "cli"`         | No       | `"tool"` (default) calls a tool; `"cli"` runs a command                              |
-| `tool`        | `string`                  | `tool`   | Tool id to call                                                                       |
-| `args`        | `Record<string, unknown>` | No       | Arguments passed to the tool call (`tool` only)                                       |
-| `command`     | `string[]`                | `cli`    | Executable plus arguments, run through OpenCode's `bash` tool in the step's environment |
-| `expectExitCode` | `number`               | No       | Exit code that counts as passing (`cli` only). Defaults to `0`                        |
-| `name`        | `string`                  | No       | Human-readable label shown in logs/UI. Defaults to the resolved tool id               |
-| `severity`    | `"required" \| "warn"`    | No       | `"required"` (default) fails the step immediately if the check fails; `"warn"` is advisory — reported but never fails the step |
-| `timeoutSeconds` | `number`               | No       | Seconds to wait for the forced call before failing it as a timeout. Fractions allowed; must be above `0` and at most `3600`. Defaults to `15` |
-| `serialGroup` | `string`                  | No       | Checks sharing the same value run one at a time, in declaration order. See [Running checks in parallel](#running-checks-in-parallel) |
+| Field            | Type                      | Required | Description                                                                                                                                   |
+| ---------------- | ------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `kind`           | `"tool" \| "cli"`         | No       | `"tool"` (default) calls a tool; `"cli"` runs a command                                                                                       |
+| `tool`           | `string`                  | `tool`   | Tool id to call                                                                                                                               |
+| `args`           | `Record<string, unknown>` | No       | Arguments passed to the tool call (`tool` only)                                                                                               |
+| `command`        | `string[]`                | `cli`    | Executable plus arguments, run through OpenCode's `bash` tool in the step's environment                                                       |
+| `expectExitCode` | `number`                  | No       | Exit code that counts as passing (`cli` only). Defaults to `0`                                                                                |
+| `name`           | `string`                  | No       | Human-readable label shown in logs/UI. Defaults to the resolved tool id                                                                       |
+| `severity`       | `"required" \| "warn"`    | No       | `"required"` (default) fails the step immediately if the check fails; `"warn"` is advisory — reported but never fails the step                |
+| `timeoutSeconds` | `number`                  | No       | Seconds to wait for the forced call before failing it as a timeout. Fractions allowed; must be above `0` and at most `3600`. Defaults to `15` |
+| `serialGroup`    | `string`                  | No       | Checks sharing the same value run one at a time, in declaration order. See [Running checks in parallel](#running-checks-in-parallel)          |
 
 ### Running checks in parallel
 
@@ -821,18 +830,50 @@ Adds an optional `$scarn_notifications_v1` array to the result, plus prompt text
 
 Each notification item has:
 
-| Field               | Type                                                                        | Required | Description                                                        |
-| ------------------- | --------------------------------------------------------------------------- | -------- | ------------------------------------------------------------------ |
-| `kind`              | `"feedback_request" \| "status_update" \| "blocked" \| "result_ready" \| "warning"` | Yes | The kind of notification                                           |
-| `title`             | `string`                                                                    | Yes      | Short, human-readable title                                        |
-| `body`              | `string`                                                                    | Yes      | Notification details                                               |
-| `priority`          | `"low" \| "normal" \| "high" \| "urgent"`                                   | Yes      | How important the notification is                                  |
-| `suggestedChannels` | `("in_app" \| "work_item_platform_comment" \| "email" \| "slack")[]`        | No       | Channels the agent suggests; the platform policy decides the final channels |
-| `payload`           | `Record<string, unknown>`                                                   | No       | Kind-specific data. For `feedback_request`: `{ category, urgency }` |
+| Field               | Type                                                                                | Required | Description                                                                 |
+| ------------------- | ----------------------------------------------------------------------------------- | -------- | --------------------------------------------------------------------------- |
+| `kind`              | `"feedback_request" \| "status_update" \| "blocked" \| "result_ready" \| "warning"` | Yes      | The kind of notification                                                    |
+| `title`             | `string`                                                                            | Yes      | Short, human-readable title                                                 |
+| `body`              | `string`                                                                            | Yes      | Notification details                                                        |
+| `priority`          | `"low" \| "normal" \| "high" \| "urgent"`                                           | Yes      | How important the notification is                                           |
+| `suggestedChannels` | `("in_app" \| "work_item_platform_comment" \| "email" \| "slack")[]`                | No       | Channels the agent suggests; the platform policy decides the final channels |
+| `payload`           | `Record<string, unknown>`                                                           | No       | Kind-specific data. For `feedback_request`: `{ category, urgency }`         |
 
 ### `Features.feedbackRequests()`
 
 A real specialization of `Features.notifications()`, not an alias — it narrows every emitted item to `kind: "feedback_request"` (in both the pushed JSON Schema and the prompt section), in the same `$scarn_notifications_v1` array. Use it when a step's primary escalation path is asking the project team clarifying questions.
+
+### `Features.workItems.*`
+
+Each `Features.workItems.*` feature grants the step's Tasks one action on a work item, and adds a prompt section naming the tool the agent uses for it. `scope: "self"` is the Task's own work item; `scope: "children"` is its child work items. Attach each action and scope at most once.
+
+| Feature                                                    | The agent may                                  | Tool                              |
+| ---------------------------------------------------------- | ---------------------------------------------- | --------------------------------- |
+| `Features.workItems.read({ scope })`                       | Read the work item                             | `scarn-get-work-item`             |
+| `Features.workItems.update({ scope })`                     | Replace its description                        | `scarn-set-work-item-description` |
+| `Features.workItems.comment({ scope })`                    | Comment on it                                  | `scarn-comment-on-work-item`      |
+| `Features.workItems.label({ scope, labels })`              | Add or remove the listed labels, and no others | `scarn-label-work-item`           |
+| `Features.workItems.block({ scope })`                      | Mark it as blocked                             | `scarn-block-work-item`           |
+| `Features.workItems.close({ scope })`                      | Close it                                       | `scarn-close-work-item`           |
+| `Features.workItems.create({ scope: "children", labels })` | Create child work items with the listed labels | `scarn-create-work-item`          |
+
+For `label` and `create`, the prompt section lists the allowed labels, so the prompt doesn't need to. Keep the labels in one `const` when an automation routes on them too:
+
+```typescript
+const LABELS = ["wayfinder:research", "wayfinder:task"] as const;
+
+export const plan = defineStep({
+  key: "plan",
+  name: "Plan",
+  agentPrompt: "Chart the map and create the next child work items.",
+  features: [
+    Features.workItems.read({ scope: "self" }),
+    Features.workItems.update({ scope: "self" }),
+    Features.workItems.create({ scope: "children", labels: LABELS }),
+    Features.workItems.close({ scope: "self" }),
+  ],
+});
+```
 
 ### Building notifications at runtime — `Notify`
 
@@ -913,14 +954,21 @@ Files written straight into `scarn.artifactsDir` are still uploaded, but only as
 A code step's `fn` gets a second argument, `{ artifactsDir }`, the absolute path of its artifacts folder. Write the file there and return `Artifact.path(...)` with its path relative to that folder:
 
 ```typescript
-import { Artifact, ArtifactTypes, codeStep, z } from "@scarn/sdk/definitions/steps";
+import {
+  Artifact,
+  ArtifactTypes,
+  codeStep,
+  z,
+} from "@scarn/sdk/definitions/steps";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 export const renderChart = codeStep({
   key: "render-chart",
   name: "Render Chart",
-  resultSchema: z.object({ chart: z.artifact({ accept: ArtifactTypes.image }) }),
+  resultSchema: z.object({
+    chart: z.artifact({ accept: ArtifactTypes.image }),
+  }),
   fn: async (_input, { artifactsDir }) => {
     await writeFile(join(artifactsDir, "chart.png"), await drawChart());
     return { chart: Artifact.path("chart.png") };
@@ -934,10 +982,10 @@ The worker checks every returned path: it must stay inside the folder, exist, be
 
 `Artifact.embed(target, { caption })` and `Artifact.link(target, { label })` return a marker string that you put in a notification `body` or in a step prompt:
 
-| Target                      | Marker                                            | If the file is missing         |
-| --------------------------- | ------------------------------------------------- | ------------------------------ |
-| `{ step, path }`            | `![caption](artifact:signal/<stepKey>/<resultPath>)` | Required: the comment is not drafted |
-| A file name or glob string  | `[label](artifact:<glob>)`                        | Optional: the marker is removed |
+| Target                     | Marker                                               | If the file is missing               |
+| -------------------------- | ---------------------------------------------------- | ------------------------------------ |
+| `{ step, path }`           | `![caption](artifact:signal/<stepKey>/<resultPath>)` | Required: the comment is not drafted |
+| A file name or glob string | `[label](artifact:<glob>)`                           | Optional: the marker is removed      |
 
 ```typescript
 Notify.create({
@@ -967,12 +1015,12 @@ When the comment is drafted, each marker is resolved. A **field marker** (`{ ste
 
 Scarn records why a declared file is unavailable as `unavailableReason`:
 
-| Value                 | Meaning                                                    |
-| --------------------- | ---------------------------------------------------------- |
-| `not_reported`        | The field was `null` or never filled                       |
-| `wrong_extension`     | The file's extension isn't in `accept`                     |
+| Value                  | Meaning                                                      |
+| ---------------------- | ------------------------------------------------------------ |
+| `not_reported`         | The field was `null` or never filled                         |
+| `wrong_extension`      | The file's extension isn't in `accept`                       |
 | `upload_failed:<code>` | The file was found but failed to upload, with the error code |
-| `not_found`           | No uploaded file matches the field                         |
+| `not_found`            | No uploaded file matches the field                           |
 
 ### Routing on whether the file exists
 
@@ -1009,11 +1057,11 @@ Retrying a failed approval never uploads a file twice: Scarn records each file i
 
 ### What each platform shows
 
-| Platform   | Embedded                        | Otherwise                         |
-| ---------- | ------------------------------- | --------------------------------- |
-| Jira Cloud | `.png`, `.gif`, `.mp4`, `.webm` | Link to the file in Scarn       |
-| GitHub     | Nothing in v1                   | Link to the file in Scarn       |
-| Bitbucket  | Nothing in v1                   | Link to the file in Scarn       |
+| Platform   | Embedded                        | Otherwise                 |
+| ---------- | ------------------------------- | ------------------------- |
+| Jira Cloud | `.png`, `.gif`, `.mp4`, `.webm` | Link to the file in Scarn |
+| GitHub     | Nothing in v1                   | Link to the file in Scarn |
+| Bitbucket  | Nothing in v1                   | Link to the file in Scarn |
 
 An embed that falls back to a link keeps its caption as the line before the link, so the comment reads the same either way:
 

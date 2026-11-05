@@ -4,6 +4,7 @@ import { DETACHED_NODE_TYPE } from "../graph/studio-graph-visuals";
 import {
   buildTemplateGraph,
   decideUseAction,
+  describeGrants,
   detachedNodeId,
   detachedStepNotice,
   findTemplateStep,
@@ -46,7 +47,7 @@ function stepPreview(key: string): TemplateStepPreview {
       managedRuntime: null,
     },
     repo: { mode: "readOnly" },
-    workItemPermissions: [],
+    grants: [],
     maxTurns: null,
     inputSchema: null,
     resultSchema: null,
@@ -234,6 +235,29 @@ describe("parameter values", () => {
 
   test("blank values are left out so the template's defaults apply", () => {
     expect(parameterValuesToSubmit({ a: "x", b: "  " })).toEqual({ a: "x" });
+  });
+});
+
+describe("describeGrants", () => {
+  test("is None for no grants", () => {
+    expect(describeGrants([])).toBe("None");
+  });
+
+  test("lists each grant's action and scope, with its labels", () => {
+    expect(
+      describeGrants([
+        { resource: "workItem", action: "read", scope: "self" },
+        {
+          resource: "workItem",
+          action: "create",
+          scope: "children",
+          labels: ["wayfinder:research", "wayfinder:prototype"],
+        },
+        { resource: "workItem", action: "close", scope: "self" },
+      ]),
+    ).toBe(
+      "read self; create children: wayfinder:research, wayfinder:prototype; close self",
+    );
   });
 });
 

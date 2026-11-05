@@ -6048,13 +6048,211 @@
                       "additionalProperties": false
                     }
                   },
-                  "workItemPermissions": {
+                  "grants": {
                     "type": "array",
                     "items": {
-                      "type": "string",
-                      "enum": [
-                        "self",
-                        "children"
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "resource": {
+                              "type": "string",
+                              "const": "workItem"
+                            },
+                            "action": {
+                              "type": "string",
+                              "const": "read"
+                            },
+                            "scope": {
+                              "type": "string",
+                              "enum": [
+                                "self",
+                                "children"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "resource",
+                            "action",
+                            "scope"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "resource": {
+                              "type": "string",
+                              "const": "workItem"
+                            },
+                            "action": {
+                              "type": "string",
+                              "const": "update"
+                            },
+                            "scope": {
+                              "type": "string",
+                              "enum": [
+                                "self",
+                                "children"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "resource",
+                            "action",
+                            "scope"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "resource": {
+                              "type": "string",
+                              "const": "workItem"
+                            },
+                            "action": {
+                              "type": "string",
+                              "const": "comment"
+                            },
+                            "scope": {
+                              "type": "string",
+                              "enum": [
+                                "self",
+                                "children"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "resource",
+                            "action",
+                            "scope"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "resource": {
+                              "type": "string",
+                              "const": "workItem"
+                            },
+                            "action": {
+                              "type": "string",
+                              "const": "label"
+                            },
+                            "scope": {
+                              "type": "string",
+                              "enum": [
+                                "self",
+                                "children"
+                              ]
+                            },
+                            "labels": {
+                              "minItems": 1,
+                              "maxItems": 50,
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 200
+                              }
+                            }
+                          },
+                          "required": [
+                            "resource",
+                            "action",
+                            "scope",
+                            "labels"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "resource": {
+                              "type": "string",
+                              "const": "workItem"
+                            },
+                            "action": {
+                              "type": "string",
+                              "const": "block"
+                            },
+                            "scope": {
+                              "type": "string",
+                              "enum": [
+                                "self",
+                                "children"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "resource",
+                            "action",
+                            "scope"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "resource": {
+                              "type": "string",
+                              "const": "workItem"
+                            },
+                            "action": {
+                              "type": "string",
+                              "const": "close"
+                            },
+                            "scope": {
+                              "type": "string",
+                              "enum": [
+                                "self",
+                                "children"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "resource",
+                            "action",
+                            "scope"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "resource": {
+                              "type": "string",
+                              "const": "workItem"
+                            },
+                            "action": {
+                              "type": "string",
+                              "const": "create"
+                            },
+                            "scope": {
+                              "type": "string",
+                              "const": "children"
+                            },
+                            "labels": {
+                              "minItems": 1,
+                              "maxItems": 50,
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 200
+                              }
+                            }
+                          },
+                          "required": [
+                            "resource",
+                            "action",
+                            "scope",
+                            "labels"
+                          ],
+                          "additionalProperties": false
+                        }
                       ]
                     }
                   },
@@ -6796,13 +6994,211 @@
                       "additionalProperties": false
                     }
                   },
-                  "workItemPermissions": {
+                  "grants": {
                     "type": "array",
                     "items": {
-                      "type": "string",
-                      "enum": [
-                        "self",
-                        "children"
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "resource": {
+                              "type": "string",
+                              "const": "workItem"
+                            },
+                            "action": {
+                              "type": "string",
+                              "const": "read"
+                            },
+                            "scope": {
+                              "type": "string",
+                              "enum": [
+                                "self",
+                                "children"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "resource",
+                            "action",
+                            "scope"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "resource": {
+                              "type": "string",
+                              "const": "workItem"
+                            },
+                            "action": {
+                              "type": "string",
+                              "const": "update"
+                            },
+                            "scope": {
+                              "type": "string",
+                              "enum": [
+                                "self",
+                                "children"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "resource",
+                            "action",
+                            "scope"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "resource": {
+                              "type": "string",
+                              "const": "workItem"
+                            },
+                            "action": {
+                              "type": "string",
+                              "const": "comment"
+                            },
+                            "scope": {
+                              "type": "string",
+                              "enum": [
+                                "self",
+                                "children"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "resource",
+                            "action",
+                            "scope"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "resource": {
+                              "type": "string",
+                              "const": "workItem"
+                            },
+                            "action": {
+                              "type": "string",
+                              "const": "label"
+                            },
+                            "scope": {
+                              "type": "string",
+                              "enum": [
+                                "self",
+                                "children"
+                              ]
+                            },
+                            "labels": {
+                              "minItems": 1,
+                              "maxItems": 50,
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 200
+                              }
+                            }
+                          },
+                          "required": [
+                            "resource",
+                            "action",
+                            "scope",
+                            "labels"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "resource": {
+                              "type": "string",
+                              "const": "workItem"
+                            },
+                            "action": {
+                              "type": "string",
+                              "const": "block"
+                            },
+                            "scope": {
+                              "type": "string",
+                              "enum": [
+                                "self",
+                                "children"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "resource",
+                            "action",
+                            "scope"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "resource": {
+                              "type": "string",
+                              "const": "workItem"
+                            },
+                            "action": {
+                              "type": "string",
+                              "const": "close"
+                            },
+                            "scope": {
+                              "type": "string",
+                              "enum": [
+                                "self",
+                                "children"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "resource",
+                            "action",
+                            "scope"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "resource": {
+                              "type": "string",
+                              "const": "workItem"
+                            },
+                            "action": {
+                              "type": "string",
+                              "const": "create"
+                            },
+                            "scope": {
+                              "type": "string",
+                              "const": "children"
+                            },
+                            "labels": {
+                              "minItems": 1,
+                              "maxItems": 50,
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 200
+                              }
+                            }
+                          },
+                          "required": [
+                            "resource",
+                            "action",
+                            "scope",
+                            "labels"
+                          ],
+                          "additionalProperties": false
+                        }
                       ]
                     }
                   },
@@ -7544,13 +7940,211 @@
                       "additionalProperties": false
                     }
                   },
-                  "workItemPermissions": {
+                  "grants": {
                     "type": "array",
                     "items": {
-                      "type": "string",
-                      "enum": [
-                        "self",
-                        "children"
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "resource": {
+                              "type": "string",
+                              "const": "workItem"
+                            },
+                            "action": {
+                              "type": "string",
+                              "const": "read"
+                            },
+                            "scope": {
+                              "type": "string",
+                              "enum": [
+                                "self",
+                                "children"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "resource",
+                            "action",
+                            "scope"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "resource": {
+                              "type": "string",
+                              "const": "workItem"
+                            },
+                            "action": {
+                              "type": "string",
+                              "const": "update"
+                            },
+                            "scope": {
+                              "type": "string",
+                              "enum": [
+                                "self",
+                                "children"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "resource",
+                            "action",
+                            "scope"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "resource": {
+                              "type": "string",
+                              "const": "workItem"
+                            },
+                            "action": {
+                              "type": "string",
+                              "const": "comment"
+                            },
+                            "scope": {
+                              "type": "string",
+                              "enum": [
+                                "self",
+                                "children"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "resource",
+                            "action",
+                            "scope"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "resource": {
+                              "type": "string",
+                              "const": "workItem"
+                            },
+                            "action": {
+                              "type": "string",
+                              "const": "label"
+                            },
+                            "scope": {
+                              "type": "string",
+                              "enum": [
+                                "self",
+                                "children"
+                              ]
+                            },
+                            "labels": {
+                              "minItems": 1,
+                              "maxItems": 50,
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 200
+                              }
+                            }
+                          },
+                          "required": [
+                            "resource",
+                            "action",
+                            "scope",
+                            "labels"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "resource": {
+                              "type": "string",
+                              "const": "workItem"
+                            },
+                            "action": {
+                              "type": "string",
+                              "const": "block"
+                            },
+                            "scope": {
+                              "type": "string",
+                              "enum": [
+                                "self",
+                                "children"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "resource",
+                            "action",
+                            "scope"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "resource": {
+                              "type": "string",
+                              "const": "workItem"
+                            },
+                            "action": {
+                              "type": "string",
+                              "const": "close"
+                            },
+                            "scope": {
+                              "type": "string",
+                              "enum": [
+                                "self",
+                                "children"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "resource",
+                            "action",
+                            "scope"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "resource": {
+                              "type": "string",
+                              "const": "workItem"
+                            },
+                            "action": {
+                              "type": "string",
+                              "const": "create"
+                            },
+                            "scope": {
+                              "type": "string",
+                              "const": "children"
+                            },
+                            "labels": {
+                              "minItems": 1,
+                              "maxItems": 50,
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 200
+                              }
+                            }
+                          },
+                          "required": [
+                            "resource",
+                            "action",
+                            "scope",
+                            "labels"
+                          ],
+                          "additionalProperties": false
+                        }
                       ]
                     }
                   },
@@ -8301,13 +8895,211 @@
                         "additionalProperties": false
                       }
                     },
-                    "workItemPermissions": {
+                    "grants": {
                       "type": "array",
                       "items": {
-                        "type": "string",
-                        "enum": [
-                          "self",
-                          "children"
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "resource": {
+                                "type": "string",
+                                "const": "workItem"
+                              },
+                              "action": {
+                                "type": "string",
+                                "const": "read"
+                              },
+                              "scope": {
+                                "type": "string",
+                                "enum": [
+                                  "self",
+                                  "children"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "resource",
+                              "action",
+                              "scope"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "resource": {
+                                "type": "string",
+                                "const": "workItem"
+                              },
+                              "action": {
+                                "type": "string",
+                                "const": "update"
+                              },
+                              "scope": {
+                                "type": "string",
+                                "enum": [
+                                  "self",
+                                  "children"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "resource",
+                              "action",
+                              "scope"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "resource": {
+                                "type": "string",
+                                "const": "workItem"
+                              },
+                              "action": {
+                                "type": "string",
+                                "const": "comment"
+                              },
+                              "scope": {
+                                "type": "string",
+                                "enum": [
+                                  "self",
+                                  "children"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "resource",
+                              "action",
+                              "scope"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "resource": {
+                                "type": "string",
+                                "const": "workItem"
+                              },
+                              "action": {
+                                "type": "string",
+                                "const": "label"
+                              },
+                              "scope": {
+                                "type": "string",
+                                "enum": [
+                                  "self",
+                                  "children"
+                                ]
+                              },
+                              "labels": {
+                                "minItems": 1,
+                                "maxItems": 50,
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 200
+                                }
+                              }
+                            },
+                            "required": [
+                              "resource",
+                              "action",
+                              "scope",
+                              "labels"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "resource": {
+                                "type": "string",
+                                "const": "workItem"
+                              },
+                              "action": {
+                                "type": "string",
+                                "const": "block"
+                              },
+                              "scope": {
+                                "type": "string",
+                                "enum": [
+                                  "self",
+                                  "children"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "resource",
+                              "action",
+                              "scope"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "resource": {
+                                "type": "string",
+                                "const": "workItem"
+                              },
+                              "action": {
+                                "type": "string",
+                                "const": "close"
+                              },
+                              "scope": {
+                                "type": "string",
+                                "enum": [
+                                  "self",
+                                  "children"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "resource",
+                              "action",
+                              "scope"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "resource": {
+                                "type": "string",
+                                "const": "workItem"
+                              },
+                              "action": {
+                                "type": "string",
+                                "const": "create"
+                              },
+                              "scope": {
+                                "type": "string",
+                                "const": "children"
+                              },
+                              "labels": {
+                                "minItems": 1,
+                                "maxItems": 50,
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 200
+                                }
+                              }
+                            },
+                            "required": [
+                              "resource",
+                              "action",
+                              "scope",
+                              "labels"
+                            ],
+                            "additionalProperties": false
+                          }
                         ]
                       }
                     },
@@ -8920,7 +9712,7 @@
                     "resultSchemaJson",
                     "errors",
                     "retry",
-                    "workItemPermissions",
+                    "grants",
                     "maxTurns",
                     "concurrency",
                     "opencodeMcpJson",
@@ -9572,13 +10364,211 @@
                           "additionalProperties": false
                         }
                       },
-                      "workItemPermissions": {
+                      "grants": {
                         "type": "array",
                         "items": {
-                          "type": "string",
-                          "enum": [
-                            "self",
-                            "children"
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "resource": {
+                                  "type": "string",
+                                  "const": "workItem"
+                                },
+                                "action": {
+                                  "type": "string",
+                                  "const": "read"
+                                },
+                                "scope": {
+                                  "type": "string",
+                                  "enum": [
+                                    "self",
+                                    "children"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "resource",
+                                "action",
+                                "scope"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "resource": {
+                                  "type": "string",
+                                  "const": "workItem"
+                                },
+                                "action": {
+                                  "type": "string",
+                                  "const": "update"
+                                },
+                                "scope": {
+                                  "type": "string",
+                                  "enum": [
+                                    "self",
+                                    "children"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "resource",
+                                "action",
+                                "scope"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "resource": {
+                                  "type": "string",
+                                  "const": "workItem"
+                                },
+                                "action": {
+                                  "type": "string",
+                                  "const": "comment"
+                                },
+                                "scope": {
+                                  "type": "string",
+                                  "enum": [
+                                    "self",
+                                    "children"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "resource",
+                                "action",
+                                "scope"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "resource": {
+                                  "type": "string",
+                                  "const": "workItem"
+                                },
+                                "action": {
+                                  "type": "string",
+                                  "const": "label"
+                                },
+                                "scope": {
+                                  "type": "string",
+                                  "enum": [
+                                    "self",
+                                    "children"
+                                  ]
+                                },
+                                "labels": {
+                                  "minItems": 1,
+                                  "maxItems": 50,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 200
+                                  }
+                                }
+                              },
+                              "required": [
+                                "resource",
+                                "action",
+                                "scope",
+                                "labels"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "resource": {
+                                  "type": "string",
+                                  "const": "workItem"
+                                },
+                                "action": {
+                                  "type": "string",
+                                  "const": "block"
+                                },
+                                "scope": {
+                                  "type": "string",
+                                  "enum": [
+                                    "self",
+                                    "children"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "resource",
+                                "action",
+                                "scope"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "resource": {
+                                  "type": "string",
+                                  "const": "workItem"
+                                },
+                                "action": {
+                                  "type": "string",
+                                  "const": "close"
+                                },
+                                "scope": {
+                                  "type": "string",
+                                  "enum": [
+                                    "self",
+                                    "children"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "resource",
+                                "action",
+                                "scope"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "resource": {
+                                  "type": "string",
+                                  "const": "workItem"
+                                },
+                                "action": {
+                                  "type": "string",
+                                  "const": "create"
+                                },
+                                "scope": {
+                                  "type": "string",
+                                  "const": "children"
+                                },
+                                "labels": {
+                                  "minItems": 1,
+                                  "maxItems": 50,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 200
+                                  }
+                                }
+                              },
+                              "required": [
+                                "resource",
+                                "action",
+                                "scope",
+                                "labels"
+                              ],
+                              "additionalProperties": false
+                            }
                           ]
                         }
                       },
@@ -10191,7 +11181,7 @@
                       "resultSchemaJson",
                       "errors",
                       "retry",
-                      "workItemPermissions",
+                      "grants",
                       "maxTurns",
                       "concurrency",
                       "opencodeMcpJson",
@@ -10624,13 +11614,211 @@
                       "additionalProperties": false
                     }
                   },
-                  "workItemPermissions": {
+                  "grants": {
                     "type": "array",
                     "items": {
-                      "type": "string",
-                      "enum": [
-                        "self",
-                        "children"
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "resource": {
+                              "type": "string",
+                              "const": "workItem"
+                            },
+                            "action": {
+                              "type": "string",
+                              "const": "read"
+                            },
+                            "scope": {
+                              "type": "string",
+                              "enum": [
+                                "self",
+                                "children"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "resource",
+                            "action",
+                            "scope"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "resource": {
+                              "type": "string",
+                              "const": "workItem"
+                            },
+                            "action": {
+                              "type": "string",
+                              "const": "update"
+                            },
+                            "scope": {
+                              "type": "string",
+                              "enum": [
+                                "self",
+                                "children"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "resource",
+                            "action",
+                            "scope"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "resource": {
+                              "type": "string",
+                              "const": "workItem"
+                            },
+                            "action": {
+                              "type": "string",
+                              "const": "comment"
+                            },
+                            "scope": {
+                              "type": "string",
+                              "enum": [
+                                "self",
+                                "children"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "resource",
+                            "action",
+                            "scope"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "resource": {
+                              "type": "string",
+                              "const": "workItem"
+                            },
+                            "action": {
+                              "type": "string",
+                              "const": "label"
+                            },
+                            "scope": {
+                              "type": "string",
+                              "enum": [
+                                "self",
+                                "children"
+                              ]
+                            },
+                            "labels": {
+                              "minItems": 1,
+                              "maxItems": 50,
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 200
+                              }
+                            }
+                          },
+                          "required": [
+                            "resource",
+                            "action",
+                            "scope",
+                            "labels"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "resource": {
+                              "type": "string",
+                              "const": "workItem"
+                            },
+                            "action": {
+                              "type": "string",
+                              "const": "block"
+                            },
+                            "scope": {
+                              "type": "string",
+                              "enum": [
+                                "self",
+                                "children"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "resource",
+                            "action",
+                            "scope"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "resource": {
+                              "type": "string",
+                              "const": "workItem"
+                            },
+                            "action": {
+                              "type": "string",
+                              "const": "close"
+                            },
+                            "scope": {
+                              "type": "string",
+                              "enum": [
+                                "self",
+                                "children"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "resource",
+                            "action",
+                            "scope"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "resource": {
+                              "type": "string",
+                              "const": "workItem"
+                            },
+                            "action": {
+                              "type": "string",
+                              "const": "create"
+                            },
+                            "scope": {
+                              "type": "string",
+                              "const": "children"
+                            },
+                            "labels": {
+                              "minItems": 1,
+                              "maxItems": 50,
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 200
+                              }
+                            }
+                          },
+                          "required": [
+                            "resource",
+                            "action",
+                            "scope",
+                            "labels"
+                          ],
+                          "additionalProperties": false
+                        }
                       ]
                     }
                   },
@@ -11372,13 +12560,211 @@
                       "additionalProperties": false
                     }
                   },
-                  "workItemPermissions": {
+                  "grants": {
                     "type": "array",
                     "items": {
-                      "type": "string",
-                      "enum": [
-                        "self",
-                        "children"
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "resource": {
+                              "type": "string",
+                              "const": "workItem"
+                            },
+                            "action": {
+                              "type": "string",
+                              "const": "read"
+                            },
+                            "scope": {
+                              "type": "string",
+                              "enum": [
+                                "self",
+                                "children"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "resource",
+                            "action",
+                            "scope"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "resource": {
+                              "type": "string",
+                              "const": "workItem"
+                            },
+                            "action": {
+                              "type": "string",
+                              "const": "update"
+                            },
+                            "scope": {
+                              "type": "string",
+                              "enum": [
+                                "self",
+                                "children"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "resource",
+                            "action",
+                            "scope"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "resource": {
+                              "type": "string",
+                              "const": "workItem"
+                            },
+                            "action": {
+                              "type": "string",
+                              "const": "comment"
+                            },
+                            "scope": {
+                              "type": "string",
+                              "enum": [
+                                "self",
+                                "children"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "resource",
+                            "action",
+                            "scope"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "resource": {
+                              "type": "string",
+                              "const": "workItem"
+                            },
+                            "action": {
+                              "type": "string",
+                              "const": "label"
+                            },
+                            "scope": {
+                              "type": "string",
+                              "enum": [
+                                "self",
+                                "children"
+                              ]
+                            },
+                            "labels": {
+                              "minItems": 1,
+                              "maxItems": 50,
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 200
+                              }
+                            }
+                          },
+                          "required": [
+                            "resource",
+                            "action",
+                            "scope",
+                            "labels"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "resource": {
+                              "type": "string",
+                              "const": "workItem"
+                            },
+                            "action": {
+                              "type": "string",
+                              "const": "block"
+                            },
+                            "scope": {
+                              "type": "string",
+                              "enum": [
+                                "self",
+                                "children"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "resource",
+                            "action",
+                            "scope"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "resource": {
+                              "type": "string",
+                              "const": "workItem"
+                            },
+                            "action": {
+                              "type": "string",
+                              "const": "close"
+                            },
+                            "scope": {
+                              "type": "string",
+                              "enum": [
+                                "self",
+                                "children"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "resource",
+                            "action",
+                            "scope"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "resource": {
+                              "type": "string",
+                              "const": "workItem"
+                            },
+                            "action": {
+                              "type": "string",
+                              "const": "create"
+                            },
+                            "scope": {
+                              "type": "string",
+                              "const": "children"
+                            },
+                            "labels": {
+                              "minItems": 1,
+                              "maxItems": 50,
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 200
+                              }
+                            }
+                          },
+                          "required": [
+                            "resource",
+                            "action",
+                            "scope",
+                            "labels"
+                          ],
+                          "additionalProperties": false
+                        }
                       ]
                     }
                   },
@@ -12120,13 +13506,211 @@
                       "additionalProperties": false
                     }
                   },
-                  "workItemPermissions": {
+                  "grants": {
                     "type": "array",
                     "items": {
-                      "type": "string",
-                      "enum": [
-                        "self",
-                        "children"
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "resource": {
+                              "type": "string",
+                              "const": "workItem"
+                            },
+                            "action": {
+                              "type": "string",
+                              "const": "read"
+                            },
+                            "scope": {
+                              "type": "string",
+                              "enum": [
+                                "self",
+                                "children"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "resource",
+                            "action",
+                            "scope"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "resource": {
+                              "type": "string",
+                              "const": "workItem"
+                            },
+                            "action": {
+                              "type": "string",
+                              "const": "update"
+                            },
+                            "scope": {
+                              "type": "string",
+                              "enum": [
+                                "self",
+                                "children"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "resource",
+                            "action",
+                            "scope"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "resource": {
+                              "type": "string",
+                              "const": "workItem"
+                            },
+                            "action": {
+                              "type": "string",
+                              "const": "comment"
+                            },
+                            "scope": {
+                              "type": "string",
+                              "enum": [
+                                "self",
+                                "children"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "resource",
+                            "action",
+                            "scope"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "resource": {
+                              "type": "string",
+                              "const": "workItem"
+                            },
+                            "action": {
+                              "type": "string",
+                              "const": "label"
+                            },
+                            "scope": {
+                              "type": "string",
+                              "enum": [
+                                "self",
+                                "children"
+                              ]
+                            },
+                            "labels": {
+                              "minItems": 1,
+                              "maxItems": 50,
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 200
+                              }
+                            }
+                          },
+                          "required": [
+                            "resource",
+                            "action",
+                            "scope",
+                            "labels"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "resource": {
+                              "type": "string",
+                              "const": "workItem"
+                            },
+                            "action": {
+                              "type": "string",
+                              "const": "block"
+                            },
+                            "scope": {
+                              "type": "string",
+                              "enum": [
+                                "self",
+                                "children"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "resource",
+                            "action",
+                            "scope"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "resource": {
+                              "type": "string",
+                              "const": "workItem"
+                            },
+                            "action": {
+                              "type": "string",
+                              "const": "close"
+                            },
+                            "scope": {
+                              "type": "string",
+                              "enum": [
+                                "self",
+                                "children"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "resource",
+                            "action",
+                            "scope"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "resource": {
+                              "type": "string",
+                              "const": "workItem"
+                            },
+                            "action": {
+                              "type": "string",
+                              "const": "create"
+                            },
+                            "scope": {
+                              "type": "string",
+                              "const": "children"
+                            },
+                            "labels": {
+                              "minItems": 1,
+                              "maxItems": 50,
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 200
+                              }
+                            }
+                          },
+                          "required": [
+                            "resource",
+                            "action",
+                            "scope",
+                            "labels"
+                          ],
+                          "additionalProperties": false
+                        }
                       ]
                     }
                   },
@@ -12877,13 +14461,211 @@
                         "additionalProperties": false
                       }
                     },
-                    "workItemPermissions": {
+                    "grants": {
                       "type": "array",
                       "items": {
-                        "type": "string",
-                        "enum": [
-                          "self",
-                          "children"
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "resource": {
+                                "type": "string",
+                                "const": "workItem"
+                              },
+                              "action": {
+                                "type": "string",
+                                "const": "read"
+                              },
+                              "scope": {
+                                "type": "string",
+                                "enum": [
+                                  "self",
+                                  "children"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "resource",
+                              "action",
+                              "scope"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "resource": {
+                                "type": "string",
+                                "const": "workItem"
+                              },
+                              "action": {
+                                "type": "string",
+                                "const": "update"
+                              },
+                              "scope": {
+                                "type": "string",
+                                "enum": [
+                                  "self",
+                                  "children"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "resource",
+                              "action",
+                              "scope"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "resource": {
+                                "type": "string",
+                                "const": "workItem"
+                              },
+                              "action": {
+                                "type": "string",
+                                "const": "comment"
+                              },
+                              "scope": {
+                                "type": "string",
+                                "enum": [
+                                  "self",
+                                  "children"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "resource",
+                              "action",
+                              "scope"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "resource": {
+                                "type": "string",
+                                "const": "workItem"
+                              },
+                              "action": {
+                                "type": "string",
+                                "const": "label"
+                              },
+                              "scope": {
+                                "type": "string",
+                                "enum": [
+                                  "self",
+                                  "children"
+                                ]
+                              },
+                              "labels": {
+                                "minItems": 1,
+                                "maxItems": 50,
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 200
+                                }
+                              }
+                            },
+                            "required": [
+                              "resource",
+                              "action",
+                              "scope",
+                              "labels"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "resource": {
+                                "type": "string",
+                                "const": "workItem"
+                              },
+                              "action": {
+                                "type": "string",
+                                "const": "block"
+                              },
+                              "scope": {
+                                "type": "string",
+                                "enum": [
+                                  "self",
+                                  "children"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "resource",
+                              "action",
+                              "scope"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "resource": {
+                                "type": "string",
+                                "const": "workItem"
+                              },
+                              "action": {
+                                "type": "string",
+                                "const": "close"
+                              },
+                              "scope": {
+                                "type": "string",
+                                "enum": [
+                                  "self",
+                                  "children"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "resource",
+                              "action",
+                              "scope"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "resource": {
+                                "type": "string",
+                                "const": "workItem"
+                              },
+                              "action": {
+                                "type": "string",
+                                "const": "create"
+                              },
+                              "scope": {
+                                "type": "string",
+                                "const": "children"
+                              },
+                              "labels": {
+                                "minItems": 1,
+                                "maxItems": 50,
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 200
+                                }
+                              }
+                            },
+                            "required": [
+                              "resource",
+                              "action",
+                              "scope",
+                              "labels"
+                            ],
+                            "additionalProperties": false
+                          }
                         ]
                       }
                     },
@@ -13496,7 +15278,7 @@
                     "resultSchemaJson",
                     "errors",
                     "retry",
-                    "workItemPermissions",
+                    "grants",
                     "maxTurns",
                     "concurrency",
                     "opencodeMcpJson",
@@ -14012,13 +15794,211 @@
                         "additionalProperties": false
                       }
                     },
-                    "workItemPermissions": {
+                    "grants": {
                       "type": "array",
                       "items": {
-                        "type": "string",
-                        "enum": [
-                          "self",
-                          "children"
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "resource": {
+                                "type": "string",
+                                "const": "workItem"
+                              },
+                              "action": {
+                                "type": "string",
+                                "const": "read"
+                              },
+                              "scope": {
+                                "type": "string",
+                                "enum": [
+                                  "self",
+                                  "children"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "resource",
+                              "action",
+                              "scope"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "resource": {
+                                "type": "string",
+                                "const": "workItem"
+                              },
+                              "action": {
+                                "type": "string",
+                                "const": "update"
+                              },
+                              "scope": {
+                                "type": "string",
+                                "enum": [
+                                  "self",
+                                  "children"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "resource",
+                              "action",
+                              "scope"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "resource": {
+                                "type": "string",
+                                "const": "workItem"
+                              },
+                              "action": {
+                                "type": "string",
+                                "const": "comment"
+                              },
+                              "scope": {
+                                "type": "string",
+                                "enum": [
+                                  "self",
+                                  "children"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "resource",
+                              "action",
+                              "scope"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "resource": {
+                                "type": "string",
+                                "const": "workItem"
+                              },
+                              "action": {
+                                "type": "string",
+                                "const": "label"
+                              },
+                              "scope": {
+                                "type": "string",
+                                "enum": [
+                                  "self",
+                                  "children"
+                                ]
+                              },
+                              "labels": {
+                                "minItems": 1,
+                                "maxItems": 50,
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 200
+                                }
+                              }
+                            },
+                            "required": [
+                              "resource",
+                              "action",
+                              "scope",
+                              "labels"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "resource": {
+                                "type": "string",
+                                "const": "workItem"
+                              },
+                              "action": {
+                                "type": "string",
+                                "const": "block"
+                              },
+                              "scope": {
+                                "type": "string",
+                                "enum": [
+                                  "self",
+                                  "children"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "resource",
+                              "action",
+                              "scope"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "resource": {
+                                "type": "string",
+                                "const": "workItem"
+                              },
+                              "action": {
+                                "type": "string",
+                                "const": "close"
+                              },
+                              "scope": {
+                                "type": "string",
+                                "enum": [
+                                  "self",
+                                  "children"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "resource",
+                              "action",
+                              "scope"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "resource": {
+                                "type": "string",
+                                "const": "workItem"
+                              },
+                              "action": {
+                                "type": "string",
+                                "const": "create"
+                              },
+                              "scope": {
+                                "type": "string",
+                                "const": "children"
+                              },
+                              "labels": {
+                                "minItems": 1,
+                                "maxItems": 50,
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 200
+                                }
+                              }
+                            },
+                            "required": [
+                              "resource",
+                              "action",
+                              "scope",
+                              "labels"
+                            ],
+                            "additionalProperties": false
+                          }
                         ]
                       }
                     },
@@ -14631,7 +16611,7 @@
                     "resultSchemaJson",
                     "errors",
                     "retry",
-                    "workItemPermissions",
+                    "grants",
                     "maxTurns",
                     "concurrency",
                     "opencodeMcpJson",
@@ -15147,13 +17127,211 @@
                         "additionalProperties": false
                       }
                     },
-                    "workItemPermissions": {
+                    "grants": {
                       "type": "array",
                       "items": {
-                        "type": "string",
-                        "enum": [
-                          "self",
-                          "children"
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "resource": {
+                                "type": "string",
+                                "const": "workItem"
+                              },
+                              "action": {
+                                "type": "string",
+                                "const": "read"
+                              },
+                              "scope": {
+                                "type": "string",
+                                "enum": [
+                                  "self",
+                                  "children"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "resource",
+                              "action",
+                              "scope"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "resource": {
+                                "type": "string",
+                                "const": "workItem"
+                              },
+                              "action": {
+                                "type": "string",
+                                "const": "update"
+                              },
+                              "scope": {
+                                "type": "string",
+                                "enum": [
+                                  "self",
+                                  "children"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "resource",
+                              "action",
+                              "scope"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "resource": {
+                                "type": "string",
+                                "const": "workItem"
+                              },
+                              "action": {
+                                "type": "string",
+                                "const": "comment"
+                              },
+                              "scope": {
+                                "type": "string",
+                                "enum": [
+                                  "self",
+                                  "children"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "resource",
+                              "action",
+                              "scope"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "resource": {
+                                "type": "string",
+                                "const": "workItem"
+                              },
+                              "action": {
+                                "type": "string",
+                                "const": "label"
+                              },
+                              "scope": {
+                                "type": "string",
+                                "enum": [
+                                  "self",
+                                  "children"
+                                ]
+                              },
+                              "labels": {
+                                "minItems": 1,
+                                "maxItems": 50,
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 200
+                                }
+                              }
+                            },
+                            "required": [
+                              "resource",
+                              "action",
+                              "scope",
+                              "labels"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "resource": {
+                                "type": "string",
+                                "const": "workItem"
+                              },
+                              "action": {
+                                "type": "string",
+                                "const": "block"
+                              },
+                              "scope": {
+                                "type": "string",
+                                "enum": [
+                                  "self",
+                                  "children"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "resource",
+                              "action",
+                              "scope"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "resource": {
+                                "type": "string",
+                                "const": "workItem"
+                              },
+                              "action": {
+                                "type": "string",
+                                "const": "close"
+                              },
+                              "scope": {
+                                "type": "string",
+                                "enum": [
+                                  "self",
+                                  "children"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "resource",
+                              "action",
+                              "scope"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "resource": {
+                                "type": "string",
+                                "const": "workItem"
+                              },
+                              "action": {
+                                "type": "string",
+                                "const": "create"
+                              },
+                              "scope": {
+                                "type": "string",
+                                "const": "children"
+                              },
+                              "labels": {
+                                "minItems": 1,
+                                "maxItems": 50,
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 200
+                                }
+                              }
+                            },
+                            "required": [
+                              "resource",
+                              "action",
+                              "scope",
+                              "labels"
+                            ],
+                            "additionalProperties": false
+                          }
                         ]
                       }
                     },
@@ -15766,7 +17944,7 @@
                     "resultSchemaJson",
                     "errors",
                     "retry",
-                    "workItemPermissions",
+                    "grants",
                     "maxTurns",
                     "concurrency",
                     "opencodeMcpJson",
@@ -16496,13 +18674,211 @@
                             }
                           ]
                         },
-                        "workItemPermissions": {
+                        "grants": {
                           "type": "array",
                           "items": {
-                            "type": "string",
-                            "enum": [
-                              "self",
-                              "children"
+                            "oneOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "resource": {
+                                    "type": "string",
+                                    "const": "workItem"
+                                  },
+                                  "action": {
+                                    "type": "string",
+                                    "const": "read"
+                                  },
+                                  "scope": {
+                                    "type": "string",
+                                    "enum": [
+                                      "self",
+                                      "children"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "resource",
+                                  "action",
+                                  "scope"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "resource": {
+                                    "type": "string",
+                                    "const": "workItem"
+                                  },
+                                  "action": {
+                                    "type": "string",
+                                    "const": "update"
+                                  },
+                                  "scope": {
+                                    "type": "string",
+                                    "enum": [
+                                      "self",
+                                      "children"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "resource",
+                                  "action",
+                                  "scope"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "resource": {
+                                    "type": "string",
+                                    "const": "workItem"
+                                  },
+                                  "action": {
+                                    "type": "string",
+                                    "const": "comment"
+                                  },
+                                  "scope": {
+                                    "type": "string",
+                                    "enum": [
+                                      "self",
+                                      "children"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "resource",
+                                  "action",
+                                  "scope"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "resource": {
+                                    "type": "string",
+                                    "const": "workItem"
+                                  },
+                                  "action": {
+                                    "type": "string",
+                                    "const": "label"
+                                  },
+                                  "scope": {
+                                    "type": "string",
+                                    "enum": [
+                                      "self",
+                                      "children"
+                                    ]
+                                  },
+                                  "labels": {
+                                    "minItems": 1,
+                                    "maxItems": 50,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 200
+                                    }
+                                  }
+                                },
+                                "required": [
+                                  "resource",
+                                  "action",
+                                  "scope",
+                                  "labels"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "resource": {
+                                    "type": "string",
+                                    "const": "workItem"
+                                  },
+                                  "action": {
+                                    "type": "string",
+                                    "const": "block"
+                                  },
+                                  "scope": {
+                                    "type": "string",
+                                    "enum": [
+                                      "self",
+                                      "children"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "resource",
+                                  "action",
+                                  "scope"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "resource": {
+                                    "type": "string",
+                                    "const": "workItem"
+                                  },
+                                  "action": {
+                                    "type": "string",
+                                    "const": "close"
+                                  },
+                                  "scope": {
+                                    "type": "string",
+                                    "enum": [
+                                      "self",
+                                      "children"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "resource",
+                                  "action",
+                                  "scope"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "resource": {
+                                    "type": "string",
+                                    "const": "workItem"
+                                  },
+                                  "action": {
+                                    "type": "string",
+                                    "const": "create"
+                                  },
+                                  "scope": {
+                                    "type": "string",
+                                    "const": "children"
+                                  },
+                                  "labels": {
+                                    "minItems": 1,
+                                    "maxItems": 50,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 200
+                                    }
+                                  }
+                                },
+                                "required": [
+                                  "resource",
+                                  "action",
+                                  "scope",
+                                  "labels"
+                                ],
+                                "additionalProperties": false
+                              }
                             ]
                           }
                         },
@@ -16612,7 +18988,7 @@
                         "taskExecutionConfigId",
                         "inputJson",
                         "retryJson",
-                        "workItemPermissions",
+                        "grants",
                         "maxTurns",
                         "heartbeatSeconds",
                         "executionTimeoutSeconds",
@@ -17890,13 +20266,211 @@
                         }
                       ]
                     },
-                    "workItemPermissions": {
+                    "grants": {
                       "type": "array",
                       "items": {
-                        "type": "string",
-                        "enum": [
-                          "self",
-                          "children"
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "resource": {
+                                "type": "string",
+                                "const": "workItem"
+                              },
+                              "action": {
+                                "type": "string",
+                                "const": "read"
+                              },
+                              "scope": {
+                                "type": "string",
+                                "enum": [
+                                  "self",
+                                  "children"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "resource",
+                              "action",
+                              "scope"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "resource": {
+                                "type": "string",
+                                "const": "workItem"
+                              },
+                              "action": {
+                                "type": "string",
+                                "const": "update"
+                              },
+                              "scope": {
+                                "type": "string",
+                                "enum": [
+                                  "self",
+                                  "children"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "resource",
+                              "action",
+                              "scope"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "resource": {
+                                "type": "string",
+                                "const": "workItem"
+                              },
+                              "action": {
+                                "type": "string",
+                                "const": "comment"
+                              },
+                              "scope": {
+                                "type": "string",
+                                "enum": [
+                                  "self",
+                                  "children"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "resource",
+                              "action",
+                              "scope"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "resource": {
+                                "type": "string",
+                                "const": "workItem"
+                              },
+                              "action": {
+                                "type": "string",
+                                "const": "label"
+                              },
+                              "scope": {
+                                "type": "string",
+                                "enum": [
+                                  "self",
+                                  "children"
+                                ]
+                              },
+                              "labels": {
+                                "minItems": 1,
+                                "maxItems": 50,
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 200
+                                }
+                              }
+                            },
+                            "required": [
+                              "resource",
+                              "action",
+                              "scope",
+                              "labels"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "resource": {
+                                "type": "string",
+                                "const": "workItem"
+                              },
+                              "action": {
+                                "type": "string",
+                                "const": "block"
+                              },
+                              "scope": {
+                                "type": "string",
+                                "enum": [
+                                  "self",
+                                  "children"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "resource",
+                              "action",
+                              "scope"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "resource": {
+                                "type": "string",
+                                "const": "workItem"
+                              },
+                              "action": {
+                                "type": "string",
+                                "const": "close"
+                              },
+                              "scope": {
+                                "type": "string",
+                                "enum": [
+                                  "self",
+                                  "children"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "resource",
+                              "action",
+                              "scope"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "resource": {
+                                "type": "string",
+                                "const": "workItem"
+                              },
+                              "action": {
+                                "type": "string",
+                                "const": "create"
+                              },
+                              "scope": {
+                                "type": "string",
+                                "const": "children"
+                              },
+                              "labels": {
+                                "minItems": 1,
+                                "maxItems": 50,
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 200
+                                }
+                              }
+                            },
+                            "required": [
+                              "resource",
+                              "action",
+                              "scope",
+                              "labels"
+                            ],
+                            "additionalProperties": false
+                          }
                         ]
                       }
                     },
@@ -18202,7 +20776,7 @@
                     "taskExecutionConfigId",
                     "inputJson",
                     "retryJson",
-                    "workItemPermissions",
+                    "grants",
                     "maxTurns",
                     "heartbeatSeconds",
                     "executionTimeoutSeconds",
@@ -22093,13 +24667,211 @@
                         "workItemId": {
                           "type": "string"
                         },
-                        "workItemPermissions": {
+                        "grants": {
                           "type": "array",
                           "items": {
-                            "type": "string",
-                            "enum": [
-                              "self",
-                              "children"
+                            "oneOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "resource": {
+                                    "type": "string",
+                                    "const": "workItem"
+                                  },
+                                  "action": {
+                                    "type": "string",
+                                    "const": "read"
+                                  },
+                                  "scope": {
+                                    "type": "string",
+                                    "enum": [
+                                      "self",
+                                      "children"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "resource",
+                                  "action",
+                                  "scope"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "resource": {
+                                    "type": "string",
+                                    "const": "workItem"
+                                  },
+                                  "action": {
+                                    "type": "string",
+                                    "const": "update"
+                                  },
+                                  "scope": {
+                                    "type": "string",
+                                    "enum": [
+                                      "self",
+                                      "children"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "resource",
+                                  "action",
+                                  "scope"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "resource": {
+                                    "type": "string",
+                                    "const": "workItem"
+                                  },
+                                  "action": {
+                                    "type": "string",
+                                    "const": "comment"
+                                  },
+                                  "scope": {
+                                    "type": "string",
+                                    "enum": [
+                                      "self",
+                                      "children"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "resource",
+                                  "action",
+                                  "scope"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "resource": {
+                                    "type": "string",
+                                    "const": "workItem"
+                                  },
+                                  "action": {
+                                    "type": "string",
+                                    "const": "label"
+                                  },
+                                  "scope": {
+                                    "type": "string",
+                                    "enum": [
+                                      "self",
+                                      "children"
+                                    ]
+                                  },
+                                  "labels": {
+                                    "minItems": 1,
+                                    "maxItems": 50,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 200
+                                    }
+                                  }
+                                },
+                                "required": [
+                                  "resource",
+                                  "action",
+                                  "scope",
+                                  "labels"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "resource": {
+                                    "type": "string",
+                                    "const": "workItem"
+                                  },
+                                  "action": {
+                                    "type": "string",
+                                    "const": "block"
+                                  },
+                                  "scope": {
+                                    "type": "string",
+                                    "enum": [
+                                      "self",
+                                      "children"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "resource",
+                                  "action",
+                                  "scope"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "resource": {
+                                    "type": "string",
+                                    "const": "workItem"
+                                  },
+                                  "action": {
+                                    "type": "string",
+                                    "const": "close"
+                                  },
+                                  "scope": {
+                                    "type": "string",
+                                    "enum": [
+                                      "self",
+                                      "children"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "resource",
+                                  "action",
+                                  "scope"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "resource": {
+                                    "type": "string",
+                                    "const": "workItem"
+                                  },
+                                  "action": {
+                                    "type": "string",
+                                    "const": "create"
+                                  },
+                                  "scope": {
+                                    "type": "string",
+                                    "const": "children"
+                                  },
+                                  "labels": {
+                                    "minItems": 1,
+                                    "maxItems": 50,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 200
+                                    }
+                                  }
+                                },
+                                "required": [
+                                  "resource",
+                                  "action",
+                                  "scope",
+                                  "labels"
+                                ],
+                                "additionalProperties": false
+                              }
                             ]
                           }
                         }
@@ -22117,7 +24889,7 @@
                         "resultSchemaJson",
                         "turnsRemaining",
                         "workItemId",
-                        "workItemPermissions"
+                        "grants"
                       ],
                       "additionalProperties": false
                     },
@@ -23490,28 +26262,6 @@
                             "reason"
                           ],
                           "additionalProperties": false
-                        },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "kind": {
-                              "type": "string",
-                              "const": "startTask"
-                            },
-                            "workItemId": {
-                              "type": "string"
-                            },
-                            "stepKey": {
-                              "type": "string",
-                              "minLength": 1
-                            }
-                          },
-                          "required": [
-                            "kind",
-                            "workItemId",
-                            "stepKey"
-                          ],
-                          "additionalProperties": false
                         }
                       ]
                     }
@@ -23787,28 +26537,6 @@
                             "reason"
                           ],
                           "additionalProperties": false
-                        },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "kind": {
-                              "type": "string",
-                              "const": "startTask"
-                            },
-                            "workItemId": {
-                              "type": "string"
-                            },
-                            "stepKey": {
-                              "type": "string",
-                              "minLength": 1
-                            }
-                          },
-                          "required": [
-                            "kind",
-                            "workItemId",
-                            "stepKey"
-                          ],
-                          "additionalProperties": false
                         }
                       ]
                     }
@@ -24082,28 +26810,6 @@
                             "kind",
                             "workItemId",
                             "reason"
-                          ],
-                          "additionalProperties": false
-                        },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "kind": {
-                              "type": "string",
-                              "const": "startTask"
-                            },
-                            "workItemId": {
-                              "type": "string"
-                            },
-                            "stepKey": {
-                              "type": "string",
-                              "minLength": 1
-                            }
-                          },
-                          "required": [
-                            "kind",
-                            "workItemId",
-                            "stepKey"
                           ],
                           "additionalProperties": false
                         }
@@ -24847,7 +27553,7 @@
         "tags": [
           "TaskRuns"
         ],
-        "description": "Records that the task run's agent ended its turn with a yield; the task run ends `yielded`. A `hand_over` (the default) hands the conversation to a person: when it belongs to a pipeline run, the run posts `message` to the step visit's conversation and waits for a reply. A `wait_for_work` applies `workItemChanges`, leaves the task `waiting_for_work`, and queues its continuation once its work item has no open blockers (at once if it has none). Requires the claim token and `executions:write`.",
+        "description": "Records that the task run's agent ended its turn with a yield; the task run ends `yielded`. It hands the conversation to a person: when it belongs to a pipeline run, the run posts `message` to the step visit's conversation and waits for a reply. Requires the claim token and `executions:write`.",
         "parameters": [
           {
             "name": "taskRunId",
@@ -24870,13 +27576,6 @@
                     "type": "string",
                     "minLength": 1
                   },
-                  "kind": {
-                    "type": "string",
-                    "enum": [
-                      "hand_over",
-                      "wait_for_work"
-                    ]
-                  },
                   "message": {
                     "type": "string",
                     "minLength": 1
@@ -24923,240 +27622,11 @@
                         "type": "null"
                       }
                     ]
-                  },
-                  "workItemChanges": {
-                    "maxItems": 200,
-                    "type": "array",
-                    "items": {
-                      "oneOf": [
-                        {
-                          "type": "object",
-                          "properties": {
-                            "kind": {
-                              "type": "string",
-                              "const": "create"
-                            },
-                            "workItemId": {
-                              "type": "string"
-                            },
-                            "title": {
-                              "type": "string",
-                              "minLength": 1,
-                              "maxLength": 500
-                            },
-                            "description": {
-                              "type": "string",
-                              "minLength": 1,
-                              "maxLength": 50000
-                            },
-                            "fields": {
-                              "type": "object",
-                              "propertyNames": {
-                                "type": "string"
-                              },
-                              "additionalProperties": {}
-                            },
-                            "labels": {
-                              "maxItems": 50,
-                              "type": "array",
-                              "items": {
-                                "type": "string",
-                                "minLength": 1,
-                                "maxLength": 200
-                              }
-                            },
-                            "blockedBy": {
-                              "maxItems": 50,
-                              "type": "array",
-                              "items": {
-                                "type": "string"
-                              }
-                            }
-                          },
-                          "required": [
-                            "kind",
-                            "workItemId",
-                            "title",
-                            "description"
-                          ],
-                          "additionalProperties": false
-                        },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "kind": {
-                              "type": "string",
-                              "const": "label"
-                            },
-                            "workItemId": {
-                              "type": "string"
-                            },
-                            "add": {
-                              "maxItems": 50,
-                              "type": "array",
-                              "items": {
-                                "type": "string",
-                                "minLength": 1,
-                                "maxLength": 200
-                              }
-                            },
-                            "remove": {
-                              "maxItems": 50,
-                              "type": "array",
-                              "items": {
-                                "type": "string",
-                                "minLength": 1,
-                                "maxLength": 200
-                              }
-                            }
-                          },
-                          "required": [
-                            "kind",
-                            "workItemId"
-                          ],
-                          "additionalProperties": false
-                        },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "kind": {
-                              "type": "string",
-                              "const": "block"
-                            },
-                            "blockedWorkItemId": {
-                              "type": "string"
-                            },
-                            "blockingWorkItemId": {
-                              "type": "string"
-                            },
-                            "remove": {
-                              "type": "boolean"
-                            }
-                          },
-                          "required": [
-                            "kind",
-                            "blockedWorkItemId",
-                            "blockingWorkItemId"
-                          ],
-                          "additionalProperties": false
-                        },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "kind": {
-                              "type": "string",
-                              "const": "describe"
-                            },
-                            "workItemId": {
-                              "type": "string"
-                            },
-                            "description": {
-                              "type": "string",
-                              "minLength": 1,
-                              "maxLength": 50000
-                            },
-                            "descriptionVersion": {
-                              "type": "integer",
-                              "exclusiveMinimum": 0,
-                              "maximum": 9007199254740991
-                            }
-                          },
-                          "required": [
-                            "kind",
-                            "workItemId",
-                            "description",
-                            "descriptionVersion"
-                          ],
-                          "additionalProperties": false
-                        },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "kind": {
-                              "type": "string",
-                              "const": "comment"
-                            },
-                            "workItemId": {
-                              "type": "string"
-                            },
-                            "body": {
-                              "type": "string",
-                              "minLength": 1,
-                              "maxLength": 50000
-                            }
-                          },
-                          "required": [
-                            "kind",
-                            "workItemId",
-                            "body"
-                          ],
-                          "additionalProperties": false
-                        },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "kind": {
-                              "type": "string",
-                              "const": "close"
-                            },
-                            "workItemId": {
-                              "type": "string"
-                            },
-                            "reason": {
-                              "type": "string",
-                              "enum": [
-                                "completed",
-                                "out_of_scope",
-                                "superseded"
-                              ]
-                            },
-                            "resolution": {
-                              "anyOf": [
-                                {
-                                  "type": "string",
-                                  "maxLength": 10000
-                                },
-                                {
-                                  "type": "null"
-                                }
-                              ]
-                            }
-                          },
-                          "required": [
-                            "kind",
-                            "workItemId",
-                            "reason"
-                          ],
-                          "additionalProperties": false
-                        },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "kind": {
-                              "type": "string",
-                              "const": "startTask"
-                            },
-                            "workItemId": {
-                              "type": "string"
-                            },
-                            "stepKey": {
-                              "type": "string",
-                              "minLength": 1
-                            }
-                          },
-                          "required": [
-                            "kind",
-                            "workItemId",
-                            "stepKey"
-                          ],
-                          "additionalProperties": false
-                        }
-                      ]
-                    }
                   }
                 },
                 "required": [
-                  "claimToken"
+                  "claimToken",
+                  "message"
                 ],
                 "additionalProperties": false
               }
@@ -25170,13 +27640,6 @@
                     "type": "string",
                     "minLength": 1
                   },
-                  "kind": {
-                    "type": "string",
-                    "enum": [
-                      "hand_over",
-                      "wait_for_work"
-                    ]
-                  },
                   "message": {
                     "type": "string",
                     "minLength": 1
@@ -25223,240 +27686,11 @@
                         "type": "null"
                       }
                     ]
-                  },
-                  "workItemChanges": {
-                    "maxItems": 200,
-                    "type": "array",
-                    "items": {
-                      "oneOf": [
-                        {
-                          "type": "object",
-                          "properties": {
-                            "kind": {
-                              "type": "string",
-                              "const": "create"
-                            },
-                            "workItemId": {
-                              "type": "string"
-                            },
-                            "title": {
-                              "type": "string",
-                              "minLength": 1,
-                              "maxLength": 500
-                            },
-                            "description": {
-                              "type": "string",
-                              "minLength": 1,
-                              "maxLength": 50000
-                            },
-                            "fields": {
-                              "type": "object",
-                              "propertyNames": {
-                                "type": "string"
-                              },
-                              "additionalProperties": {}
-                            },
-                            "labels": {
-                              "maxItems": 50,
-                              "type": "array",
-                              "items": {
-                                "type": "string",
-                                "minLength": 1,
-                                "maxLength": 200
-                              }
-                            },
-                            "blockedBy": {
-                              "maxItems": 50,
-                              "type": "array",
-                              "items": {
-                                "type": "string"
-                              }
-                            }
-                          },
-                          "required": [
-                            "kind",
-                            "workItemId",
-                            "title",
-                            "description"
-                          ],
-                          "additionalProperties": false
-                        },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "kind": {
-                              "type": "string",
-                              "const": "label"
-                            },
-                            "workItemId": {
-                              "type": "string"
-                            },
-                            "add": {
-                              "maxItems": 50,
-                              "type": "array",
-                              "items": {
-                                "type": "string",
-                                "minLength": 1,
-                                "maxLength": 200
-                              }
-                            },
-                            "remove": {
-                              "maxItems": 50,
-                              "type": "array",
-                              "items": {
-                                "type": "string",
-                                "minLength": 1,
-                                "maxLength": 200
-                              }
-                            }
-                          },
-                          "required": [
-                            "kind",
-                            "workItemId"
-                          ],
-                          "additionalProperties": false
-                        },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "kind": {
-                              "type": "string",
-                              "const": "block"
-                            },
-                            "blockedWorkItemId": {
-                              "type": "string"
-                            },
-                            "blockingWorkItemId": {
-                              "type": "string"
-                            },
-                            "remove": {
-                              "type": "boolean"
-                            }
-                          },
-                          "required": [
-                            "kind",
-                            "blockedWorkItemId",
-                            "blockingWorkItemId"
-                          ],
-                          "additionalProperties": false
-                        },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "kind": {
-                              "type": "string",
-                              "const": "describe"
-                            },
-                            "workItemId": {
-                              "type": "string"
-                            },
-                            "description": {
-                              "type": "string",
-                              "minLength": 1,
-                              "maxLength": 50000
-                            },
-                            "descriptionVersion": {
-                              "type": "integer",
-                              "exclusiveMinimum": 0,
-                              "maximum": 9007199254740991
-                            }
-                          },
-                          "required": [
-                            "kind",
-                            "workItemId",
-                            "description",
-                            "descriptionVersion"
-                          ],
-                          "additionalProperties": false
-                        },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "kind": {
-                              "type": "string",
-                              "const": "comment"
-                            },
-                            "workItemId": {
-                              "type": "string"
-                            },
-                            "body": {
-                              "type": "string",
-                              "minLength": 1,
-                              "maxLength": 50000
-                            }
-                          },
-                          "required": [
-                            "kind",
-                            "workItemId",
-                            "body"
-                          ],
-                          "additionalProperties": false
-                        },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "kind": {
-                              "type": "string",
-                              "const": "close"
-                            },
-                            "workItemId": {
-                              "type": "string"
-                            },
-                            "reason": {
-                              "type": "string",
-                              "enum": [
-                                "completed",
-                                "out_of_scope",
-                                "superseded"
-                              ]
-                            },
-                            "resolution": {
-                              "anyOf": [
-                                {
-                                  "type": "string",
-                                  "maxLength": 10000
-                                },
-                                {
-                                  "type": "null"
-                                }
-                              ]
-                            }
-                          },
-                          "required": [
-                            "kind",
-                            "workItemId",
-                            "reason"
-                          ],
-                          "additionalProperties": false
-                        },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "kind": {
-                              "type": "string",
-                              "const": "startTask"
-                            },
-                            "workItemId": {
-                              "type": "string"
-                            },
-                            "stepKey": {
-                              "type": "string",
-                              "minLength": 1
-                            }
-                          },
-                          "required": [
-                            "kind",
-                            "workItemId",
-                            "stepKey"
-                          ],
-                          "additionalProperties": false
-                        }
-                      ]
-                    }
                   }
                 },
                 "required": [
-                  "claimToken"
+                  "claimToken",
+                  "message"
                 ],
                 "additionalProperties": false
               }
@@ -25470,13 +27704,6 @@
                     "type": "string",
                     "minLength": 1
                   },
-                  "kind": {
-                    "type": "string",
-                    "enum": [
-                      "hand_over",
-                      "wait_for_work"
-                    ]
-                  },
                   "message": {
                     "type": "string",
                     "minLength": 1
@@ -25523,240 +27750,11 @@
                         "type": "null"
                       }
                     ]
-                  },
-                  "workItemChanges": {
-                    "maxItems": 200,
-                    "type": "array",
-                    "items": {
-                      "oneOf": [
-                        {
-                          "type": "object",
-                          "properties": {
-                            "kind": {
-                              "type": "string",
-                              "const": "create"
-                            },
-                            "workItemId": {
-                              "type": "string"
-                            },
-                            "title": {
-                              "type": "string",
-                              "minLength": 1,
-                              "maxLength": 500
-                            },
-                            "description": {
-                              "type": "string",
-                              "minLength": 1,
-                              "maxLength": 50000
-                            },
-                            "fields": {
-                              "type": "object",
-                              "propertyNames": {
-                                "type": "string"
-                              },
-                              "additionalProperties": {}
-                            },
-                            "labels": {
-                              "maxItems": 50,
-                              "type": "array",
-                              "items": {
-                                "type": "string",
-                                "minLength": 1,
-                                "maxLength": 200
-                              }
-                            },
-                            "blockedBy": {
-                              "maxItems": 50,
-                              "type": "array",
-                              "items": {
-                                "type": "string"
-                              }
-                            }
-                          },
-                          "required": [
-                            "kind",
-                            "workItemId",
-                            "title",
-                            "description"
-                          ],
-                          "additionalProperties": false
-                        },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "kind": {
-                              "type": "string",
-                              "const": "label"
-                            },
-                            "workItemId": {
-                              "type": "string"
-                            },
-                            "add": {
-                              "maxItems": 50,
-                              "type": "array",
-                              "items": {
-                                "type": "string",
-                                "minLength": 1,
-                                "maxLength": 200
-                              }
-                            },
-                            "remove": {
-                              "maxItems": 50,
-                              "type": "array",
-                              "items": {
-                                "type": "string",
-                                "minLength": 1,
-                                "maxLength": 200
-                              }
-                            }
-                          },
-                          "required": [
-                            "kind",
-                            "workItemId"
-                          ],
-                          "additionalProperties": false
-                        },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "kind": {
-                              "type": "string",
-                              "const": "block"
-                            },
-                            "blockedWorkItemId": {
-                              "type": "string"
-                            },
-                            "blockingWorkItemId": {
-                              "type": "string"
-                            },
-                            "remove": {
-                              "type": "boolean"
-                            }
-                          },
-                          "required": [
-                            "kind",
-                            "blockedWorkItemId",
-                            "blockingWorkItemId"
-                          ],
-                          "additionalProperties": false
-                        },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "kind": {
-                              "type": "string",
-                              "const": "describe"
-                            },
-                            "workItemId": {
-                              "type": "string"
-                            },
-                            "description": {
-                              "type": "string",
-                              "minLength": 1,
-                              "maxLength": 50000
-                            },
-                            "descriptionVersion": {
-                              "type": "integer",
-                              "exclusiveMinimum": 0,
-                              "maximum": 9007199254740991
-                            }
-                          },
-                          "required": [
-                            "kind",
-                            "workItemId",
-                            "description",
-                            "descriptionVersion"
-                          ],
-                          "additionalProperties": false
-                        },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "kind": {
-                              "type": "string",
-                              "const": "comment"
-                            },
-                            "workItemId": {
-                              "type": "string"
-                            },
-                            "body": {
-                              "type": "string",
-                              "minLength": 1,
-                              "maxLength": 50000
-                            }
-                          },
-                          "required": [
-                            "kind",
-                            "workItemId",
-                            "body"
-                          ],
-                          "additionalProperties": false
-                        },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "kind": {
-                              "type": "string",
-                              "const": "close"
-                            },
-                            "workItemId": {
-                              "type": "string"
-                            },
-                            "reason": {
-                              "type": "string",
-                              "enum": [
-                                "completed",
-                                "out_of_scope",
-                                "superseded"
-                              ]
-                            },
-                            "resolution": {
-                              "anyOf": [
-                                {
-                                  "type": "string",
-                                  "maxLength": 10000
-                                },
-                                {
-                                  "type": "null"
-                                }
-                              ]
-                            }
-                          },
-                          "required": [
-                            "kind",
-                            "workItemId",
-                            "reason"
-                          ],
-                          "additionalProperties": false
-                        },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "kind": {
-                              "type": "string",
-                              "const": "startTask"
-                            },
-                            "workItemId": {
-                              "type": "string"
-                            },
-                            "stepKey": {
-                              "type": "string",
-                              "minLength": 1
-                            }
-                          },
-                          "required": [
-                            "kind",
-                            "workItemId",
-                            "stepKey"
-                          ],
-                          "additionalProperties": false
-                        }
-                      ]
-                    }
                   }
                 },
                 "required": [
-                  "claimToken"
+                  "claimToken",
+                  "message"
                 ],
                 "additionalProperties": false
               }

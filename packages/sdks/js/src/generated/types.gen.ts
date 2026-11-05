@@ -1562,7 +1562,37 @@ export type GetApiStepDefinitionsResponses = {
             on: Array<string>;
             maxAttempts: number;
         }>;
-        workItemPermissions: Array<'self' | 'children'>;
+        grants: Array<{
+            resource: string;
+            action: string;
+            scope: 'self' | 'children';
+        } | {
+            resource: string;
+            action: string;
+            scope: 'self' | 'children';
+        } | {
+            resource: string;
+            action: string;
+            scope: 'self' | 'children';
+        } | {
+            resource: string;
+            action: string;
+            scope: 'self' | 'children';
+            labels: Array<string>;
+        } | {
+            resource: string;
+            action: string;
+            scope: 'self' | 'children';
+        } | {
+            resource: string;
+            action: string;
+            scope: 'self' | 'children';
+        } | {
+            resource: string;
+            action: string;
+            scope: string;
+            labels: Array<string>;
+        }>;
         maxTurns: number | unknown;
         concurrency: {
             max: number;
@@ -1698,7 +1728,37 @@ export type PostApiStepDefinitionsData = {
             on: Array<string>;
             maxAttempts: number;
         }>;
-        workItemPermissions?: Array<'self' | 'children'>;
+        grants?: Array<{
+            resource: string;
+            action: string;
+            scope: 'self' | 'children';
+        } | {
+            resource: string;
+            action: string;
+            scope: 'self' | 'children';
+        } | {
+            resource: string;
+            action: string;
+            scope: 'self' | 'children';
+        } | {
+            resource: string;
+            action: string;
+            scope: 'self' | 'children';
+            labels: Array<string>;
+        } | {
+            resource: string;
+            action: string;
+            scope: 'self' | 'children';
+        } | {
+            resource: string;
+            action: string;
+            scope: 'self' | 'children';
+        } | {
+            resource: string;
+            action: string;
+            scope: string;
+            labels: Array<string>;
+        }>;
         maxTurns?: number | unknown;
         concurrency?: {
             max: number;
@@ -1975,7 +2035,37 @@ export type PostApiStepDefinitionsResponses = {
             on: Array<string>;
             maxAttempts: number;
         }>;
-        workItemPermissions: Array<'self' | 'children'>;
+        grants: Array<{
+            resource: string;
+            action: string;
+            scope: 'self' | 'children';
+        } | {
+            resource: string;
+            action: string;
+            scope: 'self' | 'children';
+        } | {
+            resource: string;
+            action: string;
+            scope: 'self' | 'children';
+        } | {
+            resource: string;
+            action: string;
+            scope: 'self' | 'children';
+            labels: Array<string>;
+        } | {
+            resource: string;
+            action: string;
+            scope: 'self' | 'children';
+        } | {
+            resource: string;
+            action: string;
+            scope: 'self' | 'children';
+        } | {
+            resource: string;
+            action: string;
+            scope: string;
+            labels: Array<string>;
+        }>;
         maxTurns: number | unknown;
         concurrency: {
             max: number;
@@ -2111,7 +2201,37 @@ export type PutApiStepDefinitionsData = {
             on: Array<string>;
             maxAttempts: number;
         }>;
-        workItemPermissions?: Array<'self' | 'children'>;
+        grants?: Array<{
+            resource: string;
+            action: string;
+            scope: 'self' | 'children';
+        } | {
+            resource: string;
+            action: string;
+            scope: 'self' | 'children';
+        } | {
+            resource: string;
+            action: string;
+            scope: 'self' | 'children';
+        } | {
+            resource: string;
+            action: string;
+            scope: 'self' | 'children';
+            labels: Array<string>;
+        } | {
+            resource: string;
+            action: string;
+            scope: 'self' | 'children';
+        } | {
+            resource: string;
+            action: string;
+            scope: 'self' | 'children';
+        } | {
+            resource: string;
+            action: string;
+            scope: string;
+            labels: Array<string>;
+        }>;
         maxTurns?: number | unknown;
         concurrency?: {
             max: number;
@@ -2350,7 +2470,37 @@ export type PutApiStepDefinitionsResponses = {
             on: Array<string>;
             maxAttempts: number;
         }>;
-        workItemPermissions: Array<'self' | 'children'>;
+        grants: Array<{
+            resource: string;
+            action: string;
+            scope: 'self' | 'children';
+        } | {
+            resource: string;
+            action: string;
+            scope: 'self' | 'children';
+        } | {
+            resource: string;
+            action: string;
+            scope: 'self' | 'children';
+        } | {
+            resource: string;
+            action: string;
+            scope: 'self' | 'children';
+            labels: Array<string>;
+        } | {
+            resource: string;
+            action: string;
+            scope: 'self' | 'children';
+        } | {
+            resource: string;
+            action: string;
+            scope: 'self' | 'children';
+        } | {
+            resource: string;
+            action: string;
+            scope: string;
+            labels: Array<string>;
+        }>;
         maxTurns: number | unknown;
         concurrency: {
             max: number;
@@ -2599,7 +2749,37 @@ export type GetApiStepDefinitionsByStepDefinitionIdResponses = {
             on: Array<string>;
             maxAttempts: number;
         }>;
-        workItemPermissions: Array<'self' | 'children'>;
+        grants: Array<{
+            resource: string;
+            action: string;
+            scope: 'self' | 'children';
+        } | {
+            resource: string;
+            action: string;
+            scope: 'self' | 'children';
+        } | {
+            resource: string;
+            action: string;
+            scope: 'self' | 'children';
+        } | {
+            resource: string;
+            action: string;
+            scope: 'self' | 'children';
+            labels: Array<string>;
+        } | {
+            resource: string;
+            action: string;
+            scope: 'self' | 'children';
+        } | {
+            resource: string;
+            action: string;
+            scope: 'self' | 'children';
+        } | {
+            resource: string;
+            action: string;
+            scope: string;
+            labels: Array<string>;
+        }>;
         maxTurns: number | unknown;
         concurrency: {
             max: number;
@@ -2848,7 +3028,37 @@ export type PutApiStepDefinitionsByStepDefinitionIdArchiveResponses = {
             on: Array<string>;
             maxAttempts: number;
         }>;
-        workItemPermissions: Array<'self' | 'children'>;
+        grants: Array<{
+            resource: string;
+            action: string;
+            scope: 'self' | 'children';
+        } | {
+            resource: string;
+            action: string;
+            scope: 'self' | 'children';
+        } | {
+            resource: string;
+            action: string;
+            scope: 'self' | 'children';
+        } | {
+            resource: string;
+            action: string;
+            scope: 'self' | 'children';
+            labels: Array<string>;
+        } | {
+            resource: string;
+            action: string;
+            scope: 'self' | 'children';
+        } | {
+            resource: string;
+            action: string;
+            scope: 'self' | 'children';
+        } | {
+            resource: string;
+            action: string;
+            scope: string;
+            labels: Array<string>;
+        }>;
         maxTurns: number | unknown;
         concurrency: {
             max: number;
@@ -3133,7 +3343,37 @@ export type PostApiTasksResponses = {
             taskExecutionConfigId: string | unknown;
             inputJson: unknown;
             retryJson: unknown;
-            workItemPermissions: Array<'self' | 'children'>;
+            grants: Array<{
+                resource: string;
+                action: string;
+                scope: 'self' | 'children';
+            } | {
+                resource: string;
+                action: string;
+                scope: 'self' | 'children';
+            } | {
+                resource: string;
+                action: string;
+                scope: 'self' | 'children';
+            } | {
+                resource: string;
+                action: string;
+                scope: 'self' | 'children';
+                labels: Array<string>;
+            } | {
+                resource: string;
+                action: string;
+                scope: 'self' | 'children';
+            } | {
+                resource: string;
+                action: string;
+                scope: 'self' | 'children';
+            } | {
+                resource: string;
+                action: string;
+                scope: string;
+                labels: Array<string>;
+            }>;
             maxTurns: number | unknown;
             heartbeatSeconds: number | unknown;
             executionTimeoutSeconds: number | unknown;
@@ -3424,7 +3664,37 @@ export type GetApiTasksByTaskIdResponses = {
         taskExecutionConfigId: string | unknown;
         inputJson: unknown;
         retryJson: unknown;
-        workItemPermissions: Array<'self' | 'children'>;
+        grants: Array<{
+            resource: string;
+            action: string;
+            scope: 'self' | 'children';
+        } | {
+            resource: string;
+            action: string;
+            scope: 'self' | 'children';
+        } | {
+            resource: string;
+            action: string;
+            scope: 'self' | 'children';
+        } | {
+            resource: string;
+            action: string;
+            scope: 'self' | 'children';
+            labels: Array<string>;
+        } | {
+            resource: string;
+            action: string;
+            scope: 'self' | 'children';
+        } | {
+            resource: string;
+            action: string;
+            scope: 'self' | 'children';
+        } | {
+            resource: string;
+            action: string;
+            scope: string;
+            labels: Array<string>;
+        }>;
         maxTurns: number | unknown;
         heartbeatSeconds: number | unknown;
         executionTimeoutSeconds: number | unknown;
@@ -4303,7 +4573,37 @@ export type PostApiTaskRunsByTaskRunIdWorkerContextResponses = {
             } | unknown;
             turnsRemaining: number | unknown;
             workItemId: string;
-            workItemPermissions: Array<'self' | 'children'>;
+            grants: Array<{
+                resource: string;
+                action: string;
+                scope: 'self' | 'children';
+            } | {
+                resource: string;
+                action: string;
+                scope: 'self' | 'children';
+            } | {
+                resource: string;
+                action: string;
+                scope: 'self' | 'children';
+            } | {
+                resource: string;
+                action: string;
+                scope: 'self' | 'children';
+                labels: Array<string>;
+            } | {
+                resource: string;
+                action: string;
+                scope: 'self' | 'children';
+            } | {
+                resource: string;
+                action: string;
+                scope: 'self' | 'children';
+            } | {
+                resource: string;
+                action: string;
+                scope: string;
+                labels: Array<string>;
+            }>;
         };
         runtime: {
             executionMode: 'workspace' | 'no_workspace';
@@ -4470,10 +4770,6 @@ export type PostApiTaskRunsByTaskRunIdCompletionsData = {
             workItemId: string;
             reason: 'completed' | 'out_of_scope' | 'superseded';
             resolution?: string | unknown;
-        } | {
-            kind: string;
-            workItemId: string;
-            stepKey: string;
         }>;
     };
     path: {
@@ -4644,51 +4940,11 @@ export type PostApiTaskRunsByTaskRunIdCompletionsResponse = PostApiTaskRunsByTas
 export type PostApiTaskRunsByTaskRunIdYieldsData = {
     body: {
         claimToken: string;
-        kind?: 'hand_over' | 'wait_for_work';
-        message?: string;
+        message: string;
         workBranch?: string | unknown;
         createdFromBranch?: string | unknown;
         sessionObjectKey?: string | unknown;
         sessionRestored?: boolean | unknown;
-        workItemChanges?: Array<{
-            kind: string;
-            workItemId: string;
-            title: string;
-            description: string;
-            fields?: {
-                [key: string]: unknown;
-            };
-            labels?: Array<string>;
-            blockedBy?: Array<string>;
-        } | {
-            kind: string;
-            workItemId: string;
-            add?: Array<string>;
-            remove?: Array<string>;
-        } | {
-            kind: string;
-            blockedWorkItemId: string;
-            blockingWorkItemId: string;
-            remove?: boolean;
-        } | {
-            kind: string;
-            workItemId: string;
-            description: string;
-            descriptionVersion: number;
-        } | {
-            kind: string;
-            workItemId: string;
-            body: string;
-        } | {
-            kind: string;
-            workItemId: string;
-            reason: 'completed' | 'out_of_scope' | 'superseded';
-            resolution?: string | unknown;
-        } | {
-            kind: string;
-            workItemId: string;
-            stepKey: string;
-        }>;
     };
     path: {
         taskRunId: string;

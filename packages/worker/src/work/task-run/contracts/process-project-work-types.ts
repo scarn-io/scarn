@@ -152,31 +152,22 @@ export type TaskRunWorkerClient = {
     workItemChanges?: WorkItemChange[] | undefined;
   }): Promise<void>;
   /**
-   * Park the task after its agent's turn ended with a yield. A `hand_over`
-   * waits for a person's reply: `message` is the agent's final message
-   * (already masked). A `wait_for_work` waits until the work item has no
-   * open blockers, and carries the work item changes the agent's tools
-   * recorded. The work branch fields follow the same rules as
+   * Park the task after its agent's turn ended with a yield, handing the
+   * conversation to a person: `message` is the agent's final message
+   * (already masked). The work branch fields follow the same rules as
    * {@link completeTaskRun}. `sessionObjectKey` is the key the exported
    * OpenCode session was uploaded to (see {@link createSessionUploadUrl}),
    * null when the export or upload failed.
    */
-  yieldTaskRun(
-    input: {
-      taskRunId: UuidV7;
-      claimToken: string;
-      workBranch: string | null;
-      createdFromBranch: string | null;
-      sessionObjectKey: string | null;
-      sessionRestored: boolean | null;
-    } & (
-      | { kind?: "hand_over" | undefined; message: string }
-      | {
-          kind: "wait_for_work";
-          workItemChanges?: WorkItemChange[] | undefined;
-        }
-    ),
-  ): Promise<void>;
+  yieldTaskRun(input: {
+    taskRunId: UuidV7;
+    claimToken: string;
+    workBranch: string | null;
+    createdFromBranch: string | null;
+    sessionObjectKey: string | null;
+    sessionRestored: boolean | null;
+    message: string;
+  }): Promise<void>;
   appendTaskLogs(input: {
     taskRunId: UuidV7;
     claimToken: string;

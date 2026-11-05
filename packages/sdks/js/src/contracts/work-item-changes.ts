@@ -50,8 +50,7 @@ export type WorkItemChange =
       workItemId: string;
       reason: WorkItemCloseReason;
       resolution?: string | null;
-    }
-  | { kind: "startTask"; workItemId: string; stepKey: string };
+    };
 
 const workItemChangesFileSchema = z.object({
   changes: z.array(
@@ -63,7 +62,6 @@ const workItemChangesFileSchema = z.object({
         "describe",
         "comment",
         "close",
-        "startTask",
       ]),
     }),
   ),

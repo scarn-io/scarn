@@ -1,4 +1,10 @@
-import { defineStep, Repo, Runtime, z } from "@scarn/sdk/definitions/steps";
+import {
+  defineStep,
+  Features,
+  Repo,
+  Runtime,
+  z,
+} from "@scarn/sdk/definitions/steps";
 import { contains } from "@scarn/sdk/pipelines";
 import { defineAutomation, onEvent } from "@scarn/sdk/automations";
 
@@ -13,7 +19,15 @@ import { defineAutomation, onEvent } from "@scarn/sdk/automations";
 // `wayfinder:research`, `wayfinder:prototype`, `wayfinder:grilling` or
 // `wayfinder:task`. The automation starts the matching step when a child
 // becomes ready; a `task` child matches no route and waits for a person.
-// The prompts name the labels, so rename a step only together with its route.
+// `WAYFINDER_LABELS` is both what `plan` may create and what the routes match.
+
+const WAYFINDER_LABELS = [
+  "wayfinder:research",
+  "wayfinder:prototype",
+  "wayfinder:grilling",
+  "wayfinder:task",
+] as const;
+const [RESEARCH_LABEL, PROTOTYPE_LABEL, GRILLING_LABEL] = WAYFINDER_LABELS;
 
 // @scarn-template-params
 const PLANNING_GUIDANCE = "";
@@ -31,7 +45,12 @@ export const plan = defineStep({
     "Charts the map on its work item: folds closed child work items into it, creates the next ones, and closes the map once the way is found.",
   status: "active",
   environment: { runtime: Runtime.devcontainer(), repo: Repo.readOnly() },
-  workItemPermissions: ["children"],
+  features: [
+    Features.workItems.read({ scope: "self" }),
+    Features.workItems.update({ scope: "self" }),
+    Features.workItems.create({ scope: "children", labels: WAYFINDER_LABELS }),
+    Features.workItems.close({ scope: "self" }),
+  ],
   maxTurns: 30,
   concurrency: { max: 1, waiting: 1 },
 
@@ -49,12 +68,12 @@ Your work item's description is the map. Keep it in this shape, replacing it who
 - **Plan**: once nothing is left unspecified, the steps to build it, in order.
 
 ## Child work items
-Each child work item asks one question, and its one label says how it gets answered. When it becomes ready (open, nothing open blocking it), the map's automation starts the matching step on it:
+Each child work item asks one question, and its one \`wayfinder:<type>\` label (listed under the allowed labels below) says how it gets answered. When it becomes ready (open, nothing open blocking it), the map's automation starts the matching step on it:
 
-- \`wayfinder:research\`: an agent reads the code, docs or the web to answer a factual question.
-- \`wayfinder:prototype\`: an agent builds a quick, throwaway spike to see whether an approach works.
-- \`wayfinder:grilling\`: an agent asks a person, round by round, to settle a decision only they can make.
-- \`wayfinder:task\`: nothing starts; a person does it by hand and closes it.
+- **research**: an agent reads the code, docs or the web to answer a factual question.
+- **prototype**: an agent builds a quick, throwaway spike to see whether an approach works.
+- **grilling**: an agent asks a person, round by round, to settle a decision only they can make.
+- **task**: nothing starts; a person does it by hand and closes it.
 
 Create each one with \`scarn-create-work-item\`: a short title, a description that states the one question and what a good answer looks like, exactly one \`wayfinder:<type>\` label in \`labels\`, and \`blockedBy\` with the children whose answers it needs first. Link it on the map as \`[title](url)\` with the url the tool returns. Prefer research before prototypes, and grilling only when the answer is a judgment call.
 
@@ -88,7 +107,11 @@ export const research = defineStep({
   description: "Answers one question on the map with evidence.",
   status: "active",
   environment: { runtime: Runtime.devcontainer(), repo: Repo.readOnly() },
-  workItemPermissions: ["self"],
+  features: [
+    Features.workItems.update({ scope: "self" }),
+    Features.workItems.comment({ scope: "self" }),
+    Features.workItems.close({ scope: "self" }),
+  ],
   retry: [{ on: ["Scarn.All"], maxAttempts: 1 }],
   concurrency: { max: 1, waiting: 0 },
 
@@ -110,7 +133,8 @@ If the question can't be answered, still close your work item as completed and s
 export const prototype = defineStep({
   key: "prototype",
   name: "Wayfinder Prototype",
-  description: "Builds a throwaway spike to find out whether an approach works.",
+  description:
+    "Builds a throwaway spike to find out whether an approach works.",
   status: "active",
   environment: {
     runtime: Runtime.devcontainer(),
@@ -119,7 +143,11 @@ export const prototype = defineStep({
       onPushFailure: "warn",
     }),
   },
-  workItemPermissions: ["self"],
+  features: [
+    Features.workItems.update({ scope: "self" }),
+    Features.workItems.comment({ scope: "self" }),
+    Features.workItems.close({ scope: "self" }),
+  ],
   concurrency: { max: 1, waiting: 0 },
 
   agentPrompt: `\
@@ -142,7 +170,11 @@ export const grilling = defineStep({
   description: "Settles a decision with a person, round by round.",
   status: "active",
   environment: { runtime: Runtime.devcontainer(), repo: Repo.readOnly() },
-  workItemPermissions: ["self"],
+  features: [
+    Features.workItems.update({ scope: "self" }),
+    Features.workItems.comment({ scope: "self" }),
+    Features.workItems.close({ scope: "self" }),
+  ],
   concurrency: { max: 1, waiting: 0 },
 
   agentPrompt: `\
@@ -168,15 +200,15 @@ export default defineAutomation({
       event: "child.ready",
       routes: [
         {
-          when: (r) => contains(r.child.labels, "wayfinder:research"),
+          when: (r) => contains(r.child.labels, RESEARCH_LABEL),
           to: (r) => research().on(r.child),
         },
         {
-          when: (r) => contains(r.child.labels, "wayfinder:prototype"),
+          when: (r) => contains(r.child.labels, PROTOTYPE_LABEL),
           to: (r) => prototype().on(r.child),
         },
         {
-          when: (r) => contains(r.child.labels, "wayfinder:grilling"),
+          when: (r) => contains(r.child.labels, GRILLING_LABEL),
           to: (r) => grilling().on(r.child),
         },
       ],

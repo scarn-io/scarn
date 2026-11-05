@@ -65,6 +65,7 @@ function createWorkerClient(
           prompt: "Run the demo step.",
           entrypointJson: null,
           resultSchemaJson: { type: "object" },
+          grants: [],
         },
         runtime: {
           executionMode: "workspace",

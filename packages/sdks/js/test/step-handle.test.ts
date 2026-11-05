@@ -7,6 +7,7 @@ import { z } from "zod";
 import {
   codeStep,
   defineStep,
+  Features,
   toStepSpec,
   type StepDefinitionSpec,
   type StepRef,
@@ -103,23 +104,25 @@ describe("step handles", () => {
     ).toEqual([]);
   });
 
-  test("maxTurns and workItemPermissions compile onto the spec", () => {
+  test("maxTurns and grants compile onto the spec", () => {
     const step = defineStep({
       key: "s",
       name: "S",
       agentPrompt: "p",
       maxTurns: 40,
-      workItemPermissions: ["children"],
+      features: [Features.workItems.read({ scope: "children" })],
     });
     const spec = toStepSpec(step);
     expect(spec.maxTurns).toBe(40);
-    expect(spec.workItemPermissions).toEqual(["children"]);
+    expect(spec.grants).toEqual([
+      { resource: "workItem", action: "read", scope: "children" },
+    ]);
 
     const plain = toStepSpec(
       defineStep({ key: "t", name: "T", agentPrompt: "p" }),
     );
     expect("maxTurns" in plain).toBe(false);
-    expect("workItemPermissions" in plain).toBe(false);
+    expect("grants" in plain).toBe(false);
   });
 
   test("rejects a maxTurns that is not a positive integer", () => {

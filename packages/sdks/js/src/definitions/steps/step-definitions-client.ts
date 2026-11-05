@@ -92,7 +92,7 @@ const buildStepDefinitionsClient = (stepDefinitions: StepDefinitions) => {
         })),
         maxTurns: spec.maxTurns ?? null,
         concurrency: spec.concurrency ?? null,
-        workItemPermissions: [...(spec.workItemPermissions ?? [])],
+        grants: (spec.grants ?? []).map((grant) => ({ ...grant })),
         status: spec.status,
         projectId,
       };

@@ -3,7 +3,7 @@ import { readWorkItemChanges } from "@scarn/sdk/contracts/work-item-changes";
 import { workItemTestWorkspace } from "./_shared/work-item-test-workspace";
 import {
   invalidInputMessage,
-  missingPermissionMessage,
+  missingGrantMessage,
   NO_WORK_ITEM_MESSAGE,
 } from "./_shared/work-item-tool-support";
 import { getWorkItem, NO_API_MESSAGE } from "./scarn-get-work-item";
@@ -136,15 +136,13 @@ describe("getWorkItem", () => {
     expect(calls).toHaveLength(0);
   });
 
-  test.concurrent("refuses without the self permission", async () => {
-    const workspacePath = await workItemTestWorkspace({
-      workItemPermissions: [],
-    });
+  test.concurrent("refuses without a read grant", async () => {
+    const workspacePath = await workItemTestWorkspace({ grants: [] });
     const { fetch } = fakeFetch(new Response("{}"));
 
     expect(
       await getWorkItem({ workItemId: "item-self" }, workspacePath, fetch),
-    ).toBe(missingPermissionMessage("self"));
+    ).toBe(missingGrantMessage("read"));
   });
 
   test.concurrent("refuses outside a run on a work item", async () => {

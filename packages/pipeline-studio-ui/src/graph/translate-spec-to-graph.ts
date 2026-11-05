@@ -271,10 +271,56 @@ export function translatePipelineToSnapshot(
 
 export { describeCondition } from "./describe-transition";
 export {
+  buildAutomationRound,
+  routeMatchedLabel,
+} from "./automation-round-model";
+export {
+  LANE_ORDER,
+  LANE_TITLE,
+  ROUND_CHANNEL_GAP,
+  ROUND_COLUMN_WIDTH,
+  ROUND_HANDLES,
+  ROUND_ROW_HEIGHT,
+  laneOf,
+  layoutAutomationRound,
+  roundNodeSize,
+  type AutomationRoundLayout,
+  type RoundEdgeData,
+  type RoundEdgeTone,
+  type RoundLane,
+  type RoundLaneData,
+  type RoundLayoutEdge,
+  type RoundLayoutNode,
+  type RoundLayoutNodeData,
+  type RoundMemberData,
+} from "./automation-round-layout";
+export { findBackEdges } from "./automation-round-columns";
+export {
+  END_NODE_ID,
+  attachNodeId,
+  junctionNodeId,
+  personNodeId,
+  pipelineNodeId,
+  stepNodeId,
+  type AutomationRoundModel,
+  type RoundAttachNode,
+  type RoundEdge,
+  type RoundEdgeKind,
+  type RoundEndNode,
+  type RoundJunctionNode,
+  type RoundNode,
+  type RoundNodeKind,
+  type RoundPersonNode,
+  type RoundPipelineNode,
+  type RoundRouteEdge,
+  type RoundSoftEdge,
+  type RoundStepNode,
+  type SoftLinkProvenance,
+} from "./automation-round-types";
+export {
   AutomationGraphError,
-  translateAutomationToGraph,
   type AutomationGraphInput,
-} from "./translate-automation-to-graph";
+} from "./automation-document-parse";
 
 export type {
   BrokenPipeline,

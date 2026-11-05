@@ -3,6 +3,7 @@
  * the preview graph with its detached steps, the Use button's state, what a
  * click on Use does, and the text shown after a successful Use.
  */
+import type { Grant } from "@scarn/sdk/definitions/steps";
 import { graphBounds } from "../graph/edge-route";
 import type { StudioEdge, StudioNode } from "../graph/studio-graph-types";
 import {
@@ -216,6 +217,20 @@ export function formatRepoAccess(repo: TemplateStepRepoAccess | null): string {
     case "readWrite":
       return "Read and write";
   }
+}
+
+/**
+ * A step's grants on one line, e.g. "read self; create children:
+ * wayfinder:research, wayfinder:task; close self", or "None".
+ */
+export function describeGrants(grants: readonly Grant[]): string {
+  if (grants.length === 0) return "None";
+  return grants
+    .map((grant) => {
+      const head = `${grant.action} ${grant.scope}`;
+      return "labels" in grant ? `${head}: ${grant.labels.join(", ")}` : head;
+    })
+    .join("; ");
 }
 
 /** "Workspace (devcontainer: path)", "Workspace (managed: name)" or "No workspace". */

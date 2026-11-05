@@ -485,6 +485,11 @@ const step = defineStep({
 | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `Features.notifications()`    | Adds an optional `$scarn_notifications_v1` result array and prompt text for emitting user notifications.                                     |
 | `Features.feedbackRequests()` | A real specialization of `notifications()` (not an alias): narrows every emitted item to `kind: "feedback_request"`, in the same `$scarn_notifications_v1` array. |
+| `Features.workItems.read \| update \| comment \| block \| close({ scope })` | Grants the step's Tasks that action on their work item (`scope: "self"`) or its children (`scope: "children"`), and adds a prompt section naming the tool. |
+| `Features.workItems.label({ scope, labels })` | Grants adding or removing only the listed labels. |
+| `Features.workItems.create({ scope: "children", labels })` | Grants creating child work items with labels from `labels` only. |
+
+Work item features add nothing to the result; they collect into the step's `grants`. Attach each action and scope at most once. See [`Features.workItems.*`](/scarn/guides/steps/#featuresworkitems) for the guide.
 
 `Features` is exclusively for `features: [...]` attachment — value construction (`Notify`) is a separate export, kept apart on purpose so `Features.` autocomplete only ever shows things you attach to a step.
 

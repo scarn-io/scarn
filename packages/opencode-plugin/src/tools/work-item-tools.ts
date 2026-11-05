@@ -1,5 +1,8 @@
 import type { Info as ToolInfo } from "@opencode/plugin/promise/tool";
-import type { CurrentExecutionInfo } from "./_shared/current-execution";
+import {
+  hasGrantFor,
+  type CurrentExecutionInfo,
+} from "./_shared/current-execution";
 import { createScarnCreateWorkItemTool } from "./scarn-create-work-item";
 import { createScarnGetWorkItemTool } from "./scarn-get-work-item";
 import {
@@ -8,14 +11,12 @@ import {
   createScarnCommentOnWorkItemTool,
   createScarnLabelWorkItemTool,
   createScarnSetWorkItemDescriptionTool,
-  createScarnStartTaskTool,
 } from "./scarn-work-item-change-tools";
-import { createScarnWaitForWorkTool } from "./scarn-wait-for-work";
 
 /**
  * The work item tools a run's Task may use: none outside a run on a work
- * item, the `self` tools with that permission, plus creating children with
- * `children`. The server re-checks every change.
+ * item, otherwise one per action the Task has a grant for (on any scope).
+ * The server re-checks every change.
  */
 export function createWorkItemTools(
   directory: string,
@@ -24,21 +25,28 @@ export function createWorkItemTools(
   if (info?.workItemId == null) {
     return [];
   }
+  const { grants } = info;
   const tools: ToolInfo[] = [];
-  if (info.workItemPermissions.includes("self")) {
-    tools.push(
-      createScarnGetWorkItemTool(directory),
-      createScarnSetWorkItemDescriptionTool(directory),
-      createScarnLabelWorkItemTool(directory),
-      createScarnCommentOnWorkItemTool(directory),
-      createScarnCloseWorkItemTool(directory),
-      createScarnBlockWorkItemTool(directory),
-      createScarnStartTaskTool(directory),
-      createScarnWaitForWorkTool(directory),
-    );
+  if (hasGrantFor(grants, "read")) {
+    tools.push(createScarnGetWorkItemTool(directory, grants));
   }
-  if (info.workItemPermissions.includes("children")) {
-    tools.push(createScarnCreateWorkItemTool(directory));
+  if (hasGrantFor(grants, "update")) {
+    tools.push(createScarnSetWorkItemDescriptionTool(directory, grants));
+  }
+  if (hasGrantFor(grants, "label")) {
+    tools.push(createScarnLabelWorkItemTool(directory, grants));
+  }
+  if (hasGrantFor(grants, "comment")) {
+    tools.push(createScarnCommentOnWorkItemTool(directory, grants));
+  }
+  if (hasGrantFor(grants, "close")) {
+    tools.push(createScarnCloseWorkItemTool(directory, grants));
+  }
+  if (hasGrantFor(grants, "block")) {
+    tools.push(createScarnBlockWorkItemTool(directory, grants));
+  }
+  if (hasGrantFor(grants, "create")) {
+    tools.push(createScarnCreateWorkItemTool(directory, grants));
   }
   return tools;
 }

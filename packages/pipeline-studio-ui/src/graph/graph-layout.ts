@@ -1,5 +1,5 @@
-// Pure graph layout shared by the pipeline and automation translators: dagre
-// for the forward flow, plus loop lanes for back edges. No React, no I/O.
+// Pure layout for the pipeline graph: dagre for the forward flow, plus loop
+// lanes for back edges. No React, no I/O.
 import dagre from "dagre";
 import {
   EDGE_LABEL_HEIGHT,

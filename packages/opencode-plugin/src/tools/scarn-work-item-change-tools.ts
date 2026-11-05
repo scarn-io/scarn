@@ -4,6 +4,14 @@ import {
   type WorkItemChange,
   type WorkItemCloseReason,
 } from "@scarn/sdk/contracts/work-item-changes";
+import type { Grant, GrantAction } from "./_shared/current-execution";
+import {
+  findGrant,
+  grantedLabels,
+  grantScopes,
+  scopeNote,
+  scopePhrase,
+} from "./_shared/work-item-grants";
 import {
   DEFERRED_DESCRIPTION_NOTE,
   invalidInputMessage,
@@ -14,7 +22,7 @@ import {
 
 /**
  * The work item tools that only record a change for the server to apply when
- * the run succeeds: block, describe, label, comment, close and start-task.
+ * the run succeeds: block, describe, label, comment and close.
  */
 
 export const SCARN_BLOCK_WORK_ITEM_TOOL = "scarn-block-work-item";
@@ -23,7 +31,6 @@ export const SCARN_SET_WORK_ITEM_DESCRIPTION_TOOL =
 export const SCARN_LABEL_WORK_ITEM_TOOL = "scarn-label-work-item";
 export const SCARN_COMMENT_ON_WORK_ITEM_TOOL = "scarn-comment-on-work-item";
 export const SCARN_CLOSE_WORK_ITEM_TOOL = "scarn-close-work-item";
-export const SCARN_START_TASK_TOOL = "scarn-start-task";
 
 type ToolInput = Record<string, unknown>;
 
@@ -140,24 +147,10 @@ export function buildCloseChange(input: ToolInput): WorkItemChange | string {
   };
 }
 
-export function buildStartTaskChange(
-  input: ToolInput,
-): WorkItemChange | string {
-  const { workItemId, stepDefinitionKey } = input;
-  if (!isNonEmptyString(workItemId)) {
-    return WORK_ITEM_ID_MESSAGE;
-  }
-  if (!isNonEmptyString(stepDefinitionKey)) {
-    return invalidInputMessage(
-      "`stepDefinitionKey` must be a non-empty string.",
-    );
-  }
-  return { kind: "startTask", workItemId, stepKey: stepDefinitionKey };
-}
-
 function createChangeTool(
   directory: string,
   name: string,
+  action: GrantAction,
   description: string,
   input: ToolInfo["input"],
   buildChange: (input: ToolInput) => WorkItemChange | string,
@@ -168,11 +161,21 @@ function createChangeTool(
     input,
     options: { codemode: false },
     execute: async (toolInput) => ({
-      content: await recordWorkItemChange(directory, () =>
+      content: await recordWorkItemChange(directory, action, () =>
         buildChange(toolInput as ToolInput),
       ),
     }),
   };
+}
+
+function blockScopePhrase(grants: readonly Grant[]): string {
+  const scopes = grantScopes(grants, "block");
+  if (scopes.length === 2) {
+    return "your own work item or one of its children";
+  }
+  return scopes[0] === "self"
+    ? "your own work item"
+    : "one of your work item's children";
 }
 
 const workItemIdProperty = {
@@ -180,11 +183,15 @@ const workItemIdProperty = {
   description: "Id of the work item",
 };
 
-export function createScarnBlockWorkItemTool(directory: string): ToolInfo {
+export function createScarnBlockWorkItemTool(
+  directory: string,
+  grants: readonly Grant[],
+): ToolInfo {
   return createChangeTool(
     directory,
     SCARN_BLOCK_WORK_ITEM_TOOL,
-    "Add a block between two work items (the blocking item must be closed before the blocked one is ready), or remove one with `remove: true`.",
+    "block",
+    `Add a block between two work items (the blocking item must be closed before the blocked one is ready), or remove one with \`remove: true\`. The blocked item may be ${blockScopePhrase(grants)}; the blocking item must be in the same scope or created in this run.`,
     {
       type: "object",
       properties: {
@@ -209,11 +216,13 @@ export function createScarnBlockWorkItemTool(directory: string): ToolInfo {
 
 export function createScarnSetWorkItemDescriptionTool(
   directory: string,
+  grants: readonly Grant[],
 ): ToolInfo {
   return createChangeTool(
     directory,
     SCARN_SET_WORK_ITEM_DESCRIPTION_TOOL,
-    "Replace a work item's description. Pass the `descriptionVersion` you read with scarn-get-work-item; the write is rejected if the description changed since.",
+    "update",
+    `Replace a work item's description. Pass the \`descriptionVersion\` you read with scarn-get-work-item; the write is rejected if the description changed since. ${scopeNote(grants, "update")}`,
     {
       type: "object",
       properties: {
@@ -233,23 +242,41 @@ export function createScarnSetWorkItemDescriptionTool(
   );
 }
 
-export function createScarnLabelWorkItemTool(directory: string): ToolInfo {
+function labelGrantNote(grants: readonly Grant[]): string {
+  return (["self", "children"] as const)
+    .flatMap((scope) => {
+      const grant = findGrant(grants, "label", scope);
+      return grant
+        ? [
+            `On ${scopePhrase([scope])} you may add or remove: ${grant.labels.join(", ")}.`,
+          ]
+        : [];
+    })
+    .join(" ");
+}
+
+export function createScarnLabelWorkItemTool(
+  directory: string,
+  grants: readonly Grant[],
+): ToolInfo {
+  const labelItems = { type: "string", enum: grantedLabels(grants, "label") };
   return createChangeTool(
     directory,
     SCARN_LABEL_WORK_ITEM_TOOL,
-    "Add labels to a work item, or remove labels from it. Labels are case-sensitive; adding one it already has, or removing one it lacks, does nothing.",
+    "label",
+    `Add labels to a work item, or remove labels from it. Labels are case-sensitive; adding one it already has, or removing one it lacks, does nothing. ${scopeNote(grants, "label")} ${labelGrantNote(grants)}`,
     {
       type: "object",
       properties: {
         workItemId: workItemIdProperty,
         add: {
           type: "array",
-          items: { type: "string" },
+          items: labelItems,
           description: "Labels to add",
         },
         remove: {
           type: "array",
-          items: { type: "string" },
+          items: labelItems,
           description: "Labels to remove",
         },
       },
@@ -259,11 +286,15 @@ export function createScarnLabelWorkItemTool(directory: string): ToolInfo {
   );
 }
 
-export function createScarnCommentOnWorkItemTool(directory: string): ToolInfo {
+export function createScarnCommentOnWorkItemTool(
+  directory: string,
+  grants: readonly Grant[],
+): ToolInfo {
   return createChangeTool(
     directory,
     SCARN_COMMENT_ON_WORK_ITEM_TOOL,
-    "Add a comment to a work item.",
+    "comment",
+    `Add a comment to a work item. ${scopeNote(grants, "comment")}`,
     {
       type: "object",
       properties: {
@@ -276,11 +307,15 @@ export function createScarnCommentOnWorkItemTool(directory: string): ToolInfo {
   );
 }
 
-export function createScarnCloseWorkItemTool(directory: string): ToolInfo {
+export function createScarnCloseWorkItemTool(
+  directory: string,
+  grants: readonly Grant[],
+): ToolInfo {
   return createChangeTool(
     directory,
     SCARN_CLOSE_WORK_ITEM_TOOL,
-    "Close a work item with a reason and a short resolution.",
+    "close",
+    `Close a work item with a reason and a short resolution. ${scopeNote(grants, "close")}`,
     {
       type: "object",
       properties: {
@@ -298,25 +333,5 @@ export function createScarnCloseWorkItemTool(directory: string): ToolInfo {
       required: ["workItemId", "reason", "resolution"],
     },
     buildCloseChange,
-  );
-}
-
-export function createScarnStartTaskTool(directory: string): ToolInfo {
-  return createChangeTool(
-    directory,
-    SCARN_START_TASK_TOOL,
-    "Start a Task on a work item at the given pipeline step. The Task runs once the item is ready (all its blockers closed).",
-    {
-      type: "object",
-      properties: {
-        workItemId: workItemIdProperty,
-        stepDefinitionKey: {
-          type: "string",
-          description: "Key of the pipeline step the Task starts at",
-        },
-      },
-      required: ["workItemId", "stepDefinitionKey"],
-    },
-    buildStartTaskChange,
   );
 }

@@ -207,7 +207,7 @@ describe("processProjectWork findings persistence", () => {
         },
         turnsRemaining: 2,
         workItemId: null,
-        workItemPermissions: [],
+        grants: [],
         api: null,
         workItemLinks: null,
       });

@@ -172,4 +172,16 @@ describe("codeStep", () => {
       },
     );
   });
+
+  test.concurrent("rejects work item features at the type level", () => {
+    expect(() =>
+      codeStep({
+        key: "code-step",
+        name: "Code Step",
+        fn: () => ({}),
+        // @ts-expect-error a code step has no agent tools to use a grant with
+        features: [Features.workItems.read({ scope: "self" })],
+      }),
+    ).not.toThrow();
+  });
 });

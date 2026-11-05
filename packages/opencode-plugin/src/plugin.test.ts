@@ -10,7 +10,11 @@ import {
 import { SCARN_END_CONVERSATION_TOOL } from "./tools/scarn-end-conversation";
 import { SCARN_SUBMIT_ARTIFACT_TOOL } from "./tools/scarn-submit-artifact";
 import { SCARN_SUBMIT_STEP_FINDINGS_TOOL } from "./tools/scarn-submit-step-findings";
-import { workItemTestWorkspace } from "./tools/_shared/work-item-test-workspace";
+import {
+  ALL_GRANTS,
+  grant,
+  workItemTestWorkspace,
+} from "./tools/_shared/work-item-test-workspace";
 import { SCARN_CREATE_WORK_ITEM_TOOL } from "./tools/scarn-create-work-item";
 import { SCARN_GET_WORK_ITEM_TOOL } from "./tools/scarn-get-work-item";
 import {
@@ -19,9 +23,7 @@ import {
   SCARN_COMMENT_ON_WORK_ITEM_TOOL,
   SCARN_LABEL_WORK_ITEM_TOOL,
   SCARN_SET_WORK_ITEM_DESCRIPTION_TOOL,
-  SCARN_START_TASK_TOOL,
 } from "./tools/scarn-work-item-change-tools";
-import { SCARN_WAIT_FOR_WORK_TOOL } from "./tools/scarn-wait-for-work";
 
 const BASE_TOOLS = [
   "playwright-trace-analyzer",
@@ -30,15 +32,14 @@ const BASE_TOOLS = [
   SCARN_SUBMIT_STEP_FINDINGS_TOOL,
 ];
 
-const SELF_WORK_ITEM_TOOLS = [
+const ALL_WORK_ITEM_TOOLS = [
   SCARN_BLOCK_WORK_ITEM_TOOL,
   SCARN_CLOSE_WORK_ITEM_TOOL,
   SCARN_COMMENT_ON_WORK_ITEM_TOOL,
+  SCARN_CREATE_WORK_ITEM_TOOL,
   SCARN_GET_WORK_ITEM_TOOL,
   SCARN_LABEL_WORK_ITEM_TOOL,
   SCARN_SET_WORK_ITEM_DESCRIPTION_TOOL,
-  SCARN_START_TASK_TOOL,
-  SCARN_WAIT_FOR_WORK_TOOL,
 ];
 
 async function registeredToolNames(directory: string): Promise<string[]> {
@@ -131,27 +132,54 @@ describe("ScarnOpencodePlugin", () => {
     expect(await registeredToolNames(directory)).toEqual(BASE_TOOLS.sort());
   });
 
-  test("setup registers the self work item tools with the self permission", async () => {
-    const directory = await workItemTestWorkspace({
-      workItemPermissions: ["self"],
-    });
+  test("setup registers every work item tool with every grant", async () => {
+    const directory = await workItemTestWorkspace({ grants: ALL_GRANTS });
 
     expect(await registeredToolNames(directory)).toEqual(
-      [...BASE_TOOLS, ...SELF_WORK_ITEM_TOOLS].sort(),
+      [...BASE_TOOLS, ...ALL_WORK_ITEM_TOOLS].sort(),
     );
   });
 
-  test("setup also registers create-work-item with the children permission", async () => {
-    const directory = await workItemTestWorkspace({
-      workItemPermissions: ["self", "children"],
-    });
+  test("setup registers no work item tools without grants", async () => {
+    const directory = await workItemTestWorkspace({ grants: [] });
 
-    expect(await registeredToolNames(directory)).toEqual(
-      [
-        ...BASE_TOOLS,
-        ...SELF_WORK_ITEM_TOOLS,
-        SCARN_CREATE_WORK_ITEM_TOOL,
-      ].sort(),
-    );
+    expect(await registeredToolNames(directory)).toEqual(BASE_TOOLS.sort());
   });
+
+  const SINGLE_GRANT_CASES = [
+    { grant: grant("read", "self"), tools: [SCARN_GET_WORK_ITEM_TOOL] },
+    {
+      grant: grant("read", "children"),
+      tools: [SCARN_GET_WORK_ITEM_TOOL],
+    },
+    {
+      grant: grant("update", "self"),
+      tools: [SCARN_SET_WORK_ITEM_DESCRIPTION_TOOL],
+    },
+    {
+      grant: grant("comment", "children"),
+      tools: [SCARN_COMMENT_ON_WORK_ITEM_TOOL],
+    },
+    { grant: grant("label", "self"), tools: [SCARN_LABEL_WORK_ITEM_TOOL] },
+    { grant: grant("close", "self"), tools: [SCARN_CLOSE_WORK_ITEM_TOOL] },
+    { grant: grant("block", "self"), tools: [SCARN_BLOCK_WORK_ITEM_TOOL] },
+    {
+      grant: grant("block", "children"),
+      tools: [SCARN_BLOCK_WORK_ITEM_TOOL],
+    },
+    {
+      grant: grant("create", "children"),
+      tools: [SCARN_CREATE_WORK_ITEM_TOOL],
+    },
+  ];
+
+  for (const { grant: granted, tools } of SINGLE_GRANT_CASES) {
+    test(`setup registers ${tools.join(", ")} for ${granted.action} on ${granted.scope}`, async () => {
+      const directory = await workItemTestWorkspace({ grants: [granted] });
+
+      expect(await registeredToolNames(directory)).toEqual(
+        [...BASE_TOOLS, ...tools].sort(),
+      );
+    });
+  }
 });

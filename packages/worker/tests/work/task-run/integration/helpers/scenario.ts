@@ -80,6 +80,7 @@ export function buildSingleStepScenario(input: {
         ? null
         : (input.prompt ?? "Complete the integration step."),
       entrypointJson: input.codeEntrypoint ?? null,
+      grants: [],
       resultSchemaJson,
     },
     runtime: {

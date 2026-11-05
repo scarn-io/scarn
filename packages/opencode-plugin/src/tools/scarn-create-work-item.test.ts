@@ -3,9 +3,12 @@ import {
   MAX_WORK_ITEMS_CREATED_PER_RUN,
   readWorkItemChanges,
 } from "@scarn/sdk/contracts/work-item-changes";
-import { workItemTestWorkspace } from "./_shared/work-item-test-workspace";
 import {
-  missingPermissionMessage,
+  grant,
+  workItemTestWorkspace,
+} from "./_shared/work-item-test-workspace";
+import {
+  missingGrantMessage,
   NO_WORK_ITEM_MESSAGE,
 } from "./_shared/work-item-tool-support";
 import {
@@ -120,14 +123,14 @@ describe("createWorkItem", () => {
     );
   });
 
-  test.concurrent("refuses without the children permission", async () => {
+  test.concurrent("refuses without a create grant", async () => {
     const workspacePath = await workItemTestWorkspace({
-      workItemPermissions: ["self"],
+      grants: [grant("read", "self"), grant("update", "children")],
     });
 
     expect(
       await createWorkItem({ title: "Child", description: "" }, workspacePath),
-    ).toBe(missingPermissionMessage("children"));
+    ).toBe(missingGrantMessage("create"));
     expect(await readWorkItemChanges(workspacePath)).toEqual([]);
   });
 

@@ -21,7 +21,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { PipelineGraphSnapshot } from "@scarn/pipeline-studio-ui";
-import type { StepDefinitionSpec } from "@scarn/sdk/definitions/steps";
+import type { Grant, StepDefinitionSpec } from "@scarn/sdk/definitions/steps";
 import { createLazyLogger } from "@scarn/observability/logging/host";
 import { buildPipelineDocuments } from "../../pipeline-definitions/application/build-pipeline-documents";
 import { computeStudioState } from "../../pipeline-studio/application/compute-studio-snapshot";
@@ -57,7 +57,7 @@ export type TemplateStepPreview = {
   };
   /** `null` when the step leaves repository access to the runtime's default. */
   repo: StepDefinitionSpec["repo"] | null;
-  workItemPermissions: string[];
+  grants: Grant[];
   maxTurns: number | null;
   inputSchema: Record<string, unknown> | null;
   resultSchema: Record<string, unknown> | null;
@@ -93,7 +93,7 @@ function toStepPreview(step: StepDefinitionSpec): TemplateStepPreview {
       managedRuntime: step.managedRuntime ?? null,
     },
     repo: step.repo ?? null,
-    workItemPermissions: [...(step.workItemPermissions ?? [])],
+    grants: (step.grants ?? []).map((grant) => ({ ...grant })),
     maxTurns: step.maxTurns ?? null,
     inputSchema: step.inputSchemaJson,
     resultSchema: step.resultSchemaJson,

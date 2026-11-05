@@ -4,6 +4,8 @@
  * the React Flow runtime, which `"."`'s server-side consumers must not.
  */
 export { PipelineGraphView } from "./PipelineGraphView";
+export { AutomationRoundView } from "./AutomationRoundView";
+export { RoundEdge, ROUND_EDGE_COLOR, ROUND_EDGE_DASH } from "./RoundEdge";
 export {
   EMPTY_EDGE_DECORATION,
   EMPTY_NODE_DECORATION,

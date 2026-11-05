@@ -156,7 +156,22 @@ describe("pipeline studio template endpoints", () => {
     );
     const plan = detail.preview.steps.find((step) => step.key === "plan");
     expect(plan?.maxTurns).toBe(30);
-    expect(plan?.workItemPermissions).toEqual(["children"]);
+    expect(plan?.grants).toEqual([
+      { resource: "workItem", action: "read", scope: "self" },
+      { resource: "workItem", action: "update", scope: "self" },
+      {
+        resource: "workItem",
+        action: "create",
+        scope: "children",
+        labels: [
+          "wayfinder:research",
+          "wayfinder:prototype",
+          "wayfinder:grilling",
+          "wayfinder:task",
+        ],
+      },
+      { resource: "workItem", action: "close", scope: "self" },
+    ]);
     expect(plan?.repo).toEqual({ mode: "readOnly" });
     expect(plan?.prompt).toBeTruthy();
 

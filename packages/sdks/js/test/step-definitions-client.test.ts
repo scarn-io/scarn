@@ -4,6 +4,7 @@ import {
   defineStep,
   type StepDefinitionSpec,
 } from "../src/definitions/steps/define-step";
+import { Features } from "../src/definitions/steps/step-features";
 
 type CapturedRequest = {
   url: string;
@@ -120,7 +121,7 @@ describe("createStepDefinitionsClient.upsertFromSpec", () => {
         retry: [],
         maxTurns: null,
         concurrency: null,
-        workItemPermissions: [],
+        grants: [],
         projectId: "proj-1",
       });
       // Headers.entries() lowercases header names per the WHATWG spec.
@@ -195,7 +196,7 @@ describe("createStepDefinitionsClient.upsertFromSpec", () => {
     }
   });
 
-  test("sends maxTurns, concurrency and workItemPermissions in the request body", async () => {
+  test("sends maxTurns, concurrency and grants in the request body", async () => {
     const { mockFetch, captured } = createMockFetch([
       { status: 200, body: { id: "step-id" } },
     ]);
@@ -209,7 +210,10 @@ describe("createStepDefinitionsClient.upsertFromSpec", () => {
         agentPrompt: "Find the way.",
         maxTurns: 40,
         concurrency: { max: 1, waiting: 1 },
-        workItemPermissions: ["children"],
+        features: [
+          Features.workItems.read({ scope: "children" }),
+          Features.workItems.create({ scope: "children", labels: ["afk"] }),
+        ],
       });
       await client.upsertFromSpec("proj-1", wayfinder, {
         headers: AUTH_HEADER,
@@ -217,7 +221,15 @@ describe("createStepDefinitionsClient.upsertFromSpec", () => {
       expect(captured[0]?.body).toMatchObject({
         maxTurns: 40,
         concurrency: { max: 1, waiting: 1 },
-        workItemPermissions: ["children"],
+        grants: [
+          { resource: "workItem", action: "read", scope: "children" },
+          {
+            resource: "workItem",
+            action: "create",
+            scope: "children",
+            labels: ["afk"],
+          },
+        ],
       });
     } finally {
       globalThis.fetch = prev;

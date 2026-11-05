@@ -1,12 +1,15 @@
 import {
   appendWorkItemChange,
+  readWorkItemChanges,
   type WorkItemChange,
 } from "@scarn/sdk/contracts/work-item-changes";
+import { checkChangeGrants } from "./work-item-grants";
 import {
+  hasGrantFor,
   loadCurrentExecutionInfo,
   type CurrentExecutionInfo,
+  type GrantAction,
   type WorkItemLinks,
-  type WorkItemPermission,
 } from "./current-execution";
 import { resolveWorktree } from "./resolve-worktree";
 
@@ -19,10 +22,8 @@ export const DEFERRED_DESCRIPTION_NOTE =
 export const NO_WORK_ITEM_MESSAGE =
   "This run is not on a work item, so work item tools are unavailable.";
 
-export function missingPermissionMessage(
-  permission: WorkItemPermission,
-): string {
-  return `This Task lacks the \`${permission}\` work item permission.`;
+export function missingGrantMessage(action: GrantAction): string {
+  return `This Task has no \`${action}\` grant on work items.`;
 }
 
 export type WorkItemToolContext = {
@@ -32,11 +33,11 @@ export type WorkItemToolContext = {
 
 /**
  * Loads the run's execution info for a work item tool, or a refusal message
- * when the run is not on a work item or the Task lacks `permission`.
+ * when the run is not on a work item or the Task has no grant for `action`.
  */
 export async function loadWorkItemToolContext(
   directory: string,
-  permission: WorkItemPermission,
+  action: GrantAction,
 ): Promise<WorkItemToolContext | string> {
   const worktree = await resolveWorktree(directory);
   const info = await loadCurrentExecutionInfo(worktree);
@@ -44,21 +45,22 @@ export async function loadWorkItemToolContext(
   if (workItemId === null) {
     return NO_WORK_ITEM_MESSAGE;
   }
-  if (!info.workItemPermissions.includes(permission)) {
-    return missingPermissionMessage(permission);
+  if (!hasGrantFor(info.grants, action)) {
+    return missingGrantMessage(action);
   }
   return { worktree, info: { ...info, workItemId } };
 }
 
 /**
  * Validates the input into a change (or a refusal message) and appends it to
- * the run's recorded work item changes.
+ * the run's recorded work item changes, if the Task has a grant for `action`.
  */
 export async function recordWorkItemChange(
   directory: string,
+  action: GrantAction,
   buildChange: (context: WorkItemToolContext) => WorkItemChange | string,
 ): Promise<string> {
-  const context = await loadWorkItemToolContext(directory, "self");
+  const context = await loadWorkItemToolContext(directory, action);
   if (typeof context === "string") {
     return context;
   }
@@ -66,8 +68,35 @@ export async function recordWorkItemChange(
   if (typeof change === "string") {
     return change;
   }
+  const refusal = await checkRecordedChange(context, change);
+  if (refusal !== null) {
+    return refusal;
+  }
   await appendWorkItemChange(context.worktree, change);
   return RECORDED_CHANGE_NOTE;
+}
+
+/**
+ * Refuses a change the server would refuse for lack of a grant, as far as the
+ * plugin can tell from the run's grants and the changes recorded so far.
+ */
+export async function checkRecordedChange(
+  context: WorkItemToolContext,
+  change: WorkItemChange,
+): Promise<string | null> {
+  const recorded = await readWorkItemChanges(context.worktree);
+  return checkChangeGrants(
+    {
+      grants: context.info.grants,
+      ownWorkItemId: context.info.workItemId,
+      createdWorkItemIds: new Set(
+        recorded.flatMap((entry) =>
+          entry.kind === "create" ? [entry.workItemId] : [],
+        ),
+      ),
+    },
+    change,
+  );
 }
 
 // eslint-disable-next-line local/no-unknown-parameter-type -- a type guard

@@ -19,8 +19,6 @@ const KIND_STYLE: Record<NodeKind, NodeKindStyle> = {
   succeed: { icon: "succeed", color: palette.success },
   fail: { icon: "fail", color: palette.danger },
   detached: { icon: "step", color: palette.textMuted },
-  event: { icon: "event", color: palette.attention },
-  rule: { icon: "rule", color: palette.textMuted },
   pipeline: { icon: "pipeline", color: palette.done },
   action: { icon: "step", color: palette.accent },
 };
@@ -29,9 +27,7 @@ const ACTION_STYLE: Record<
   NonNullable<StudioNodeData["actionKind"]>,
   NodeKindStyle
 > = {
-  step: KIND_STYLE.action,
   attach: { icon: "attach", color: palette.violet },
-  skip: { icon: "skip", color: palette.textMuted },
 };
 
 /** A node's icon and identity color; an action node's follow what it does. */
@@ -44,9 +40,9 @@ export function nodeKindStyle(
   return KIND_STYLE[data.kind];
 }
 
-/** Whether edges can enter a node of this kind (all but the graph's entry points). */
+/** Whether edges can enter a node of this kind (all but the graph's entry point). */
 export function hasInputHandle(kind: NodeKind): boolean {
-  return kind !== "start" && kind !== "event";
+  return kind !== "start";
 }
 
 /** Whether edges can leave a node of this kind (all but terminal nodes and route targets). */
@@ -55,8 +51,6 @@ export function hasOutputHandle(kind: NodeKind): boolean {
     case "start":
     case "step":
     case "wait":
-    case "event":
-    case "rule":
       return true;
     case "succeed":
     case "fail":

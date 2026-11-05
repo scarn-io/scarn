@@ -1,7 +1,11 @@
 import { toJSONSchema } from "zod/v4/core";
 import type { $ZodType } from "zod/v4/core";
 import type { ZodObject, ZodRawShape, ZodType } from "zod";
-import type { AnyStepFeature, FeatureResultExtensions } from "./step-features";
+import type {
+  AnyStepFeature,
+  FeatureResultExtensions,
+  Grant,
+} from "./step-features";
 import {
   createPromptTemplateContext,
   type PromptTemplateContext,
@@ -19,7 +23,6 @@ import { compileEnvironment, type StepEnvironment } from "./runtime";
 import { mergeStepMcps } from "./compile-mcps";
 import type { McpHandle } from "./define-mcp";
 import type { BuiltInError, ConversationResult } from "../../pipelines/types";
-import type { PutApiStepDefinitionsData } from "../../generated/types.gen";
 import {
   compileStepConcurrency,
   compileStepErrors,
@@ -100,8 +103,6 @@ export type DefineStepInput<
    * dropped. Omitted means no limit. Pipeline nodes can't override it.
    */
   concurrency?: StepConcurrency;
-  /** Work item permissions the step's Tasks get on top of `self`. */
-  workItemPermissions?: readonly WorkItemPermission[];
 };
 
 /** A step's per-work-item concurrency limit. */
@@ -109,11 +110,6 @@ export type StepConcurrency = {
   max: number;
   waiting: number;
 };
-
-/** A work item permission a step's Tasks may be granted. */
-export type WorkItemPermission = NonNullable<
-  PutApiStepDefinitionsData["body"]["workItemPermissions"]
->[number];
 
 /** One `retry` entry: the same shape as a pipeline node's `retry`. */
 export type StepRetryEntry = {
@@ -171,8 +167,11 @@ export type StepDefinitionSpec = {
   maxTurns?: number;
   /** The step's per-work-item concurrency limit; omitted means no limit. */
   concurrency?: StepConcurrency;
-  /** Work item permissions the step's Tasks get on top of `self`. */
-  workItemPermissions?: readonly WorkItemPermission[];
+  /**
+   * What the step's Tasks may do to work items, from its
+   * `Features.workItems.*` features. Every Task may also read its own.
+   */
+  grants?: readonly Grant[];
   /**
    * `kind === "code"` only: the live function of a spec produced by
    * `codeStep()`. Code-step discovery (`findCodeStepInModule`) reads it to
@@ -205,14 +204,14 @@ export type EffectiveResult<
 
 /**
  * A `defineStep` handle's result type: `ConversationResult` when the step has
- * no `result` and no features (a conversation step), else its effective
- * result.
+ * no `result` and no feature adds result fields (a conversation step), else
+ * its effective result.
  */
 export type DefineStepResult<
   TResult extends ZodType,
   TFeatures extends ReadonlyArray<AnyStepFeature>,
 > = ZodType extends TResult
-  ? [TFeatures[number]] extends [never]
+  ? [keyof FeatureResultExtensions<TFeatures>] extends [never]
     ? ConversationResult
     : EffectiveResult<TResult["_output"], TFeatures>
   : EffectiveResult<TResult["_output"], TFeatures>;
@@ -245,6 +244,32 @@ function assertStepMcpInput(config: {
   );
 }
 
+/** The grants a step's features carry, at most one per resource, action and scope. */
+function collectGrants(
+  stepKey: string,
+  features: readonly AnyStepFeature[],
+): Grant[] {
+  const grants: Grant[] = [];
+  const seen = new Set<string>();
+  for (const feature of features) {
+    const grant = feature._grant;
+    if (!grant) continue;
+    const key = `${grant.resource}:${grant.action}:${grant.scope}`;
+    if (seen.has(key)) {
+      throw new Error(
+        `Step "${stepKey}": more than one Features.${grant.resource}s.${grant.action}({ scope: "${grant.scope}" }). Attach each work item grant once.`,
+      );
+    }
+    seen.add(key);
+    grants.push(
+      "labels" in grant
+        ? { ...grant, labels: [...grant.labels] }
+        : { ...grant },
+    );
+  }
+  return grants;
+}
+
 export function defineStep<
   TInput extends ZodType = ZodType,
   TResult extends ZodType = ZodType,
@@ -269,10 +294,12 @@ export function defineStep<
   TErrors
 > {
   const features = (config.features ?? []) as AnyStepFeature[];
+  const grants = collectGrants(config.key, features);
 
   // Merge each feature's result extension into the base schema.
   let effectiveResult: ZodType | undefined = config.result;
   for (const feature of features) {
+    if (!feature._resultExtension) continue;
     effectiveResult = effectiveResult
       ? (effectiveResult as ZodObject<ZodRawShape>).extend(
           feature._resultExtension.shape,
@@ -347,9 +374,7 @@ export function defineStep<
           concurrency: compileStepConcurrency(config.key, config.concurrency),
         }
       : {}),
-    ...(config.workItemPermissions !== undefined
-      ? { workItemPermissions: [...config.workItemPermissions] }
-      : {}),
+    ...(grants.length > 0 ? { grants } : {}),
   };
   return toStepHandle(spec) as StepHandle<
     TInput["_output"],

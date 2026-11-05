@@ -1,7 +1,6 @@
 import path from "node:path";
 import type { RepoConfig } from "@scarn/sdk/repo-config";
 import { removeWorkItemChanges } from "@scarn/sdk/contracts/work-item-changes";
-import { removeWaitForWorkMarker } from "../contracts/wait-for-work-marker";
 import {
   removeFindingsSubmissionFile,
   type CurrentExecutionInfo,
@@ -253,7 +252,6 @@ export class DefaultLocalProjectRuntimeEnvironmentOrchestrator implements LocalP
       // the agent starts.
       await removeFindingsSubmissionFile(workspacePath);
       await removeWorkItemChanges(workspacePath);
-      await removeWaitForWorkMarker(workspacePath);
 
       // Step 2: Resolve the devcontainer config + its workspace folder: the
       // cloned repo's, or for a managed runtime one synthesized into the clone.

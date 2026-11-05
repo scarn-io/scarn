@@ -2,11 +2,6 @@
 // `GraphEdge.tsx` and `graph-decoration.ts` — kept in a plain `.ts` file (rather than inside
 // either component) so `bun:test` can import and exercise it directly,
 // without a JSX/React-DOM test environment.
-import {
-  eventHasChild,
-  scopeOfEvent,
-  type AutomationEvent,
-} from "@scarn/sdk/contracts/automation-document";
 import type {
   StudioEdgeData,
   StudioIssue,
@@ -74,75 +69,39 @@ const KIND_CAPTION: Record<StudioNodeData["kind"], string> = {
   succeed: "succeed",
   fail: "fail",
   detached: "detached step",
-  event: "event",
-  rule: "rule",
   pipeline: "pipeline",
   action: "action",
 };
 
 /**
  * The subtitle under a node's label in the detail panel, e.g.
- * `step · triage`, `wait · decision`, `event · child.ready` or
- * `attach · wayfinder`.
+ * `step · triage`, `wait · decision` or `attach · wayfinder`.
  */
 export function nodeCaption(data: StudioNodeData): string {
   const kind =
     data.kind === "action"
       ? (data.actionKind ?? KIND_CAPTION.action)
       : KIND_CAPTION[data.kind];
-  const detail = data.stepKey ?? data.waitFor ?? data.targetKey ?? data.event;
+  const detail = data.stepKey ?? data.waitFor ?? data.targetKey;
   return detail ? `${kind} · ${detail}` : kind;
 }
 
 type KindLabelData = Pick<
   StudioNodeData,
-  | "kind"
-  | "stepKey"
-  | "waitFor"
-  | "event"
-  | "ruleIndex"
-  | "actionKind"
-  | "targetKey"
-  | "subject"
-  | "resolved"
+  "kind" | "stepKey" | "waitFor" | "actionKind" | "targetKey" | "resolved"
 >;
 
-function joinParts(parts: readonly (string | undefined)[]): string {
-  return parts.filter((part): part is string => Boolean(part)).join(" · ");
-}
-
-/**
- * Which work item an event is about: any top-level work item in the project
- * (`workItem.*`), or the automation's own work item (`self.*`) or one of its
- * children (`child.*`). The event pill's label already names the event.
- */
-function eventSubject(event: AutomationEvent): string {
-  if (scopeOfEvent(event) === "project") return "top-level work item";
-  return eventHasChild(event) ? "child work item" : "own work item";
-}
-
 function targetLabel(data: KindLabelData, kind: string): string {
+  if (data.targetKey === undefined) return kind;
   const target =
-    data.targetKey === undefined
-      ? undefined
-      : data.resolved === false
-        ? `${data.targetKey} (not found)`
-        : data.targetKey;
-  return joinParts([
-    kind,
-    target,
-    data.subject === "child" ? "on child" : undefined,
-  ]);
+    data.resolved === false ? `${data.targetKey} (not found)` : data.targetKey;
+  return `${kind} · ${target}`;
 }
 
 function actionLabel(data: KindLabelData): string {
   switch (data.actionKind) {
-    case "step":
-      return targetLabel(data, "Step");
     case "attach":
       return targetLabel(data, "Attach");
-    case "skip":
-      return "Skip";
     case undefined:
       return "Action";
   }
@@ -150,8 +109,7 @@ function actionLabel(data: KindLabelData): string {
 
 /**
  * The title-cased kind line on a graph node, e.g. `Step · triage`,
- * `Decision`, `Rule 2 · child.ready`, `Pipeline · triage (not found)` or
- * `Step · plan · on child`.
+ * `Decision`, `Pipeline · triage (not found)` or `Attach · wayfinder`.
  */
 export function kindLabel(data: KindLabelData): string {
   switch (data.kind) {
@@ -168,18 +126,6 @@ export function kindLabel(data: KindLabelData): string {
       return "Fail";
     case "detached":
       return data.stepKey ? `Detached step · ${data.stepKey}` : "Detached step";
-    case "event":
-      return joinParts([
-        "Event",
-        data.event === undefined ? undefined : eventSubject(data.event),
-      ]);
-    case "rule":
-      return joinParts([
-        data.ruleIndex === undefined
-          ? "Rule"
-          : `Rule ${String(data.ruleIndex + 1)}`,
-        data.event,
-      ]);
     case "pipeline":
       return targetLabel(data, "Pipeline");
     case "action":
@@ -281,12 +227,11 @@ const CARD_WIDTH = 240;
 const CARD_BASE_HEIGHT = 56;
 const CARD_EXTRA_LINE_HEIGHT = 16;
 const DETACHED_SIZE = { width: CARD_WIDTH, height: 72 };
-const EVENT_SIZE = { width: 208, height: 44 };
 
 /**
  * The size the layout reserves for a node, which the node renderers also
  * draw at so edges meet the card exactly: a compact pill for the synthetic
- * start node, a wider pill for an automation event, a smaller card for
+ * start node, a smaller card for
  * `succeed`/`fail`, and a card for every other kind, one line taller for
  * each fork marker, merge badge or pause marker it shows.
  */
@@ -294,7 +239,6 @@ export function nodeLayoutSize(
   data: Pick<StudioNodeData, "kind" | "match" | "mergeWaitsFor" | "maxTurns">,
 ): { width: number; height: number } {
   if (data.kind === "start") return { ...START_SIZE };
-  if (data.kind === "event") return { ...EVENT_SIZE };
   if (data.kind === "detached") return { ...DETACHED_SIZE };
   if (data.kind === "succeed" || data.kind === "fail") {
     return { ...TERMINAL_SIZE };

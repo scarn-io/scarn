@@ -4,7 +4,6 @@ import path from "node:path";
 import { buildOpencodeContext } from "@scarn/opencode-plugin";
 import type { RepoConfig } from "@scarn/sdk/repo-config";
 import { removeWorkItemChanges } from "@scarn/sdk/contracts/work-item-changes";
-import { removeWaitForWorkMarker } from "../contracts/wait-for-work-marker";
 import {
   removeFindingsSubmissionFile,
   type CurrentExecutionInfo,
@@ -214,7 +213,6 @@ export class DefaultLocalNoWorkspaceRuntimeEnvironmentOrchestrator implements Lo
       // reused temp dir. Symmetric with the workspace runtime path.
       await removeFindingsSubmissionFile(workspacePath);
       await removeWorkItemChanges(workspacePath);
-      await removeWaitForWorkMarker(workspacePath);
 
       // Step 3: Resolve the step's MCP server refs, then build the OpenCode
       // context (embedded Scarn plugin + step MCPs) into the temp

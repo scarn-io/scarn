@@ -3,9 +3,13 @@ import {
   readWorkItemChanges,
   type WorkItemChange,
 } from "@scarn/sdk/contracts/work-item-changes";
-import { workItemTestWorkspace } from "./_shared/work-item-test-workspace";
+import type { GrantAction } from "./_shared/current-execution";
 import {
-  missingPermissionMessage,
+  grant,
+  workItemTestWorkspace,
+} from "./_shared/work-item-test-workspace";
+import {
+  missingGrantMessage,
   NO_WORK_ITEM_MESSAGE,
   RECORDED_CHANGE_NOTE,
   recordWorkItemChange,
@@ -16,19 +20,20 @@ import {
   buildCommentChange,
   buildDescribeChange,
   buildLabelChange,
-  buildStartTaskChange,
 } from "./scarn-work-item-change-tools";
 
 type Build = (input: Record<string, unknown>) => WorkItemChange | string;
 
 const RECORDING_CASES: {
   name: string;
+  action: GrantAction;
   build: Build;
   input: Record<string, unknown>;
   change: WorkItemChange;
 }[] = [
   {
     name: "block",
+    action: "block",
     build: buildBlockChange,
     input: { blockedWorkItemId: "item-a", blockingWorkItemId: "item-b" },
     change: {
@@ -39,6 +44,7 @@ const RECORDING_CASES: {
   },
   {
     name: "unblock",
+    action: "block",
     build: buildBlockChange,
     input: {
       blockedWorkItemId: "item-a",
@@ -54,6 +60,7 @@ const RECORDING_CASES: {
   },
   {
     name: "describe",
+    action: "update",
     build: buildDescribeChange,
     input: { workItemId: "item-a", description: "New", descriptionVersion: 2 },
     change: {
@@ -65,6 +72,7 @@ const RECORDING_CASES: {
   },
   {
     name: "label",
+    action: "label",
     build: buildLabelChange,
     input: { workItemId: "item-a", add: ["bug", "ui"], remove: ["triage"] },
     change: {
@@ -76,12 +84,14 @@ const RECORDING_CASES: {
   },
   {
     name: "comment",
+    action: "comment",
     build: buildCommentChange,
     input: { workItemId: "item-a", body: "Hi" },
     change: { kind: "comment", workItemId: "item-a", body: "Hi" },
   },
   {
     name: "close",
+    action: "close",
     build: buildCloseChange,
     input: { workItemId: "item-a", reason: "completed", resolution: "Done" },
     change: {
@@ -91,23 +101,17 @@ const RECORDING_CASES: {
       resolution: "Done",
     },
   },
-  {
-    name: "start task",
-    build: buildStartTaskChange,
-    input: { workItemId: "item-a", stepDefinitionKey: "implement" },
-    change: { kind: "startTask", workItemId: "item-a", stepKey: "implement" },
-  },
 ];
 
 describe("work item change tools", () => {
-  for (const { name, build, input, change } of RECORDING_CASES) {
+  for (const { name, action, build, input, change } of RECORDING_CASES) {
     test.concurrent(`records a ${name} change`, async () => {
       const workspacePath = await workItemTestWorkspace({
-        workItemPermissions: ["self"],
+        grants: [grant(action, "children")],
       });
 
       expect(
-        await recordWorkItemChange(workspacePath, () => build(input)),
+        await recordWorkItemChange(workspacePath, action, () => build(input)),
       ).toBe(RECORDED_CHANGE_NOTE);
       expect(await readWorkItemChanges(workspacePath)).toEqual([change]);
     });
@@ -116,8 +120,8 @@ describe("work item change tools", () => {
   test.concurrent("appends changes in call order", async () => {
     const workspacePath = await workItemTestWorkspace();
 
-    for (const { build, input } of RECORDING_CASES) {
-      await recordWorkItemChange(workspacePath, () => build(input));
+    for (const { action, build, input } of RECORDING_CASES) {
+      await recordWorkItemChange(workspacePath, action, () => build(input));
     }
 
     expect(await readWorkItemChanges(workspacePath)).toEqual(
@@ -125,16 +129,16 @@ describe("work item change tools", () => {
     );
   });
 
-  test.concurrent("refuses without the self permission", async () => {
+  test.concurrent("refuses without a grant for the action", async () => {
     const workspacePath = await workItemTestWorkspace({
-      workItemPermissions: ["children"],
+      grants: [grant("read", "self"), grant("close", "children")],
     });
 
     expect(
-      await recordWorkItemChange(workspacePath, () =>
+      await recordWorkItemChange(workspacePath, "comment", () =>
         buildCommentChange({ workItemId: "item-a", body: "Hi" }),
       ),
-    ).toBe(missingPermissionMessage("self"));
+    ).toBe(missingGrantMessage("comment"));
     expect(await readWorkItemChanges(workspacePath)).toEqual([]);
   });
 
@@ -142,7 +146,7 @@ describe("work item change tools", () => {
     const workspacePath = await workItemTestWorkspace({ workItemId: null });
 
     expect(
-      await recordWorkItemChange(workspacePath, () =>
+      await recordWorkItemChange(workspacePath, "comment", () =>
         buildCommentChange({ workItemId: "item-a", body: "Hi" }),
       ),
     ).toBe(NO_WORK_ITEM_MESSAGE);
@@ -152,7 +156,7 @@ describe("work item change tools", () => {
     const workspacePath = await workItemTestWorkspace();
 
     expect(
-      await recordWorkItemChange(workspacePath, () =>
+      await recordWorkItemChange(workspacePath, "close", () =>
         buildCloseChange({ workItemId: "item-a", reason: "bored" }),
       ),
     ).toContain("Invalid input");
@@ -183,8 +187,5 @@ describe("work item change tools", () => {
       workItemId: "a",
       add: ["bug"],
     });
-    expect(buildStartTaskChange({ workItemId: "a" })).toContain(
-      "stepDefinitionKey",
-    );
   });
 });

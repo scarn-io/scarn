@@ -135,7 +135,7 @@ export async function launchRuntimeEnvironment(
       resultSchemaJson: input.workerContext.task.resultSchemaJson,
       turnsRemaining: input.workerContext.task.turnsRemaining ?? null,
       workItemId: input.workerContext.task.workItemId,
-      workItemPermissions: input.workerContext.task.workItemPermissions,
+      grants: input.workerContext.task.grants,
       api: deps.workerClient.apiBaseUrl
         ? {
             baseUrl: agentReachableBaseUrl(

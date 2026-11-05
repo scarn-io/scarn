@@ -2,6 +2,7 @@ import { NodeDetailPanel } from "../graph/NodeDetailPanel";
 import type { StudioNode } from "../graph/studio-graph-types";
 import { InlineMarkdown } from "./MarkdownView";
 import {
+  describeGrants,
   detachedStepNotice,
   findTemplateStep,
   formatRepoAccess,
@@ -58,12 +59,8 @@ function TemplateStepSections({
               <td>{formatRepoAccess(step.repo)}</td>
             </tr>
             <tr>
-              <th scope="row">Work item permissions</th>
-              <td>
-                {step.workItemPermissions.length > 0
-                  ? step.workItemPermissions.join(", ")
-                  : "None"}
-              </td>
+              <th scope="row">Work item grants</th>
+              <td>{describeGrants(step.grants)}</td>
             </tr>
             <tr>
               <th scope="row">Max turns</th>

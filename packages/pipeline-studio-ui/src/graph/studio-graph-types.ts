@@ -1,8 +1,4 @@
 import type { Edge, Node } from "@xyflow/react";
-import type {
-  AutomationEvent,
-  AutomationSubject,
-} from "@scarn/sdk/contracts/automation-document";
 import type { PipelineNode } from "@scarn/sdk/contracts/pipeline-document";
 
 // `Node`/`Edge` are imported `type`-only (see the top-level comment in
@@ -56,19 +52,12 @@ export type StudioNodeShape =
  * transition leaves from (id `START_NODE_ID`), or `"detached"` for a step the
  * file exports but no graph runs (template previews only).
  *
- * An automation's graph uses its own kinds: an `"event"` the automation
- * reacts to, one `"rule"` per event rule, and the rule's route targets — a
- * `"pipeline"` it starts, or an `"action"` (a step Task, an attachment or a
- * skip; see `actionKind`).
+ * The automation round view reuses the card for two of its targets: a
+ * `"pipeline"` a route starts, and an `"action"` (an attachment; see
+ * `actionKind`).
  */
 export type StudioNodeKind =
-  | PipelineNode["kind"]
-  | "start"
-  | "detached"
-  | "event"
-  | "rule"
-  | "pipeline"
-  | "action";
+  PipelineNode["kind"] | "start" | "detached" | "pipeline" | "action";
 
 /** Per-node data the designer renders inline next to the node itself. */
 export type StudioNodeData = {
@@ -84,16 +73,10 @@ export type StudioNodeData = {
   mergeWaitsFor?: string[];
   /** On a step node: its `maxTurns`, when the document sets it. */
   maxTurns?: number;
-  /** On an event or rule node: the event it reacts to. */
-  event?: AutomationEvent;
-  /** On a rule node: its 0-based position in the automation's `rules`. */
-  ruleIndex?: number;
   /** On an action node: what the route does. */
-  actionKind?: "step" | "attach" | "skip";
-  /** On a pipeline or action node: the step, pipeline or automation key it names. */
+  actionKind?: "attach";
+  /** On a pipeline or action node: the pipeline or automation key it names. */
   targetKey?: string;
-  /** On a step action or pipeline node: which work item it runs for. */
-  subject?: AutomationSubject;
   /** On a pipeline or action node: false when `targetKey` names nothing known. */
   resolved?: boolean;
   issues: StudioIssue[];

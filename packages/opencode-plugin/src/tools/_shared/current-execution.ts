@@ -1,5 +1,6 @@
 import { access, readFile } from "node:fs/promises";
 import path from "node:path";
+import type { Grant, GrantAction, GrantScope } from "@scarn/sdk";
 
 export const CURRENT_EXECUTION_INFO_RELATIVE_PATH =
   ".scarn/current-execution/execution.json";
@@ -11,34 +12,97 @@ export type CurrentExecutionInfo = {
   turnsRemaining: number | null;
   /** The work item the run's Task is on; `null` outside a run on one. */
   workItemId: string | null;
-  workItemPermissions: WorkItemPermission[];
+  /** What the run's Task may do to work items; `[]` when none were given. */
+  grants: Grant[];
   /** How the agent's tools reach the API live; `null` when unavailable. */
   api: CurrentExecutionApi | null;
   /** What work item page URLs are built from; `null` when unknown. */
   workItemLinks: WorkItemLinks | null;
 };
 
-export type WorkItemPermission = "self" | "children";
+export type { Grant, GrantAction, GrantScope };
 
 export type CurrentExecutionApi = { baseUrl: string; claimToken: string };
 
 export type WorkItemLinks = { appBaseUrl: string; projectPath: string };
 
-const WORK_ITEM_PERMISSIONS: readonly WorkItemPermission[] = [
-  "self",
-  "children",
+const GRANT_ACTIONS: readonly GrantAction[] = [
+  "read",
+  "update",
+  "comment",
+  "label",
+  "block",
+  "close",
+  "create",
 ];
 
-function parseWorkItemPermissions(
-  record: Record<string, unknown>,
-): WorkItemPermission[] {
-  const value = record["workItemPermissions"];
+const GRANT_SCOPES: readonly GrantScope[] = ["self", "children"];
+
+// eslint-disable-next-line local/no-unknown-parameter-type -- a parser
+function parseLabels(value: unknown): string[] | null {
+  return Array.isArray(value) &&
+    value.every((label) => typeof label === "string")
+    ? [...value]
+    : null;
+}
+
+// eslint-disable-next-line local/no-unknown-parameter-type -- a parser
+function parseGrant(value: unknown): Grant | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  const { resource, action, scope, labels } = value as Record<string, unknown>;
+  const knownAction = GRANT_ACTIONS.find((candidate) => candidate === action);
+  const knownScope = GRANT_SCOPES.find((candidate) => candidate === scope);
+  if (
+    resource !== "workItem" ||
+    knownAction === undefined ||
+    knownScope === undefined
+  ) {
+    return null;
+  }
+  if (knownAction === "create") {
+    const parsedLabels = parseLabels(labels);
+    return knownScope === "children" && parsedLabels !== null
+      ? {
+          resource,
+          action: knownAction,
+          scope: knownScope,
+          labels: parsedLabels,
+        }
+      : null;
+  }
+  if (knownAction === "label") {
+    const parsedLabels = parseLabels(labels);
+    return parsedLabels === null
+      ? null
+      : {
+          resource,
+          action: knownAction,
+          scope: knownScope,
+          labels: parsedLabels,
+        };
+  }
+  return { resource, action: knownAction, scope: knownScope };
+}
+
+function parseGrants(record: Record<string, unknown>): Grant[] {
+  const value = record["grants"];
   if (!Array.isArray(value)) {
     return [];
   }
-  return WORK_ITEM_PERMISSIONS.filter((permission) =>
-    value.includes(permission),
-  );
+  return value.flatMap((entry) => {
+    const grant = parseGrant(entry);
+    return grant === null ? [] : [grant];
+  });
+}
+
+/** Whether `grants` hold `action` on any scope. */
+export function hasGrantFor(
+  grants: readonly Grant[],
+  action: GrantAction,
+): boolean {
+  return grants.some((grant) => grant.action === action);
 }
 
 function parseApi(record: Record<string, unknown>): CurrentExecutionApi | null {
@@ -136,7 +200,7 @@ export async function loadCurrentExecutionInfo(
       typeof workItemId === "string" && workItemId.length > 0
         ? workItemId
         : null,
-    workItemPermissions: parseWorkItemPermissions(parsedRecord),
+    grants: parseGrants(parsedRecord),
     api: parseApi(parsedRecord),
     workItemLinks: parseWorkItemLinks(parsedRecord),
   };

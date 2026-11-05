@@ -2,7 +2,12 @@ import { isDeepStrictEqual } from "node:util";
 import { parseSchema } from "json-schema-to-zod";
 import { appliesToSetup, type EnvVarSpec } from "@scarn/sdk/env-vars";
 import { resolveRepoConfig, type RepoConfig } from "@scarn/sdk/repo-config";
-import { isSecretLookingEnvName } from "@scarn/sdk/definitions/steps";
+import {
+  Features,
+  isSecretLookingEnvName,
+  type AnyStepFeature,
+  type Grant,
+} from "@scarn/sdk/definitions/steps";
 import { DEFAULT_CODE_STEP_RUNTIME_ID } from "@scarn/sdk/managed-runtimes";
 
 export type StepDefContract = {
@@ -25,7 +30,7 @@ export type StepDefContract = {
   errors?: string[];
   retry?: { on: string[]; maxAttempts: number }[];
   maxTurns?: number | null;
-  workItemPermissions?: string[];
+  grants?: readonly Grant[];
 };
 
 export function keyToVarName(key: string): string {
@@ -306,6 +311,60 @@ function buildEnvironmentField(step: StepDefContract): EnvironmentField | null {
   };
 }
 
+function grantToFeature(grant: Grant): {
+  feature: AnyStepFeature;
+  source: string;
+} {
+  const { workItems } = Features;
+  switch (grant.action) {
+    case "label":
+      return {
+        feature: workItems.label({
+          scope: grant.scope,
+          labels: grant.labels as [string, ...string[]],
+        }),
+        source: `Features.workItems.label({ scope: ${JSON.stringify(grant.scope)}, labels: ${JSON.stringify(grant.labels)} })`,
+      };
+    case "create":
+      return {
+        feature: workItems.create({
+          scope: "children",
+          labels: grant.labels as [string, ...string[]],
+        }),
+        source: `Features.workItems.create({ scope: "children", labels: ${JSON.stringify(grant.labels)} })`,
+      };
+    default:
+      return {
+        feature: workItems[grant.action]({ scope: grant.scope }),
+        source: `Features.workItems.${grant.action}({ scope: ${JSON.stringify(grant.scope)} })`,
+      };
+  }
+}
+
+/**
+ * The `features: [...]` sources for a step's grants, and its prompt with the
+ * sections those features append taken back off, so a pulled file compiles
+ * back to the same prompt.
+ */
+function buildGrantFeatures(step: StepDefContract): {
+  prompt: string;
+  sources: string[];
+} {
+  const prompt = step.prompt ?? "";
+  const grants = step.grants ?? [];
+  if (grants.length === 0) return { prompt, sources: [] };
+
+  const features = grants.map(grantToFeature);
+  const additions = features.map(({ feature }) => feature._promptAddition);
+  const suffix = additions.map((addition) => `\n\n${addition}`).join("");
+  const sources = features.map(({ source }) => source);
+  if (prompt.endsWith(suffix)) {
+    return { prompt: prompt.slice(0, -suffix.length), sources };
+  }
+  if (prompt === additions.join("\n\n")) return { prompt: "", sources };
+  return { prompt, sources };
+}
+
 export function generateStepsFileContent(steps: StepDefContract[]): string {
   if (steps.length === 0) return "";
 
@@ -317,6 +376,8 @@ export function generateStepsFileContent(steps: StepDefContract[]): string {
   const usesRepoHelper = environmentFields.some(
     (field) => field?.usesRepoHelper,
   );
+  const grantFeatures = steps.map(buildGrantFeatures);
+  const usesFeatures = grantFeatures.some(({ sources }) => sources.length > 0);
   const stepBlocks = steps.map((step, index) => {
     const varName = keyToVarName(step.key);
     const inputExpr = schemaToZodExpr(step.inputSchemaJson);
@@ -332,7 +393,11 @@ export function generateStepsFileContent(steps: StepDefContract[]): string {
       fields.push(`  description: ${JSON.stringify(step.description)}`);
     const environmentField = environmentFields[index];
     if (environmentField) fields.push(environmentField.field);
-    fields.push(`  agentPrompt: ${promptToSource(step.prompt ?? "")}`);
+    const { prompt, sources: featureSources } = grantFeatures[index] ?? {
+      prompt: step.prompt ?? "",
+      sources: [],
+    };
+    fields.push(`  agentPrompt: ${promptToSource(prompt)}`);
     fields.push(`  input: ${inputExpr}`);
     fields.push(`  result: ${resultExpr}`);
     if (step.opencodeMcpJson && Object.keys(step.opencodeMcpJson).length > 0) {
@@ -363,9 +428,9 @@ export function generateStepsFileContent(steps: StepDefContract[]): string {
     if (step.maxTurns != null) {
       fields.push(`  maxTurns: ${String(step.maxTurns)}`);
     }
-    if (step.workItemPermissions && step.workItemPermissions.length > 0) {
+    if (featureSources.length > 0) {
       fields.push(
-        `  workItemPermissions: ${JSON.stringify(step.workItemPermissions)}`,
+        `  features: [\n${featureSources.map((source) => `    ${source},`).join("\n")}\n  ]`,
       );
     }
 
@@ -377,6 +442,7 @@ export function generateStepsFileContent(steps: StepDefContract[]): string {
     ...(usesRuntimeHelper ? ["Runtime"] : []),
     ...(usesRepoHelper ? ["Repo"] : []),
     ...(usesEnvHelper ? ["Env"] : []),
+    ...(usesFeatures ? ["Features"] : []),
   ].join(", ");
   return `import { z } from "zod";
 import { ${sdkImports} } from "@scarn/sdk/definitions/steps";

@@ -277,7 +277,7 @@ export class TaskRuns extends HeyApiClient {
     }
     
     /**
-     * Records that the task run's agent ended its turn with a yield; the task run ends `yielded`. A `hand_over` (the default) hands the conversation to a person: when it belongs to a pipeline run, the run posts `message` to the step visit's conversation and waits for a reply. A `wait_for_work` applies `workItemChanges`, leaves the task `waiting_for_work`, and queues its continuation once its work item has no open blockers (at once if it has none). Requires the claim token and `executions:write`.
+     * Records that the task run's agent ended its turn with a yield; the task run ends `yielded`. It hands the conversation to a person: when it belongs to a pipeline run, the run posts `message` to the step visit's conversation and waits for a reply. Requires the claim token and `executions:write`.
      */
     public yieldTaskRun<ThrowOnError extends boolean = false>(options: Options<PostApiTaskRunsByTaskRunIdYieldsData, ThrowOnError>) {
         return (options.client ?? this.client).post<PostApiTaskRunsByTaskRunIdYieldsResponses, PostApiTaskRunsByTaskRunIdYieldsErrors, ThrowOnError>({

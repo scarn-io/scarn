@@ -5,7 +5,8 @@ import {
   loadWorkItemToolContext,
   workItemUrl,
 } from "./_shared/work-item-tool-support";
-import type { CurrentExecutionInfo } from "./_shared/current-execution";
+import type { CurrentExecutionInfo, Grant } from "./_shared/current-execution";
+import { checkGrantOn, scopeNote } from "./_shared/work-item-grants";
 
 export const SCARN_GET_WORK_ITEM_TOOL = "scarn-get-work-item";
 
@@ -21,7 +22,7 @@ export async function getWorkItem(
   directory: string,
   fetchImpl: typeof fetch = fetch,
 ): Promise<string> {
-  const context = await loadWorkItemToolContext(directory, "self");
+  const context = await loadWorkItemToolContext(directory, "read");
   if (typeof context === "string") {
     return context;
   }
@@ -35,6 +36,15 @@ export async function getWorkItem(
     );
   }
   const workItemId = input.workItemId ?? context.info.workItemId;
+  const refusal = checkGrantOn(
+    context.info.grants,
+    context.info.workItemId,
+    "read",
+    workItemId,
+  );
+  if (refusal !== null) {
+    return refusal;
+  }
 
   const url = `${api.baseUrl.replace(/\/+$/, "")}/api/task-runs/${encodeURIComponent(taskRunId)}/work-item-reads`;
   let response: Response;
@@ -106,11 +116,13 @@ function withWorkItemUrls(
 }
 
 /** The `scarn-get-work-item` tool, bound to the plugin's directory. */
-export function createScarnGetWorkItemTool(directory: string): ToolInfo {
+export function createScarnGetWorkItemTool(
+  directory: string,
+  grants: readonly Grant[],
+): ToolInfo {
   return {
     name: SCARN_GET_WORK_ITEM_TOOL,
-    description:
-      "Read a work item live: url (its web page), title, labels, description with its descriptionVersion, fields, state, blockers and children. Each blocker and child has its url, labels, state, close reason, open blockers (`blockedBy`) and newest Task's status (`latestTaskStatus`, null if it never had one). Works on this Task's own item and, with permission, its children. Changes nothing. Items created earlier in this run don't exist until the run succeeds.",
+    description: `Read a work item live: url (its web page), title, labels, description with its descriptionVersion, fields, state, blockers and children. Each blocker and child has its url, labels, state, close reason, open blockers (\`blockedBy\`) and newest Task's status (\`latestTaskStatus\`, null if it never had one). ${scopeNote(grants, "read")} Changes nothing. Items created earlier in this run don't exist until the run succeeds.`,
     input: {
       type: "object",
       properties: {

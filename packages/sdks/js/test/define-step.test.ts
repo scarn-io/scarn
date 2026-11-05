@@ -248,4 +248,127 @@ describe("defineStep", () => {
       });
     });
   });
+
+  describe("work item features", () => {
+    test("collects each feature's grant onto the spec", () => {
+      const spec = defineStep({
+        key: "plan",
+        name: "Plan",
+        agentPrompt: "Plan it.",
+        features: [
+          Features.workItems.read({ scope: "children" }),
+          Features.workItems.label({ scope: "self", labels: ["ready"] }),
+          Features.workItems.create({
+            scope: "children",
+            labels: ["afk", "hitl"],
+          }),
+        ],
+      });
+      expect(spec.grants).toEqual([
+        { resource: "workItem", action: "read", scope: "children" },
+        {
+          resource: "workItem",
+          action: "label",
+          scope: "self",
+          labels: ["ready"],
+        },
+        {
+          resource: "workItem",
+          action: "create",
+          scope: "children",
+          labels: ["afk", "hitl"],
+        },
+      ]);
+      expect(spec.resultSchemaJson).toBeNull();
+    });
+
+    test("keeps label literals in the grant type", () => {
+      const feature = Features.workItems.create({
+        scope: "children",
+        labels: ["afk", "hitl"],
+      });
+      const labels: ["afk", "hitl"] = feature._grant.labels;
+      expect(labels).toEqual(["afk", "hitl"]);
+    });
+
+    test("adds a prompt section naming the tool, and the labels for label and create", () => {
+      const spec = defineStep({
+        key: "plan",
+        name: "Plan",
+        agentPrompt: "Plan it.",
+        features: [
+          Features.workItems.comment({ scope: "self" }),
+          Features.workItems.create({ scope: "children", labels: ["afk"] }),
+        ],
+      });
+      expect(spec.prompt).toStartWith(
+        "Plan it.\n\n## Work Items: Comment on Your Work Item",
+      );
+      expect(spec.prompt).toContain("`scarn-comment-on-work-item`");
+      expect(spec.prompt).toContain("## Work Items: Create Child Work Items");
+      expect(spec.prompt).toContain("`scarn-create-work-item`");
+      expect(spec.prompt).toContain("- `afk`");
+      expect(spec.prompt).toContain("Any other label is rejected.");
+    });
+
+    test.each([
+      ["read", "scarn-get-work-item"],
+      ["update", "scarn-set-work-item-description"],
+      ["block", "scarn-block-work-item"],
+      ["close", "scarn-close-work-item"],
+    ] as const)("%s names %s", (action, tool) => {
+      expect(
+        Features.workItems[action]({ scope: "self" })._promptAddition,
+      ).toContain(`\`${tool}\``);
+    });
+
+    test("label names scarn-label-work-item and its labels", () => {
+      const prompt = Features.workItems.label({
+        scope: "children",
+        labels: ["bug"],
+      })._promptAddition;
+      expect(prompt).toContain("`scarn-label-work-item`");
+      expect(prompt).toContain("child work items");
+      expect(prompt).toContain("- `bug`");
+    });
+
+    test("throws when two features grant the same action and scope", () => {
+      expect(() =>
+        defineStep({
+          key: "plan",
+          name: "Plan",
+          agentPrompt: "Plan it.",
+          features: [
+            Features.workItems.label({ scope: "self", labels: ["a"] }),
+            Features.workItems.label({ scope: "self", labels: ["b"] }),
+          ],
+        }),
+      ).toThrow('Step "plan": more than one Features.workItems.label');
+    });
+
+    test("allows the same action on different scopes", () => {
+      const spec = defineStep({
+        key: "plan",
+        name: "Plan",
+        agentPrompt: "Plan it.",
+        features: [
+          Features.workItems.close({ scope: "self" }),
+          Features.workItems.close({ scope: "children" }),
+        ],
+      });
+      expect(spec.grants).toHaveLength(2);
+    });
+
+    test("rejects invalid work item features at the type level", () => {
+      const typeOnly = () => [
+        // @ts-expect-error create only covers children
+        Features.workItems.create({ scope: "self", labels: ["afk"] }),
+        // @ts-expect-error label needs labels
+        Features.workItems.label({ scope: "self" }),
+        // @ts-expect-error label needs at least one label
+        Features.workItems.label({ scope: "self", labels: [] }),
+      ];
+      expect(typeof typeOnly).toBe("function");
+    });
+  });
 });

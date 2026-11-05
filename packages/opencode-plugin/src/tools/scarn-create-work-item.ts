@@ -3,8 +3,12 @@ import {
   appendWorkItemChange,
   MAX_WORK_ITEMS_CREATED_PER_RUN,
   readWorkItemChanges,
+  type WorkItemChange,
 } from "@scarn/sdk/contracts/work-item-changes";
+import type { Grant } from "./_shared/current-execution";
+import { grantedLabels } from "./_shared/work-item-grants";
 import {
+  checkRecordedChange,
   DEFERRED_DESCRIPTION_NOTE,
   invalidInputMessage,
   isLabelList,
@@ -36,7 +40,7 @@ export async function createWorkItem(
   input: CreateWorkItemInput,
   directory: string,
 ): Promise<string> {
-  const context = await loadWorkItemToolContext(directory, "children");
+  const context = await loadWorkItemToolContext(directory, "create");
   if (typeof context === "string") {
     return context;
   }
@@ -76,7 +80,7 @@ export async function createWorkItem(
   }
 
   const workItemId = Bun.randomUUIDv7();
-  await appendWorkItemChange(context.worktree, {
+  const change: WorkItemChange = {
     kind: "create",
     workItemId,
     title,
@@ -86,7 +90,12 @@ export async function createWorkItem(
       : { fields: fields as Record<string, unknown> }),
     ...(labels === undefined || labels.length === 0 ? {} : { labels }),
     ...(blockedBy === undefined ? {} : { blockedBy }),
-  });
+  };
+  const refusal = await checkRecordedChange(context, change);
+  if (refusal !== null) {
+    return refusal;
+  }
+  await appendWorkItemChange(context.worktree, change);
   return JSON.stringify({
     workItemId,
     url: workItemUrl(context.info.workItemLinks, workItemId),
@@ -94,11 +103,18 @@ export async function createWorkItem(
   });
 }
 
-/** The `scarn-create-work-item` tool, bound to the plugin's directory. */
-export function createScarnCreateWorkItemTool(directory: string): ToolInfo {
+/**
+ * The `scarn-create-work-item` tool, bound to the plugin's directory, with
+ * `labels` limited to those the run's `create` grant allows.
+ */
+export function createScarnCreateWorkItemTool(
+  directory: string,
+  grants: readonly Grant[],
+): ToolInfo {
+  const labels = grantedLabels(grants, "create");
   return {
     name: SCARN_CREATE_WORK_ITEM_TOOL,
-    description: `Create a work item as a child of this Task's work item. Returns the new item's workItemId and url (its web page; link it in descriptions as [title](url)). The workItemId can be used right away in other work item tools (e.g. as a blocker). At most ${String(MAX_WORK_ITEMS_CREATED_PER_RUN)} per run. ${DEFERRED_DESCRIPTION_NOTE}`,
+    description: `Create a work item as a child of this Task's work item (it is one of your work item's children). Returns the new item's workItemId and url (its web page; link it in descriptions as [title](url)). The workItemId can be used right away in other work item tools (e.g. as a blocker). Labels you may give it: ${labels.join(", ")}. At most ${String(MAX_WORK_ITEMS_CREATED_PER_RUN)} per run. ${DEFERRED_DESCRIPTION_NOTE}`,
     input: {
       type: "object",
       properties: {
@@ -113,7 +129,7 @@ export function createScarnCreateWorkItemTool(directory: string): ToolInfo {
         },
         labels: {
           type: "array",
-          items: { type: "string" },
+          items: { type: "string", enum: labels },
           description: "Labels for the new item (case-sensitive)",
         },
         blockedBy: {
