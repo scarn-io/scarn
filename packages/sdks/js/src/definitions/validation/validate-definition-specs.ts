@@ -14,7 +14,11 @@ import { checkRepo } from "./validate-repo";
 import { checkRuntime } from "./validate-runtime";
 import { listPaths, type DefinitionValidationIssue } from "./validation-issue";
 
-// ─── Health checks reference declared, single-qualified MCP tools ───
+// ─── Health checks reference declared MCP servers ───
+//
+// Whether `tool` was double-qualified with the server key can't be decided
+// offline (some servers' tool names legitimately start with it), so the
+// worker offers that hint only when the check actually fails at run time.
 
 function checkHealthChecks(
   steps: readonly StepDefinitionSpec[],
@@ -52,19 +56,6 @@ function checkHealthChecks(
           message:
             `${where} names MCP server "${check.mcp}", but the step declares no ` +
             `such server in mcps. Declared servers: ${mcpServerKeys.length > 0 ? listPaths([...mcpServerKeys].sort()) : "(none)"}.`,
-        });
-      }
-
-      const prefix = `${check.mcp}_`;
-      if (check.tool.startsWith(prefix)) {
-        issues.push({
-          check: "health-check-double-qualified",
-          severity: "error",
-          message:
-            `${where} sets mcp "${check.mcp}" and tool "${check.tool}", which already ` +
-            `starts with "${prefix}". When "mcp" is set, "tool" should be the bare tool ` +
-            `name — OpenCode resolves it to "${prefix}${check.tool}". Did you mean ` +
-            `tool: "${check.tool.slice(prefix.length)}"?`,
         });
       }
     });

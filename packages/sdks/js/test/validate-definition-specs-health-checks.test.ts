@@ -9,12 +9,8 @@ import { stepSpecWithOverrides } from "./definition-spec-fixtures";
  * own coverage (route targets, signal bindings, `assertValidDefinitionSpecs`).
  */
 describe("validateDefinitionSpecs — health checks", () => {
-  // Server key deliberately does not share a prefix with the tool's own name
-  // (Playwright's MCP tools are themselves named "browser_*"), matching the
-  // convention used by the shipped Playwright template (`mcp: "playwright"`).
-  // Using a server key that collides with the tool's own naming (e.g. a
-  // server key of "browser" for a tool called "browser_navigate") is exactly
-  // the double-qualification trap this check exists to catch.
+  // Matches the shipped Playwright template (`mcp: "playwright"`), whose
+  // MCP tools are themselves named "browser_*".
   const withMcp = (
     healthChecksJson: NonNullable<
       ReturnType<typeof stepSpecWithOverrides>["healthChecksJson"]
@@ -102,25 +98,27 @@ describe("validateDefinitionSpecs — health checks", () => {
     expect(issues[0]?.message).toContain("Declared servers: playwright.");
   });
 
-  test("rejects a double-qualified tool name (server key + tool already prefixed)", () => {
-    const issues = validateDefinitionSpecs([
-      withMcp([
-        {
-          mcp: "playwright",
-          tool: "playwright_browser_navigate",
-          severity: "required",
-          timeoutSeconds: 15,
-        },
+  // Microsoft's PostgreSQL MCP server's own tools are named `postgres_mcp_*`,
+  // so a tool name starting with the server key is not necessarily a
+  // double-qualification mistake — that hint is left to the worker, which
+  // only offers it once the call has actually failed.
+  test("accepts a tool whose real name starts with the server key", () => {
+    expect(
+      validateDefinitionSpecs([
+        stepSpecWithOverrides("postgres-step", {
+          opencodeMcpJson: { postgres: { type: "ref" } },
+          healthChecksJson: [
+            {
+              mcp: "postgres",
+              tool: "postgres_mcp_connect",
+              args: { profileId: "default" },
+              severity: "required",
+              timeoutSeconds: 15,
+            },
+          ],
+        }),
       ]),
-    ]);
-    expect(issues).toHaveLength(1);
-    expect(issues[0]?.check).toBe("health-check-double-qualified");
-    expect(issues[0]?.message).toContain(
-      'sets mcp "playwright" and tool "playwright_browser_navigate"',
-    );
-    expect(issues[0]?.message).toContain(
-      'Did you mean tool: "browser_navigate"?',
-    );
+    ).toEqual([]);
   });
 
   test("uses the check's name for the label when provided", () => {
@@ -185,7 +183,7 @@ describe("validateDefinitionSpecs — health checks", () => {
     ).toEqual([]);
   });
 
-  test("a cli check's absence of mcp/tool never triggers the mcp-server or double-qualified checks", () => {
+  test("a cli check's absence of mcp/tool never triggers the mcp-server check", () => {
     const issues = validateDefinitionSpecs([
       stepSpecWithOverrides("cli-only-step", {
         healthChecksJson: [
@@ -199,11 +197,7 @@ describe("validateDefinitionSpecs — health checks", () => {
       }),
     ]);
     expect(
-      issues.some(
-        (issue) =>
-          issue.check === "health-check-mcp-server" ||
-          issue.check === "health-check-double-qualified",
-      ),
+      issues.some((issue) => issue.check === "health-check-mcp-server"),
     ).toBe(false);
   });
 });

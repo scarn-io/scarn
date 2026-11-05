@@ -292,10 +292,31 @@ async function runOneCheck(
         : {
             kind: "failed",
             reason: verification.reason,
-            detail: verification.detail,
+            detail: verification.detail + doubleQualifiedHint(check),
           };
     }
   }
+}
+
+/**
+ * A failed `mcp`-qualified check whose `tool` already starts with
+ * `${mcp}_` may have been double-qualified by its author. This can't be
+ * decided offline — some servers' own tool names legitimately start with
+ * the server key (Microsoft's PostgreSQL MCP exposes `postgres_mcp_connect`
+ * under a server registered as `postgres`) — so the suggestion is only
+ * offered once the call has actually failed.
+ */
+function doubleQualifiedHint(
+  check: Extract<HealthCheck, { kind: "tool" }>,
+): string {
+  if (!check.mcp) return "";
+  const prefix = `${check.mcp}_`;
+  if (!check.tool.startsWith(prefix)) return "";
+  return (
+    ` Hint: with mcp "${check.mcp}", tool "${check.tool}" was called as ` +
+    `"${prefix}${check.tool}". If "${prefix}" was meant as the server prefix, ` +
+    `set tool: "${check.tool.slice(prefix.length)}".`
+  );
 }
 
 /** Narrows {@link HealthCheckOutcome} to just the `failed` variant. */
