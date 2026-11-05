@@ -982,6 +982,7 @@ export type PostApiProjectsData = {
                 apiToken: string;
             };
             firstSyncHorizonDays?: number;
+            autoSync?: boolean;
         } | {
             type: string;
             credential: {
@@ -1012,6 +1013,7 @@ export type PostApiProjectsData = {
                 apiToken: string;
             };
             firstSyncHorizonDays?: number;
+            autoSync?: boolean;
         };
     };
     path?: never;
@@ -15999,7 +16001,7 @@ export type GetApiWorkItemCommentDraftsResponses = {
             taskId: string | unknown;
             agentSessionId: string | unknown;
             recipientUserId: string | unknown;
-            kind: 'feedback_request' | 'status_update' | 'blocked' | 'result_ready' | 'warning';
+            kind: 'feedback_request' | 'status_update' | 'blocked' | 'result_ready' | 'warning' | 'integration_auto_sync_paused';
             audience: 'assignee' | 'reporter' | 'project_admins' | 'specific_users';
             title: string;
             body: string;
@@ -16409,7 +16411,7 @@ export type PostApiWorkItemCommentDraftsByNotificationIdRejectResponses = {
         taskId: string | unknown;
         agentSessionId: string | unknown;
         recipientUserId: string | unknown;
-        kind: 'feedback_request' | 'status_update' | 'blocked' | 'result_ready' | 'warning';
+        kind: 'feedback_request' | 'status_update' | 'blocked' | 'result_ready' | 'warning' | 'integration_auto_sync_paused';
         audience: 'assignee' | 'reporter' | 'project_admins' | 'specific_users';
         title: string;
         body: string;
@@ -17471,7 +17473,7 @@ export type GetApiProjectsByProjectIdNotificationsResponses = {
         taskId: string | unknown;
         agentSessionId: string | unknown;
         recipientUserId: string | unknown;
-        kind: 'feedback_request' | 'status_update' | 'blocked' | 'result_ready' | 'warning';
+        kind: 'feedback_request' | 'status_update' | 'blocked' | 'result_ready' | 'warning' | 'integration_auto_sync_paused';
         audience: 'assignee' | 'reporter' | 'project_admins' | 'specific_users';
         title: string;
         body: string;
@@ -17610,7 +17612,7 @@ export type GetApiProjectsByProjectIdNotificationsByNotificationIdResponses = {
         taskId: string | unknown;
         agentSessionId: string | unknown;
         recipientUserId: string | unknown;
-        kind: 'feedback_request' | 'status_update' | 'blocked' | 'result_ready' | 'warning';
+        kind: 'feedback_request' | 'status_update' | 'blocked' | 'result_ready' | 'warning' | 'integration_auto_sync_paused';
         audience: 'assignee' | 'reporter' | 'project_admins' | 'specific_users';
         title: string;
         body: string;
@@ -17879,7 +17881,7 @@ export type PostApiProjectsByProjectIdNotificationsByNotificationIdRespondRespon
         taskId: string | unknown;
         agentSessionId: string | unknown;
         recipientUserId: string | unknown;
-        kind: 'feedback_request' | 'status_update' | 'blocked' | 'result_ready' | 'warning';
+        kind: 'feedback_request' | 'status_update' | 'blocked' | 'result_ready' | 'warning' | 'integration_auto_sync_paused';
         audience: 'assignee' | 'reporter' | 'project_admins' | 'specific_users';
         title: string;
         body: string;
@@ -18313,7 +18315,7 @@ export type GetApiProjectsByProjectIdNotificationRulesResponses = {
     200: Array<{
         id: string;
         projectId: string;
-        kind: 'feedback_request' | 'status_update' | 'blocked' | 'result_ready' | 'warning';
+        kind: 'feedback_request' | 'status_update' | 'blocked' | 'result_ready' | 'warning' | 'integration_auto_sync_paused';
         channel: 'in_app' | 'work_item_platform_comment' | 'email' | 'slack';
         enabled: boolean;
         minPriority: 'low' | 'normal' | 'high' | 'urgent' | unknown;
@@ -18329,7 +18331,7 @@ export type GetApiProjectsByProjectIdNotificationRulesResponse = GetApiProjectsB
 
 export type PutApiProjectsByProjectIdNotificationRulesData = {
     body: {
-        kind: 'feedback_request' | 'status_update' | 'blocked' | 'result_ready' | 'warning';
+        kind: 'feedback_request' | 'status_update' | 'blocked' | 'result_ready' | 'warning' | 'integration_auto_sync_paused';
         channel: 'in_app' | 'work_item_platform_comment' | 'email' | 'slack';
         enabled: boolean;
         minPriority: 'low' | 'normal' | 'high' | 'urgent' | unknown;
@@ -18451,7 +18453,7 @@ export type PutApiProjectsByProjectIdNotificationRulesResponses = {
     200: {
         id: string;
         projectId: string;
-        kind: 'feedback_request' | 'status_update' | 'blocked' | 'result_ready' | 'warning';
+        kind: 'feedback_request' | 'status_update' | 'blocked' | 'result_ready' | 'warning' | 'integration_auto_sync_paused';
         channel: 'in_app' | 'work_item_platform_comment' | 'email' | 'slack';
         enabled: boolean;
         minPriority: 'low' | 'normal' | 'high' | 'urgent' | unknown;
@@ -18582,6 +18584,18 @@ export type GetApiProjectsByProjectIdIntegrationsResponses = {
         id: string;
         projectId: string;
         status: 'active' | 'paused' | 'error';
+        autoSync: {
+            supported: boolean;
+            state: 'off' | 'on' | 'paused';
+            syncsAs: {
+                userId: string;
+                displayName: string | unknown;
+                secretName: string;
+            } | unknown;
+            pausedReason: 'key_removed' | 'key_rejected' | 'key_expired' | 'owner_left_project' | 'access_lost' | unknown;
+            pausedDetail: string | unknown;
+            pausedAt: string | unknown;
+        };
         lastSyncedAt: string | unknown;
         lastError: string | unknown;
         firstSyncHorizonDays: number | unknown;
@@ -18601,6 +18615,18 @@ export type GetApiProjectsByProjectIdIntegrationsResponses = {
         id: string;
         projectId: string;
         status: 'active' | 'paused' | 'error';
+        autoSync: {
+            supported: boolean;
+            state: 'off' | 'on' | 'paused';
+            syncsAs: {
+                userId: string;
+                displayName: string | unknown;
+                secretName: string;
+            } | unknown;
+            pausedReason: 'key_removed' | 'key_rejected' | 'key_expired' | 'owner_left_project' | 'access_lost' | unknown;
+            pausedDetail: string | unknown;
+            pausedAt: string | unknown;
+        };
         lastSyncedAt: string | unknown;
         lastError: string | unknown;
         firstSyncHorizonDays: number | unknown;
@@ -18619,6 +18645,18 @@ export type GetApiProjectsByProjectIdIntegrationsResponses = {
         id: string;
         projectId: string;
         status: 'active' | 'paused' | 'error';
+        autoSync: {
+            supported: boolean;
+            state: 'off' | 'on' | 'paused';
+            syncsAs: {
+                userId: string;
+                displayName: string | unknown;
+                secretName: string;
+            } | unknown;
+            pausedReason: 'key_removed' | 'key_rejected' | 'key_expired' | 'owner_left_project' | 'access_lost' | unknown;
+            pausedDetail: string | unknown;
+            pausedAt: string | unknown;
+        };
         lastSyncedAt: string | unknown;
         lastError: string | unknown;
         firstSyncHorizonDays: number | unknown;
@@ -18638,6 +18676,18 @@ export type GetApiProjectsByProjectIdIntegrationsResponses = {
         id: string;
         projectId: string;
         status: 'active' | 'paused' | 'error';
+        autoSync: {
+            supported: boolean;
+            state: 'off' | 'on' | 'paused';
+            syncsAs: {
+                userId: string;
+                displayName: string | unknown;
+                secretName: string;
+            } | unknown;
+            pausedReason: 'key_removed' | 'key_rejected' | 'key_expired' | 'owner_left_project' | 'access_lost' | unknown;
+            pausedDetail: string | unknown;
+            pausedAt: string | unknown;
+        };
         lastSyncedAt: string | unknown;
         lastError: string | unknown;
         firstSyncHorizonDays: number | unknown;
@@ -18791,6 +18841,18 @@ export type PostApiProjectsByProjectIdIntegrationsResponses = {
         id: string;
         projectId: string;
         status: 'active' | 'paused' | 'error';
+        autoSync: {
+            supported: boolean;
+            state: 'off' | 'on' | 'paused';
+            syncsAs: {
+                userId: string;
+                displayName: string | unknown;
+                secretName: string;
+            } | unknown;
+            pausedReason: 'key_removed' | 'key_rejected' | 'key_expired' | 'owner_left_project' | 'access_lost' | unknown;
+            pausedDetail: string | unknown;
+            pausedAt: string | unknown;
+        };
         lastSyncedAt: string | unknown;
         lastError: string | unknown;
         firstSyncHorizonDays: number | unknown;
@@ -18810,6 +18872,18 @@ export type PostApiProjectsByProjectIdIntegrationsResponses = {
         id: string;
         projectId: string;
         status: 'active' | 'paused' | 'error';
+        autoSync: {
+            supported: boolean;
+            state: 'off' | 'on' | 'paused';
+            syncsAs: {
+                userId: string;
+                displayName: string | unknown;
+                secretName: string;
+            } | unknown;
+            pausedReason: 'key_removed' | 'key_rejected' | 'key_expired' | 'owner_left_project' | 'access_lost' | unknown;
+            pausedDetail: string | unknown;
+            pausedAt: string | unknown;
+        };
         lastSyncedAt: string | unknown;
         lastError: string | unknown;
         firstSyncHorizonDays: number | unknown;
@@ -18828,6 +18902,18 @@ export type PostApiProjectsByProjectIdIntegrationsResponses = {
         id: string;
         projectId: string;
         status: 'active' | 'paused' | 'error';
+        autoSync: {
+            supported: boolean;
+            state: 'off' | 'on' | 'paused';
+            syncsAs: {
+                userId: string;
+                displayName: string | unknown;
+                secretName: string;
+            } | unknown;
+            pausedReason: 'key_removed' | 'key_rejected' | 'key_expired' | 'owner_left_project' | 'access_lost' | unknown;
+            pausedDetail: string | unknown;
+            pausedAt: string | unknown;
+        };
         lastSyncedAt: string | unknown;
         lastError: string | unknown;
         firstSyncHorizonDays: number | unknown;
@@ -18847,6 +18933,18 @@ export type PostApiProjectsByProjectIdIntegrationsResponses = {
         id: string;
         projectId: string;
         status: 'active' | 'paused' | 'error';
+        autoSync: {
+            supported: boolean;
+            state: 'off' | 'on' | 'paused';
+            syncsAs: {
+                userId: string;
+                displayName: string | unknown;
+                secretName: string;
+            } | unknown;
+            pausedReason: 'key_removed' | 'key_rejected' | 'key_expired' | 'owner_left_project' | 'access_lost' | unknown;
+            pausedDetail: string | unknown;
+            pausedAt: string | unknown;
+        };
         lastSyncedAt: string | unknown;
         lastError: string | unknown;
         firstSyncHorizonDays: number | unknown;
@@ -19158,6 +19256,562 @@ export type DeleteApiProjectsByProjectIdIntegrationsByIntegrationIdResponses = {
      */
     200: unknown;
 };
+
+export type DeleteApiProjectsByProjectIdIntegrationsByIntegrationIdAutoSyncData = {
+    body?: never;
+    path: {
+        projectId: string;
+        integrationId: string;
+    };
+    query?: never;
+    url: '/api/projects/{projectId}/integrations/{integrationId}/auto-sync';
+};
+
+export type DeleteApiProjectsByProjectIdIntegrationsByIntegrationIdAutoSyncErrors = {
+    /**
+     * Response for status 400
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 404
+     */
+    404: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 502
+     */
+    502: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type DeleteApiProjectsByProjectIdIntegrationsByIntegrationIdAutoSyncError = DeleteApiProjectsByProjectIdIntegrationsByIntegrationIdAutoSyncErrors[keyof DeleteApiProjectsByProjectIdIntegrationsByIntegrationIdAutoSyncErrors];
+
+export type DeleteApiProjectsByProjectIdIntegrationsByIntegrationIdAutoSyncResponses = {
+    /**
+     * Response for status 200
+     */
+    200: {
+        id: string;
+        projectId: string;
+        status: 'active' | 'paused' | 'error';
+        autoSync: {
+            supported: boolean;
+            state: 'off' | 'on' | 'paused';
+            syncsAs: {
+                userId: string;
+                displayName: string | unknown;
+                secretName: string;
+            } | unknown;
+            pausedReason: 'key_removed' | 'key_rejected' | 'key_expired' | 'owner_left_project' | 'access_lost' | unknown;
+            pausedDetail: string | unknown;
+            pausedAt: string | unknown;
+        };
+        lastSyncedAt: string | unknown;
+        lastError: string | unknown;
+        firstSyncHorizonDays: number | unknown;
+        createdAt: string;
+        updatedAt: string;
+        kind: string;
+        platform: string;
+        authMode: string;
+        installationId: string;
+        externalScope: {
+            repos: Array<{
+                id: number;
+                fullName: string;
+            }>;
+        };
+    } | {
+        id: string;
+        projectId: string;
+        status: 'active' | 'paused' | 'error';
+        autoSync: {
+            supported: boolean;
+            state: 'off' | 'on' | 'paused';
+            syncsAs: {
+                userId: string;
+                displayName: string | unknown;
+                secretName: string;
+            } | unknown;
+            pausedReason: 'key_removed' | 'key_rejected' | 'key_expired' | 'owner_left_project' | 'access_lost' | unknown;
+            pausedDetail: string | unknown;
+            pausedAt: string | unknown;
+        };
+        lastSyncedAt: string | unknown;
+        lastError: string | unknown;
+        firstSyncHorizonDays: number | unknown;
+        createdAt: string;
+        updatedAt: string;
+        kind: string;
+        platform: string;
+        authMode: string;
+        externalScope: {
+            repos: Array<{
+                id: number;
+                fullName: string;
+            }>;
+        };
+    } | {
+        id: string;
+        projectId: string;
+        status: 'active' | 'paused' | 'error';
+        autoSync: {
+            supported: boolean;
+            state: 'off' | 'on' | 'paused';
+            syncsAs: {
+                userId: string;
+                displayName: string | unknown;
+                secretName: string;
+            } | unknown;
+            pausedReason: 'key_removed' | 'key_rejected' | 'key_expired' | 'owner_left_project' | 'access_lost' | unknown;
+            pausedDetail: string | unknown;
+            pausedAt: string | unknown;
+        };
+        lastSyncedAt: string | unknown;
+        lastError: string | unknown;
+        firstSyncHorizonDays: number | unknown;
+        createdAt: string;
+        updatedAt: string;
+        kind: string;
+        platform: string;
+        authMode: string;
+        externalScope: {
+            repos: Array<{
+                workspace: string;
+                slug: string;
+                fullName: string;
+            }>;
+        };
+    } | {
+        id: string;
+        projectId: string;
+        status: 'active' | 'paused' | 'error';
+        autoSync: {
+            supported: boolean;
+            state: 'off' | 'on' | 'paused';
+            syncsAs: {
+                userId: string;
+                displayName: string | unknown;
+                secretName: string;
+            } | unknown;
+            pausedReason: 'key_removed' | 'key_rejected' | 'key_expired' | 'owner_left_project' | 'access_lost' | unknown;
+            pausedDetail: string | unknown;
+            pausedAt: string | unknown;
+        };
+        lastSyncedAt: string | unknown;
+        lastError: string | unknown;
+        firstSyncHorizonDays: number | unknown;
+        createdAt: string;
+        updatedAt: string;
+        kind: string;
+        platform: string;
+        authMode: string;
+        externalScope: {
+            baseUrl: string;
+            projectKeys: Array<string>;
+        };
+    };
+};
+
+export type DeleteApiProjectsByProjectIdIntegrationsByIntegrationIdAutoSyncResponse = DeleteApiProjectsByProjectIdIntegrationsByIntegrationIdAutoSyncResponses[keyof DeleteApiProjectsByProjectIdIntegrationsByIntegrationIdAutoSyncResponses];
+
+export type PutApiProjectsByProjectIdIntegrationsByIntegrationIdAutoSyncData = {
+    body: {
+        secretId: string;
+    };
+    path: {
+        projectId: string;
+        integrationId: string;
+    };
+    query?: never;
+    url: '/api/projects/{projectId}/integrations/{integrationId}/auto-sync';
+};
+
+export type PutApiProjectsByProjectIdIntegrationsByIntegrationIdAutoSyncErrors = {
+    /**
+     * Response for status 400
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 404
+     */
+    404: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 502
+     */
+    502: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type PutApiProjectsByProjectIdIntegrationsByIntegrationIdAutoSyncError = PutApiProjectsByProjectIdIntegrationsByIntegrationIdAutoSyncErrors[keyof PutApiProjectsByProjectIdIntegrationsByIntegrationIdAutoSyncErrors];
+
+export type PutApiProjectsByProjectIdIntegrationsByIntegrationIdAutoSyncResponses = {
+    /**
+     * Response for status 200
+     */
+    200: {
+        id: string;
+        projectId: string;
+        status: 'active' | 'paused' | 'error';
+        autoSync: {
+            supported: boolean;
+            state: 'off' | 'on' | 'paused';
+            syncsAs: {
+                userId: string;
+                displayName: string | unknown;
+                secretName: string;
+            } | unknown;
+            pausedReason: 'key_removed' | 'key_rejected' | 'key_expired' | 'owner_left_project' | 'access_lost' | unknown;
+            pausedDetail: string | unknown;
+            pausedAt: string | unknown;
+        };
+        lastSyncedAt: string | unknown;
+        lastError: string | unknown;
+        firstSyncHorizonDays: number | unknown;
+        createdAt: string;
+        updatedAt: string;
+        kind: string;
+        platform: string;
+        authMode: string;
+        installationId: string;
+        externalScope: {
+            repos: Array<{
+                id: number;
+                fullName: string;
+            }>;
+        };
+    } | {
+        id: string;
+        projectId: string;
+        status: 'active' | 'paused' | 'error';
+        autoSync: {
+            supported: boolean;
+            state: 'off' | 'on' | 'paused';
+            syncsAs: {
+                userId: string;
+                displayName: string | unknown;
+                secretName: string;
+            } | unknown;
+            pausedReason: 'key_removed' | 'key_rejected' | 'key_expired' | 'owner_left_project' | 'access_lost' | unknown;
+            pausedDetail: string | unknown;
+            pausedAt: string | unknown;
+        };
+        lastSyncedAt: string | unknown;
+        lastError: string | unknown;
+        firstSyncHorizonDays: number | unknown;
+        createdAt: string;
+        updatedAt: string;
+        kind: string;
+        platform: string;
+        authMode: string;
+        externalScope: {
+            repos: Array<{
+                id: number;
+                fullName: string;
+            }>;
+        };
+    } | {
+        id: string;
+        projectId: string;
+        status: 'active' | 'paused' | 'error';
+        autoSync: {
+            supported: boolean;
+            state: 'off' | 'on' | 'paused';
+            syncsAs: {
+                userId: string;
+                displayName: string | unknown;
+                secretName: string;
+            } | unknown;
+            pausedReason: 'key_removed' | 'key_rejected' | 'key_expired' | 'owner_left_project' | 'access_lost' | unknown;
+            pausedDetail: string | unknown;
+            pausedAt: string | unknown;
+        };
+        lastSyncedAt: string | unknown;
+        lastError: string | unknown;
+        firstSyncHorizonDays: number | unknown;
+        createdAt: string;
+        updatedAt: string;
+        kind: string;
+        platform: string;
+        authMode: string;
+        externalScope: {
+            repos: Array<{
+                workspace: string;
+                slug: string;
+                fullName: string;
+            }>;
+        };
+    } | {
+        id: string;
+        projectId: string;
+        status: 'active' | 'paused' | 'error';
+        autoSync: {
+            supported: boolean;
+            state: 'off' | 'on' | 'paused';
+            syncsAs: {
+                userId: string;
+                displayName: string | unknown;
+                secretName: string;
+            } | unknown;
+            pausedReason: 'key_removed' | 'key_rejected' | 'key_expired' | 'owner_left_project' | 'access_lost' | unknown;
+            pausedDetail: string | unknown;
+            pausedAt: string | unknown;
+        };
+        lastSyncedAt: string | unknown;
+        lastError: string | unknown;
+        firstSyncHorizonDays: number | unknown;
+        createdAt: string;
+        updatedAt: string;
+        kind: string;
+        platform: string;
+        authMode: string;
+        externalScope: {
+            baseUrl: string;
+            projectKeys: Array<string>;
+        };
+    };
+};
+
+export type PutApiProjectsByProjectIdIntegrationsByIntegrationIdAutoSyncResponse = PutApiProjectsByProjectIdIntegrationsByIntegrationIdAutoSyncResponses[keyof PutApiProjectsByProjectIdIntegrationsByIntegrationIdAutoSyncResponses];
 
 export type GetApiIntegrationsGithubInstallData = {
     body?: never;
@@ -20809,6 +21463,12 @@ export type GetApiMeSecretsResponses = {
         status: 'active' | 'expiring_soon' | 'expired';
         createdAt: string;
         updatedAt: string;
+        usedBy: Array<{
+            projectId: string;
+            projectName: string;
+            integrationId: string;
+            platform: 'jira' | 'github' | 'bitbucket' | 'linear' | 'scarn' | 'custom';
+        }>;
     } | {
         id: string;
         kind: string;
@@ -20822,6 +21482,12 @@ export type GetApiMeSecretsResponses = {
         status: 'active' | 'expiring_soon' | 'expired';
         createdAt: string;
         updatedAt: string;
+        usedBy: Array<{
+            projectId: string;
+            projectName: string;
+            integrationId: string;
+            platform: 'jira' | 'github' | 'bitbucket' | 'linear' | 'scarn' | 'custom';
+        }>;
     } | {
         id: string;
         kind: string;
@@ -20835,6 +21501,12 @@ export type GetApiMeSecretsResponses = {
         status: 'active' | 'expiring_soon' | 'expired';
         createdAt: string;
         updatedAt: string;
+        usedBy: Array<{
+            projectId: string;
+            projectName: string;
+            integrationId: string;
+            platform: 'jira' | 'github' | 'bitbucket' | 'linear' | 'scarn' | 'custom';
+        }>;
     }>;
 };
 
@@ -20982,6 +21654,12 @@ export type PostApiMeSecretsResponses = {
         status: 'active' | 'expiring_soon' | 'expired';
         createdAt: string;
         updatedAt: string;
+        usedBy: Array<{
+            projectId: string;
+            projectName: string;
+            integrationId: string;
+            platform: 'jira' | 'github' | 'bitbucket' | 'linear' | 'scarn' | 'custom';
+        }>;
     } | {
         id: string;
         kind: string;
@@ -20995,6 +21673,12 @@ export type PostApiMeSecretsResponses = {
         status: 'active' | 'expiring_soon' | 'expired';
         createdAt: string;
         updatedAt: string;
+        usedBy: Array<{
+            projectId: string;
+            projectName: string;
+            integrationId: string;
+            platform: 'jira' | 'github' | 'bitbucket' | 'linear' | 'scarn' | 'custom';
+        }>;
     } | {
         id: string;
         kind: string;
@@ -21008,6 +21692,12 @@ export type PostApiMeSecretsResponses = {
         status: 'active' | 'expiring_soon' | 'expired';
         createdAt: string;
         updatedAt: string;
+        usedBy: Array<{
+            projectId: string;
+            projectName: string;
+            integrationId: string;
+            platform: 'jira' | 'github' | 'bitbucket' | 'linear' | 'scarn' | 'custom';
+        }>;
     };
 };
 
@@ -21280,6 +21970,12 @@ export type PatchApiMeSecretsBySecretIdResponses = {
         status: 'active' | 'expiring_soon' | 'expired';
         createdAt: string;
         updatedAt: string;
+        usedBy: Array<{
+            projectId: string;
+            projectName: string;
+            integrationId: string;
+            platform: 'jira' | 'github' | 'bitbucket' | 'linear' | 'scarn' | 'custom';
+        }>;
     } | {
         id: string;
         kind: string;
@@ -21293,6 +21989,12 @@ export type PatchApiMeSecretsBySecretIdResponses = {
         status: 'active' | 'expiring_soon' | 'expired';
         createdAt: string;
         updatedAt: string;
+        usedBy: Array<{
+            projectId: string;
+            projectName: string;
+            integrationId: string;
+            platform: 'jira' | 'github' | 'bitbucket' | 'linear' | 'scarn' | 'custom';
+        }>;
     } | {
         id: string;
         kind: string;
@@ -21306,7 +22008,189 @@ export type PatchApiMeSecretsBySecretIdResponses = {
         status: 'active' | 'expiring_soon' | 'expired';
         createdAt: string;
         updatedAt: string;
+        usedBy: Array<{
+            projectId: string;
+            projectName: string;
+            integrationId: string;
+            platform: 'jira' | 'github' | 'bitbucket' | 'linear' | 'scarn' | 'custom';
+        }>;
     };
 };
 
 export type PatchApiMeSecretsBySecretIdResponse = PatchApiMeSecretsBySecretIdResponses[keyof PatchApiMeSecretsBySecretIdResponses];
+
+export type DeleteApiMeSecretsBySecretIdUsesByIntegrationIdData = {
+    body?: never;
+    path: {
+        secretId: string;
+        integrationId: string;
+    };
+    query?: never;
+    url: '/api/me/secrets/{secretId}/uses/{integrationId}';
+};
+
+export type DeleteApiMeSecretsBySecretIdUsesByIntegrationIdErrors = {
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 404
+     */
+    404: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type DeleteApiMeSecretsBySecretIdUsesByIntegrationIdError = DeleteApiMeSecretsBySecretIdUsesByIntegrationIdErrors[keyof DeleteApiMeSecretsBySecretIdUsesByIntegrationIdErrors];
+
+export type DeleteApiMeSecretsBySecretIdUsesByIntegrationIdResponses = {
+    /**
+     * Response for status 200
+     */
+    200: {
+        id: string;
+        kind: string;
+        name: string;
+        metadata: {
+            email: string;
+        };
+        lastFour: string;
+        expiresAt: string;
+        lastUsedAt: string | unknown;
+        status: 'active' | 'expiring_soon' | 'expired';
+        createdAt: string;
+        updatedAt: string;
+        usedBy: Array<{
+            projectId: string;
+            projectName: string;
+            integrationId: string;
+            platform: 'jira' | 'github' | 'bitbucket' | 'linear' | 'scarn' | 'custom';
+        }>;
+    } | {
+        id: string;
+        kind: string;
+        name: string;
+        metadata: {
+            login: string | unknown;
+        };
+        lastFour: string;
+        expiresAt: string | unknown;
+        lastUsedAt: string | unknown;
+        status: 'active' | 'expiring_soon' | 'expired';
+        createdAt: string;
+        updatedAt: string;
+        usedBy: Array<{
+            projectId: string;
+            projectName: string;
+            integrationId: string;
+            platform: 'jira' | 'github' | 'bitbucket' | 'linear' | 'scarn' | 'custom';
+        }>;
+    } | {
+        id: string;
+        kind: string;
+        name: string;
+        metadata: {
+            email: string;
+        };
+        lastFour: string;
+        expiresAt: string;
+        lastUsedAt: string | unknown;
+        status: 'active' | 'expiring_soon' | 'expired';
+        createdAt: string;
+        updatedAt: string;
+        usedBy: Array<{
+            projectId: string;
+            projectName: string;
+            integrationId: string;
+            platform: 'jira' | 'github' | 'bitbucket' | 'linear' | 'scarn' | 'custom';
+        }>;
+    };
+};
+
+export type DeleteApiMeSecretsBySecretIdUsesByIntegrationIdResponse = DeleteApiMeSecretsBySecretIdUsesByIntegrationIdResponses[keyof DeleteApiMeSecretsBySecretIdUsesByIntegrationIdResponses];

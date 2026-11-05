@@ -16,6 +16,6 @@
   "scripts": {
     "build": "tsgo -p tsconfig.json --noEmit",
     "declarations": "bunx tsgo -p tsconfig.build.json",
-    "typecheck": "tsgo -p tsconfig.json --noEmit"
+    "typecheck": "tsgo -p tsconfig.json --noEmit --incremental"
   }
 }

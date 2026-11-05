@@ -46,7 +46,7 @@
     "link:local": "bun link",
     "pack:local": "bun run script/pack-local.ts",
     "test": "bun test test",
-    "typecheck": "tsgo -p tsconfig.json --noEmit"
+    "typecheck": "tsgo -p tsconfig.json --noEmit --incremental"
   },
   "dependencies": {
     "jsonc-parser": "^3.3.1"

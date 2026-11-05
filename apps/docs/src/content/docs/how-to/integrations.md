@@ -24,7 +24,7 @@ the last 7, 30 or 180 days** for the first import (30 days by default). This
 filters by last update, not creation date or an exact ticket count. The create
 request waits for this import to finish. A smaller range can make setup faster,
 but older untouched issues won't be imported by later incremental syncs.
-Integrations connected later from Settings default to 180 days.
+Integrations connected later from Settings also default to 30 days.
 
 ## GitHub
 
@@ -51,7 +51,7 @@ items update within seconds:
 | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Cadence         | Instant, via webhooks — an issue being opened, edited, closed, reopened, labeled, unlabeled, assigned, or unassigned updates its work item right away |
 | Backstop        | A daily sync catches anything a webhook missed                                                                                                        |
-| First sync      | Looks back 30 days when created in the wizard (7 or 180 selectable); 180 days when connected from Settings                                            |
+| First sync      | Looks back 30 days when created in the wizard (7 or 180 selectable); 30 days when connected from Settings                                             |
 | What's ingested | Issues only — pull requests are filtered out                                                                                                          |
 
 Each GitHub issue maps to a work item like this:
@@ -124,11 +124,11 @@ schedule.
 If the repository's issue tracker is turned off, Scarn says so and offers
 Jira instead. Many Bitbucket teams track their work there.
 
-|             |                                                                                |
-| ----------- | ------------------------------------------------------------------------------ |
-| Cadence     | Manual: **Sync now**                                                           |
-| First sync  | Looks back 30 days in the wizard (7 or 180 selectable); 180 days from Settings |
-| Later syncs | Issues updated since the last sync                                             |
+|             |                                                                               |
+| ----------- | ----------------------------------------------------------------------------- |
+| Cadence     | Manual: **Sync now**                                                          |
+| First sync  | Looks back 30 days in the wizard (7 or 180 selectable); 30 days from Settings |
+| Later syncs | Issues updated since the last sync                                            |
 
 Each Bitbucket issue maps to a work item like this:
 

@@ -19,7 +19,7 @@
   "scripts": {
     "build": "bun build src/plugin.ts --bundle --outfile dist/plugin.js --target bun --external @opencode/plugin",
     "declarations": "bun run build && find dist -name '*.d.ts' -delete 2>/dev/null; bunx tsgo -p tsconfig.build.json",
-    "typecheck": "tsgo -p tsconfig.json --noEmit",
+    "typecheck": "tsgo -p tsconfig.json --noEmit --incremental",
     "test": "bun test"
   },
   "dependencies": {

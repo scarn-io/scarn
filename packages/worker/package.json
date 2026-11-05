@@ -17,7 +17,7 @@
   },
   "scripts": {
     "build": "tsgo -p tsconfig.json --noEmit",
-    "typecheck": "tsgo -p tsconfig.json --noEmit",
+    "typecheck": "tsgo -p tsconfig.json --noEmit --incremental",
     "test": "bun test tests --parallel"
   },
   "dependencies": {

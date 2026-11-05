@@ -30,7 +30,7 @@
     "publish:package": "bun run script/publish.ts",
     "test": "bun test test --parallel --path-ignore-patterns=compiled-binary-tests/**",
     "test:compiled": "bun test compiled-binary-tests",
-    "typecheck": "tsgo -p tsconfig.json --noEmit"
+    "typecheck": "tsgo -p tsconfig.json --noEmit --incremental"
   },
   "dependencies": {
     "@scarn/observability": "workspace:*",
