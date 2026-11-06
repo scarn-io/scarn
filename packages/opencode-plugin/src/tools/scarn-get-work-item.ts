@@ -122,7 +122,7 @@ export function createScarnGetWorkItemTool(
 ): ToolInfo {
   return {
     name: SCARN_GET_WORK_ITEM_TOOL,
-    description: `Read a work item live: url (its web page), title, labels, description with its descriptionVersion, fields, state, blockers and children. Each blocker and child has its url, labels, state, close reason, open blockers (\`blockedBy\`) and newest Task's status (\`latestTaskStatus\`, null if it never had one). ${scopeNote(grants, "read")} Changes nothing. Items created earlier in this run don't exist until the run succeeds.`,
+    description: `Read a work item live: url (its web page), title, labels, description with its descriptionVersion, fields, state, blockers and children. Each blocker and child has its url, labels, state, close reason, open blockers (\`blockedBy\`) and newest Task's status (\`latestTaskStatus\`, null if it never had one). ${scopeNote(grants, "read")} Changes nothing.`,
     input: {
       type: "object",
       properties: {

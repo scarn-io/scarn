@@ -82,6 +82,7 @@ export async function monitorStartedClaimedTaskRun(
   let hasSubmittedFindings = false;
   let hasCollectedArtifacts = false;
   let hasObservedSessionRunning = false;
+  let failed = false;
   const missingFindingsState = {
     hasWaitedForSessionStop: false,
     hasRetriedFindingsSubmission: false,
@@ -399,6 +400,7 @@ export async function monitorStartedClaimedTaskRun(
       }
     }
   } catch (error) {
+    failed = true;
     if (isExpectedStepOutputFailure(error)) {
       logger.error(
         "worker",
@@ -476,7 +478,13 @@ export async function monitorStartedClaimedTaskRun(
     });
     throw error;
   } finally {
-    await heartbeat.stop();
+    // On failure the step is still "running" until the caller reports it,
+    // after this cleanup. The heartbeat keeps its lease alive meanwhile, or a
+    // slow cleanup lets the lease lapse and the run ends "abandoned" instead
+    // of with its real error; the caller stops it after reporting.
+    if (!failed) {
+      await heartbeat.stop();
+    }
     await cleanupRuntime();
   }
 }

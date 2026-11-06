@@ -4,14 +4,11 @@
  * worker sends the list with the run's completion, and the server checks and
  * applies it then. Nothing here is applied during the run.
  */
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
 
 export const WORK_ITEM_CHANGES_RELATIVE_PATH = ".scarn/work-item-changes.json";
-
-/** At most this many items created in one run; the server checks it too. */
-export const MAX_WORK_ITEMS_CREATED_PER_RUN = 10;
 
 export const WORK_ITEM_CLOSE_REASONS = [
   "completed",
@@ -22,15 +19,6 @@ export const WORK_ITEM_CLOSE_REASONS = [
 export type WorkItemCloseReason = (typeof WORK_ITEM_CLOSE_REASONS)[number];
 
 export type WorkItemChange =
-  | {
-      kind: "create";
-      workItemId: string;
-      title: string;
-      description: string;
-      fields?: Record<string, unknown>;
-      labels?: string[];
-      blockedBy?: string[];
-    }
   | { kind: "label"; workItemId: string; add?: string[]; remove?: string[] }
   | {
       kind: "block";
@@ -55,14 +43,7 @@ export type WorkItemChange =
 const workItemChangesFileSchema = z.object({
   changes: z.array(
     z.looseObject({
-      kind: z.enum([
-        "create",
-        "label",
-        "block",
-        "describe",
-        "comment",
-        "close",
-      ]),
+      kind: z.enum(["label", "block", "describe", "comment", "close"]),
     }),
   ),
 });
@@ -93,6 +74,41 @@ export async function readWorkItemChanges(
   return parsed.data.changes as WorkItemChange[];
 }
 
+const workItemChangesLocks = new Map<string, Promise<void>>();
+
+/**
+ * Runs `fn` while holding this process's lock on the workspace's changes
+ * file. An agent can call several work item tools in parallel, and each one
+ * reads the recorded changes, checks against them and appends; holding the
+ * lock across all of that keeps parallel calls from losing each other's
+ * changes or seeing a half-written file.
+ */
+export async function withWorkItemChangesLock<T>(
+  workspacePath: string,
+  fn: () => Promise<T>,
+): Promise<T> {
+  const key = buildWorkItemChangesPath(workspacePath);
+  const previous = workItemChangesLocks.get(key) ?? Promise.resolve();
+  const run = previous.then(fn);
+  const released = run.then(
+    () => undefined,
+    () => undefined,
+  );
+  workItemChangesLocks.set(key, released);
+  try {
+    return await run;
+  } finally {
+    if (workItemChangesLocks.get(key) === released) {
+      workItemChangesLocks.delete(key);
+    }
+  }
+}
+
+/**
+ * Appends one change. The file is replaced by a rename, so a reader sees the
+ * old list or the new one, never a partial write. Callers that read the
+ * recorded changes before appending hold {@link withWorkItemChangesLock}.
+ */
 export async function appendWorkItemChange(
   workspacePath: string,
   change: WorkItemChange,
@@ -100,11 +116,18 @@ export async function appendWorkItemChange(
   const changes = [...(await readWorkItemChanges(workspacePath)), change];
   const filePath = buildWorkItemChangesPath(workspacePath);
   await mkdir(path.dirname(filePath), { recursive: true });
-  await writeFile(
-    filePath,
-    `${JSON.stringify({ changes }, null, 2)}\n`,
-    "utf8",
-  );
+  const tempPath = `${filePath}.${String(process.pid)}.${crypto.randomUUID()}.tmp`;
+  try {
+    await writeFile(
+      tempPath,
+      `${JSON.stringify({ changes }, null, 2)}\n`,
+      "utf8",
+    );
+    await rename(tempPath, filePath);
+  } catch (error) {
+    await rm(tempPath, { force: true });
+    throw error;
+  }
   return changes;
 }
 

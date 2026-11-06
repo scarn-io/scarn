@@ -11,10 +11,7 @@ import {
   RECORDED_CHANGE_NOTE,
   recordWorkItemChange,
 } from "./_shared/work-item-tool-support";
-import {
-  createWorkItem,
-  SCARN_CREATE_WORK_ITEM_TOOL,
-} from "./scarn-create-work-item";
+import { SCARN_CREATE_WORK_ITEM_TOOL } from "./scarn-create-work-item";
 import { getWorkItem } from "./scarn-get-work-item";
 import {
   buildBlockChange,
@@ -183,41 +180,6 @@ describe("work item tools refuse what the grants don't cover", () => {
     ).toContain("doesn't cover item-self");
     expect(await readWorkItemChanges(workspacePath)).toEqual([]);
   });
-
-  test.concurrent(
-    "refuses creating with labels outside the grant",
-    async () => {
-      const workspacePath = await workItemTestWorkspace({
-        grants: [grant("create", "children", ["bug"])],
-      });
-
-      expect(
-        await createWorkItem(
-          { title: "Child", description: "", labels: ["bug", "ui"] },
-          workspacePath,
-        ),
-      ).toContain(
-        "with labels ui: its `create` grant on `children` covers bug.",
-      );
-      expect(await readWorkItemChanges(workspacePath)).toEqual([]);
-    },
-  );
-
-  test.concurrent(
-    "refuses blocking a new item on the own item without a self block grant",
-    async () => {
-      const workspacePath = await workItemTestWorkspace({
-        grants: [grant("create", "children")],
-      });
-
-      expect(
-        await createWorkItem(
-          { title: "Child", description: "", blockedBy: ["item-self"] },
-          workspacePath,
-        ),
-      ).toContain("no `block` grant on `children`");
-    },
-  );
 
   test.concurrent(
     "refuses reading an item outside the read grant",

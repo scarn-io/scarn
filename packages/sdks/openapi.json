@@ -26086,58 +26086,6 @@
                           "properties": {
                             "kind": {
                               "type": "string",
-                              "const": "create"
-                            },
-                            "workItemId": {
-                              "type": "string"
-                            },
-                            "title": {
-                              "type": "string",
-                              "minLength": 1,
-                              "maxLength": 500
-                            },
-                            "description": {
-                              "type": "string",
-                              "minLength": 1,
-                              "maxLength": 50000
-                            },
-                            "fields": {
-                              "type": "object",
-                              "propertyNames": {
-                                "type": "string"
-                              },
-                              "additionalProperties": {}
-                            },
-                            "labels": {
-                              "maxItems": 50,
-                              "type": "array",
-                              "items": {
-                                "type": "string",
-                                "minLength": 1,
-                                "maxLength": 200
-                              }
-                            },
-                            "blockedBy": {
-                              "maxItems": 50,
-                              "type": "array",
-                              "items": {
-                                "type": "string"
-                              }
-                            }
-                          },
-                          "required": [
-                            "kind",
-                            "workItemId",
-                            "title",
-                            "description"
-                          ],
-                          "additionalProperties": false
-                        },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "kind": {
-                              "type": "string",
                               "const": "label"
                             },
                             "workItemId": {
@@ -26361,58 +26309,6 @@
                           "properties": {
                             "kind": {
                               "type": "string",
-                              "const": "create"
-                            },
-                            "workItemId": {
-                              "type": "string"
-                            },
-                            "title": {
-                              "type": "string",
-                              "minLength": 1,
-                              "maxLength": 500
-                            },
-                            "description": {
-                              "type": "string",
-                              "minLength": 1,
-                              "maxLength": 50000
-                            },
-                            "fields": {
-                              "type": "object",
-                              "propertyNames": {
-                                "type": "string"
-                              },
-                              "additionalProperties": {}
-                            },
-                            "labels": {
-                              "maxItems": 50,
-                              "type": "array",
-                              "items": {
-                                "type": "string",
-                                "minLength": 1,
-                                "maxLength": 200
-                              }
-                            },
-                            "blockedBy": {
-                              "maxItems": 50,
-                              "type": "array",
-                              "items": {
-                                "type": "string"
-                              }
-                            }
-                          },
-                          "required": [
-                            "kind",
-                            "workItemId",
-                            "title",
-                            "description"
-                          ],
-                          "additionalProperties": false
-                        },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "kind": {
-                              "type": "string",
                               "const": "label"
                             },
                             "workItemId": {
@@ -26631,58 +26527,6 @@
                     "type": "array",
                     "items": {
                       "oneOf": [
-                        {
-                          "type": "object",
-                          "properties": {
-                            "kind": {
-                              "type": "string",
-                              "const": "create"
-                            },
-                            "workItemId": {
-                              "type": "string"
-                            },
-                            "title": {
-                              "type": "string",
-                              "minLength": 1,
-                              "maxLength": 500
-                            },
-                            "description": {
-                              "type": "string",
-                              "minLength": 1,
-                              "maxLength": 50000
-                            },
-                            "fields": {
-                              "type": "object",
-                              "propertyNames": {
-                                "type": "string"
-                              },
-                              "additionalProperties": {}
-                            },
-                            "labels": {
-                              "maxItems": 50,
-                              "type": "array",
-                              "items": {
-                                "type": "string",
-                                "minLength": 1,
-                                "maxLength": 200
-                              }
-                            },
-                            "blockedBy": {
-                              "maxItems": 50,
-                              "type": "array",
-                              "items": {
-                                "type": "string"
-                              }
-                            }
-                          },
-                          "required": [
-                            "kind",
-                            "workItemId",
-                            "title",
-                            "description"
-                          ],
-                          "additionalProperties": false
-                        },
                         {
                           "type": "object",
                           "properties": {
@@ -32973,6 +32817,653 @@
                     "resolution",
                     "blockers",
                     "children"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Response for status 401",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "path": {
+                            "type": "string"
+                          },
+                          "message": {
+                            "type": "string"
+                          },
+                          "summary": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "path",
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "title",
+                    "status"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Response for status 403",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "path": {
+                            "type": "string"
+                          },
+                          "message": {
+                            "type": "string"
+                          },
+                          "summary": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "path",
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "title",
+                    "status"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Response for status 404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "path": {
+                            "type": "string"
+                          },
+                          "message": {
+                            "type": "string"
+                          },
+                          "summary": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "path",
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "title",
+                    "status"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Response for status 409",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "path": {
+                            "type": "string"
+                          },
+                          "message": {
+                            "type": "string"
+                          },
+                          "summary": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "path",
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "title",
+                    "status"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Response for status 422",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "path": {
+                            "type": "string"
+                          },
+                          "message": {
+                            "type": "string"
+                          },
+                          "summary": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "path",
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "title",
+                    "status"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Response for status 500",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "path": {
+                            "type": "string"
+                          },
+                          "message": {
+                            "type": "string"
+                          },
+                          "summary": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "path",
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "title",
+                    "status"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/task-runs/{taskRunId}/work-item-creates": {
+      "post": {
+        "operationId": "createTaskRunWorkItem",
+        "tags": [
+          "TaskRuns"
+        ],
+        "description": "Creates a child of the running task run's work item for its agent, committed at once, as the user who claimed the run. Needs the Task's `create` grant on `children`, covering every label; `blockedBy` must name existing items that are the Task's own item or its children. At most 10 items per Task and 50 open children per item. Returns 201, or 200 with `created: false` when `workItemId` already names this Task's child (a retry). Authorized by the claim token alone; no session.",
+        "parameters": [
+          {
+            "name": "taskRunId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "claimToken": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "workItemId": {
+                    "type": "string"
+                  },
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500
+                  },
+                  "description": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 50000
+                  },
+                  "fields": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {}
+                  },
+                  "labels": {
+                    "maxItems": 50,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 200
+                    }
+                  },
+                  "blockedBy": {
+                    "maxItems": 50,
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "claimToken",
+                  "workItemId",
+                  "title",
+                  "description"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "claimToken": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "workItemId": {
+                    "type": "string"
+                  },
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500
+                  },
+                  "description": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 50000
+                  },
+                  "fields": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {}
+                  },
+                  "labels": {
+                    "maxItems": 50,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 200
+                    }
+                  },
+                  "blockedBy": {
+                    "maxItems": 50,
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "claimToken",
+                  "workItemId",
+                  "title",
+                  "description"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "claimToken": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "workItemId": {
+                    "type": "string"
+                  },
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500
+                  },
+                  "description": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 50000
+                  },
+                  "fields": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {}
+                  },
+                  "labels": {
+                    "maxItems": 50,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 200
+                    }
+                  },
+                  "blockedBy": {
+                    "maxItems": 50,
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "claimToken",
+                  "workItemId",
+                  "title",
+                  "description"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response for status 200",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "workItemId": {
+                      "type": "string"
+                    },
+                    "created": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "workItemId",
+                    "created"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Response for status 201",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "workItemId": {
+                      "type": "string"
+                    },
+                    "created": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "workItemId",
+                    "created"
                   ],
                   "additionalProperties": false
                 }

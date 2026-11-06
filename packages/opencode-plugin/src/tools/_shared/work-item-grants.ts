@@ -5,8 +5,7 @@ import type { Grant, GrantAction, GrantScope } from "./current-execution";
  * The plugin's side of the grant checks: which scopes a tool may act on, the
  * labels it may set, and refusing a change the server would refuse, as far as
  * the plugin can tell. It knows the Task's own work item; any other id is
- * taken to be a child (or an item created in this run) and its parentage is
- * left to the server.
+ * taken to be a child and its parentage is left to the server.
  */
 
 type LabelGrant = Extract<Grant, { labels: string[] }>;
@@ -103,15 +102,14 @@ export function checkGrantOn(
 export type GrantCheckContext = {
   grants: readonly Grant[];
   ownWorkItemId: string;
-  createdWorkItemIds: ReadonlySet<string>;
 };
 
 /**
  * A block needs a `block` grant on the blocked item's scope, and the blocking
- * item must be in that scope too or created in this run.
+ * item must be in that scope too.
  */
 function checkBlock(
-  { grants, ownWorkItemId, createdWorkItemIds }: GrantCheckContext,
+  { grants, ownWorkItemId }: GrantCheckContext,
   blockedWorkItemId: string,
   blockingWorkItemId: string,
 ): string | null {
@@ -125,10 +123,7 @@ function checkBlock(
     return refusal;
   }
   const blockedScope = scopeOf(ownWorkItemId, blockedWorkItemId);
-  if (
-    !createdWorkItemIds.has(blockingWorkItemId) &&
-    scopeOf(ownWorkItemId, blockingWorkItemId) !== blockedScope
-  ) {
+  if (scopeOf(ownWorkItemId, blockingWorkItemId) !== blockedScope) {
     return `This Task may not block work item ${blockedWorkItemId} on ${blockingWorkItemId}: its \`block\` grant on \`${blockedScope}\` doesn't cover ${blockingWorkItemId}.`;
   }
   return null;
@@ -144,20 +139,6 @@ export function checkChangeGrants(
 ): string | null {
   const { grants, ownWorkItemId } = context;
   switch (change.kind) {
-    case "create": {
-      const grant = findGrant(grants, "create", "children");
-      if (!grant) {
-        return "This Task may not create work items: it has no `create` grant on `children`.";
-      }
-      return (
-        labelsOutside(grant, change.labels ?? [], change.workItemId) ??
-        (change.blockedBy ?? [])
-          .filter((blocker) => blocker === ownWorkItemId)
-          .map((blocker) => checkBlock(context, change.workItemId, blocker))
-          .find((refusal) => refusal !== null) ??
-        null
-      );
-    }
     case "block":
       return checkBlock(
         context,

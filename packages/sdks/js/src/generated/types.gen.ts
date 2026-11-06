@@ -4741,16 +4741,6 @@ export type PostApiTaskRunsByTaskRunIdCompletionsData = {
         workItemChanges?: Array<{
             kind: string;
             workItemId: string;
-            title: string;
-            description: string;
-            fields?: {
-                [key: string]: unknown;
-            };
-            labels?: Array<string>;
-            blockedBy?: Array<string>;
-        } | {
-            kind: string;
-            workItemId: string;
             add?: Array<string>;
             remove?: Array<string>;
         } | {
@@ -6294,6 +6284,163 @@ export type PostApiTaskRunsByTaskRunIdWorkItemReadsResponses = {
 };
 
 export type PostApiTaskRunsByTaskRunIdWorkItemReadsResponse = PostApiTaskRunsByTaskRunIdWorkItemReadsResponses[keyof PostApiTaskRunsByTaskRunIdWorkItemReadsResponses];
+
+export type PostApiTaskRunsByTaskRunIdWorkItemCreatesData = {
+    body: {
+        claimToken: string;
+        workItemId: string;
+        title: string;
+        description: string;
+        fields?: {
+            [key: string]: unknown;
+        };
+        labels?: Array<string>;
+        blockedBy?: Array<string>;
+    };
+    path: {
+        taskRunId: string;
+    };
+    query?: never;
+    url: '/api/task-runs/{taskRunId}/work-item-creates';
+};
+
+export type PostApiTaskRunsByTaskRunIdWorkItemCreatesErrors = {
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 404
+     */
+    404: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 409
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type PostApiTaskRunsByTaskRunIdWorkItemCreatesError = PostApiTaskRunsByTaskRunIdWorkItemCreatesErrors[keyof PostApiTaskRunsByTaskRunIdWorkItemCreatesErrors];
+
+export type PostApiTaskRunsByTaskRunIdWorkItemCreatesResponses = {
+    /**
+     * Response for status 200
+     */
+    200: {
+        workItemId: string;
+        created: boolean;
+    };
+    /**
+     * Response for status 201
+     */
+    201: {
+        workItemId: string;
+        created: boolean;
+    };
+};
+
+export type PostApiTaskRunsByTaskRunIdWorkItemCreatesResponse = PostApiTaskRunsByTaskRunIdWorkItemCreatesResponses[keyof PostApiTaskRunsByTaskRunIdWorkItemCreatesResponses];
 
 export type PostApiTaskRunsByTaskRunIdArtifactUploadUrlData = {
     body: {

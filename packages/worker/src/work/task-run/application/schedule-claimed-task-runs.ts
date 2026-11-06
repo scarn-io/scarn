@@ -112,7 +112,6 @@ export function scheduleClaimedTaskRunJob(
         logStream,
       );
     } catch (error: unknown) {
-      await heartbeat.stop();
       executionError = error;
       throw error;
     } finally {
@@ -122,6 +121,9 @@ export function scheduleClaimedTaskRunJob(
       // and assertClaimOwnership will accept the appends.
       await logStream.stop();
       if (executionError !== undefined) {
+        // The heartbeat runs until the failure is reported: runtime cleanup
+        // can outlast the lease, and a lapsed lease would replace the real
+        // error with "abandoned".
         try {
           await failClaimedTaskRunIfStillRunning(deps.workerClient, logger, {
             taskRunId: claim.task.id,
@@ -141,6 +143,8 @@ export function scheduleClaimedTaskRunJob(
                 ? failError.message
                 : String(failError),
           });
+        } finally {
+          await heartbeat.stop();
         }
       }
     }

@@ -75,7 +75,7 @@ Each child work item asks one question, and its one \`wayfinder:<type>\` label (
 - **grilling**: an agent asks a person, round by round, to settle a decision only they can make.
 - **task**: nothing starts; a person does it by hand and closes it.
 
-Create each one with \`scarn-create-work-item\`: a short title, a description that states the one question and what a good answer looks like, exactly one \`wayfinder:<type>\` label in \`labels\`, and \`blockedBy\` with the children whose answers it needs first. Link it on the map as \`[title](url)\` with the url the tool returns. Prefer research before prototypes, and grilling only when the answer is a judgment call.
+Create each one with \`scarn-create-work-item\`: a short title, a description that states the one question and what a good answer looks like, exactly one \`wayfinder:<type>\` label in \`labels\`, and \`blockedBy\` with the children whose answers it needs first. The child exists as soon as the tool returns, and stays even if the round fails later. \`blockedBy\` can only name children that already exist, so create blockers first, one at a time when one depends on another. Link each child on the map as \`[title](url)\` with the url the tool returns, straight away. Prefer research before prototypes, and grilling only when the answer is a judgment call.
 
 Use \`wayfinder:task\` only for work a person must do before a decision can be made, such as signing up for a service, provisioning access or moving data. Use \`wayfinder:research\` whenever an agent could do it. Write a \`task\` description as instructions for a person, in three parts:
 - **Why**: the decision this unblocks.
@@ -87,10 +87,10 @@ Set no assignee.
 1. Read the map and its children live once, with \`scarn-get-work-item\` on your work item.
 2. Fold every closed child that isn't in **Decisions so far** yet into it, as \`[title](url)\` plus a one-line gist of its resolution. You aren't told which close started this round, so check them all. If a closed \`task\` child has no resolution, look for the facts in its comments. If they're missing, note the gap on the map and create a follow-up child for it.
 3. Then do exactly one of these:
-   - **Chart:** for fog that's now sharp enough to ask as one precise question, create the children (each with its label and blockers) and, in the same description write, move what you charted out of **Not yet specified**. Create at most 10 per round, and only what's sharp now.
+   - **Chart:** for fog that's now sharp enough to ask as one precise question, create the children (each with its label and blockers) and, in the same description write, move what you charted out of **Not yet specified**. Create at most 10 per round, counting any an earlier attempt of this round created, and only what's sharp now.
    - **Wait:** if open children remain and nothing is newly sharp, create nothing and change nothing beyond what step 2 folded in.
    - **Finish:** if no children are open and nothing is left in **Not yet specified**, write the **Plan** section and close the map with \`scarn-close-work-item\` (\`reason: "completed"\`, with a one-line resolution).
-4. Never create a child whose question is already an open child or already in **Decisions so far**.
+4. Never create a child whose question is already an open child or already in **Decisions so far**. That includes a child a failed round left behind that isn't on the map yet: check the children you read in step 1, and link it on the map instead.
 5. If you're stuck, with no open children and fog you can't state precisely, create a \`wayfinder:grilling\` child asking a person to sharpen it. Don't close the map, and don't ask in this conversation.
 6. If a description write is refused because the map changed since you read it, read it again with \`scarn-get-work-item\` and redo the round from step 2.
 7. End the round: call \`scarn-end-conversation\` and end your turn with a one-line summary of what you did.

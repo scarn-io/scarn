@@ -1,6 +1,6 @@
 import {
   appendWorkItemChange,
-  readWorkItemChanges,
+  withWorkItemChangesLock,
   type WorkItemChange,
 } from "@scarn/sdk/contracts/work-item-changes";
 import { checkChangeGrants } from "./work-item-grants";
@@ -68,32 +68,28 @@ export async function recordWorkItemChange(
   if (typeof change === "string") {
     return change;
   }
-  const refusal = await checkRecordedChange(context, change);
-  if (refusal !== null) {
-    return refusal;
-  }
-  await appendWorkItemChange(context.worktree, change);
-  return RECORDED_CHANGE_NOTE;
+  return withWorkItemChangesLock(context.worktree, async () => {
+    const refusal = checkRecordedChange(context, change);
+    if (refusal !== null) {
+      return refusal;
+    }
+    await appendWorkItemChange(context.worktree, change);
+    return RECORDED_CHANGE_NOTE;
+  });
 }
 
 /**
  * Refuses a change the server would refuse for lack of a grant, as far as the
- * plugin can tell from the run's grants and the changes recorded so far.
+ * plugin can tell from the run's grants.
  */
-export async function checkRecordedChange(
+export function checkRecordedChange(
   context: WorkItemToolContext,
   change: WorkItemChange,
-): Promise<string | null> {
-  const recorded = await readWorkItemChanges(context.worktree);
+): string | null {
   return checkChangeGrants(
     {
       grants: context.info.grants,
       ownWorkItemId: context.info.workItemId,
-      createdWorkItemIds: new Set(
-        recorded.flatMap((entry) =>
-          entry.kind === "create" ? [entry.workItemId] : [],
-        ),
-      ),
     },
     change,
   );

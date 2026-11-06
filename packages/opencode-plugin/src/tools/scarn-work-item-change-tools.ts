@@ -191,7 +191,7 @@ export function createScarnBlockWorkItemTool(
     directory,
     SCARN_BLOCK_WORK_ITEM_TOOL,
     "block",
-    `Add a block between two work items (the blocking item must be closed before the blocked one is ready), or remove one with \`remove: true\`. The blocked item may be ${blockScopePhrase(grants)}; the blocking item must be in the same scope or created in this run.`,
+    `Add a block between two work items (the blocking item must be closed before the blocked one is ready), or remove one with \`remove: true\`. The blocked item may be ${blockScopePhrase(grants)}; the blocking item must be in the same scope.`,
     {
       type: "object",
       properties: {

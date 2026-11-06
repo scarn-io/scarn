@@ -129,6 +129,22 @@ describe("work item change tools", () => {
     );
   });
 
+  test.concurrent("records every change made in parallel", async () => {
+    const workspacePath = await workItemTestWorkspace();
+
+    await Promise.all(
+      RECORDING_CASES.map(({ action, build, input }) =>
+        recordWorkItemChange(workspacePath, action, () => build(input)),
+      ),
+    );
+
+    const byJson = (changes: WorkItemChange[]) =>
+      changes.map((change) => JSON.stringify(change)).sort();
+    expect(byJson(await readWorkItemChanges(workspacePath))).toEqual(
+      byJson(RECORDING_CASES.map(({ change }) => change)),
+    );
+  });
+
   test.concurrent("refuses without a grant for the action", async () => {
     const workspacePath = await workItemTestWorkspace({
       grants: [grant("read", "self"), grant("close", "children")],

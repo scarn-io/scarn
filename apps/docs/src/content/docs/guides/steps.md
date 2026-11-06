@@ -857,6 +857,8 @@ Each `Features.workItems.*` feature grants the step's Tasks one action on a work
 | `Features.workItems.close({ scope })`                      | Close it                                       | `scarn-close-work-item`           |
 | `Features.workItems.create({ scope: "children", labels })` | Create child work items with the listed labels | `scarn-create-work-item`          |
 
+A child work item exists as soon as `scarn-create-work-item` returns, and stays even if the Task fails later. Its `blockedBy` can only name work items that already exist (the Task's own work item or its children), so the agent creates blockers before the items they block. A Task creates at most 10 child work items, counted across its retries, and a work item has at most 50 open children. The other changes (label, block, description, comment, close) apply when the Task succeeds.
+
 For `label` and `create`, the prompt section lists the allowed labels, so the prompt doesn't need to. Keep the labels in one `const` when an automation routes on them too:
 
 ```typescript
