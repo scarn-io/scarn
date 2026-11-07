@@ -126,7 +126,7 @@ export function createInput(
 
 export function createHarness(
   startedTask: StartedClaimedTask,
-  options: { finalText: string },
+  options: { finalText: string; turnError?: string },
 ) {
   let statusCall = 0;
   let completed = false;
@@ -169,7 +169,14 @@ export function createHarness(
         return Promise.resolve({ running: statusCall === 1 });
       }),
       sendRetryPrompt,
-      readLastAssistantText: vi.fn(() => Promise.resolve(options.finalText)),
+      readLastTurn: vi.fn(() =>
+        Promise.resolve({
+          text: options.finalText,
+          ...(options.turnError === undefined
+            ? {}
+            : { error: options.turnError }),
+        }),
+      ),
       exportSession,
     },
     artifactStore: { saveArtifact },

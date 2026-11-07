@@ -269,4 +269,75 @@ describe("CLI processProjectWork", () => {
       );
     },
   );
+
+  concurrentTest(
+    "backs off empty polls to a 10-minute cap when no max poll interval is configured",
+    async () => {
+      class StopPolling extends Error {}
+      let call = 0;
+      const claimTaskRuns: TaskRunWorkerClient["claimTaskRuns"] = vi.fn(() => {
+        call += 1;
+        return call <= 9
+          ? Promise.resolve([])
+          : Promise.reject(new StopPolling());
+      });
+      const workerClient = createWorkerClient({ claimTaskRuns });
+      const sleepCalls: number[] = [];
+      const previousPollInterval = process.env["SCARN_WORK_POLL_INTERVAL_MS"];
+      const previousMaxPollInterval =
+        process.env["SCARN_WORK_MAX_POLL_INTERVAL_MS"];
+
+      delete process.env["SCARN_WORK_POLL_INTERVAL_MS"];
+      delete process.env["SCARN_WORK_MAX_POLL_INTERVAL_MS"];
+
+      try {
+        await processProjectWork(
+          { projectId },
+          {
+            createWorkerClient: () => Promise.resolve(workerClient),
+            createRunTracker,
+            runtimeEnvironmentOrchestrator: {
+              launch: vi.fn(() => Promise.reject(new Error("Not used"))),
+            } satisfies TaskRuntimeEnvironmentOrchestrator,
+            agentRunner: {
+              promptAsync: vi.fn(() => Promise.reject(new Error("Not used"))),
+              getSessionStatus: vi.fn(() =>
+                Promise.resolve({ running: false }),
+              ),
+              sendRetryPrompt: vi.fn(() => Promise.resolve(undefined)),
+            } satisfies TaskAgentRunner,
+            sleep: (milliseconds) => {
+              sleepCalls.push(milliseconds);
+              return Promise.resolve(undefined);
+            },
+            logger: {
+              debug: vi.fn(),
+              log: vi.fn(),
+              error: vi.fn(),
+            },
+          },
+        );
+        throw new Error("expected processProjectWork to reject");
+      } catch (error) {
+        expect(error).toBeInstanceOf(StopPolling);
+      } finally {
+        if (previousPollInterval === undefined) {
+          delete process.env["SCARN_WORK_POLL_INTERVAL_MS"];
+        } else {
+          process.env["SCARN_WORK_POLL_INTERVAL_MS"] = previousPollInterval;
+        }
+        if (previousMaxPollInterval === undefined) {
+          delete process.env["SCARN_WORK_MAX_POLL_INTERVAL_MS"];
+        } else {
+          process.env["SCARN_WORK_MAX_POLL_INTERVAL_MS"] =
+            previousMaxPollInterval;
+        }
+      }
+
+      expect(sleepCalls).toEqual([
+        10_000, 20_000, 40_000, 80_000, 160_000, 320_000, 600_000, 600_000,
+        600_000,
+      ]);
+    },
+  );
 });

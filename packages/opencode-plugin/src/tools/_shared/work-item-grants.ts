@@ -26,7 +26,7 @@ export function grantScopes(
   grants: readonly Grant[],
   action: GrantAction,
 ): GrantScope[] {
-  return (["self", "children"] as const).filter(
+  return (["self", "children", "project"] as const).filter(
     (scope) => findGrant(grants, action, scope) !== undefined,
   );
 }
@@ -34,6 +34,7 @@ export function grantScopes(
 const SCOPE_PHRASES: Record<GrantScope, string> = {
   self: "your own work item",
   children: "your work item's children",
+  project: "any work item in the project",
 };
 
 /** "your own work item", "your work item's children", or both. */
@@ -46,6 +47,9 @@ export function scopeNote(
   grants: readonly Grant[],
   action: GrantAction,
 ): string {
+  if (findGrant(grants, action, "project")) {
+    return `Works on ${SCOPE_PHRASES.project}.`;
+  }
   return `Works on ${scopePhrase(grantScopes(grants, action))} only.`;
 }
 
@@ -92,6 +96,9 @@ export function checkGrantOn(
   action: GrantAction,
   workItemId: string,
 ): string | null {
+  if (findGrant(grants, action, "project")) {
+    return null;
+  }
   const scope = scopeOf(ownWorkItemId, workItemId);
   return findGrant(grants, action, scope)
     ? null

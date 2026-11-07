@@ -3,11 +3,16 @@ import type {
   SessionMessageAssistantRetry,
 } from "@opencode/client";
 import type {
+  AgentTurn,
   ExportedAgentSession,
   OpencodeServerHandle,
   TaskAgentRunner,
 } from "../contracts/process-project-work-types";
 import { logWork, logWorkError } from "../application/work-logger";
+import {
+  describeStructuredError,
+  sessionErrorOf,
+} from "./opencode-session-error";
 import {
   createScarnOpencodeClient,
   opencodeLocation,
@@ -279,25 +284,41 @@ export class DefaultOpencodeStepRunner implements OpencodeStepRunner {
     return { restored: true, sessionId };
   }
 
-  /** The latest assistant message's text parts joined, trimmed; reasoning and tool parts are skipped. */
-  async readLastAssistantText(input: {
+  /**
+   * `text` is the latest assistant message's text parts joined, trimmed;
+   * reasoning and tool parts are skipped. `error` comes from that message, or
+   * from an idle marker newer than it (see {@link sessionErrorOf}).
+   */
+  async readLastTurn(input: {
     server: OpencodeServerHandle;
     sessionId: string;
-  }): Promise<string> {
+  }): Promise<AgentTurn> {
     const client = createScarnOpencodeClient(input.server);
-    const page = await client.message.list({
-      sessionID: input.sessionId,
-      type: "assistant",
-      order: "desc",
-      limit: 1,
-    });
-    const latest = page.data[0];
-    if (!latest || latest.type !== "assistant") {
-      return "";
-    }
-    return latest.content
+    const latestOfType = async (type: "assistant" | "idle") =>
+      (
+        await client.message.list({
+          sessionID: input.sessionId,
+          type,
+          order: "desc",
+          limit: 1,
+        })
+      ).data[0];
+    const [assistant, idle] = await Promise.all([
+      latestOfType("assistant"),
+      latestOfType("idle"),
+    ]);
+
+    const latest = assistant?.type === "assistant" ? assistant : undefined;
+    const text = (latest?.content ?? [])
       .flatMap((part) => (part.type === "text" ? [part.text] : []))
       .join("\n")
       .trim();
+    const idleIsNewer =
+      idle !== undefined &&
+      (latest === undefined || idle.time.created >= latest.time.created);
+    const error =
+      (latest && sessionErrorOf(latest)) ??
+      (idleIsNewer ? sessionErrorOf(idle) : undefined);
+    return error ? { text, error: describeStructuredError(error) } : { text };
   }
 }

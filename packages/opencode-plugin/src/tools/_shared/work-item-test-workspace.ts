@@ -20,6 +20,12 @@ export function grant(
   if (action === "create") {
     return { resource: "workItem", action, scope: "children", labels };
   }
+  if (action === "read") {
+    return { resource: "workItem", action, scope };
+  }
+  if (scope === "project") {
+    throw new Error(`No ${action} grant covers the project`);
+  }
   if (action === "label") {
     return { resource: "workItem", action, scope, labels };
   }

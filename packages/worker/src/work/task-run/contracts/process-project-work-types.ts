@@ -565,20 +565,22 @@ export type TaskAgentRunner = {
     agent: string;
   }): Promise<void>;
   /**
-   * The text of the session's latest assistant message, trimmed; empty when
-   * it has none. Used as the message handed to the person when the agent
-   * ends its turn, and as the summary when a conversation step ends.
-   * Optional so runners that never hand over can omit it; a runner without
-   * it reads as an empty final message.
+   * How the session's latest turn ended. `text` is the latest assistant
+   * message's text, trimmed; empty when it has none. It is the message handed
+   * to the person when the agent ends its turn, and the summary when a
+   * conversation step ends. `error` describes why the turn failed (e.g. the
+   * provider rejected the model); absent when it did not. Optional so runners
+   * that never hand over can omit it; a runner without it reads as an empty,
+   * successful turn.
    */
-  readLastAssistantText?(input: {
+  readLastTurn?(input: {
     server: OpencodeServerHandle;
     sessionId: string;
-  }): Promise<string>;
+  }): Promise<AgentTurn>;
   /**
    * The session's full export (`sanitize: false`), saved when the agent
    * yields so the Task that answers can restore it. Optional like
-   * {@link readLastAssistantText}; without it a yield saves no session.
+   * {@link readLastTurn}; without it a yield saves no session.
    */
   exportSession?(input: {
     server: OpencodeServerHandle;
@@ -600,6 +602,12 @@ export type TaskAgentRunner = {
   }): Promise<
     { restored: true; sessionId: string } | { restored: false; reason: string }
   >;
+};
+
+/** How an agent's latest turn ended; see {@link TaskAgentRunner.readLastTurn}. */
+export type AgentTurn = {
+  text: string;
+  error?: string;
 };
 
 /**

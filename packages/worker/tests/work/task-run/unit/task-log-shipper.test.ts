@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "bun:test";
+import { describe, expect, it, spyOn, vi } from "bun:test";
 import { createUuidV7 } from "../../../../src/common/contracts/uuid-v7";
 import { SecretMasker } from "../../../../src/work/task-run/application/secret-masker";
 import { TaskLogShipper } from "../../../../src/work/task-run/application/task-log-shipper";
@@ -261,5 +261,127 @@ describe("TaskLogShipper", () => {
     shipper.enqueue("worker", "c");
     await shipper.flush();
     expect(sent.map((l) => l.content)).toEqual(["b", "c"]);
+  });
+
+  describe("flush interval", () => {
+    const ENV = "SCARN_LOG_FLUSH_INTERVAL_MS";
+
+    const startedIntervalMs = (
+      env: string | undefined,
+      flushIntervalMs?: number,
+    ): number | undefined => {
+      const previous = process.env[ENV];
+      if (env === undefined) {
+        delete process.env["SCARN_LOG_FLUSH_INTERVAL_MS"];
+      } else {
+        process.env[ENV] = env;
+      }
+      const setIntervalSpy = spyOn(globalThis, "setInterval");
+      try {
+        const shipper = new TaskLogShipper({
+          workerClient: {
+            appendTaskLogs: () => Promise.resolve({ nextOffset: 0 }),
+          },
+          taskRunId: createUuidV7(),
+          claimToken: "claim-token",
+          secretMasker: new SecretMasker(),
+          ...(flushIntervalMs === undefined ? {} : { flushIntervalMs }),
+        });
+        shipper.start();
+        void shipper.stop();
+        return setIntervalSpy.mock.calls[0]?.[1];
+      } finally {
+        setIntervalSpy.mockRestore();
+        if (previous === undefined) {
+          delete process.env["SCARN_LOG_FLUSH_INTERVAL_MS"];
+        } else {
+          process.env[ENV] = previous;
+        }
+      }
+    };
+
+    it("defaults to 5s", () => {
+      expect(startedIntervalMs(undefined)).toBe(5_000);
+    });
+
+    it("is overridden by SCARN_LOG_FLUSH_INTERVAL_MS", () => {
+      expect(startedIntervalMs("2500")).toBe(2_500);
+    });
+
+    it("falls back to the default when the env var is not a positive integer", () => {
+      expect(startedIntervalMs("0")).toBe(5_000);
+      expect(startedIntervalMs("-10")).toBe(5_000);
+      expect(startedIntervalMs("1.5")).toBe(5_000);
+      expect(startedIntervalMs("soon")).toBe(5_000);
+    });
+
+    it("prefers an explicit flushIntervalMs over the env var", () => {
+      expect(startedIntervalMs("2500", 750)).toBe(750);
+    });
+  });
+
+  it("ships as soon as a full batch is buffered, without waiting for the timer", async () => {
+    const append = vi.fn((input: { lines: TaskLogLine[] }) =>
+      Promise.resolve({ nextOffset: input.lines.at(-1)?.seq ?? 0 }),
+    );
+    const shipper = new TaskLogShipper({
+      workerClient: { appendTaskLogs: append },
+      taskRunId: createUuidV7(),
+      claimToken: "claim-token",
+      secretMasker: new SecretMasker(),
+      maxBatchLines: 3,
+      flushIntervalMs: 60_000,
+    });
+    shipper.start();
+
+    shipper.enqueue("worker", "a");
+    shipper.enqueue("worker", "b");
+    expect(append).not.toHaveBeenCalled();
+
+    shipper.enqueue("worker", "c");
+    expect(append).toHaveBeenCalledTimes(1);
+    expect(append.mock.calls[0]?.[0].lines.map((l) => l.content)).toEqual([
+      "a",
+      "b",
+      "c",
+    ]);
+
+    await shipper.stop();
+  });
+
+  it("drains lines that fill a batch while a flush is already in flight", async () => {
+    const batches: string[][] = [];
+    let release: () => void = () => {};
+    const firstCall = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const shipper = new TaskLogShipper({
+      workerClient: {
+        appendTaskLogs: async (input) => {
+          batches.push(input.lines.map((l) => l.content));
+          if (batches.length === 1) {
+            await firstCall;
+          }
+          return { nextOffset: 0 };
+        },
+      },
+      taskRunId: createUuidV7(),
+      claimToken: "claim-token",
+      secretMasker: new SecretMasker(),
+      maxBatchLines: 2,
+      flushIntervalMs: 60_000,
+    });
+
+    shipper.enqueue("worker", "a");
+    shipper.enqueue("worker", "b");
+    shipper.enqueue("worker", "c");
+    shipper.enqueue("worker", "d");
+    release();
+    await shipper.stop();
+
+    expect(batches).toEqual([
+      ["a", "b"],
+      ["c", "d"],
+    ]);
   });
 });

@@ -26,7 +26,7 @@ import { createTaskPlaneWorkerClient } from "../infra/worker-api-client";
 
 const DEFAULT_WORK_CONCURRENCY = 1;
 const DEFAULT_POLL_INTERVAL_MS = 5_000;
-const DEFAULT_MAX_POLL_INTERVAL_MS = 60_000;
+const DEFAULT_MAX_POLL_INTERVAL_MS = 600_000;
 const DEFAULT_LEASE_DURATION_SECONDS = 30;
 
 export type ProcessProjectWorkOptions = {

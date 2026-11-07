@@ -845,7 +845,7 @@ A real specialization of `Features.notifications()`, not an alias — it narrows
 
 ### `Features.workItems.*`
 
-Each `Features.workItems.*` feature grants the step's Tasks one action on a work item, and adds a prompt section naming the tool the agent uses for it. `scope: "self"` is the Task's own work item; `scope: "children"` is its child work items. Attach each action and scope at most once.
+Each `Features.workItems.*` feature grants the step's Tasks one action on a work item, and adds a prompt section naming the tool the agent uses for it. `scope: "self"` is the Task's own work item; `scope: "children"` is its child work items. `read` also takes `scope: "project"`, which covers every work item in the project (its parent, siblings and anything else). Every Task can read its own work item without a grant. Attach each action and scope at most once.
 
 | Feature                                                    | The agent may                                  | Tool                              |
 | ---------------------------------------------------------- | ---------------------------------------------- | --------------------------------- |

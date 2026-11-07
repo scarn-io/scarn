@@ -5,11 +5,14 @@
  * step) talks until it calls `scarn-end-conversation`, which writes
  * {@link buildEndConversationPath}. In order:
  *
- * 1. a conversation step with the end marker ends;
- * 2. with turns left and a non-empty final message, the turn is handed over;
- * 3. with no turns left in a run, the agent gets one more message saying so,
+ * 1. a conversation step with the end marker ends, even if a later step of
+ *    the turn failed;
+ * 2. a turn that failed (e.g. the provider rejected the request) fails the
+ *    Task with its error;
+ * 3. with turns left and a non-empty final message, the turn is handed over;
+ * 4. with no turns left in a run, the agent gets one more message saying so,
  *    and the decision waits for that turn to end;
- * 4. otherwise a conversation step ends, and a step with a schema takes the
+ * 5. otherwise a conversation step ends, and a step with a schema takes the
  *    missing-findings path. A Task outside a run has no turns and never hands
  *    over.
  *
@@ -68,7 +71,8 @@ export type TurnEndAction =
   | { kind: "hand-over"; message: string }
   | { kind: "end"; summary: string }
   | { kind: "continue" }
-  | { kind: "missing-findings" };
+  | { kind: "missing-findings" }
+  | { kind: "failed"; error: string };
 
 type TurnEndInput = {
   deps: ProcessProjectWorkDeps;
@@ -93,26 +97,27 @@ export async function decideTurnEnd(
   const info = await tryReadCurrentExecutionInfo(workspacePath);
   const isConversation = info !== null && info.resultSchemaJson === null;
   const turnsRemaining = info?.turnsRemaining ?? null;
-  const readFinalMessage = async () =>
-    input.mask(
-      (await deps.agentRunner.readLastAssistantText?.({
-        server: input.server,
-        sessionId: input.agentSessionId,
-      })) ?? "",
-    );
+  const lastTurn = (await deps.agentRunner.readLastTurn?.({
+    server: input.server,
+    sessionId: input.agentSessionId,
+  })) ?? { text: "" };
+  const finalMessage = input.mask(lastTurn.text);
+
+  if (isConversation && (await hasEndConversationMarker(workspacePath))) {
+    return { kind: "end", summary: finalMessage };
+  }
+
+  if (lastTurn.error !== undefined) {
+    return { kind: "failed", error: input.mask(lastTurn.error) };
+  }
 
   if (state.lastTurnPrompted) {
     if (state.graceWaitedMs < input.graceMs) return { kind: "continue" };
     return isConversation
-      ? { kind: "end", summary: await readFinalMessage() }
+      ? { kind: "end", summary: finalMessage }
       : { kind: "missing-findings" };
   }
 
-  if (isConversation && (await hasEndConversationMarker(workspacePath))) {
-    return { kind: "end", summary: await readFinalMessage() };
-  }
-
-  const finalMessage = await readFinalMessage();
   if (turnsRemaining !== null && turnsRemaining > 0 && finalMessage !== "") {
     return { kind: "hand-over", message: finalMessage };
   }
@@ -190,6 +195,9 @@ export async function runTurnEnd(
   },
 ): Promise<"yielded" | "ended" | "continue" | "missing-findings"> {
   const action = await decideTurnEnd(input);
+  if (action.kind === "failed") {
+    throw new Error(`Agent turn failed: ${action.error}`);
+  }
   if (action.kind === "hand-over") {
     await handOverAgentTask({
       deps: input.deps,

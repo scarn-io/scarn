@@ -333,6 +333,11 @@ function grantToFeature(grant: Grant): {
         }),
         source: `Features.workItems.create({ scope: "children", labels: ${JSON.stringify(grant.labels)} })`,
       };
+    case "read":
+      return {
+        feature: workItems.read({ scope: grant.scope }),
+        source: `Features.workItems.read({ scope: ${JSON.stringify(grant.scope)} })`,
+      };
     default:
       return {
         feature: workItems[grant.action]({ scope: grant.scope }),

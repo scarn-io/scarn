@@ -7,7 +7,8 @@ import type {
 } from "../contracts/process-project-work-types";
 import type { SecretMasker } from "./secret-masker";
 
-const DEFAULT_FLUSH_INTERVAL_MS = 1_000;
+/** Overridable via `SCARN_LOG_FLUSH_INTERVAL_MS`. */
+const DEFAULT_FLUSH_INTERVAL_MS = 5_000;
 const DEFAULT_MAX_BATCH_LINES = 256;
 const DEFAULT_MAX_BUFFER_LINES = 10_000;
 // Stay under the server-side per-line cap (16k chars) so one long line can't
@@ -74,6 +75,15 @@ const parseLogLevel = (value: string | undefined): LogLevel | undefined => {
   }
 };
 
+const parsePositiveInt = (value: string | undefined): number | undefined => {
+  const trimmed = value?.trim();
+  if (!trimmed || !/^\d+$/.test(trimmed)) {
+    return undefined;
+  }
+  const parsed = Number(trimmed);
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : undefined;
+};
+
 export type TaskLogShipperDeps = {
   workerClient: Pick<TaskRunWorkerClient, "appendTaskLogs">;
   taskRunId: UuidV7;
@@ -88,6 +98,7 @@ export type TaskLogShipperDeps = {
   /** Diagnostic sink; shipping failures are logged here, never thrown. */
   // eslint-disable-next-line local/no-unknown-parameter-type
   onError?: (error: unknown) => void;
+  /** Defaults to `SCARN_LOG_FLUSH_INTERVAL_MS` or 5s. */
   flushIntervalMs?: number;
   maxBatchLines?: number;
   maxBufferLines?: number;
@@ -99,7 +110,8 @@ export type TaskLogShipperDeps = {
 };
 
 /**
- * Batches task log lines and ships them to the platform on a timer.
+ * Batches task log lines and ships them to the platform on a timer, or as soon
+ * as a full batch is buffered.
  *
  * GitHub-Actions-style: each line carries a monotonic per-step `seq` so the
  * server feed is an append-only, offset-addressable log and retried batches are
@@ -121,13 +133,16 @@ export class TaskLogShipper {
   private seq = 1;
   private buffer: TaskLogLine[] = [];
   private timer: ReturnType<typeof setInterval> | null = null;
-  private flushing = false;
+  private inFlight: Promise<void> | null = null;
   private stopped = false;
 
   constructor(deps: TaskLogShipperDeps) {
     this.deps = {
       ...deps,
-      flushIntervalMs: deps.flushIntervalMs ?? DEFAULT_FLUSH_INTERVAL_MS,
+      flushIntervalMs:
+        deps.flushIntervalMs ??
+        parsePositiveInt(process.env["SCARN_LOG_FLUSH_INTERVAL_MS"]) ??
+        DEFAULT_FLUSH_INTERVAL_MS,
       maxBatchLines: deps.maxBatchLines ?? DEFAULT_MAX_BATCH_LINES,
       maxBufferLines: deps.maxBufferLines ?? DEFAULT_MAX_BUFFER_LINES,
       minShipLevel:
@@ -149,7 +164,10 @@ export class TaskLogShipper {
   }
 
   /**
-   * Enqueue a single log line. Cheap and synchronous; flushed on the timer.
+   * Enqueue a single log line. Cheap and synchronous; flushed on the timer, or
+   * immediately once the buffer reaches a full batch. The early flush fires
+   * only when the buffer first reaches {@link TaskLogShipperDeps.maxBatchLines},
+   * so a failing endpoint is retried on the timer rather than on every line.
    *
    * For the diagnostic streams (`worker`, `ai-server`) a `level` may be supplied
    * (defaulting to `info`); lines below {@link TaskLogShipperDeps.minShipLevel}
@@ -192,41 +210,59 @@ export class TaskLogShipper {
       // tolerated by the offset-read contract.
       this.buffer.splice(0, this.buffer.length - this.deps.maxBufferLines);
     }
+    if (this.buffer.length === this.deps.maxBatchLines) {
+      void this.flush();
+    }
   }
 
-  /** Flush all buffered lines, draining in capped batches. Never throws. */
-  async flush(): Promise<void> {
-    if (this.flushing || this.buffer.length === 0) {
-      return;
+  /**
+   * Flush all buffered lines, draining in capped batches. Never throws. If a
+   * flush is already in flight, returns that flush; its drain loop picks up
+   * lines enqueued meanwhile.
+   */
+  flush(): Promise<void> {
+    if (this.inFlight !== null) {
+      return this.inFlight;
     }
-    this.flushing = true;
-    try {
-      while (this.buffer.length > 0) {
-        const batch = this.buffer.slice(0, this.deps.maxBatchLines);
-        try {
-          await this.deps.workerClient.appendTaskLogs({
-            taskRunId: this.deps.taskRunId,
-            claimToken: this.deps.claimToken,
-            lines: batch,
-          });
-        } catch (error) {
-          // Retain the unsent batch for the next flush; report and stop draining.
-          this.deps.onError?.(error);
-          return;
-        }
-        this.buffer.splice(0, batch.length);
+    if (this.buffer.length === 0) {
+      return Promise.resolve();
+    }
+    this.inFlight = this.drain().finally(() => {
+      this.inFlight = null;
+    });
+    return this.inFlight;
+  }
+
+  private async drain(): Promise<void> {
+    while (this.buffer.length > 0) {
+      const batch = this.buffer.slice(0, this.deps.maxBatchLines);
+      try {
+        await this.deps.workerClient.appendTaskLogs({
+          taskRunId: this.deps.taskRunId,
+          claimToken: this.deps.claimToken,
+          lines: batch,
+        });
+      } catch (error) {
+        // Retain the unsent batch for the next flush; report and stop draining.
+        this.deps.onError?.(error);
+        return;
       }
-    } finally {
-      this.flushing = false;
+      this.buffer.splice(0, batch.length);
     }
   }
 
-  /** Stop the timer and flush any remaining lines a final time. */
+  /**
+   * Stop the timer, wait for any in-flight flush, then flush any remaining
+   * lines a final time.
+   */
   async stop(): Promise<void> {
     this.stopped = true;
     if (this.timer !== null) {
       clearInterval(this.timer);
       this.timer = null;
+    }
+    if (this.inFlight !== null) {
+      await this.inFlight;
     }
     await this.flush();
   }

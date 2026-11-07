@@ -1567,7 +1567,7 @@ export type GetApiStepDefinitionsResponses = {
         grants: Array<{
             resource: string;
             action: string;
-            scope: 'self' | 'children';
+            scope: 'self' | 'children' | 'project';
         } | {
             resource: string;
             action: string;
@@ -1733,7 +1733,7 @@ export type PostApiStepDefinitionsData = {
         grants?: Array<{
             resource: string;
             action: string;
-            scope: 'self' | 'children';
+            scope: 'self' | 'children' | 'project';
         } | {
             resource: string;
             action: string;
@@ -2040,7 +2040,7 @@ export type PostApiStepDefinitionsResponses = {
         grants: Array<{
             resource: string;
             action: string;
-            scope: 'self' | 'children';
+            scope: 'self' | 'children' | 'project';
         } | {
             resource: string;
             action: string;
@@ -2206,7 +2206,7 @@ export type PutApiStepDefinitionsData = {
         grants?: Array<{
             resource: string;
             action: string;
-            scope: 'self' | 'children';
+            scope: 'self' | 'children' | 'project';
         } | {
             resource: string;
             action: string;
@@ -2475,7 +2475,7 @@ export type PutApiStepDefinitionsResponses = {
         grants: Array<{
             resource: string;
             action: string;
-            scope: 'self' | 'children';
+            scope: 'self' | 'children' | 'project';
         } | {
             resource: string;
             action: string;
@@ -2754,7 +2754,7 @@ export type GetApiStepDefinitionsByStepDefinitionIdResponses = {
         grants: Array<{
             resource: string;
             action: string;
-            scope: 'self' | 'children';
+            scope: 'self' | 'children' | 'project';
         } | {
             resource: string;
             action: string;
@@ -3033,7 +3033,7 @@ export type PutApiStepDefinitionsByStepDefinitionIdArchiveResponses = {
         grants: Array<{
             resource: string;
             action: string;
-            scope: 'self' | 'children';
+            scope: 'self' | 'children' | 'project';
         } | {
             resource: string;
             action: string;
@@ -3348,7 +3348,7 @@ export type PostApiTasksResponses = {
             grants: Array<{
                 resource: string;
                 action: string;
-                scope: 'self' | 'children';
+                scope: 'self' | 'children' | 'project';
             } | {
                 resource: string;
                 action: string;
@@ -3669,7 +3669,7 @@ export type GetApiTasksByTaskIdResponses = {
         grants: Array<{
             resource: string;
             action: string;
-            scope: 'self' | 'children';
+            scope: 'self' | 'children' | 'project';
         } | {
             resource: string;
             action: string;
@@ -4578,7 +4578,7 @@ export type PostApiTaskRunsByTaskRunIdWorkerContextResponses = {
             grants: Array<{
                 resource: string;
                 action: string;
-                scope: 'self' | 'children';
+                scope: 'self' | 'children' | 'project';
             } | {
                 resource: string;
                 action: string;

@@ -485,7 +485,7 @@ const step = defineStep({
 | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `Features.notifications()`    | Adds an optional `$scarn_notifications_v1` result array and prompt text for emitting user notifications.                                     |
 | `Features.feedbackRequests()` | A real specialization of `notifications()` (not an alias): narrows every emitted item to `kind: "feedback_request"`, in the same `$scarn_notifications_v1` array. |
-| `Features.workItems.read \| update \| comment \| block \| close({ scope })` | Grants the step's Tasks that action on their work item (`scope: "self"`) or its children (`scope: "children"`), and adds a prompt section naming the tool. |
+| `Features.workItems.read \| update \| comment \| block \| close({ scope })` | Grants the step's Tasks that action on their work item (`scope: "self"`) or its children (`scope: "children"`), and adds a prompt section naming the tool. `read` also takes `scope: "project"`: any work item in the project. |
 | `Features.workItems.label({ scope, labels })` | Grants adding or removing only the listed labels. |
 | `Features.workItems.create({ scope: "children", labels })` | Grants creating child work items with labels from `labels` only. |
 

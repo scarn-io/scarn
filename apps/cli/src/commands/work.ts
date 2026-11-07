@@ -310,7 +310,7 @@ export const workCommand: CommandModule<object, WorkArguments> = {
           "work (doubles from --pollIntervalMs on each empty poll, resets " +
           "the moment work is claimed). Pass the same value as " +
           "--pollIntervalMs to poll at a fixed cadence instead. " +
-          "Defaults to 60000 (1 minute).",
+          "Defaults to 600000 (10 minutes).",
         type: "number",
       })
       .option("once", {

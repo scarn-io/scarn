@@ -1,6 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import { readWorkItemChanges } from "@scarn/sdk/contracts/work-item-changes";
-import { workItemTestWorkspace } from "./_shared/work-item-test-workspace";
+import {
+  grant,
+  workItemTestWorkspace,
+} from "./_shared/work-item-test-workspace";
 import {
   invalidInputMessage,
   missingGrantMessage,
@@ -144,6 +147,22 @@ describe("getWorkItem", () => {
       await getWorkItem({ workItemId: "item-self" }, workspacePath, fetch),
     ).toBe(missingGrantMessage("read"));
   });
+
+  test.concurrent(
+    "a read grant on project reads any item without a self or children grant",
+    async () => {
+      const workspacePath = await workItemTestWorkspace({
+        grants: [grant("read", "project")],
+      });
+      const { fetch, calls } = fakeFetch(
+        new Response(JSON.stringify({ id: "item-sibling", title: "S" })),
+      );
+
+      await getWorkItem({ workItemId: "item-sibling" }, workspacePath, fetch);
+
+      expect(calls).toHaveLength(1);
+    },
+  );
 
   test.concurrent("refuses outside a run on a work item", async () => {
     const workspacePath = await workItemTestWorkspace({ workItemId: null });

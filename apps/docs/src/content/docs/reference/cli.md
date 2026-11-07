@@ -500,7 +500,7 @@ scarn work <owner/slug>
 | `--batch-size <n>`               | `-b`  | value of `--concurrency`  | Max tasks claimed per poll                                                                                                |
 | `--lease-duration-seconds <n>`   | `-l`  | `30`                      | Seconds a claim lasts before the server can reclaim it; heartbeats extend it (env: `SCARN_WORK_LEASE_DURATION_SECONDS`) |
 | `--poll-interval-ms <n>`         | `-p`  | `5000`                    | Milliseconds between polls while there is work to claim (env: `SCARN_WORK_POLL_INTERVAL_MS`)                            |
-| `--max-poll-interval-ms <n>`     | —     | `60000`                   | Ceiling for the empty-poll backoff — see [Polling backoff](#polling-backoff) (env: `SCARN_WORK_MAX_POLL_INTERVAL_MS`)   |
+| `--max-poll-interval-ms <n>`     | —     | `600000`                  | Ceiling for the empty-poll backoff — see [Polling backoff](#polling-backoff) (env: `SCARN_WORK_MAX_POLL_INTERVAL_MS`)   |
 | `--worker-id <id>`               | `-w`  | auto                      | Worker identifier used while claiming tasks                                                                               |
 | `--work-item-id <id>`            | —     | —                         | Only process tasks for this work item ID                                                                                  |
 | `--source-branch <branch>`       | —     | your current local branch | Branch checked out for the run's first step — see [Source branch](#source-branch)                                         |
@@ -513,7 +513,9 @@ scarn work <owner/slug>
 #### Polling backoff
 
 Each empty poll doubles the interval, starting from `--poll-interval-ms`, up to `--max-poll-interval-ms`; it
-resets as soon as work is claimed. Set the two equal for a fixed cadence.
+resets as soon as work is claimed. Set the two equal for a fixed cadence. An idle worker can take up to
+`--max-poll-interval-ms` to notice new work; the 10-minute default is deliberately longer than the database's
+5-minute idle-suspend window, so idle workers let it sleep.
 
 #### Source branch
 

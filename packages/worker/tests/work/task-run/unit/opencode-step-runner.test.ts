@@ -223,8 +223,17 @@ describe("DefaultOpencodeStepRunner", () => {
     ]);
   });
 
-  test("readLastAssistantText joins the latest assistant message's text parts", async () => {
+  test("readLastTurn joins the latest assistant message's text parts", async () => {
     const requests = installFetch(({ url }) => {
+      if (
+        url.pathname === "/api/session/session-1/message" &&
+        url.searchParams.get("type") === "idle"
+      ) {
+        return jsonResponse({
+          data: [],
+          cursor: { previous: null, next: null },
+        });
+      }
       if (url.pathname === "/api/session/session-1/message") {
         return jsonResponse({
           data: [
@@ -243,12 +252,12 @@ describe("DefaultOpencodeStepRunner", () => {
       throw new Error(`Unexpected request: ${url.pathname}`);
     });
 
-    const text = await new DefaultOpencodeStepRunner().readLastAssistantText({
+    const turn = await new DefaultOpencodeStepRunner().readLastTurn({
       server: SERVER,
       sessionId: "session-1",
     });
 
-    expect(text).toBe("Which env?\nStaging or prod?");
+    expect(turn).toEqual({ text: "Which env?\nStaging or prod?" });
     expect(Object.fromEntries(requests[0]?.url.searchParams ?? [])).toEqual({
       type: "assistant",
       order: "desc",
@@ -256,16 +265,110 @@ describe("DefaultOpencodeStepRunner", () => {
     });
   });
 
-  test("readLastAssistantText is empty when the session has no assistant message", async () => {
+  test("readLastTurn reports the latest assistant message's error as the turn's error", async () => {
+    installFetch(({ url }) =>
+      jsonResponse({
+        data:
+          url.searchParams.get("type") === "assistant"
+            ? [
+                {
+                  ...assistantMessage(),
+                  error: {
+                    type: "provider.invalid-request",
+                    message:
+                      "model_not_found: The 'gpt-6-sol' model is not supported",
+                  },
+                },
+              ]
+            : [],
+        cursor: { previous: null, next: null },
+      }),
+    );
+
+    expect(
+      await new DefaultOpencodeStepRunner().readLastTurn({
+        server: SERVER,
+        sessionId: "session-1",
+      }),
+    ).toEqual({
+      text: "",
+      error:
+        "provider.invalid-request: model_not_found: The 'gpt-6-sol' model is not supported",
+    });
+  });
+
+  test("readLastTurn reports a failed idle marker as the turn's error when no assistant message exists", async () => {
+    installFetch(({ url }) =>
+      jsonResponse({
+        data:
+          url.searchParams.get("type") === "idle"
+            ? [
+                {
+                  id: "msg-idle",
+                  type: "idle",
+                  time: { created: 1 },
+                  outcome: "failed",
+                  error: {
+                    type: "agent.unknown",
+                    message: "No agent named build",
+                  },
+                },
+              ]
+            : [],
+        cursor: { previous: null, next: null },
+      }),
+    );
+
+    expect(
+      await new DefaultOpencodeStepRunner().readLastTurn({
+        server: SERVER,
+        sessionId: "session-1",
+      }),
+    ).toEqual({ text: "", error: "agent.unknown: No agent named build" });
+  });
+
+  test("readLastTurn does not treat an interrupted turn as failed", async () => {
+    installFetch(({ url }) =>
+      jsonResponse({
+        data:
+          url.searchParams.get("type") === "assistant"
+            ? [
+                {
+                  ...assistantMessage(),
+                  content: [{ type: "text", text: "Partway" }],
+                  error: { type: "aborted", message: "Step interrupted" },
+                },
+              ]
+            : [
+                {
+                  id: "msg-idle",
+                  type: "idle",
+                  time: { created: 1 },
+                  outcome: "interrupted",
+                },
+              ],
+        cursor: { previous: null, next: null },
+      }),
+    );
+
+    expect(
+      await new DefaultOpencodeStepRunner().readLastTurn({
+        server: SERVER,
+        sessionId: "session-1",
+      }),
+    ).toEqual({ text: "Partway" });
+  });
+
+  test("readLastTurn is empty when the session has no assistant message", async () => {
     installFetch(() =>
       jsonResponse({ data: [], cursor: { previous: null, next: null } }),
     );
 
     expect(
-      await new DefaultOpencodeStepRunner().readLastAssistantText({
+      await new DefaultOpencodeStepRunner().readLastTurn({
         server: SERVER,
         sessionId: "session-1",
       }),
-    ).toBe("");
+    ).toEqual({ text: "" });
   });
 });

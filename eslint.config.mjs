@@ -154,6 +154,14 @@ export default defineConfig(
     },
   },
   {
+    // preview-env is a CLI (`bun packages/preview-env/src/cli.ts`) whose
+    // console output is its interface, both locally and in CI logs.
+    files: ["packages/preview-env/src/**/*.ts"],
+    rules: {
+      "no-console": "off",
+    },
+  },
+  {
     // In packages/core, test location defines the boundary:
     // colocated src tests are unit-only, while top-level tests are infra-backed.
     files: ["packages/core/tests/**/integration/**/*.{ts,tsx}"],

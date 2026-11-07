@@ -6085,7 +6085,8 @@
                               "type": "string",
                               "enum": [
                                 "self",
-                                "children"
+                                "children",
+                                "project"
                               ]
                             }
                           },
@@ -7031,7 +7032,8 @@
                               "type": "string",
                               "enum": [
                                 "self",
-                                "children"
+                                "children",
+                                "project"
                               ]
                             }
                           },
@@ -7977,7 +7979,8 @@
                               "type": "string",
                               "enum": [
                                 "self",
-                                "children"
+                                "children",
+                                "project"
                               ]
                             }
                           },
@@ -8932,7 +8935,8 @@
                                 "type": "string",
                                 "enum": [
                                   "self",
-                                  "children"
+                                  "children",
+                                  "project"
                                 ]
                               }
                             },
@@ -10401,7 +10405,8 @@
                                   "type": "string",
                                   "enum": [
                                     "self",
-                                    "children"
+                                    "children",
+                                    "project"
                                   ]
                                 }
                               },
@@ -11651,7 +11656,8 @@
                               "type": "string",
                               "enum": [
                                 "self",
-                                "children"
+                                "children",
+                                "project"
                               ]
                             }
                           },
@@ -12597,7 +12603,8 @@
                               "type": "string",
                               "enum": [
                                 "self",
-                                "children"
+                                "children",
+                                "project"
                               ]
                             }
                           },
@@ -13543,7 +13550,8 @@
                               "type": "string",
                               "enum": [
                                 "self",
-                                "children"
+                                "children",
+                                "project"
                               ]
                             }
                           },
@@ -14498,7 +14506,8 @@
                                 "type": "string",
                                 "enum": [
                                   "self",
-                                  "children"
+                                  "children",
+                                  "project"
                                 ]
                               }
                             },
@@ -15831,7 +15840,8 @@
                                 "type": "string",
                                 "enum": [
                                   "self",
-                                  "children"
+                                  "children",
+                                  "project"
                                 ]
                               }
                             },
@@ -17164,7 +17174,8 @@
                                 "type": "string",
                                 "enum": [
                                   "self",
-                                  "children"
+                                  "children",
+                                  "project"
                                 ]
                               }
                             },
@@ -18711,7 +18722,8 @@
                                     "type": "string",
                                     "enum": [
                                       "self",
-                                      "children"
+                                      "children",
+                                      "project"
                                     ]
                                   }
                                 },
@@ -20303,7 +20315,8 @@
                                 "type": "string",
                                 "enum": [
                                   "self",
-                                  "children"
+                                  "children",
+                                  "project"
                                 ]
                               }
                             },
@@ -24704,7 +24717,8 @@
                                     "type": "string",
                                     "enum": [
                                       "self",
-                                      "children"
+                                      "children",
+                                      "project"
                                     ]
                                   }
                                 },

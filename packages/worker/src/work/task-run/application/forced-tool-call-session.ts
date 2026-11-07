@@ -14,6 +14,10 @@ import {
   opencodeLocation,
   type ScarnOpencodeClient,
 } from "../infra/opencode-client";
+import {
+  describeStructuredError,
+  sessionErrorOf,
+} from "../infra/opencode-session-error";
 import { logWorkError } from "./work-logger";
 import type { OpencodeServerHandle } from "../../../runtime/runtime-service/infra/opencode-server-contract";
 
@@ -52,10 +56,6 @@ export function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-export function describeStructuredError(error: SessionStructuredError): string {
-  return `${error.type}: ${error.message}`;
-}
-
 export function renderToolTextContent(
   content: ReadonlyArray<ToolContent> | undefined,
 ): string {
@@ -88,11 +88,8 @@ function findTool(
 }
 
 /**
- * Finds the first failure of the session turn itself: an assistant step that
- * errored, or an idle marker whose execution failed (e.g. an unknown agent,
- * which never produces an assistant message at all).
- *
- * `aborted` assistant errors and `interrupted` idle markers are ignored: the
+ * Finds the first failure of the session turn itself (see
+ * {@link sessionErrorOf}). Ignoring `aborted`/`interrupted` matters here: the
  * caller interrupts the session itself once its deadline passes, so reporting
  * that as the *cause* of the failure would be circular.
  */
@@ -100,21 +97,8 @@ function findSessionError(
   messages: SessionMessageInfo[],
 ): SessionStructuredError | undefined {
   for (const message of messages) {
-    if (
-      message.type === "assistant" &&
-      message.error &&
-      message.error.type !== "aborted"
-    ) {
-      return message.error;
-    }
-    if (message.type === "idle" && message.outcome === "failed") {
-      return (
-        message.error ?? {
-          type: "unknown",
-          message: "The session execution failed",
-        }
-      );
-    }
+    const error = sessionErrorOf(message);
+    if (error) return error;
   }
   return undefined;
 }

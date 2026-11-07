@@ -36,7 +36,7 @@ const GRANT_ACTIONS: readonly GrantAction[] = [
   "create",
 ];
 
-const GRANT_SCOPES: readonly GrantScope[] = ["self", "children"];
+const GRANT_SCOPES: readonly GrantScope[] = ["self", "children", "project"];
 
 // eslint-disable-next-line local/no-unknown-parameter-type -- a parser
 function parseLabels(value: unknown): string[] | null {
@@ -59,6 +59,12 @@ function parseGrant(value: unknown): Grant | null {
     knownAction === undefined ||
     knownScope === undefined
   ) {
+    return null;
+  }
+  if (knownAction === "read") {
+    return { resource, action: knownAction, scope: knownScope };
+  }
+  if (knownScope === "project") {
     return null;
   }
   if (knownAction === "create") {

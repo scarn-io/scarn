@@ -17,27 +17,38 @@ export const grantActionValues = [
   "close",
   "create",
 ] as const;
-export const grantScopeValues = ["self", "children"] as const;
+export const grantScopeValues = ["self", "children", "project"] as const;
 
 /** What a grant lets the agent do to a work item. */
 export type GrantAction = (typeof grantActionValues)[number];
-/** `self`: the Task's own work item. `children`: its child work items. */
+/**
+ * `self`: the Task's own work item. `children`: its child work items.
+ * `project`: any work item in the project (`read` only).
+ */
 export type GrantScope = (typeof grantScopeValues)[number];
+/** The scopes a grant that changes work items may cover. */
+export type ChangeGrantScope = Exclude<GrantScope, "project">;
 
 /**
  * One thing a step's Tasks may do to a work item. `label` and `create` name
- * the labels they may set; `create` only covers `children`.
+ * the labels they may set; `create` only covers `children`; only `read` may
+ * cover `project`.
  */
 export type Grant =
   | {
       resource: "workItem";
-      action: "read" | "update" | "comment" | "block" | "close";
+      action: "read";
       scope: GrantScope;
     }
   | {
       resource: "workItem";
+      action: "update" | "comment" | "block" | "close";
+      scope: ChangeGrantScope;
+    }
+  | {
+      resource: "workItem";
       action: "label";
-      scope: GrantScope;
+      scope: ChangeGrantScope;
       labels: string[];
     }
   | {
@@ -263,14 +274,21 @@ const WORK_ITEM_ACTION_TEXT: Record<GrantAction, string> = {
   create: "create",
 };
 
-const scopeText = (action: GrantAction, scope: GrantScope): string => {
-  if (action === "create") return "child work items of your work item";
-  return scope === "self" ? "your work item" : "its child work items";
+const SCOPE_TEXT: Record<GrantScope, string> = {
+  self: "your work item",
+  children: "its child work items",
+  project: "any work item in this project (pass its `workItemId`)",
 };
+
+const scopeText = (action: GrantAction, scope: GrantScope): string =>
+  action === "create"
+    ? "child work items of your work item"
+    : SCOPE_TEXT[scope];
 
 const scopeHeading: Record<GrantScope, string> = {
   self: "Your Work Item",
   children: "Child Work Items",
+  project: "Any Work Item in the Project",
 };
 
 const actionHeading: Record<GrantAction, string> = {
@@ -311,20 +329,21 @@ function workItemFeature<TGrant extends Grant>(
   return { _grant: grant, _promptAddition: workItemPrompt(grant) };
 }
 
-type ScopeOptions = { scope: GrantScope };
+type ScopeOptions = { scope: ChangeGrantScope };
 type LabelsOptions<TLabels extends readonly string[]> = {
-  scope: GrantScope;
+  scope: ChangeGrantScope;
   labels: TLabels;
 };
 
 /**
  * Work item grants. Each builder gives the step's Tasks one action on their
  * work item (`scope: "self"`) or its children (`scope: "children"`), and adds
- * a prompt section naming the tool to use. A step may attach at most one per
+ * a prompt section naming the tool to use. `read` may also cover every work
+ * item in the project (`scope: "project"`). A step may attach at most one per
  * action and scope.
  */
 const workItems = {
-  read: ({ scope }: ScopeOptions) =>
+  read: ({ scope }: { scope: GrantScope }) =>
     workItemFeature({ resource: "workItem", action: "read", scope } as const),
   update: ({ scope }: ScopeOptions) =>
     workItemFeature({ resource: "workItem", action: "update", scope } as const),
