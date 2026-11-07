@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "key": "human-attention-slack",
+  "title": "Human Attention → Slack (experimental)",
+  "start": {
+    "to": "assess-human-attention",
+    "args": {
+      "title": "workItem.title",
+      "description": "workItem.description"
+    }
+  },
+  "nodes": {
+    "assess-human-attention": {
+      "kind": "step",
+      "step": "assess-human-attention",
+      "next": {
+        "routes": [
+          {
+            "when": {
+              "path": "result.needsHumanAttention",
+              "op": "equal",
+              "value": true
+            },
+            "to": "notify-slack-human-attention",
+            "args": {
+              "summary": "result.summary"
+            }
+          }
+        ],
+        "otherwise": {
+          "to": "no-attention-needed"
+        }
+      }
+    },
+    "notify-slack-human-attention": {
+      "kind": "step",
+      "step": "notify-slack-human-attention",
+      "next": {
+        "routes": [
+          {
+            "to": "notified"
+          }
+        ]
+      }
+    },
+    "notified": {
+      "kind": "succeed"
+    },
+    "no-attention-needed": {
+      "kind": "succeed"
+    }
+  }
+}

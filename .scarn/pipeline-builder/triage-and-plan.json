@@ -1,0 +1,90 @@
+{
+  "schemaVersion": 1,
+  "key": "triage-and-plan",
+  "title": "Triage & Plan",
+  "start": {
+    "to": "triage",
+    "args": {
+      "title": "workItem.title"
+    }
+  },
+  "nodes": {
+    "triage": {
+      "kind": "step",
+      "step": "triage",
+      "next": {
+        "routes": [
+          {
+            "when": {
+              "path": "result.confidence",
+              "op": "lessThan",
+              "value": 7
+            },
+            "to": "review-triage",
+            "args": {
+              "triage": "result"
+            }
+          }
+        ],
+        "otherwise": {
+          "to": "write-fix-plan",
+          "args": {
+            "triageSummary": "result.summary"
+          }
+        }
+      }
+    },
+    "review-triage": {
+      "kind": "wait",
+      "for": "decision",
+      "actions": [
+        {
+          "key": "approve",
+          "label": "Approve",
+          "body": "optional"
+        },
+        {
+          "key": "reject",
+          "label": "Reject",
+          "body": "optional"
+        }
+      ],
+      "next": {
+        "routes": [
+          {
+            "when": {
+              "path": "result.action",
+              "op": "equal",
+              "value": "approve"
+            },
+            "to": "write-fix-plan",
+            "args": {
+              "triageSummary": "nodes.triage.result.summary"
+            }
+          }
+        ],
+        "otherwise": {
+          "to": "triage-rejected"
+        }
+      }
+    },
+    "write-fix-plan": {
+      "kind": "step",
+      "step": "write-fix-plan",
+      "next": {
+        "routes": [
+          {
+            "to": "done"
+          }
+        ]
+      }
+    },
+    "triage-rejected": {
+      "kind": "fail",
+      "error": "TriageRejected"
+    },
+    "done": {
+      "kind": "succeed"
+    }
+  }
+}

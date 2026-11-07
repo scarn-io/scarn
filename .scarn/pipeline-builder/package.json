@@ -1,0 +1,16 @@
+{
+  "name": "pipeline-builder",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@scarn/sdk": "0.8.5",
+    "zod": "^4.4.2"
+  },
+  "devDependencies": {
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0"
+  }
+}

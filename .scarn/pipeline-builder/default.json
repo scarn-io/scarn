@@ -1,0 +1,31 @@
+{
+  "kind": "automation",
+  "schemaVersion": 1,
+  "key": "default",
+  "title": "Default",
+  "scope": "project",
+  "rules": [
+    {
+      "event": "workItem.ready",
+      "next": {
+        "routes": [
+          {
+            "when": {
+              "path": "event.workItem.labels",
+              "op": "contains",
+              "value": "bug"
+            },
+            "kind": "pipeline",
+            "to": "bug-repro",
+            "on": "workItem"
+          }
+        ],
+        "otherwise": {
+          "kind": "pipeline",
+          "to": "triage-and-plan",
+          "on": "workItem"
+        }
+      }
+    }
+  ]
+}

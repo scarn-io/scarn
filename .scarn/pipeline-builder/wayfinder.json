@@ -1,0 +1,70 @@
+{
+  "kind": "automation",
+  "schemaVersion": 1,
+  "key": "wayfinder",
+  "title": "Wayfinder",
+  "scope": "workItem",
+  "rules": [
+    {
+      "event": "self.attached",
+      "next": {
+        "routes": [
+          {
+            "kind": "step",
+            "to": "plan",
+            "on": "workItem"
+          }
+        ]
+      }
+    },
+    {
+      "event": "child.ready",
+      "next": {
+        "routes": [
+          {
+            "when": {
+              "path": "event.child.labels",
+              "op": "contains",
+              "value": "wayfinder:research"
+            },
+            "kind": "step",
+            "to": "research",
+            "on": "child"
+          },
+          {
+            "when": {
+              "path": "event.child.labels",
+              "op": "contains",
+              "value": "wayfinder:prototype"
+            },
+            "kind": "step",
+            "to": "prototype",
+            "on": "child"
+          },
+          {
+            "when": {
+              "path": "event.child.labels",
+              "op": "contains",
+              "value": "wayfinder:grilling"
+            },
+            "kind": "step",
+            "to": "grilling",
+            "on": "child"
+          }
+        ]
+      }
+    },
+    {
+      "event": "child.closed",
+      "next": {
+        "routes": [
+          {
+            "kind": "step",
+            "to": "plan",
+            "on": "workItem"
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,105 @@
+{
+  "schemaVersion": 1,
+  "key": "bug-repro",
+  "title": "Bug Repro",
+  "start": {
+    "to": "reproduce-in-browser",
+    "args": {
+      "appUrl": {
+        "value": "http://localhost:3000"
+      }
+    }
+  },
+  "nodes": {
+    "reproduce-in-browser": {
+      "kind": "step",
+      "step": "reproduce-in-browser",
+      "next": {
+        "routes": [
+          {
+            "when": {
+              "all": [
+                {
+                  "path": "result.reproduced",
+                  "op": "equal",
+                  "value": true
+                },
+                {
+                  "path": "result.confidence",
+                  "op": "greaterThanInclusive",
+                  "value": 0.8
+                }
+              ]
+            },
+            "to": "write-failing-integration-test",
+            "args": {
+              "observedBehavior": "result.observedBehavior",
+              "expectedBehavior": "result.expectedBehavior",
+              "setupNotes": "result.setupNotes"
+            }
+          }
+        ],
+        "otherwise": {
+          "to": "review-reproduction",
+          "args": {
+            "reproduction": "result"
+          }
+        }
+      }
+    },
+    "write-failing-integration-test": {
+      "kind": "step",
+      "step": "write-failing-integration-test",
+      "next": {
+        "routes": [
+          {
+            "to": "done"
+          }
+        ]
+      }
+    },
+    "review-reproduction": {
+      "kind": "wait",
+      "for": "decision",
+      "actions": [
+        {
+          "key": "approve",
+          "label": "Approve",
+          "body": "optional"
+        },
+        {
+          "key": "reject",
+          "label": "Reject",
+          "body": "optional"
+        }
+      ],
+      "next": {
+        "routes": [
+          {
+            "when": {
+              "path": "result.action",
+              "op": "equal",
+              "value": "approve"
+            },
+            "to": "write-failing-integration-test",
+            "args": {
+              "observedBehavior": "nodes.reproduce-in-browser.result.observedBehavior",
+              "expectedBehavior": "nodes.reproduce-in-browser.result.expectedBehavior",
+              "setupNotes": "nodes.reproduce-in-browser.result.setupNotes"
+            }
+          }
+        ],
+        "otherwise": {
+          "to": "not-reproduced"
+        }
+      }
+    },
+    "not-reproduced": {
+      "kind": "fail",
+      "error": "NotReproduced"
+    },
+    "done": {
+      "kind": "succeed"
+    }
+  }
+}

@@ -1,0 +1,218 @@
+// Created from the "wayfinder" pipeline template (scarn 0.0.0).
+import {
+  defineStep,
+  Features,
+  Repo,
+  Runtime,
+  z,
+} from "@scarn/sdk/definitions/steps";
+import { contains } from "@scarn/sdk/pipelines";
+import { defineAutomation, onEvent } from "@scarn/sdk/automations";
+
+// Wayfinder: a planner that turns a fuzzy goal into a map on its work item.
+// Attach the automation to a work item and it runs on its own:
+//
+//   self.attached → plan
+//   child.ready   → research | prototype | grilling, by the child's label
+//   child.closed  → plan (a fresh round)
+//
+// `plan` charts the map and creates child work items labelled
+// `wayfinder:research`, `wayfinder:prototype`, `wayfinder:grilling` or
+// `wayfinder:task`. The automation starts the matching step when a child
+// becomes ready; a `task` child matches no route and waits for a person.
+// `WAYFINDER_LABELS` is both what `plan` may create and what the routes match.
+
+const WAYFINDER_LABELS = [
+  "wayfinder:research",
+  "wayfinder:prototype",
+  "wayfinder:grilling",
+  "wayfinder:task",
+] as const;
+const [RESEARCH_LABEL, PROTOTYPE_LABEL, GRILLING_LABEL] = WAYFINDER_LABELS;
+
+const PLANNING_GUIDANCE = "";
+
+const findings = z.looseObject({
+  summary: z.string().min(1),
+  evidence: z.array(z.string()).optional(),
+  openQuestions: z.array(z.string()).optional(),
+});
+
+export const plan = defineStep({
+  key: "plan",
+  name: "Wayfinder Plan",
+  description:
+    "Charts the map on its work item: folds closed child work items into it, creates the next ones, and closes the map once the way is found.",
+  status: "active",
+  environment: { runtime: Runtime.managed.bun1(), repo: Repo.readOnly() },
+  features: [
+    Features.workItems.read({ scope: "self" }),
+    Features.workItems.update({ scope: "self" }),
+    Features.workItems.create({ scope: "children", labels: WAYFINDER_LABELS }),
+    Features.workItems.close({ scope: "self" }),
+  ],
+  maxTurns: 30,
+  concurrency: { max: 1, waiting: 1 },
+
+  agentPrompt: `\
+You are the wayfinder planner. Your work item is a map: a goal that isn't clear enough to build yet. Each round is one fresh Task that reads the map, does one thing, and ends. A new round starts whenever a child work item closes, so you never wait for anything.
+
+## The map
+Your work item's description is the map. Keep it in this shape, replacing it whole with \`scarn-set-work-item-description\`:
+
+- **Goal**: one or two sentences.
+- **Notes**: context that matters. Keep the original request here the first time you write the map.
+- **Decisions so far**: each settled question as \`[title](url)\` of the child work item that settled it, plus a one-line gist of the answer.
+- **Not yet specified**: the fog. Open questions nobody is working on yet.
+- **Out of scope**: what the goal deliberately leaves out.
+- **Plan**: once nothing is left unspecified, the steps to build it, in order.
+
+## Child work items
+Each child work item asks one question, and its one \`wayfinder:<type>\` label (listed under the allowed labels below) says how it gets answered. When it becomes ready (open, nothing open blocking it), the map's automation starts the matching step on it:
+
+- **research**: an agent reads the code, docs or the web to answer a factual question.
+- **prototype**: an agent builds a quick, throwaway spike to see whether an approach works.
+- **grilling**: an agent asks a person, round by round, to settle a decision only they can make.
+- **task**: nothing starts; a person does it by hand and closes it.
+
+Create each one with \`scarn-create-work-item\`: a short title, a description that states the one question and what a good answer looks like, exactly one \`wayfinder:<type>\` label in \`labels\`, and \`blockedBy\` with the children whose answers it needs first. The child exists as soon as the tool returns, and stays even if the round fails later. \`blockedBy\` can only name children that already exist, so create blockers first, one at a time when one depends on another. Link each child on the map as \`[title](url)\` with the url the tool returns, straight away. Prefer research before prototypes, and grilling only when the answer is a judgment call.
+
+Use \`wayfinder:task\` only for work a person must do before a decision can be made, such as signing up for a service, provisioning access or moving data. Use \`wayfinder:research\` whenever an agent could do it. Write a \`task\` description as instructions for a person, in three parts:
+- **Why**: the decision this unblocks.
+- **Steps**: a checklist of what to do.
+- **Record when you close**: the facts later rounds need, such as where a credential is kept, a new URL or a row count. Say where secrets are kept, never the secrets themselves.
+Set no assignee.
+
+## Each round
+1. Read the map and its children live once, with \`scarn-get-work-item\` on your work item.
+2. Fold every closed child that isn't in **Decisions so far** yet into it, as \`[title](url)\` plus a one-line gist of its resolution. You aren't told which close started this round, so check them all. If a closed \`task\` child has no resolution, look for the facts in its comments. If they're missing, note the gap on the map and create a follow-up child for it.
+3. Then do exactly one of these:
+   - **Chart:** for fog that's now sharp enough to ask as one precise question, create the children (each with its label and blockers) and, in the same description write, move what you charted out of **Not yet specified**. Create at most 10 per round, counting any an earlier attempt of this round created, and only what's sharp now.
+   - **Wait:** if open children remain and nothing is newly sharp, create nothing and change nothing beyond what step 2 folded in.
+   - **Finish:** if no children are open and nothing is left in **Not yet specified**, write the **Plan** section and close the map with \`scarn-close-work-item\` (\`reason: "completed"\`, with a one-line resolution).
+4. Never create a child whose question is already an open child or already in **Decisions so far**. That includes a child a failed round left behind that isn't on the map yet: check the children you read in step 1, and link it on the map instead.
+5. If you're stuck, with no open children and fog you can't state precisely, create a \`wayfinder:grilling\` child asking a person to sharpen it. Don't close the map, and don't ask in this conversation.
+6. If a description write is refused because the map changed since you read it, read it again with \`scarn-get-work-item\` and redo the round from step 2.
+7. End the round: call \`scarn-end-conversation\` and end your turn with a one-line summary of what you did.
+
+If the goal turns out to be out of scope or already done, close the map with \`out_of_scope\` or \`superseded\` and say why.
+
+${PLANNING_GUIDANCE}
+`,
+});
+
+export const research = defineStep({
+  key: "research",
+  name: "Wayfinder Research",
+  description: "Answers one question on the map with evidence.",
+  status: "active",
+  environment: { runtime: Runtime.managed.bun1(), repo: Repo.readOnly() },
+  features: [
+    Features.workItems.update({ scope: "self" }),
+    Features.workItems.comment({ scope: "self" }),
+    Features.workItems.close({ scope: "self" }),
+  ],
+  retry: [{ on: ["Scarn.All"], maxAttempts: 1 }],
+  concurrency: { max: 1, waiting: 0 },
+
+  agentPrompt: `\
+You are a wayfinder researcher. Your work item is a child work item on a planner's map, labelled \`wayfinder:research\`: it asks one question. Answer it with evidence.
+
+1. Read your work item with \`scarn-get-work-item\`. Its description states the question and what a good answer looks like.
+2. Investigate: read the repository (it is checked out read-only), its docs and, when it helps, primary sources on the web. Don't change any files.
+3. Comment your findings on your work item with \`scarn-comment-on-work-item\`: the answer, the evidence (file paths, links, quotes) and anything surprising.
+4. Close your work item with \`scarn-close-work-item\` (\`reason: "completed"\`). The resolution is what the planner reads first, so make it the answer in one or two sentences.
+5. Submit your findings with \`scarn-submit-step-findings\`.
+
+If the question can't be answered, still close your work item as completed and say what you found and what is missing.
+`,
+
+  result: findings,
+});
+
+export const prototype = defineStep({
+  key: "prototype",
+  name: "Wayfinder Prototype",
+  description:
+    "Builds a throwaway spike to find out whether an approach works.",
+  status: "active",
+  environment: {
+    runtime: Runtime.devcontainer(),
+    repo: Repo.readWrite({
+      message: "wayfinder prototype: {{workItem.title}}",
+      onPushFailure: "warn",
+    }),
+  },
+  features: [
+    Features.workItems.update({ scope: "self" }),
+    Features.workItems.comment({ scope: "self" }),
+    Features.workItems.close({ scope: "self" }),
+  ],
+  concurrency: { max: 1, waiting: 0 },
+
+  agentPrompt: `\
+You are a wayfinder prototyper. Your work item is a child work item on a planner's map, labelled \`wayfinder:prototype\`: it asks whether an approach works. Find out by building the smallest throwaway spike that answers it.
+
+1. Read your work item with \`scarn-get-work-item\`. Its description states the question and what a good answer looks like.
+2. Build the spike in the repository. Optimize for learning, not polish: hard-code, skip tests and cut corners that don't affect the answer. Your changes are committed to a work branch of their own, never merged.
+3. Run it, and note what worked, what didn't and what surprised you.
+4. Comment your findings on your work item with \`scarn-comment-on-work-item\`: the verdict, how you tested it, the key files and the work branch.
+5. Close your work item with \`scarn-close-work-item\` (\`reason: "completed"\`). The resolution is what the planner reads first, so make it the verdict in one or two sentences.
+6. Submit your findings with \`scarn-submit-step-findings\`.
+`,
+
+  result: findings,
+});
+
+export const grilling = defineStep({
+  key: "grilling",
+  name: "Wayfinder Grilling",
+  description: "Settles a decision with a person, round by round.",
+  status: "active",
+  environment: { runtime: Runtime.managed.bun1(), repo: Repo.readOnly() },
+  features: [
+    Features.workItems.update({ scope: "self" }),
+    Features.workItems.comment({ scope: "self" }),
+    Features.workItems.close({ scope: "self" }),
+  ],
+  concurrency: { max: 1, waiting: 0 },
+
+  agentPrompt: `\
+You are a wayfinder griller. Your work item is a child work item on a planner's map, labelled \`wayfinder:grilling\`: a decision only a person can make. Grill them until the decision is settled and you both understand it the same way.
+
+1. Read your work item with \`scarn-get-work-item\`. Its description states the decision and what the planner needs to know.
+2. Work in rounds. Each round, ask the open questions as a numbered list, each with your recommended answer and why, then end your turn. Your final message goes to the person, and you continue in this conversation when they reply. If they ask you something instead of answering, explain, then end your turn again.
+3. Follow each answer down: ask what it implies, and stop when nothing the planner needs is left open.
+4. End one more turn with a short summary of every decision and ask them to confirm it.
+5. Once they confirm, comment the decisions on your work item with \`scarn-comment-on-work-item\`, close it with \`scarn-close-work-item\` (\`reason: "completed"\`, with the resolution summarizing the decisions), call \`scarn-end-conversation\` and end your turn with a short thank-you.
+
+If you are told you can't hand back again, record what's settled and what's still open the same way, and close your work item.
+`,
+});
+
+export default defineAutomation({
+  key: "wayfinder",
+  title: "Wayfinder",
+  scope: "workItem",
+  rules: [
+    onEvent({ event: "self.attached", to: (r) => plan().on(r.workItem) }),
+    onEvent({
+      event: "child.ready",
+      routes: [
+        {
+          when: (r) => contains(r.child.labels, RESEARCH_LABEL),
+          to: (r) => research().on(r.child),
+        },
+        {
+          when: (r) => contains(r.child.labels, PROTOTYPE_LABEL),
+          to: (r) => prototype().on(r.child),
+        },
+        {
+          when: (r) => contains(r.child.labels, GRILLING_LABEL),
+          to: (r) => grilling().on(r.child),
+        },
+      ],
+    }),
+    onEvent({ event: "child.closed", to: (r) => plan().on(r.workItem) }),
+  ],
+});

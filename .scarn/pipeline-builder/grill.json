@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "key": "grill",
+  "title": "Grill",
+  "start": {
+    "to": "grill",
+    "args": {
+      "topic": "workItem.title"
+    }
+  },
+  "nodes": {
+    "grill": {
+      "kind": "step",
+      "step": "grill",
+      "maxTurns": 20,
+      "next": {
+        "routes": [
+          {
+            "to": "done"
+          }
+        ]
+      }
+    },
+    "done": {
+      "kind": "succeed"
+    }
+  }
+}
