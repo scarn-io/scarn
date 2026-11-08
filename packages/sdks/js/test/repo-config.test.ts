@@ -19,6 +19,9 @@ describe("repoConfigInputSchema", () => {
     [{ mode: "readWrite", message: "fix: {{result.summary}}" }],
     [{ mode: "readWrite", onPushFailure: "warn" }],
     [{ mode: "readWrite", message: "{{input.title}}", onPushFailure: "fail" }],
+    [{ mode: "readOnly", gitCredentials: "none" }],
+    [{ mode: "readOnly", gitCredentials: "auto" }],
+    [{ mode: "readWrite", gitCredentials: "none" }],
   ])("accepts %j", (input) => {
     expect(repoConfigInputSchema.safeParse(input).success).toBe(true);
   });
@@ -33,6 +36,9 @@ describe("repoConfigInputSchema", () => {
     [{ mode: "readWrite", onPushFailure: "ignore" }, "unknown onPushFailure"],
     [{ mode: "readWrite", message: 3 }, "non-string message"],
     [{ mode: "readWrite", extra: true }, "unknown key"],
+    [{ mode: "none", gitCredentials: "none" }, "gitCredentials on none"],
+    [{ mode: "none", gitCredentials: "auto" }, "gitCredentials auto on none"],
+    [{ mode: "readOnly", gitCredentials: "write" }, "unknown gitCredentials"],
   ])("rejects %j (%s)", (input) => {
     expect(repoConfigInputSchema.safeParse(input).success).toBe(false);
   });
@@ -40,9 +46,20 @@ describe("repoConfigInputSchema", () => {
   test("a resolved RepoConfig is a valid input", () => {
     const resolved: RepoConfig[] = [
       { mode: "none" },
-      { mode: "readOnly" },
-      { mode: "readWrite", message: null, onPushFailure: "fail" },
-      { mode: "readWrite", message: "x {{input.a}}", onPushFailure: "warn" },
+      { mode: "readOnly", gitCredentials: "auto" },
+      { mode: "readOnly", gitCredentials: "none" },
+      {
+        mode: "readWrite",
+        message: null,
+        onPushFailure: "fail",
+        gitCredentials: "auto",
+      },
+      {
+        mode: "readWrite",
+        message: "x {{input.a}}",
+        onPushFailure: "warn",
+        gitCredentials: "none",
+      },
     ];
     for (const config of resolved) {
       expect(repoConfigInputSchema.safeParse(config).success).toBe(true);
@@ -54,24 +71,58 @@ describe("repoConfigSchema", () => {
   test("accepts every resolved shape", () => {
     for (const config of [
       { mode: "none" },
-      { mode: "readOnly" },
-      { mode: "readWrite", message: null, onPushFailure: "fail" },
-      { mode: "readWrite", message: "m", onPushFailure: "warn" },
+      { mode: "readOnly", gitCredentials: "auto" },
+      {
+        mode: "readWrite",
+        message: null,
+        onPushFailure: "fail",
+        gitCredentials: "auto",
+      },
+      {
+        mode: "readWrite",
+        message: "m",
+        onPushFailure: "warn",
+        gitCredentials: "none",
+      },
     ]) {
       expect(repoConfigSchema.safeParse(config).success).toBe(true);
     }
   });
 
-  test("requires message and onPushFailure on readWrite", () => {
+  test("requires message, onPushFailure and gitCredentials on readWrite", () => {
     expect(repoConfigSchema.safeParse({ mode: "readWrite" }).success).toBe(
       false,
     );
     expect(
-      repoConfigSchema.safeParse({ mode: "readWrite", onPushFailure: "fail" })
-        .success,
+      repoConfigSchema.safeParse({
+        mode: "readWrite",
+        onPushFailure: "fail",
+        gitCredentials: "auto",
+      }).success,
     ).toBe(false);
     expect(
-      repoConfigSchema.safeParse({ mode: "readWrite", message: null }).success,
+      repoConfigSchema.safeParse({
+        mode: "readWrite",
+        message: null,
+        gitCredentials: "auto",
+      }).success,
+    ).toBe(false);
+    expect(
+      repoConfigSchema.safeParse({
+        mode: "readWrite",
+        message: null,
+        onPushFailure: "fail",
+      }).success,
+    ).toBe(false);
+  });
+
+  test("requires gitCredentials on readOnly and rejects it on none", () => {
+    expect(repoConfigSchema.safeParse({ mode: "readOnly" }).success).toBe(
+      false,
+    );
+    expect(
+      repoConfigSchema.safeParse({ mode: "none", gitCredentials: "auto" })
+        .success,
     ).toBe(false);
   });
 
@@ -81,6 +132,7 @@ describe("repoConfigSchema", () => {
         mode: "readWrite",
         message: "{{env.TOKEN}}",
         onPushFailure: "fail",
+        gitCredentials: "auto",
       }).success,
     ).toBe(false);
   });
@@ -195,6 +247,7 @@ describe("resolveRepoConfig", () => {
       mode: "readWrite",
       message: null,
       onPushFailure: "fail",
+      gitCredentials: "auto",
     });
   });
 
@@ -210,30 +263,59 @@ describe("resolveRepoConfig", () => {
     );
   });
 
-  test("readWrite fills an omitted message and onPushFailure", () => {
+  test("readWrite fills an omitted message, onPushFailure and gitCredentials", () => {
     expect(resolveRepoConfig("workspace", { mode: "readWrite" })).toEqual({
       mode: "readWrite",
       message: null,
       onPushFailure: "fail",
+      gitCredentials: "auto",
     });
   });
 
   test("readWrite fills only the omitted field", () => {
     expect(
       resolveRepoConfig("workspace", { mode: "readWrite", message: "m" }),
-    ).toEqual({ mode: "readWrite", message: "m", onPushFailure: "fail" });
+    ).toEqual({
+      mode: "readWrite",
+      message: "m",
+      onPushFailure: "fail",
+      gitCredentials: "auto",
+    });
     expect(
       resolveRepoConfig("workspace", {
         mode: "readWrite",
         onPushFailure: "warn",
       }),
-    ).toEqual({ mode: "readWrite", message: null, onPushFailure: "warn" });
+    ).toEqual({
+      mode: "readWrite",
+      message: null,
+      onPushFailure: "warn",
+      gitCredentials: "auto",
+    });
+    expect(
+      resolveRepoConfig("workspace", {
+        mode: "readWrite",
+        gitCredentials: "none",
+      }),
+    ).toEqual({
+      mode: "readWrite",
+      message: null,
+      onPushFailure: "fail",
+      gitCredentials: "none",
+    });
   });
 
-  test("readOnly and none pass through", () => {
+  test("readOnly fills gitCredentials and none passes through", () => {
     expect(resolveRepoConfig("workspace", { mode: "readOnly" })).toEqual({
       mode: "readOnly",
+      gitCredentials: "auto",
     });
+    expect(
+      resolveRepoConfig("workspace", {
+        mode: "readOnly",
+        gitCredentials: "none",
+      }),
+    ).toEqual({ mode: "readOnly", gitCredentials: "none" });
     expect(resolveRepoConfig("no_workspace", { mode: "none" })).toEqual({
       mode: "none",
     });
@@ -244,6 +326,7 @@ describe("resolveRepoConfig", () => {
       mode: "readWrite",
       message: "{{result.summary}}",
       onPushFailure: "warn",
+      gitCredentials: "none",
     });
     expect(resolveRepoConfig("workspace", resolved)).toEqual(resolved);
   });
@@ -252,7 +335,9 @@ describe("resolveRepoConfig", () => {
     for (const [executionMode, input] of [
       ["workspace", undefined],
       ["workspace", { mode: "readOnly" }],
+      ["workspace", { mode: "readOnly", gitCredentials: "none" }],
       ["workspace", { mode: "readWrite", message: "m" }],
+      ["workspace", { mode: "readWrite", gitCredentials: "none" }],
       ["no_workspace", undefined],
       ["no_workspace", { mode: "none" }],
     ] as const) {

@@ -671,6 +671,15 @@ The read-only database is at ${env.READONLY_DB_URL}.
     lets a failed push be logged instead of failing the step. A message may
     use `input` and `result`, so it is a function:
     `repo: ({ result }) => Repo.readWrite({ message: \`fix: ${result.summary}\` })`.
+    By default (`gitCredentials: "auto"`), if the worker has git credentials
+    on, git inside the container gets the worker machine's git credentials
+    for the repo's host, so private submodules in `postCreateCommand` and
+    private git dependencies just work. That credential may be able to push,
+    and the agent can read it; `git push` from the container is blocked only
+    as a guardrail. For a step that fetches no other private repos and
+    shouldn't see the credential, write
+    `Repo.readOnly({ gitCredentials: "none" })` or
+    `Repo.readWrite({ gitCredentials: "none" })`.
     `Runtime.host()` has no clone, so it takes only `Repo.none()`, which is its
     default and never needs writing. Omit `repo` unless a step needs one of these.
 - **Repo config first, step config second.** A step already runs with the

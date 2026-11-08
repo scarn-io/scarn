@@ -17,6 +17,7 @@ import { buildFakeAiProviderOverride, FakeAiServer } from "../infra/fake-ai";
 import {
   buildDryRunNoWorkspaceOrchestrator,
   buildDryRunWorkspaceOrchestrator,
+  DRY_RUN_CLAIM_TOKEN,
 } from "./run-work-dry-run-orchestrators";
 import type { McpHandshakeReport } from "./run-work-dry-run-health-checks";
 import { runInDryRunEnvironment } from "./dry-run-environment";
@@ -109,7 +110,10 @@ export type StepDefinitionForDryRun = {
 };
 
 /** A global-only dry run has no step, so it commits nothing: read-only. */
-const DRY_RUN_GLOBAL_REPO: RepoConfig = { mode: "readOnly" };
+const DRY_RUN_GLOBAL_REPO: RepoConfig = {
+  mode: "readOnly",
+  gitCredentials: "none",
+};
 
 export function buildAuthHeaders(accessToken: string) {
   return { Authorization: `Bearer ${accessToken}` };
@@ -284,6 +288,7 @@ export async function runWorkDryRun(
         projectId,
         requestedByUserId,
         gitUrl,
+        claimToken: DRY_RUN_CLAIM_TOKEN,
         baseWorkBranch: null,
         sourceBranch: options.sourceBranch ?? null,
         // No stepKey: skips work-branch creation, so a dry run never pushes or

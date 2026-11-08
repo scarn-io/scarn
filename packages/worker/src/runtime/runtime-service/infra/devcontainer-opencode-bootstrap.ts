@@ -12,7 +12,10 @@ import {
   logWorkDebug,
   logWorkError,
 } from "../../../work/task-run/application/work-logger";
-import type { DevcontainerBindMount } from "./devcontainer-mount-injection";
+import {
+  HOST_GATEWAY_RUN_ARGS,
+  type DevcontainerBindMount,
+} from "./devcontainer-mount-injection";
 import { buildDockerEnvFlags } from "./docker-env-flags";
 import { execDockerWithStdin, shQuote } from "./docker-exec-with-stdin";
 import {
@@ -107,17 +110,6 @@ export const CONTAINER_PROVIDER_DIR = "/opt/scarn/provider";
 export const CONTAINER_NPM_CACHE_DIR = "/tmp/scarn-npm-cache";
 /** Port OpenCode binds inside the container; published to a host loopback port. */
 export const CONTAINER_OPENCODE_PORT = 4096;
-
-/**
- * `docker run` args injected into the devcontainer so the in-container OpenCode
- * can reach the host over `host.docker.internal`. Docker Desktop (macOS/Windows)
- * provides this alias natively; on Linux it must be added explicitly via the
- * host-gateway alias.
- */
-const HOST_GATEWAY_RUN_ARGS = [
-  "--add-host",
-  "host.docker.internal:host-gateway",
-];
 
 /** Where the in-container opencode process writes its boot log. */
 const AGENT_LOG_DIR = `${CONTAINER_AGENT_HOME}/.scarn-log`;

@@ -53,6 +53,10 @@ import type {
   ProvisionedWorkspace,
   WorkspaceManager,
 } from "../../../../../src/runtime/runtime-service/application/workspace-manager";
+import type {
+  GitCredentialRelaySession,
+  OpenGitCredentialRelaySessionInput,
+} from "../../../../../src/runtime/git-credentials/infra";
 import {
   PROVIDER_ACCESS_ENV_VARS,
   type EnvSource,
@@ -306,6 +310,41 @@ export class FakeOpencodeBootstrap extends DevcontainerOpencodeBootstrap {
   }
 }
 
+/**
+ * Recording git credential relay opener. Never listens; `stop` is recorded so
+ * tests can assert the session is torn down.
+ */
+export class FakeGitCredentialRelayOpener {
+  openInputs: OpenGitCredentialRelaySessionInput[] = [];
+  stopCalls = 0;
+  constructor(
+    private readonly log: CallLog,
+    private readonly session: Omit<GitCredentialRelaySession, "stop"> = {
+      mount: {
+        source: "/host/git-credential",
+        target: "/opt/scarn/git-credential",
+        readOnly: true,
+      },
+      containerEnv: { GIT_CONFIG_COUNT: "1" },
+      runArgs: ["--add-host=host.docker.internal:host-gateway"],
+    },
+  ) {}
+  readonly open = (
+    input: OpenGitCredentialRelaySessionInput,
+  ): Promise<GitCredentialRelaySession> => {
+    this.log.push("openGitCredentialRelay");
+    this.openInputs.push(input);
+    return Promise.resolve({
+      ...this.session,
+      stop: () => {
+        this.log.push("stopGitCredentialRelay");
+        this.stopCalls += 1;
+        return Promise.resolve();
+      },
+    });
+  };
+}
+
 export type OrchestratorFakeDeps = {
   workspaceManager: FakeWorkspaceManager;
   gitCloneService: FakeGitCloneService;
@@ -317,6 +356,8 @@ export type OrchestratorFakeDeps = {
   providerAccessResolver: DirectProviderAccessResolver;
   runtimeConfigMaterializer: SessionRuntimeConfigMaterializer;
   loadCredentials: OpencodeCredentialLoader;
+  openGitCredentialRelaySession: FakeGitCredentialRelayOpener["open"];
+  gitCredentialRelay: FakeGitCredentialRelayOpener;
 };
 
 /** A fixed credential the fake loader returns, so masking can be asserted. */
@@ -339,6 +380,7 @@ export function buildOrchestratorFakeDeps(input: {
     [PROVIDER_ACCESS_ENV_VARS.tokenEnv]: "SCARN_TEST_TOKEN",
     SCARN_TEST_TOKEN: "secret-token",
   });
+  const gitCredentialRelay = new FakeGitCredentialRelayOpener(input.log);
   return {
     workspaceManager: new FakeWorkspaceManager(input.workspacePath, input.log),
     gitCloneService: new FakeGitCloneService(input.log),
@@ -357,6 +399,8 @@ export function buildOrchestratorFakeDeps(input: {
       env: providerEnv,
     }),
     loadCredentials: () => Promise.resolve([FAKE_CREDENTIAL]),
+    openGitCredentialRelaySession: gitCredentialRelay.open,
+    gitCredentialRelay,
   };
 }
 
@@ -364,6 +408,7 @@ export const DEFAULT_WORKSPACE_REPO: RepoConfig = {
   mode: "readWrite",
   message: null,
   onPushFailure: "fail",
+  gitCredentials: "none",
 };
 
 /** A representative `workspace`-mode launch input. */
@@ -375,10 +420,21 @@ export function buildLaunchInput() {
     projectId: createUuidV7(),
     requestedByUserId: createUuidV7(),
     gitUrl: "https://example.com/repo.git",
+    claimToken: "fake-claim-token",
     currentExecutionInfo: {
       taskRunId: createUuidV7(),
       resultSchemaJson: null,
       turnsRemaining: null,
     },
   };
+}
+
+/** Awaits `promise` and returns what it rejected with; fails if it resolved. */
+export async function rejectionOf(promise: Promise<unknown>): Promise<unknown> {
+  try {
+    await promise;
+  } catch (error) {
+    return error;
+  }
+  throw new Error("expected the promise to reject");
 }

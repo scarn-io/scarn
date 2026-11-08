@@ -179,12 +179,13 @@ describe("composed prompt size", () => {
   // states, signals and advancement policies, plus push/build/publish)
   // brought it down to ~92,900, and replacing `approval` with `decision`
   // (actions, body, a revise loop in §4, and the template's actions) took it
-  // to ~96,000 — the lower bound is set just under the current value so any
-  // further growth is a deliberate decision rather than a drift.
+  // to ~96,000, and documenting `gitCredentials` on `Repo` took it to ~98,500
+  // — the lower bound is set just under the current value so any further
+  // growth is a deliberate decision rather than a drift.
   test("stays within the expected envelope", () => {
     const length = buildPipelineDesignerPrompt().length;
-    expect(length).toBeGreaterThan(95_500);
-    expect(length).toBeLessThan(98_000);
+    expect(length).toBeGreaterThan(98_000);
+    expect(length).toBeLessThan(100_500);
   });
 
   test("survives a round trip through the injected TUI config", () => {

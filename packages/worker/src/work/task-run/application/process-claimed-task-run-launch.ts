@@ -72,6 +72,8 @@ export async function launchRuntimeEnvironment(
     startAgent: boolean;
     /** The run's claim token; the agent's live work item reads carry it. */
     claimToken: string;
+    /** See `TaskRuntimeEnvironmentOrchestrator.launch`'s field of the same name. */
+    onSecretValues?: ((values: readonly string[]) => void) | undefined;
     localRuntimeSessionId: UuidV7;
     workerContext: Awaited<ReturnType<typeof fetchWorkerContext>>;
     requestedByUserId: UuidV7;
@@ -117,6 +119,8 @@ export async function launchRuntimeEnvironment(
     projectId: parseUuidV7(input.workerContext.projectId),
     requestedByUserId: input.requestedByUserId,
     gitUrl: input.workerContext.gitUrl,
+    claimToken: input.claimToken,
+    onSecretValues: input.onSecretValues,
     baseWorkBranch: resolveBaseWorkBranch(input.workerContext.baseWorkBranch),
     sourceBranch: input.sourceBranch,
     stepKey: input.workerContext.task.key,

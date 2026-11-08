@@ -49,6 +49,7 @@ import {
   buildLocalProjectRuntimeDeps,
   type LocalProjectRuntimeEnvironmentDeps,
 } from "./local-project-runtime-environment-deps";
+import { prepareGitCredentialRelay } from "./local-project-git-credentials";
 
 export type LocalProjectRuntimeEnvironment = TaskRuntimeEnvironment;
 
@@ -96,6 +97,8 @@ export class DefaultLocalProjectRuntimeEnvironmentOrchestrator implements LocalP
     projectId: UuidV7;
     requestedByUserId: UuidV7;
     gitUrl: string;
+    claimToken: string;
+    onSecretValues?: ((values: readonly string[]) => void) | undefined;
     /**
      * The branch a later step must be created off of, handed down by the server
      * (the predecessor step's work branch). Takes precedence over any repo-local
@@ -177,6 +180,7 @@ export class DefaultLocalProjectRuntimeEnvironmentOrchestrator implements LocalP
     let workspacePath: string | null = null;
     let devcontainerId: string | null = null;
     let agent: AgentRuntime | null = null;
+    let gitCredentialRelay: { stop(): Promise<void> } | null = null;
 
     try {
       logWork("runtime", "Creating local runtime environment", {
@@ -311,6 +315,21 @@ export class DefaultLocalProjectRuntimeEnvironmentOrchestrator implements LocalP
           sessionId: input.sessionId,
         });
       }
+
+      gitCredentialRelay = await prepareGitCredentialRelay({
+        deps: this.deps,
+        repo: input.repo,
+        sessionId: input.sessionId,
+        runContext: {
+          taskRunId,
+          claimToken: input.claimToken,
+          repoGitUrl: input.gitUrl,
+        },
+        workspacePath,
+        devcontainerConfigPath,
+        logger: input.logger,
+        onSecretValues: input.onSecretValues,
+      });
 
       // Step 3b: For steps that start an agent, resolve the step's MCP server
       // refs and the env they need (a missing ref, or a required MCP's missing
@@ -456,6 +475,7 @@ export class DefaultLocalProjectRuntimeEnvironmentOrchestrator implements LocalP
             agent
               ? this.deps.opencodeBootstrap.stop(capturedDevcontainerId)
               : Promise.resolve(),
+            gitCredentialRelay?.stop(),
             cleanupEnvironment({
               workspacePath: capturedWorkspacePath,
               devcontainerId: capturedDevcontainerId,
@@ -465,6 +485,7 @@ export class DefaultLocalProjectRuntimeEnvironmentOrchestrator implements LocalP
         },
       };
     } catch (error) {
+      await gitCredentialRelay?.stop().catch(() => undefined);
       if (input.preserveRuntimeOnFailure) {
         logWork(
           "runtime",

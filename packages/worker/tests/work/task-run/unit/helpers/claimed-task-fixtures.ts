@@ -52,7 +52,12 @@ export function createWorkerContext(
     repo:
       resolvedExecutionMode === "no_workspace"
         ? { mode: "none" }
-        : { mode: "readWrite", message: null, onPushFailure: "fail" },
+        : {
+            mode: "readWrite",
+            message: null,
+            onPushFailure: "fail",
+            gitCredentials: "none",
+          },
     envJson: null,
     healthChecksJson: healthChecksJson ?? null,
     opencodeMcpJson: null,

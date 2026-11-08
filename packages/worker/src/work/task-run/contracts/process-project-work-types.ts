@@ -383,6 +383,13 @@ export type TaskRuntimeEnvironmentOrchestrator = {
     projectId: UuidV7;
     requestedByUserId: UuidV7;
     gitUrl: string;
+    /** The run's claim token; scopes the git credential relay's source. */
+    claimToken: string;
+    /**
+     * Receives secret values issued during the run (git credential relay
+     * passwords). Register them with the log masker.
+     */
+    onSecretValues?: ((values: readonly string[]) => void) | undefined;
     /**
      * The branch a later step must be created off of, handed down by the server
      * (the predecessor step's work branch). Takes precedence over any repo-local

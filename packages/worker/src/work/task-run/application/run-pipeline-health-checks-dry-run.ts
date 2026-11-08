@@ -13,6 +13,7 @@ import type { TaskRuntimeEnvironmentOrchestrator } from "../contracts/process-pr
 import {
   buildDryRunNoWorkspaceOrchestrator,
   buildDryRunWorkspaceOrchestrator,
+  DRY_RUN_CLAIM_TOKEN,
 } from "./run-work-dry-run-orchestrators";
 import {
   runInDryRunEnvironment,
@@ -185,7 +186,9 @@ export type PipelineHealthChecksDryRunOptions = {
 
 /** A dry run has no step key, so it never commits: read-only, or no clone on the host. */
 const repoForLaunch = (launch: PlannedHealthCheckLaunch): RepoConfig =>
-  launch.runtime.kind === "host" ? { mode: "none" } : { mode: "readOnly" };
+  launch.runtime.kind === "host"
+    ? { mode: "none" }
+    : { mode: "readOnly", gitCredentials: "none" };
 
 // eslint-disable-next-line local/no-unknown-parameter-type -- narrows a caught value, not a real input boundary
 function errorMessage(error: unknown): string {
@@ -296,6 +299,7 @@ export async function runPipelineHealthChecksDryRun(
         projectId,
         requestedByUserId,
         gitUrl,
+        claimToken: DRY_RUN_CLAIM_TOKEN,
         baseWorkBranch: null,
         sourceBranch: options.sourceBranch ?? null,
         stepKey: undefined,

@@ -1,6 +1,12 @@
 import os from "node:os";
 import path from "node:path";
 import type { Logger } from "@scarn/observability/logging/host";
+import {
+  createGitCredentialRelaySessionOpener,
+  hostGitCredentialSourceFactory,
+  resolveGitCredentialRelayConfig,
+  type OpenGitCredentialRelaySession,
+} from "../../../runtime/git-credentials/infra";
 import type { DevcontainerLauncher } from "../../../runtime/runtime-service/application/devcontainer-launcher";
 import type { GitCloneService } from "../../../runtime/runtime-service/application/git-clone-service";
 import type { GitCommitPushService } from "../../../runtime/runtime-service/application/git-commit-push-service";
@@ -42,6 +48,12 @@ export type LocalProjectRuntimeEnvironmentDeps = {
   runtimeConfigMaterializer: RuntimeConfigMaterializer;
   /** Loads the user's provider credentials injected into each session. */
   loadCredentials: OpencodeCredentialLoader;
+  /**
+   * Opens the per-run git credential relay for `gitCredentials: "auto"` steps.
+   * `null` when this worker offers no git credentials (`SCARN_GIT_CREDENTIALS=off`,
+   * or a dry run).
+   */
+  openGitCredentialRelaySession: OpenGitCredentialRelaySession | null;
 };
 
 /**
@@ -49,7 +61,7 @@ export type LocalProjectRuntimeEnvironmentDeps = {
  * clone service comes from the shared `createGitCloneService` factory, configured
  * from `{...process.env, ...localEnvVars}`, so the real and dry-run
  * orchestrators share one code path. Throws a `ConfigurationError` for an
- * invalid git cache setting. `overrides` replace individual deps (the dry run
+ * invalid git cache or git credential relay setting. `overrides` replace individual deps (the dry run
  * swaps in a safe provider-access resolver).
  */
 export function buildLocalProjectRuntimeDeps(
@@ -57,10 +69,9 @@ export function buildLocalProjectRuntimeDeps(
   localEnvVars: Record<string, string>,
   overrides: Partial<LocalProjectRuntimeEnvironmentDeps> = {},
 ): LocalProjectRuntimeEnvironmentDeps {
-  const { gitCloneService, cacheDir } = createGitCloneService(
-    { ...process.env, ...localEnvVars },
-    logger,
-  );
+  const env = { ...process.env, ...localEnvVars };
+  const { gitCloneService, cacheDir } = createGitCloneService(env, logger);
+  const gitCredentialRelayConfig = resolveGitCredentialRelayConfig(env);
   return {
     workspaceManager: new LocalWorkspaceManager(),
     gitCloneService,
@@ -75,6 +86,12 @@ export function buildLocalProjectRuntimeDeps(
       outputBaseDir: path.join(os.tmpdir(), "scarn-provider-config"),
     }),
     loadCredentials: loadOpencodeCredentials,
+    openGitCredentialRelaySession: gitCredentialRelayConfig.enabled
+      ? createGitCredentialRelaySessionOpener({
+          config: gitCredentialRelayConfig,
+          sourceFactory: hostGitCredentialSourceFactory,
+        })
+      : null,
     ...overrides,
   };
 }

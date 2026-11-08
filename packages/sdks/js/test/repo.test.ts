@@ -6,12 +6,12 @@ import { compileEnvironment } from "../src/definitions/steps/runtime";
 import { validateDefinitionSpecs } from "../src/definitions/validation";
 
 describe("Repo constructors", () => {
-  test("none() and readOnly() take no options", () => {
+  test("none() takes no options and readOnly() takes no message", () => {
     expect(Repo.none()).toEqual({ mode: "none" });
     expect(Repo.readOnly()).toEqual({ mode: "readOnly" });
     // @ts-expect-error none takes no options
     Repo.none({ message: "x" });
-    // @ts-expect-error readOnly takes no options
+    // @ts-expect-error readOnly takes no message
     Repo.readOnly({ message: "x" });
   });
 
@@ -98,6 +98,7 @@ describe("compileRepo — forms", () => {
       message: "fix",
     });
   });
+
 
   test("an explicitly undefined option is dropped from the wire shape", () => {
     const config = compileRepo(

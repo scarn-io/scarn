@@ -1,4 +1,4 @@
-import type { RepoConfig } from "@scarn/sdk/repo-config";
+import { resolveRepoConfig, type RepoConfigInput } from "@scarn/sdk/repo-config";
 import type { UuidV7 } from "../../../../../src/common/contracts/uuid-v7";
 import type { TaskRunWorkerContextContract } from "../../../../../src/work/task-run/contracts/task-run-contracts";
 
@@ -45,8 +45,8 @@ export function buildSingleStepScenario(input: {
   devcontainerConfigPath?: string | null;
   /** The managed runtime identifier a code step runs in; `null` is not managed. */
   managedRuntime?: string | null;
-  /** The step's resolved repo access; defaults to a read-write step. */
-  repo?: RepoConfig;
+  /** The step's repo access, resolved for a workspace step; defaults to read-write. */
+  repo?: RepoConfigInput;
   /** The task's additional input (the `{{input.…}}` token source). */
   inputJson?: unknown;
   /** When set, the step is `kind: "code"` and runs this entrypoint instead of prompting. */
@@ -87,11 +87,7 @@ export function buildSingleStepScenario(input: {
       executionMode: "workspace",
       devcontainerConfigPath: input.devcontainerConfigPath ?? null,
       managedRuntime: input.managedRuntime ?? null,
-      repo: input.repo ?? {
-        mode: "readWrite",
-        message: null,
-        onPushFailure: "fail",
-      },
+      repo: resolveRepoConfig("workspace", input.repo),
       envJson: null,
       healthChecksJson: null,
       opencodeMcpJson: null,

@@ -3,6 +3,7 @@ import {
   repoRuntimeMismatch,
   type RepoConfigInput,
   type RepoExecutionMode,
+  type RepoGitCredentials,
 } from "../../repo-config";
 import {
   createPromptInputProxy,
@@ -19,8 +20,20 @@ import type { RuntimeSpec } from "./runtime";
 /** The step gets no repository: no clone, branch, commit or push. */
 export type NoneRepoSpec = { readonly mode: "none" };
 
+type GitCredentialsOpt = {
+  /**
+   * Defaults to `"auto"`: git inside the container gets credentials (for
+   * private submodules or dependencies) through the worker's per-run
+   * credential relay, when the worker has it enabled. The credential may be
+   * able to push. `"none"` opts the step out.
+   */
+  readonly gitCredentials?: RepoGitCredentials;
+};
+
 /** Clones and checks out the base branch; creates no branch, commits and pushes nothing. */
-export type ReadOnlyRepoSpec = { readonly mode: "readOnly" };
+export type ReadOnlyRepoSpec = {
+  readonly mode: "readOnly";
+} & GitCredentialsOpt;
 
 export type ReadWriteRepoSpec = {
   readonly mode: "readWrite";
@@ -32,7 +45,7 @@ export type ReadWriteRepoSpec = {
   readonly message?: string;
   /** Defaults to `"fail"`: a failed push fails the step. */
   readonly onPushFailure?: "fail" | "warn";
-};
+} & GitCredentialsOpt;
 
 export type RepoSpec = NoneRepoSpec | ReadOnlyRepoSpec | ReadWriteRepoSpec;
 
@@ -56,6 +69,7 @@ export type RepoFn<TInput, TResult, TSpec extends RepoSpec> = (context: {
 export type RepoField<TInput, TResult, TSpec extends RepoSpec> =
   TSpec | RepoFn<TInput, TResult, TSpec>;
 
+export type ReadOnlyRepoOpts = Omit<ReadOnlyRepoSpec, "mode">;
 export type ReadWriteRepoOpts = Omit<ReadWriteRepoSpec, "mode">;
 
 export const Repo = {
@@ -72,8 +86,8 @@ export const Repo = {
    * nothing, pushes nothing and reports no `workBranch`. A policy, not a
    * sandbox: edits the agent makes stay in the workspace and are discarded.
    */
-  readOnly(): ReadOnlyRepoSpec {
-    return { mode: "readOnly" };
+  readOnly(opts?: ReadOnlyRepoOpts): ReadOnlyRepoSpec {
+    return { mode: "readOnly", ...opts };
   },
 
   /**
@@ -125,8 +139,7 @@ export function compileRepo<TInput, TResult>(
     );
   }
 
-  const config: RepoConfigInput =
-    spec.mode === "readWrite" ? toReadWriteConfig(spec) : { mode: spec.mode };
+  const config = toRepoConfigInput(spec);
   const parsed = repoConfigInputSchema.safeParse(config);
   if (!parsed.success) {
     throw new Error(
@@ -136,9 +149,23 @@ export function compileRepo<TInput, TResult>(
   return config;
 }
 
+function toRepoConfigInput(spec: RepoSpec): RepoConfigInput {
+  if (spec.mode === "readWrite") return toReadWriteConfig(spec);
+  if (spec.mode === "readOnly")
+    return { mode: "readOnly", ...gitCredentialsOf(spec) };
+  return { mode: "none" };
+}
+
+function gitCredentialsOf(spec: GitCredentialsOpt): GitCredentialsOpt {
+  return spec.gitCredentials !== undefined
+    ? { gitCredentials: spec.gitCredentials }
+    : {};
+}
+
 function toReadWriteConfig(spec: ReadWriteRepoSpec): RepoConfigInput {
   return {
     mode: "readWrite",
+    ...gitCredentialsOf(spec),
     ...(spec.message !== undefined
       ? {
           // eslint-disable-next-line @typescript-eslint/no-unnecessary-template-expression -- a bare input or result reference is a proxy object typed as string; the template coerces it to its {{…}} token

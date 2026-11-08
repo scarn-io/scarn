@@ -36,6 +36,17 @@ export type DevcontainerBindMount = {
   readOnly?: boolean | undefined;
 };
 
+/**
+ * `docker run` args injected into the devcontainer so in-container processes
+ * (OpenCode, the git credential helper) can reach the host over
+ * `host.docker.internal`. Docker Desktop (macOS/Windows) provides this alias
+ * natively; on Linux it must be added explicitly via the host-gateway alias.
+ */
+export const HOST_GATEWAY_RUN_ARGS: readonly string[] = [
+  "--add-host",
+  "host.docker.internal:host-gateway",
+];
+
 const DEVCONTAINER_COMPOSE_KEY = "dockerComposeFile";
 
 /** Render a bind mount as the devcontainer/Docker long-form mount string. */

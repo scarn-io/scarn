@@ -111,7 +111,9 @@ export type TaskRunWorkerContextContract = {
      * The resolved repository access (see `Repo` in the SDK). Never null: the
      * server resolves the runtime's default when a definition is written.
      * `no_workspace` tasks are always `none`; `workspace` tasks are
-     * `readOnly` or `readWrite`.
+     * `readOnly` or `readWrite`. Those two also carry `gitCredentials`:
+     * `"auto"` (the default) opens the git credential relay when this worker
+     * offers git credentials; `"none"` leaves the container without them.
      */
     repo: RepoConfig;
     /**

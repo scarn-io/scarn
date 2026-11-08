@@ -1,0 +1,6 @@
+{
+  "name": "scarn-integration-git-credentials",
+  "image": "node:20-bookworm",
+  "overrideCommand": true,
+  "postCreateCommand": "sh .devcontainer/git-credentials/post-create.sh https://${localEnv:SCARN_IT_GIT_STUB_AUTHORITY}/acme/private.git"
+}

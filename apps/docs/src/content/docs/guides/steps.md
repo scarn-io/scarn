@@ -304,10 +304,11 @@ export const implement = defineStep({
 
 #### `Repo.readWrite` options
 
-| Option          | Type               | Default                | Description                                                                                     |
-| --------------- | ------------------ | ---------------------- | ----------------------------------------------------------------------------------------------- |
-| `message`       | `string`           | `scarn: task <taskId>` | The commit message, rendered from the step's input, its result and the work item's title or key |
-| `onPushFailure` | `"fail" \| "warn"` | `"fail"`               | Whether a failed push fails the step (`"fail"`) or is logged and ignored (`"warn"`)             |
+| Option           | Type               | Default                | Description                                                                                             |
+| ---------------- | ------------------ | ---------------------- | ------------------------------------------------------------------------------------------------------- |
+| `message`        | `string`           | `scarn: task <taskId>` | The commit message, rendered from the step's input, its result and the work item's title or key         |
+| `onPushFailure`  | `"fail" \| "warn"` | `"fail"`               | Whether a failed push fails the step (`"fail"`) or is logged and ignored (`"warn"`)                     |
+| `gitCredentials` | `"auto" \| "none"` | `"auto"`               | Whether git in the container gets the worker's git credentials. See [Git credentials](#git-credentials) |
 
 **Commit message.** `repo` is a function of `{ input, result, workItem }`, the same way `vars` is a function of `{ input }`: both are typed from the step's `input` and `result` schemas, and a template literal built from them (`` `fix: ${result.summary}` ``) becomes a `{{result.summary}}` token that the worker renders when the step finishes. Write the string with a prefix before the interpolation, since a bare `` `${result.summary}` `` trips a lint rule. A static `Repo.readWrite({ message: "fix: {{result.summary}}" })` is the same thing, and the common case when the message needs no tokens.
 
@@ -324,6 +325,26 @@ export const implement = defineStep({
 `Repo.readOnly()` tells the worker not to publish anything. It does not mount the repository read-only and does not revert edits, so an agent can still write files in its workspace. Those edits live and die with the workspace, which is deleted after the step. The guarantee you can rely on is the observable one: no branch appears on your remote and no `workBranch` is reported for the step.
 
 A read-only step checks out the same base branch a `readWrite` step would be created off. Because it produces no work branch, later steps skip it: they are created off the nearest earlier step that did produce one. See [Base branch](/scarn/guides/workers/#base-branch).
+
+#### Git credentials
+
+By default (`gitCredentials: "auto"`), git inside a `readOnly` or `readWrite` step's container can fetch private repositories through the worker: private submodules (`git submodule update --init` in `postCreateCommand`), private git dependencies in a package install, or a `git fetch` from another private repo. This works when the worker has git credentials enabled, which is the default (see [`SCARN_GIT_CREDENTIALS`](/scarn/guides/workers/#git-credentials)), and it works the same way in a [`codeStep()`](#code-steps).
+
+The worker answers git's credential requests with the worker machine's own git credentials, for your repo's host and any hosts listed in [`SCARN_GIT_CREDENTIAL_HOSTS`](/scarn/guides/workers/#git-credentials). Credential helpers already set up in your image or gitconfig are tried first; the worker is the fallback. Unless your dev container's `containerEnv` sets `SSH_AUTH_SOCK`, SSH URLs on those hosts are fetched over HTTPS. Pushing from inside the container is blocked; the worker pushes the work branch itself.
+
+:::caution[The container can see the worker's git credential]
+The worker's git credential may be able to push, and anything in the container, the agent included, can read a credential it is given (for example with `git credential fill`). Blocking `git push` guards against accidents, not against an agent that wants to push. Turn it off for a step that doesn't need it:
+
+```typescript
+environment: { repo: Repo.readOnly({ gitCredentials: "none" }) },
+```
+
+`Repo.readWrite({ gitCredentials: "none" })` works the same way. A worker owner can turn it off for every step with `SCARN_GIT_CREDENTIALS=off`.
+:::
+
+- The container needs `curl` or `wget`. Without either, git fails as it would with no credentials.
+- The worker skips it, with one line in the step log, for compose-based dev containers and for a dev container whose `containerEnv` (including `.scarn/.env`) already sets `GIT_CONFIG_COUNT`. The step still runs.
+- It has no effect in a `--dry-run`.
 
 ### Environment variables
 
@@ -448,7 +469,7 @@ Here `init-subrepos.sh` reads `INIT_SUBREPOS` on the host, and the `containerEnv
 
 #### Pulling steps
 
-`scarn pipelines pull` writes a step's `environment` back into `steps.ts`, before `agentPrompt`. A host step is written as `runtime: Runtime.host()`, a step with a selected config as `runtime: Runtime.devcontainer({ config })`, and a step on the default devcontainer omits `runtime`. `vars` is written inside `environment`, and so is `repo`, but only when it differs from the runtime's default: `Repo.readOnly()` for a read-only step, and `Repo.readWrite(...)` for a read-write step with a custom `message` or `onPushFailure: "warn"` (the function form when the message uses `input` or `result` tokens). `Runtime`, `Env` and `Repo` are imported only when needed. A static, non-secret value on a credential-looking name round-trips as `Env.value({ value, unsafeAllowStatic: true })`.
+`scarn pipelines pull` writes a step's `environment` back into `steps.ts`, before `agentPrompt`. A host step is written as `runtime: Runtime.host()`, a step with a selected config as `runtime: Runtime.devcontainer({ config })`, and a step on the default devcontainer omits `runtime`. `vars` is written inside `environment`, and so is `repo`, but only when it differs from the runtime's default: `Repo.readOnly()` for a read-only step, and `Repo.readWrite(...)` for a read-write step with a custom `message`, `onPushFailure: "warn"` or `gitCredentials: "none"` (the function form when the message uses `input` or `result` tokens). `gitCredentials` is written back on either mode only when it is `"none"`, since `"auto"` is the default. `Runtime`, `Env` and `Repo` are imported only when needed. A static, non-secret value on a credential-looking name round-trips as `Env.value({ value, unsafeAllowStatic: true })`.
 
 See [Running Workers](/scarn/guides/workers/#step-environment-variables) for how the worker resolves and injects these, and [`Runtime`](/scarn/reference/sdk/#runtime), [`Env`](/scarn/reference/sdk/#env) and [`Repo`](/scarn/reference/sdk/#repo) in the SDK reference.
 

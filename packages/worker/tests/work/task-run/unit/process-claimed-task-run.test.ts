@@ -284,13 +284,22 @@ describe("startProcessClaimedTaskRun runtime orchestrator routing", () => {
   );
 
   test.each<[RepoConfig, "workspace" | "no_workspace"]>([
-    [{ mode: "readOnly" }, "workspace"],
-    [{ mode: "readWrite", message: null, onPushFailure: "fail" }, "workspace"],
+    [{ mode: "readOnly", gitCredentials: "none" }, "workspace"],
+    [
+      {
+        mode: "readWrite",
+        message: null,
+        onPushFailure: "fail",
+        gitCredentials: "none",
+      },
+      "workspace",
+    ],
     [
       {
         mode: "readWrite",
         message: "fix: {{result.summary}}",
         onPushFailure: "warn",
+        gitCredentials: "none",
       },
       "workspace",
     ],

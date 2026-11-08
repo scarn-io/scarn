@@ -33,6 +33,8 @@ import type { FakeTaskRunWorkerClient } from "./fake-worker-client";
 import { ContainerRegistry } from "./containers/container-registry";
 import { TestcontainersDevcontainerLauncher } from "./containers/testcontainers-devcontainer-launcher";
 import { resolveIntegrationPayloadHome } from "./integration-home";
+import type { DevcontainerLauncher } from "../../../../../src/runtime/runtime-service/application/devcontainer-launcher";
+import type { OpenGitCredentialRelaySession } from "../../../../../src/runtime/git-credentials/infra";
 
 const execFileAsync = promisify(execFile);
 
@@ -187,6 +189,16 @@ export function buildIntegrationDeps(input: {
   artifactStore?: ArtifactStore | undefined;
   /** Make the remote refuse the work-branch push (an unwritable remote). */
   rejectRemotePushes?: boolean | undefined;
+  /**
+   * Replace the testcontainers launcher (which honors only the injected mounts
+   * and port) with another, e.g. the real devcontainer CLI for a test that
+   * needs `postCreateCommand`, `containerEnv` and `runArgs`. It gets the
+   * registry so it can track what it starts for teardown.
+   */
+  devcontainerLauncher?:
+    ((registry: ContainerRegistry) => DevcontainerLauncher) | undefined;
+  /** A real git credential relay opener; without one no relay is opened. */
+  openGitCredentialRelaySession?: OpenGitCredentialRelaySession | undefined;
 }): IntegrationDeps {
   // Even when not running verbose, keep error-level logging on. The job and
   // monitor failure paths log through this injected logger; silencing it
@@ -230,7 +242,8 @@ export function buildIntegrationDeps(input: {
       gitCloneService,
       gitCommitPushService,
       submoduleService: new GitCliSubmoduleService(logger),
-      devcontainerLauncher,
+      devcontainerLauncher:
+        input.devcontainerLauncher?.(containerRegistry) ?? devcontainerLauncher,
       payloadProvisioner: new OpencodeRuntimePayloadProvisioner({
         homeDir: resolveIntegrationPayloadHome(),
       }),
@@ -253,6 +266,8 @@ export function buildIntegrationDeps(input: {
           homeDir: sandboxHome,
           env: credentialEnv,
         }),
+      openGitCredentialRelaySession:
+        input.openGitCredentialRelaySession ?? null,
     },
   );
 

@@ -266,9 +266,12 @@ type RepoSpec = NoneRepoSpec | ReadOnlyRepoSpec | ReadWriteRepoSpec;
 Repo.readWrite(opts?: {
   message?: string;                  // {{input.…}} / {{result.…}} tokens; one line, at most 500 characters
   onPushFailure?: "fail" | "warn";   // defaults to "fail"
+  gitCredentials?: "auto" | "none";  // defaults to "auto"
 }): ReadWriteRepoSpec;
 
-Repo.readOnly(): ReadOnlyRepoSpec;
+Repo.readOnly(opts?: {
+  gitCredentials?: "auto" | "none";  // defaults to "auto"
+}): ReadOnlyRepoSpec;
 
 Repo.none(): NoneRepoSpec;
 ```
@@ -278,6 +281,8 @@ Repo.none(): NoneRepoSpec;
 | `Repo.readWrite()`  | Creates a work branch, then commits and pushes it when the step succeeds. The default for `Runtime.devcontainer()`.                        |
 | `Repo.readOnly()`   | Clones and checks out the base branch. No work branch, no commit, no push, and no `workBranch` reported. A policy, not a sandbox: edits stay in the workspace and are discarded. |
 | `Repo.none()`       | No repository: no clone, branch, commit or push. The default for `Runtime.host()`.                                                          |
+
+`gitCredentials` (on `readOnly` or `readWrite`) defaults to `"auto"`: when the worker has git credentials enabled, git inside the container can fetch private repositories, such as submodules or git dependencies, with the worker's git credentials. That credential may be able to push and the agent can read it; `git push` from the container is blocked as a guardrail only. Set `"none"` to opt a step out. See [Git credentials](/scarn/guides/steps/#git-credentials).
 
 Which `repo` each runtime accepts:
 

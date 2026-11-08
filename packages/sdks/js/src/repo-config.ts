@@ -12,6 +12,10 @@ import { z } from "zod";
  *   `{{workItem.title}}` and `{{workItem.platformKey}}` tokens only) and
  *   `onPushFailure` picks whether a failed push fails the step.
  *
+ * `readOnly` and `readWrite` also carry `gitCredentials` (`"auto"` or
+ * `"none"`): whether git inside the container gets credentials through the
+ * worker's credential relay when the worker offers one.
+ *
  * Two shapes of the same data. `RepoConfigInput` is what an author or API client
  * sends and may leave things out; `RepoConfig` is what is stored, returned and
  * handed to the worker, fully resolved by `resolveRepoConfig`. A resolved
@@ -95,26 +99,50 @@ export const repoCommitMessageSchema = z
 
 const onPushFailureSchema = z.enum(["fail", "warn"]);
 
+/**
+ * Whether git inside the step's container gets credentials through the
+ * worker's per-run credential relay.
+ *
+ * - `auto` (the default): yes, when the worker has git credentials enabled.
+ *   The credential is whatever the worker's source issues; with the worker
+ *   host's own git it may be able to push, so this names no permission.
+ * - `none`: the container gets no git credentials from Scarn.
+ */
+export const repoGitCredentialsSchema = z.enum(["auto", "none"]);
+export type RepoGitCredentials = z.output<typeof repoGitCredentialsSchema>;
+
 export const repoConfigInputSchema = z.discriminatedUnion("mode", [
   z.object({ mode: z.literal("none") }).strict(),
-  z.object({ mode: z.literal("readOnly") }).strict(),
+  z
+    .object({
+      mode: z.literal("readOnly"),
+      gitCredentials: repoGitCredentialsSchema.optional(),
+    })
+    .strict(),
   z
     .object({
       mode: z.literal("readWrite"),
       message: repoCommitMessageSchema.nullish(),
       onPushFailure: onPushFailureSchema.optional(),
+      gitCredentials: repoGitCredentialsSchema.optional(),
     })
     .strict(),
 ]);
 
 export const repoConfigSchema = z.discriminatedUnion("mode", [
   z.object({ mode: z.literal("none") }).strict(),
-  z.object({ mode: z.literal("readOnly") }).strict(),
+  z
+    .object({
+      mode: z.literal("readOnly"),
+      gitCredentials: repoGitCredentialsSchema,
+    })
+    .strict(),
   z
     .object({
       mode: z.literal("readWrite"),
       message: repoCommitMessageSchema.nullable(),
       onPushFailure: onPushFailureSchema,
+      gitCredentials: repoGitCredentialsSchema,
     })
     .strict(),
 ]);
@@ -161,20 +189,27 @@ export function repoRuntimeMismatch(
 /**
  * Fills what an author left out: an omitted `repo` becomes the runtime's default
  * (`readWrite` for `workspace`, `none` for `no_workspace`), an omitted
- * `onPushFailure` becomes `"fail"` and an omitted `message` becomes `null`.
- * Does not check the runtime pairing; that is the caller's invariant.
+ * `onPushFailure` becomes `"fail"`, an omitted `message` becomes `null` and an
+ * omitted `gitCredentials` becomes `"auto"`. Does not check the runtime
+ * pairing; that is the caller's invariant.
  */
 export function resolveRepoConfig(
   executionMode: RepoExecutionMode,
   input?: RepoConfigInput | null,
 ): RepoConfig {
   const mode = input?.mode ?? REPO_RUNTIME_SUPPORT[executionMode].default;
-  if (mode !== "readWrite") return { mode };
+  if (mode === "none") return { mode };
+
+  const gitCredentials =
+    (input && "gitCredentials" in input ? input.gitCredentials : undefined) ??
+    "auto";
+  if (mode === "readOnly") return { mode, gitCredentials };
 
   const readWrite = input?.mode === "readWrite" ? input : undefined;
   return {
     mode,
     message: readWrite?.message ?? null,
     onPushFailure: readWrite?.onPushFailure ?? "fail",
+    gitCredentials,
   };
 }

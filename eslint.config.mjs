@@ -30,6 +30,8 @@ export default defineConfig(
       "!packages/local-dev/src/local-test-project/.scarn/pipeline-builder/*.ts",
       "packages/local-dev/src/local-test-project/.scarn/pipeline-builder/push.ts",
       "scripts/**",
+      // Research evidence snapshots, not part of any tsconfig project.
+      "docs/research/**",
       "eslint/rules/**",
       "eslint.config.mjs",
       "**/*.d.ts",

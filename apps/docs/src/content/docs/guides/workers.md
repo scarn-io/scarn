@@ -90,6 +90,10 @@ A step with `Repo.readOnly()` still clones the repo and checks out its base bran
 
 A step with `Repo.none()` (the `Runtime.host()` default) never clones, so none of this applies to it.
 
+### Private submodules and dependencies
+
+Git inside the dev container has no credentials of its own. By default the worker answers git's credential requests from the container with the worker machine's own git credentials, for your repo's host only (add more with [`SCARN_GIT_CREDENTIAL_HOSTS`](#git-credentials)). So a `postCreateCommand` that runs `git submodule update --init` for a private submodule, or a package install that pulls a private git dependency, just works. Nothing goes into `.scarn/.env` or your `devcontainer.json`. Pushing from inside the container is blocked: the worker pushes the work branch itself. A step opts out with `gitCredentials: "none"` on its repo (see [Git credentials](/scarn/guides/steps/#git-credentials)), and you can turn it off for the whole worker with [`SCARN_GIT_CREDENTIALS=off`](#git-credentials).
+
 ### Commit message and push failures
 
 The commit message defaults to `scarn: task <taskId>`. A step sets its own with `Repo.readWrite({ message })`, rendered from the step's input and the result the agent submitted. The rendered subject is single-line, at most 200 characters, and falls back to the default when empty. The same message is used for submodule commits. See [Repo access](/scarn/guides/steps/#repo-access) for the token rules.
@@ -141,7 +145,7 @@ How the predecessor is chosen:
 | Earlier step failed or is otherwise unsatisfied                                        | Ignored; only satisfied runs count. A rerun's inherited satisfied runs keep their branch                  |
 | Loop iteration after the first                                                         | The previous iteration's branch, when it wrote one                                                        |
 | Node after a loop                                                                      | The last iteration that wrote a branch                                                                    |
-| [Lanes](/scarn/guides/pipelines/#routes-splits-and-merges) started by a split        | All share the base of the node that started them                                                          |
+| [Lanes](/scarn/guides/pipelines/#routes-splits-and-merges) started by a split          | All share the base of the node that started them                                                          |
 | Node after a merge where every arriving lane ended on the same branch                  | That branch                                                                                               |
 | Node after a merge where lanes ended on different branches                             | No single base: falls back to the source branch, configured base, then default; the server logs a warning |
 | Nothing upstream wrote a branch                                                        | The precedence above                                                                                      |
@@ -153,14 +157,31 @@ If the resolved base branch cannot be fetched/checked out (for example it was de
 
 To avoid a full network clone for every step, the worker keeps a local bare mirror of your repo on the worker machine and clones each step's workspace from it. The mirror is refreshed from your real remote before each clone, and the workspace's `origin` is still your real remote, so pushes behave exactly as before. If the cache can't be used for any reason (offline, a repo URL that embeds a password or token, a lock timeout), the worker logs `git-cache: falling back to plain clone (<reason>)` in the step log and does a normal clone.
 
-| Env var                 | Description                                                    | Default                |
-| ----------------------- | -------------------------------------------------------------- | ---------------------- |
-| `SCARN_GIT_CACHE`     | `on` or `off`. Any other value stops the worker with an error. | `on`                   |
+| Env var               | Description                                                    | Default              |
+| --------------------- | -------------------------------------------------------------- | -------------------- |
+| `SCARN_GIT_CACHE`     | `on` or `off`. Any other value stops the worker with an error. | `on`                 |
 | `SCARN_GIT_CACHE_DIR` | Absolute path of the directory that holds the mirrors          | `~/.scarn/git-cache` |
 
 Both can be set in the environment or in `.scarn/.env` (the latter wins). There is no size limit; it is always safe to delete the cache directory, and it is rebuilt on demand.
 
 Only your repo itself is cached. Submodules are not touched. When the cache is on, the worker passes `SCARN_GIT_CACHE_DIR` to the host-side environment of your devcontainer's `initializeCommand`, so a script in your repo can opt in to reusing the mirrors. Such a script must tolerate a missing mirror and treat the cache as read-only.
+
+## Git credentials
+
+By default, git in every `readOnly` or `readWrite` step's dev container can fetch private repositories with your worker's git credentials (see [Private submodules and dependencies](#private-submodules-and-dependencies)). These settings control it:
+
+| Env var                           | Description                                                                                                                                               | Default                                              |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| `SCARN_GIT_CREDENTIALS`           | `on` or `off` (any case). `off` gives containers no credentials and leaves `devcontainer.json` untouched. Any other value stops the worker with an error. | `on`                                                 |
+| `SCARN_GIT_CREDENTIAL_SOURCE`     | Where credentials come from. Only `host` (the worker machine's own git credentials) works today. Any other value stops the worker with an error.          | `host`                                               |
+| `SCARN_GIT_CREDENTIAL_HOSTS`      | Comma-separated extra hosts (`host` or `host:port`) the container may get credentials for, besides your repo's host.                                      | none                                                 |
+| `SCARN_GIT_CREDENTIAL_RELAY_BIND` | Address the worker's credential endpoint listens on.                                                                                                      | `127.0.0.1` on macOS and Windows, `0.0.0.0` on Linux |
+
+All four can be set in the environment or in `.scarn/.env` (the latter wins). The container needs `curl` or `wget` for this to work. Compose-based dev containers, and dev containers whose `containerEnv` already sets `GIT_CONFIG_COUNT`, are skipped with one line in the step log; the step still runs. Every request is written to the step log, and issued tokens are masked there.
+
+:::caution[Steps can read your git credential]
+With credentials on, every repo step's container can obtain your worker machine's git credential for the allowed hosts, and that credential may be able to push. Anything in the container, the agent included, can read it. If you don't want that, set `SCARN_GIT_CREDENTIALS=off`. Step authors can opt a single step out with `gitCredentials: "none"`.
+:::
 
 ## Step environment variables
 

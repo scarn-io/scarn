@@ -4,7 +4,10 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import type { DevcontainerLauncher } from "../../../runtime/runtime-service/application/devcontainer-launcher";
 import type { WorkspaceManager } from "../../../runtime/runtime-service/application/workspace-manager";
-import { parseDevcontainerWorkspaceFolderFromContent } from "../../../runtime/runtime-service/infra/local-devcontainer-jsonc";
+import {
+  parseDevcontainerConfigContent,
+  parseDevcontainerWorkspaceFolderFromContent,
+} from "../../../runtime/runtime-service/infra/local-devcontainer-jsonc";
 import { logWork } from "../application/work-logger";
 
 export const execFileAsync = promisify(execFile);
@@ -81,10 +84,7 @@ export async function patchDevcontainerEnv(
 ): Promise<void> {
   const configAbsPath = path.join(workspacePath, devcontainerConfigPath);
   const raw = await readFile(configAbsPath, "utf8");
-
-  // Strip JS-style line comments so we can parse the JSON.
-  const stripped = raw.replace(/\/\/[^\n]*/g, "");
-  const parsed = JSON.parse(stripped) as Record<string, unknown>;
+  const parsed = parseDevcontainerConfigContent(raw) as Record<string, unknown>;
 
   // Merge: our vars extend existing containerEnv without overwriting user-defined ones.
   const existing =

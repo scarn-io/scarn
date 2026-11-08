@@ -193,7 +193,12 @@ describe("branch-per-step launch", () => {
 
     const env = await orchestrator.launch({
       ...buildLaunchInput(),
-      repo: { mode: "readWrite", message: null, onPushFailure: "warn" },
+      repo: {
+        mode: "readWrite",
+        message: null,
+        onPushFailure: "warn",
+        gitCredentials: "none",
+      },
       stepKey: "impl",
     });
 
@@ -224,7 +229,7 @@ describe("branch-per-step launch", () => {
 
     const env = await orchestrator.launch({
       ...buildLaunchInput(),
-      repo: { mode: "readOnly" },
+      repo: { mode: "readOnly", gitCredentials: "none" },
       stepKey: "triage",
     });
 

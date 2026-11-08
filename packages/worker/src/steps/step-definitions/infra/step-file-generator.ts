@@ -260,7 +260,14 @@ function buildRepoProperty(step: StepDefContract): string | null {
   if (isDeepStrictEqual(repo, resolveRepoConfig(step.executionMode))) {
     return null;
   }
-  if (repo.mode !== "readWrite") return `    repo: Repo.${repo.mode}(),`;
+  const gitCredentialsOpt =
+    repo.mode !== "none" && repo.gitCredentials !== "auto"
+      ? `gitCredentials: ${JSON.stringify(repo.gitCredentials)}`
+      : null;
+  if (repo.mode !== "readWrite") {
+    const args = gitCredentialsOpt === null ? "" : `{ ${gitCredentialsOpt} }`;
+    return `    repo: Repo.${repo.mode}(${args}),`;
+  }
 
   const opts: string[] = [];
   let params = "";
@@ -275,6 +282,7 @@ function buildRepoProperty(step: StepDefContract): string | null {
   if (repo.onPushFailure !== "fail") {
     opts.push(`onPushFailure: ${JSON.stringify(repo.onPushFailure)}`);
   }
+  if (gitCredentialsOpt !== null) opts.push(gitCredentialsOpt);
   const call = `Repo.readWrite(${opts.length > 0 ? `{ ${opts.join(", ")} }` : ""})`;
   return params === ""
     ? `    repo: ${call},`

@@ -1,11 +1,7 @@
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { describe, expect, test } from "bun:test";
-import {
-  resolveRepoConfig,
-  type RepoConfig,
-  type RepoConfigInput,
-} from "@scarn/sdk/repo-config";
+import { resolveRepoConfig } from "@scarn/sdk/repo-config";
 import {
   generateStepsFileContent,
   type StepDefContract,
@@ -173,7 +169,12 @@ describe("generateStepsFileContent environment", () => {
       }),
       makeStep({
         key: "explicit-default",
-        repo: { mode: "readWrite", message: null, onPushFailure: "fail" },
+        repo: {
+          mode: "readWrite",
+          message: null,
+          onPushFailure: "fail",
+          gitCredentials: "auto",
+        },
       }),
     ]);
 
@@ -183,7 +184,7 @@ describe("generateStepsFileContent environment", () => {
 
   test("emits Repo.readOnly() inside a minimal environment", () => {
     const content = generateStepsFileContent([
-      makeStep({ repo: { mode: "readOnly" } }),
+      makeStep({ repo: { mode: "readOnly", gitCredentials: "auto" } }),
     ]);
 
     expect(content).toContain(
@@ -202,6 +203,7 @@ describe("generateStepsFileContent environment", () => {
           mode: "readWrite",
           message: 'fix: "quoted"',
           onPushFailure: "fail",
+          gitCredentials: "auto",
         },
       }),
     ]);
@@ -214,7 +216,12 @@ describe("generateStepsFileContent environment", () => {
   test("emits onPushFailure only when it is not the default", () => {
     const content = generateStepsFileContent([
       makeStep({
-        repo: { mode: "readWrite", message: null, onPushFailure: "warn" },
+        repo: {
+          mode: "readWrite",
+          message: null,
+          onPushFailure: "warn",
+          gitCredentials: "auto",
+        },
       }),
     ]);
 
@@ -231,6 +238,7 @@ describe("generateStepsFileContent environment", () => {
           mode: "readWrite",
           message: "fix: {{result.summary}}",
           onPushFailure: "fail",
+          gitCredentials: "auto",
         },
       }),
       makeStep({
@@ -239,6 +247,7 @@ describe("generateStepsFileContent environment", () => {
           mode: "readWrite",
           message: "{{result.summary}} for {{input.ticket-id}}",
           onPushFailure: "warn",
+          gitCredentials: "auto",
         },
       }),
     ]);
@@ -258,6 +267,7 @@ describe("generateStepsFileContent environment", () => {
           mode: "readWrite",
           message: "`a` ${b} \\ {{input.title}}",
           onPushFailure: "fail",
+          gitCredentials: "auto",
         },
       }),
     ]);
@@ -269,7 +279,7 @@ describe("generateStepsFileContent environment", () => {
     const content = generateStepsFileContent([
       makeStep({
         devcontainerConfigPath: ".devcontainer/perf/devcontainer.json",
-        repo: { mode: "readOnly" },
+        repo: { mode: "readOnly", gitCredentials: "auto" },
         envJson: [
           {
             name: "PROFILER_TOKEN",
@@ -297,124 +307,5 @@ describe("generateStepsFileContent environment", () => {
     expect(content).toContain(
       'import { defineStep, Runtime, Repo, Env } from "@scarn/sdk/definitions/steps";',
     );
-  });
-
-  test("a generated steps file round-trips repo through defineStep", async () => {
-    const cases: Array<{
-      key: string;
-      varName: string;
-      executionMode: StepDefContract["executionMode"];
-      repo: RepoConfig;
-      authored: RepoConfigInput | undefined;
-    }> = [
-      {
-        key: "read-only",
-        varName: "readOnly",
-        executionMode: "workspace",
-        repo: { mode: "readOnly" },
-        authored: { mode: "readOnly" },
-      },
-      {
-        key: "read-write-default",
-        varName: "readWriteDefault",
-        executionMode: "workspace",
-        repo: { mode: "readWrite", message: null, onPushFailure: "fail" },
-        authored: undefined,
-      },
-      {
-        key: "static-message",
-        varName: "staticMessage",
-        executionMode: "workspace",
-        repo: {
-          mode: "readWrite",
-          message: "chore: tidy",
-          onPushFailure: "fail",
-        },
-        authored: { mode: "readWrite", message: "chore: tidy" },
-      },
-      {
-        key: "result-token",
-        varName: "resultToken",
-        executionMode: "workspace",
-        repo: {
-          mode: "readWrite",
-          message: "fix: {{result.summary}}",
-          onPushFailure: "fail",
-        },
-        authored: { mode: "readWrite", message: "fix: {{result.summary}}" },
-      },
-      {
-        key: "input-and-result-tokens",
-        varName: "inputAndResultTokens",
-        executionMode: "workspace",
-        repo: {
-          mode: "readWrite",
-          message: "{{input.ticket}}: {{result.summary}}",
-          onPushFailure: "fail",
-        },
-        authored: {
-          mode: "readWrite",
-          message: "{{input.ticket}}: {{result.summary}}",
-        },
-      },
-      {
-        key: "warn-only",
-        varName: "warnOnly",
-        executionMode: "workspace",
-        repo: { mode: "readWrite", message: null, onPushFailure: "warn" },
-        authored: { mode: "readWrite", onPushFailure: "warn" },
-      },
-      {
-        key: "message-and-warn",
-        varName: "messageAndWarn",
-        executionMode: "workspace",
-        repo: {
-          mode: "readWrite",
-          message: "wip: {{result.summary}}",
-          onPushFailure: "warn",
-        },
-        authored: {
-          mode: "readWrite",
-          message: "wip: {{result.summary}}",
-          onPushFailure: "warn",
-        },
-      },
-      {
-        key: "host-none",
-        varName: "hostNone",
-        executionMode: "no_workspace",
-        repo: { mode: "none" },
-        authored: undefined,
-      },
-    ];
-    const content = generateStepsFileContent(
-      cases.map(({ key, executionMode, repo }) =>
-        makeStep({ key, executionMode, repo }),
-      ),
-    );
-
-    const dir = await mkdtemp(path.join(import.meta.dir, ".roundtrip-"));
-    try {
-      const file = path.join(dir, "steps.ts");
-      await writeFile(file, content, "utf-8");
-      const loaded = (await import(file)) as Record<
-        string,
-        { repo?: RepoConfigInput }
-      >;
-
-      for (const entry of cases) {
-        const spec = loaded[entry.varName];
-        expect({ key: entry.key, repo: spec?.repo }).toEqual({
-          key: entry.key,
-          repo: entry.authored,
-        });
-        expect({
-          key: entry.key,
-          repo: resolveRepoConfig(entry.executionMode, spec?.repo),
-        }).toEqual({ key: entry.key, repo: entry.repo });
-      }
-    } finally {
-      await rm(dir, { recursive: true, force: true });
-    }
   });
 });

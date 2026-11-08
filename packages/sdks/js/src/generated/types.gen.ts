@@ -1693,10 +1693,12 @@ export type GetApiStepDefinitionsResponses = {
             mode: string;
         } | {
             mode: string;
+            gitCredentials: 'auto' | 'none';
         } | {
             mode: string;
             message: string | unknown;
             onPushFailure: 'fail' | 'warn';
+            gitCredentials: 'auto' | 'none';
         };
         status: 'draft' | 'active' | 'archived';
         createdAt: string;
@@ -1859,10 +1861,12 @@ export type PostApiStepDefinitionsData = {
             mode: string;
         } | {
             mode: string;
+            gitCredentials?: 'auto' | 'none';
         } | {
             mode: string;
             message?: string | unknown;
             onPushFailure?: 'fail' | 'warn';
+            gitCredentials?: 'auto' | 'none';
         };
         status: 'draft' | 'active' | 'archived';
     };
@@ -2166,10 +2170,12 @@ export type PostApiStepDefinitionsResponses = {
             mode: string;
         } | {
             mode: string;
+            gitCredentials: 'auto' | 'none';
         } | {
             mode: string;
             message: string | unknown;
             onPushFailure: 'fail' | 'warn';
+            gitCredentials: 'auto' | 'none';
         };
         status: 'draft' | 'active' | 'archived';
         createdAt: string;
@@ -2332,10 +2338,12 @@ export type PutApiStepDefinitionsData = {
             mode: string;
         } | {
             mode: string;
+            gitCredentials?: 'auto' | 'none';
         } | {
             mode: string;
             message?: string | unknown;
             onPushFailure?: 'fail' | 'warn';
+            gitCredentials?: 'auto' | 'none';
         };
         status: 'draft' | 'active' | 'archived';
     };
@@ -2601,10 +2609,12 @@ export type PutApiStepDefinitionsResponses = {
             mode: string;
         } | {
             mode: string;
+            gitCredentials: 'auto' | 'none';
         } | {
             mode: string;
             message: string | unknown;
             onPushFailure: 'fail' | 'warn';
+            gitCredentials: 'auto' | 'none';
         };
         status: 'draft' | 'active' | 'archived';
         createdAt: string;
@@ -2880,10 +2890,12 @@ export type GetApiStepDefinitionsByStepDefinitionIdResponses = {
             mode: string;
         } | {
             mode: string;
+            gitCredentials: 'auto' | 'none';
         } | {
             mode: string;
             message: string | unknown;
             onPushFailure: 'fail' | 'warn';
+            gitCredentials: 'auto' | 'none';
         };
         status: 'draft' | 'active' | 'archived';
         createdAt: string;
@@ -3159,10 +3171,12 @@ export type PutApiStepDefinitionsByStepDefinitionIdArchiveResponses = {
             mode: string;
         } | {
             mode: string;
+            gitCredentials: 'auto' | 'none';
         } | {
             mode: string;
             message: string | unknown;
             onPushFailure: 'fail' | 'warn';
+            gitCredentials: 'auto' | 'none';
         };
         status: 'draft' | 'active' | 'archived';
         createdAt: string;
@@ -4615,10 +4629,12 @@ export type PostApiTaskRunsByTaskRunIdWorkerContextResponses = {
                 mode: string;
             } | {
                 mode: string;
+                gitCredentials: 'auto' | 'none';
             } | {
                 mode: string;
                 message: string | unknown;
                 onPushFailure: 'fail' | 'warn';
+                gitCredentials: 'auto' | 'none';
             };
             envJson: Array<{
                 name: string;

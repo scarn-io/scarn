@@ -159,7 +159,7 @@ describe("launch with a managed runtime", () => {
       ...buildLaunchInput(),
       startAgent: true,
       managedRuntime: "bun1",
-      repo: { mode: "readOnly" },
+      repo: { mode: "readOnly", gitCredentials: "none" },
     });
 
     expect(deps.devcontainerLauncher.resolveConfigInputs).toEqual([]);

@@ -6818,6 +6818,13 @@
                           "mode": {
                             "type": "string",
                             "const": "readOnly"
+                          },
+                          "gitCredentials": {
+                            "type": "string",
+                            "enum": [
+                              "auto",
+                              "none"
+                            ]
                           }
                         },
                         "required": [
@@ -6848,6 +6855,13 @@
                             "enum": [
                               "fail",
                               "warn"
+                            ]
+                          },
+                          "gitCredentials": {
+                            "type": "string",
+                            "enum": [
+                              "auto",
+                              "none"
                             ]
                           }
                         },
@@ -7765,6 +7779,13 @@
                           "mode": {
                             "type": "string",
                             "const": "readOnly"
+                          },
+                          "gitCredentials": {
+                            "type": "string",
+                            "enum": [
+                              "auto",
+                              "none"
+                            ]
                           }
                         },
                         "required": [
@@ -7795,6 +7816,13 @@
                             "enum": [
                               "fail",
                               "warn"
+                            ]
+                          },
+                          "gitCredentials": {
+                            "type": "string",
+                            "enum": [
+                              "auto",
+                              "none"
                             ]
                           }
                         },
@@ -8712,6 +8740,13 @@
                           "mode": {
                             "type": "string",
                             "const": "readOnly"
+                          },
+                          "gitCredentials": {
+                            "type": "string",
+                            "enum": [
+                              "auto",
+                              "none"
+                            ]
                           }
                         },
                         "required": [
@@ -8742,6 +8777,13 @@
                             "enum": [
                               "fail",
                               "warn"
+                            ]
+                          },
+                          "gitCredentials": {
+                            "type": "string",
+                            "enum": [
+                              "auto",
+                              "none"
                             ]
                           }
                         },
@@ -9658,10 +9700,18 @@
                             "mode": {
                               "type": "string",
                               "const": "readOnly"
+                            },
+                            "gitCredentials": {
+                              "type": "string",
+                              "enum": [
+                                "auto",
+                                "none"
+                              ]
                             }
                           },
                           "required": [
-                            "mode"
+                            "mode",
+                            "gitCredentials"
                           ],
                           "additionalProperties": false
                         },
@@ -9689,12 +9739,20 @@
                                 "fail",
                                 "warn"
                               ]
+                            },
+                            "gitCredentials": {
+                              "type": "string",
+                              "enum": [
+                                "auto",
+                                "none"
+                              ]
                             }
                           },
                           "required": [
                             "mode",
                             "message",
-                            "onPushFailure"
+                            "onPushFailure",
+                            "gitCredentials"
                           ],
                           "additionalProperties": false
                         }
@@ -11128,10 +11186,18 @@
                               "mode": {
                                 "type": "string",
                                 "const": "readOnly"
+                              },
+                              "gitCredentials": {
+                                "type": "string",
+                                "enum": [
+                                  "auto",
+                                  "none"
+                                ]
                               }
                             },
                             "required": [
-                              "mode"
+                              "mode",
+                              "gitCredentials"
                             ],
                             "additionalProperties": false
                           },
@@ -11159,12 +11225,20 @@
                                   "fail",
                                   "warn"
                                 ]
+                              },
+                              "gitCredentials": {
+                                "type": "string",
+                                "enum": [
+                                  "auto",
+                                  "none"
+                                ]
                               }
                             },
                             "required": [
                               "mode",
                               "message",
-                              "onPushFailure"
+                              "onPushFailure",
+                              "gitCredentials"
                             ],
                             "additionalProperties": false
                           }
@@ -12389,6 +12463,13 @@
                           "mode": {
                             "type": "string",
                             "const": "readOnly"
+                          },
+                          "gitCredentials": {
+                            "type": "string",
+                            "enum": [
+                              "auto",
+                              "none"
+                            ]
                           }
                         },
                         "required": [
@@ -12419,6 +12500,13 @@
                             "enum": [
                               "fail",
                               "warn"
+                            ]
+                          },
+                          "gitCredentials": {
+                            "type": "string",
+                            "enum": [
+                              "auto",
+                              "none"
                             ]
                           }
                         },
@@ -13336,6 +13424,13 @@
                           "mode": {
                             "type": "string",
                             "const": "readOnly"
+                          },
+                          "gitCredentials": {
+                            "type": "string",
+                            "enum": [
+                              "auto",
+                              "none"
+                            ]
                           }
                         },
                         "required": [
@@ -13366,6 +13461,13 @@
                             "enum": [
                               "fail",
                               "warn"
+                            ]
+                          },
+                          "gitCredentials": {
+                            "type": "string",
+                            "enum": [
+                              "auto",
+                              "none"
                             ]
                           }
                         },
@@ -14283,6 +14385,13 @@
                           "mode": {
                             "type": "string",
                             "const": "readOnly"
+                          },
+                          "gitCredentials": {
+                            "type": "string",
+                            "enum": [
+                              "auto",
+                              "none"
+                            ]
                           }
                         },
                         "required": [
@@ -14313,6 +14422,13 @@
                             "enum": [
                               "fail",
                               "warn"
+                            ]
+                          },
+                          "gitCredentials": {
+                            "type": "string",
+                            "enum": [
+                              "auto",
+                              "none"
                             ]
                           }
                         },
@@ -15229,10 +15345,18 @@
                             "mode": {
                               "type": "string",
                               "const": "readOnly"
+                            },
+                            "gitCredentials": {
+                              "type": "string",
+                              "enum": [
+                                "auto",
+                                "none"
+                              ]
                             }
                           },
                           "required": [
-                            "mode"
+                            "mode",
+                            "gitCredentials"
                           ],
                           "additionalProperties": false
                         },
@@ -15260,12 +15384,20 @@
                                 "fail",
                                 "warn"
                               ]
+                            },
+                            "gitCredentials": {
+                              "type": "string",
+                              "enum": [
+                                "auto",
+                                "none"
+                              ]
                             }
                           },
                           "required": [
                             "mode",
                             "message",
-                            "onPushFailure"
+                            "onPushFailure",
+                            "gitCredentials"
                           ],
                           "additionalProperties": false
                         }
@@ -16563,10 +16695,18 @@
                             "mode": {
                               "type": "string",
                               "const": "readOnly"
+                            },
+                            "gitCredentials": {
+                              "type": "string",
+                              "enum": [
+                                "auto",
+                                "none"
+                              ]
                             }
                           },
                           "required": [
-                            "mode"
+                            "mode",
+                            "gitCredentials"
                           ],
                           "additionalProperties": false
                         },
@@ -16594,12 +16734,20 @@
                                 "fail",
                                 "warn"
                               ]
+                            },
+                            "gitCredentials": {
+                              "type": "string",
+                              "enum": [
+                                "auto",
+                                "none"
+                              ]
                             }
                           },
                           "required": [
                             "mode",
                             "message",
-                            "onPushFailure"
+                            "onPushFailure",
+                            "gitCredentials"
                           ],
                           "additionalProperties": false
                         }
@@ -17897,10 +18045,18 @@
                             "mode": {
                               "type": "string",
                               "const": "readOnly"
+                            },
+                            "gitCredentials": {
+                              "type": "string",
+                              "enum": [
+                                "auto",
+                                "none"
+                              ]
                             }
                           },
                           "required": [
-                            "mode"
+                            "mode",
+                            "gitCredentials"
                           ],
                           "additionalProperties": false
                         },
@@ -17928,12 +18084,20 @@
                                 "fail",
                                 "warn"
                               ]
+                            },
+                            "gitCredentials": {
+                              "type": "string",
+                              "enum": [
+                                "auto",
+                                "none"
+                              ]
                             }
                           },
                           "required": [
                             "mode",
                             "message",
-                            "onPushFailure"
+                            "onPushFailure",
+                            "gitCredentials"
                           ],
                           "additionalProperties": false
                         }
@@ -24981,10 +25145,18 @@
                                 "mode": {
                                   "type": "string",
                                   "const": "readOnly"
+                                },
+                                "gitCredentials": {
+                                  "type": "string",
+                                  "enum": [
+                                    "auto",
+                                    "none"
+                                  ]
                                 }
                               },
                               "required": [
-                                "mode"
+                                "mode",
+                                "gitCredentials"
                               ],
                               "additionalProperties": false
                             },
@@ -25012,12 +25184,20 @@
                                     "fail",
                                     "warn"
                                   ]
+                                },
+                                "gitCredentials": {
+                                  "type": "string",
+                                  "enum": [
+                                    "auto",
+                                    "none"
+                                  ]
                                 }
                               },
                               "required": [
                                 "mode",
                                 "message",
-                                "onPushFailure"
+                                "onPushFailure",
+                                "gitCredentials"
                               ],
                               "additionalProperties": false
                             }

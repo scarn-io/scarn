@@ -16,7 +16,8 @@ import type { TaskRuntimeEnvironmentOrchestrator } from "../contracts/process-pr
  * substituted for the default `DirectProviderAccessResolver`, so a missing
  * provider credential is reported rather than aborting the launch. Uses the
  * same default deps as `DefaultLocalProjectRuntimeEnvironmentOrchestrator`
- * (including the shared git clone service factory), except for that one swap.
+ * (including the shared git clone service factory), except for that swap and
+ * no git credential relay: a dry run never hands out host credentials.
  */
 export function buildDryRunWorkspaceOrchestrator(
   logger: Logger,
@@ -28,9 +29,13 @@ export function buildDryRunWorkspaceOrchestrator(
     localEnvVars,
     buildLocalProjectRuntimeDeps(logger, localEnvVars, {
       providerAccessResolver: safeProviderAccessResolver,
+      openGitCredentialRelaySession: null,
     }),
   );
 }
+
+/** A dry run has no claim and opens no relay, so nothing reads this. */
+export const DRY_RUN_CLAIM_TOKEN = "dry-run";
 
 /** Same swap as {@link buildDryRunWorkspaceOrchestrator}, for `no_workspace` steps. */
 export function buildDryRunNoWorkspaceOrchestrator(

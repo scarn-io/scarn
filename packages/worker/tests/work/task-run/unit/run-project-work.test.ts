@@ -71,7 +71,12 @@ function createWorkerClient(
           executionMode: "workspace",
           devcontainerConfigPath: null,
           managedRuntime: null,
-          repo: { mode: "readWrite", message: null, onPushFailure: "fail" },
+          repo: {
+            mode: "readWrite",
+            message: null,
+            onPushFailure: "fail",
+            gitCredentials: "none",
+          },
           envJson: null,
           healthChecksJson: null,
           opencodeMcpJson: null,
