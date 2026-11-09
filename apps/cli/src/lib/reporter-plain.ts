@@ -65,6 +65,12 @@ export class PlainReporter implements WorkReporter {
       case "worker:claimed":
         this.info(`claimed ${String(event.count)} task(s)`);
         return;
+      case "worker:signal-connected":
+        this.info("push wake-up connected");
+        return;
+      case "worker:signal-disconnected":
+        this.warn("push wake-up disconnected; polling");
+        return;
       case "worker:complete":
         this.success(
           `run complete: ${String(event.processed)} processed, ${String(

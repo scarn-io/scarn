@@ -38,6 +38,7 @@ export interface WorkArguments {
   preserveRuntimeOnComplete: boolean;
   pollIntervalMs: number | undefined;
   maxPollIntervalMs: number | undefined;
+  connectedMaxPollIntervalMs: number | undefined;
   workerId: string | undefined;
   workItemId: string | undefined;
   /**
@@ -178,6 +179,7 @@ export async function runWork(arguments_: WorkOptions): Promise<void> {
       preserveRuntimeOnComplete,
       pollIntervalMs: arguments_.pollIntervalMs,
       maxPollIntervalMs: arguments_.maxPollIntervalMs,
+      connectedMaxPollIntervalMs: arguments_.connectedMaxPollIntervalMs,
       workerId: arguments_.workerId,
       workItemId: arguments_.workItemId,
       dryRun,
@@ -235,6 +237,7 @@ export async function runWork(arguments_: WorkOptions): Promise<void> {
       once,
       pollIntervalMs: arguments_.pollIntervalMs,
       maxPollIntervalMs: arguments_.maxPollIntervalMs,
+      connectedMaxPollIntervalMs: arguments_.connectedMaxPollIntervalMs,
       workerId: arguments_.workerId,
       workItemId: arguments_.workItemId,
       dest: createTransport(),
@@ -311,6 +314,15 @@ export const workCommand: CommandModule<object, WorkArguments> = {
           "the moment work is claimed). Pass the same value as " +
           "--pollIntervalMs to poll at a fixed cadence instead. " +
           "Defaults to 600000 (10 minutes).",
+        type: "number",
+      })
+      .option("connectedMaxPollIntervalMs", {
+        alias: "connected-max-poll-interval-ms",
+        describe:
+          "Ceiling the claim poll backs off to while the push wake-up " +
+          "connection is up (the larger of this and --maxPollIntervalMs " +
+          "applies). Drops back to --maxPollIntervalMs on disconnect. " +
+          "Defaults to 1800000 (30 minutes).",
         type: "number",
       })
       .option("once", {

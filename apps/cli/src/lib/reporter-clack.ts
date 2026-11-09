@@ -2,6 +2,12 @@ import * as clack from "@clack/prompts";
 import pc from "picocolors";
 import type { WorkEvent, WorkReporter, WorkActivity } from "./reporter-types";
 import { formatElapsed, shortId } from "./reporter-types";
+import {
+  DEVCONTAINER_LOG_WINDOW,
+  formatDevcontainerLine,
+  formatTaskLabel,
+  formatTaskReason,
+} from "./reporter-clack-format";
 
 /** State tracked for an in-flight task. */
 type ActiveTask = {
@@ -18,28 +24,6 @@ type ActiveTask = {
    */
   taskLog?: ReturnType<typeof clack.taskLog>;
 };
-
-/**
- * How many recent devcontainer log lines to keep visible under the title.
- * Enough to show a meaningful tail of the lifecycle without flooding the
- * terminal. On failure, these retained lines are the primary diagnostic hint
- * shown to the user (the raw output is in the pino log file).
- */
-const DEVCONTAINER_LOG_WINDOW = 12;
-
-/**
- * Max width (chars) for a single devcontainer log line in the rolling window.
- * Lines longer than this are truncated with an ellipsis so the window doesn't
- * wrap and blow up the height of the live region.
- */
-const DEVCONTAINER_LINE_MAX_WIDTH = 100;
-
-/**
- * Max length for the task failure reason shown inline beneath the spinner.
- * With the raw devcontainer CLI output stripped upstream this is now a clean
- * single-sentence message, so 500 chars is a generous safety net.
- */
-const TASK_REASON_MAX_LENGTH = 500;
 
 /**
  * A `WorkReporter` backed by `@clack/prompts`. Renders friendly, hierarchical
@@ -145,6 +129,12 @@ export class ClackReporter implements WorkReporter {
           }`,
         );
         return;
+      case "worker:signal-connected":
+        this.info("Push wake-up connected");
+        return;
+      case "worker:signal-disconnected":
+        this.warn("Push wake-up disconnected; polling");
+        return;
       case "worker:complete":
         this.success(
           `Run complete · ${pc.bold(String(event.processed))} processed` +
@@ -236,10 +226,7 @@ export class ClackReporter implements WorkReporter {
       case "task:failed": {
         // With raw devcontainer output stripped upstream, the reason is now a
         // clean single-line message. Truncate only as a safety net.
-        const reason =
-          event.reason.length > TASK_REASON_MAX_LENGTH
-            ? `${event.reason.slice(0, TASK_REASON_MAX_LENGTH)}…`
-            : event.reason;
+        const reason = formatTaskReason(event.reason);
         const logHint = this.logFilePath
           ? `\n  ${pc.dim(`Full logs: ${this.logFilePath}`)}`
           : "";
@@ -272,21 +259,16 @@ export class ClackReporter implements WorkReporter {
     }
   }
 
-  /**
-   * Build the spinner message label for a task.
-   * When `startedAt` is provided the elapsed is appended so the parked line
-   * captures the final duration at park time.
-   */
   private taskLabel(
     taskRunId: string,
     phase: string,
     startedAt?: number,
   ): string {
-    const elapsed =
-      startedAt !== undefined
-        ? pc.dim(` · ${formatElapsed(this.now() - startedAt)}`)
-        : "";
-    return `task ${pc.cyan(shortId(taskRunId))} ${pc.dim(phase)}${elapsed}`;
+    return formatTaskLabel(
+      taskRunId,
+      phase,
+      startedAt !== undefined ? this.now() - startedAt : undefined,
+    );
   }
 
   /** Update the live spinner message for a task. No-op if the task has no spinner. */
@@ -332,24 +314,7 @@ export class ClackReporter implements WorkReporter {
     if (kind === "milestone") {
       task.phase = phase;
     }
-    // Truncate wide lines so they can't wrap and blow up the live region height.
-    const displayPhase =
-      phase.length > DEVCONTAINER_LINE_MAX_WIDTH
-        ? `${phase.slice(0, DEVCONTAINER_LINE_MAX_WIDTH - 1)}…`
-        : phase;
-    // Colorize by severity first (errors/warnings stand out), then fall back to
-    // milestone/detail emphasis. Let clack frame each line (no `raw`) so the
-    // bar prefix is preserved and the window stays within its region.
-    let line: string;
-    if (level === "error") {
-      line = pc.red(displayPhase);
-    } else if (level === "warn") {
-      line = pc.yellow(displayPhase);
-    } else {
-      line =
-        kind === "milestone" ? pc.cyan(displayPhase) : pc.dim(displayPhase);
-    }
-    task.taskLog.message(line);
+    task.taskLog.message(formatDevcontainerLine(kind, phase, level));
   }
 
   /**

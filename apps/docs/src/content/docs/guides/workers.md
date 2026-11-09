@@ -11,13 +11,26 @@ A **worker** is a long-running process that polls the Scarn server for pending t
 scarn work
 ```
 
-By default the worker runs continuously, polling your project's task queue every 5 seconds. When a poll finds nothing to claim, the interval doubles, up to once a minute, and drops back to 5 seconds as soon as it claims work.
+By default the worker runs continuously, polling your project's task queue every 5 seconds. When a poll finds nothing to claim, the interval doubles, up to once every 10 minutes, and drops back to 5 seconds as soon as it claims work. With [push wake-up](#push-wake-up) connected, an idle worker still picks up new work within seconds.
 
 If your current directory contains `.scarn/scarn.jsonc`, the project is read from it automatically. Otherwise pass it explicitly, as `owner/slug` (see [Project refs](/scarn/reference/cli/#project-refs)):
 
 ```bash
 scarn work <owner/slug>
 ```
+
+## Push wake-up
+
+A backed-off worker would otherwise take up to 10 minutes to notice new work. Push wake-up closes that gap: the worker holds a WebSocket open to Scarn's wake-up service, and when a run is queued for your project the server tells every connected worker to poll now. There's nothing to configure. The worker connects automatically when the server supports it, and the terminal shows `Push wake-up connected`.
+
+The message is only a hint. It carries no task data, and the worker still claims work through the normal poll, so a missed message only costs latency:
+
+- **On every (re)connect** the worker polls straight away, so it catches anything queued while it was disconnected.
+- **While connected,** the empty-poll backoff stretches to 30 minutes as a safety net (`--connected-max-poll-interval-ms`; see [Polling backoff](/scarn/reference/cli/#polling-backoff)).
+- **If the connection drops** (the terminal shows `Push wake-up disconnected; polling`), the worker falls back to the normal 10-minute backoff right away and keeps retrying the connection in the background.
+- **If the server has push wake-up turned off,** the worker just polls, exactly as before.
+
+The connection is outbound only, over `wss://` to a `*.workers.dev` host. If a firewall or proxy blocks that, the worker keeps working and polls instead.
 
 ## Worker flags
 

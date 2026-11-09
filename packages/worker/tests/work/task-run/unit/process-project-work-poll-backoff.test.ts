@@ -113,6 +113,93 @@ describe("claim-poll idle backoff", () => {
     ]);
   });
 
+  test("while the signal socket is connected, backs off to connectedMaxPollIntervalMs; once disconnected, to maxPollIntervalMs", async () => {
+    let call = 0;
+    let connected = true;
+    const claimTaskRuns = vi.fn(() => {
+      call += 1;
+      if (call === 5) {
+        connected = false;
+      }
+      return call <= 6
+        ? Promise.resolve([])
+        : Promise.reject(new StopPolling());
+    });
+    const sleepCalls: number[] = [];
+    const deps = {
+      ...buildDeps(claimTaskRuns, sleepCalls),
+      signalConnection: {
+        isConnected: () => connected,
+        disconnected: () => new Promise<void>(() => {}),
+      },
+    } satisfies ProcessProjectWorkDeps;
+
+    const input: ProcessProjectWorkInput = {
+      projectId,
+      workerId: "worker-1",
+      batchSize: 1,
+      concurrency: 1,
+      pollIntervalMs: 100,
+      maxPollIntervalMs: 300,
+      connectedMaxPollIntervalMs: 1_000,
+      leaseDurationSeconds: 30,
+    };
+
+    try {
+      await processProjectWork(input, deps);
+      throw new Error("expected processProjectWork to reject");
+    } catch (error) {
+      expect(error).toBeInstanceOf(StopPolling);
+    }
+
+    expect(sleepCalls).toEqual([
+      200,
+      400, // past maxPollIntervalMs: connected ceiling applies
+      800,
+      1_000, // capped at connectedMaxPollIntervalMs
+      300, // disconnected: back to maxPollIntervalMs
+      300,
+    ]);
+  });
+
+  test("a connectedMaxPollIntervalMs below maxPollIntervalMs leaves the ceiling at maxPollIntervalMs", async () => {
+    let call = 0;
+    const claimTaskRuns = vi.fn(() => {
+      call += 1;
+      return call <= 3
+        ? Promise.resolve([])
+        : Promise.reject(new StopPolling());
+    });
+    const sleepCalls: number[] = [];
+    const deps = {
+      ...buildDeps(claimTaskRuns, sleepCalls),
+      signalConnection: {
+        isConnected: () => true,
+        disconnected: () => new Promise<void>(() => {}),
+      },
+    } satisfies ProcessProjectWorkDeps;
+
+    const input: ProcessProjectWorkInput = {
+      projectId,
+      workerId: "worker-1",
+      batchSize: 1,
+      concurrency: 1,
+      pollIntervalMs: 100,
+      maxPollIntervalMs: 400,
+      connectedMaxPollIntervalMs: 150,
+      leaseDurationSeconds: 30,
+    };
+
+    try {
+      await processProjectWork(input, deps);
+      throw new Error("expected processProjectWork to reject");
+    } catch (error) {
+      expect(error).toBeInstanceOf(StopPolling);
+    }
+
+    expect(sleepCalls).toEqual([200, 400, 400]);
+  });
+
   test("never backs off when maxPollIntervalMs is omitted (matches prior fixed-cadence behavior)", async () => {
     let call = 0;
     const claimTaskRuns = vi.fn(() => {

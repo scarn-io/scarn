@@ -178,11 +178,11 @@ export type GetApiProjectsResolveResponses = {
         id: string;
         name: string;
         slug: string;
-        description: string | unknown;
+        description: string | null;
         gitUrl: string;
         createdByUserId: string;
         orgId: string;
-        ownerUsername: string | unknown;
+        ownerUsername: string | null;
         memberships: Array<{
             userId: string;
             permissions: Array<string>;
@@ -328,40 +328,40 @@ export type GetApiProjectsByProjectIdWorkItemsResponses = {
             id: string;
             projectId: string;
             platform: 'jira' | 'github' | 'bitbucket' | 'linear' | 'scarn' | 'custom';
-            platformId?: string | unknown;
+            platformId?: string | null;
             platformKey: string;
-            url?: string | unknown;
+            url?: string | null;
             title: string;
             description: string;
             descriptionVersion: number;
-            sourceCreatedAt: string | unknown;
-            sourceUpdatedAt: string | unknown;
+            sourceCreatedAt: string | null;
+            sourceUpdatedAt: string | null;
             fields: {
                 [key: string]: unknown;
-            } | unknown;
+            } | null;
             labels: Array<string>;
-            createdByUserId: string | unknown;
-            createdByUsername: string | unknown;
-            createdByImage: string | unknown;
-            assigneeUserId: string | unknown;
-            parentWorkItemId: string | unknown;
+            createdByUserId: string | null;
+            createdByUsername: string | null;
+            createdByImage: string | null;
+            assigneeUserId: string | null;
+            parentWorkItemId: string | null;
             state: 'open' | 'closed';
-            closeReason: 'completed' | 'out_of_scope' | 'superseded' | unknown;
-            resolution: string | unknown;
-            closedAt: string | unknown;
-            closedByUserId: string | unknown;
-            closedByTaskId: string | unknown;
-            spawnedByTaskId: string | unknown;
+            closeReason: 'completed' | 'out_of_scope' | 'superseded' | null;
+            resolution: string | null;
+            closedAt: string | null;
+            closedByUserId: string | null;
+            closedByTaskId: string | null;
+            spawnedByTaskId: string | null;
             createdAt: string;
             updatedAt: string;
-            signalScore: number | unknown;
-            latestExecutionStatus: string | unknown;
+            signalScore: number | null;
+            latestExecutionStatus: string | null;
             awaitingApprovalCount: number;
             assignee: {
                 userId: string;
-                username: string | unknown;
-                image: string | unknown;
-            } | unknown;
+                username: string | null;
+                image: string | null;
+            } | null;
             taskStatusCounts: {
                 running: number;
                 queued: number;
@@ -862,11 +862,11 @@ export type GetApiProjectsByProjectIdResponses = {
         id: string;
         name: string;
         slug: string;
-        description: string | unknown;
+        description: string | null;
         gitUrl: string;
         createdByUserId: string;
         orgId: string;
-        ownerUsername: string | unknown;
+        ownerUsername: string | null;
         memberships: Array<{
             userId: string;
             permissions: Array<string>;
@@ -939,11 +939,11 @@ export type GetApiProjectsResponses = {
         id: string;
         name: string;
         slug: string;
-        description: string | unknown;
+        description: string | null;
         gitUrl: string;
         createdByUserId: string;
         orgId: string;
-        ownerUsername: string | unknown;
+        ownerUsername: string | null;
         memberships: Array<{
             userId: string;
             permissions: Array<string>;
@@ -961,15 +961,15 @@ export type GetApiProjectsResponse = GetApiProjectsResponses[keyof GetApiProject
 export type PostApiProjectsData = {
     body: {
         name: string;
-        description: string | unknown;
+        description: string | null;
         gitUrl: string;
         origin?: 'web' | 'cli_handoff' | 'cli_api';
         issueTracker?: {
-            type: string;
+            type: 'github_app';
             installationId: string;
             firstSyncHorizonDays?: number;
         } | {
-            type: string;
+            type: 'github_token';
             credential: {
                 secretId: string;
             } | {
@@ -984,7 +984,7 @@ export type PostApiProjectsData = {
             firstSyncHorizonDays?: number;
             autoSync?: boolean;
         } | {
-            type: string;
+            type: 'bitbucket';
             credential: {
                 secretId: string;
             } | {
@@ -998,7 +998,7 @@ export type PostApiProjectsData = {
             };
             firstSyncHorizonDays?: number;
         } | {
-            type: string;
+            type: 'jira';
             baseUrl: string;
             projectKeys: Array<string>;
             credential: {
@@ -1167,11 +1167,11 @@ export type PostApiProjectsResponses = {
         id: string;
         name: string;
         slug: string;
-        description: string | unknown;
+        description: string | null;
         gitUrl: string;
         createdByUserId: string;
         orgId: string;
-        ownerUsername: string | unknown;
+        ownerUsername: string | null;
         memberships: Array<{
             userId: string;
             permissions: Array<string>;
@@ -1302,15 +1302,17 @@ export type GetApiProjectsByProjectIdMembersResponses = {
      */
     200: Array<{
         userId: string;
-        username: string | unknown;
-        image: string | unknown;
+        username: string | null;
+        image: string | null;
     }>;
 };
 
 export type GetApiProjectsByProjectIdMembersResponse = GetApiProjectsByProjectIdMembersResponses[keyof GetApiProjectsByProjectIdMembersResponses];
 
 export type PutApiProjectsByProjectIdMembersByUserIdPermissionsData = {
-    body?: never;
+    body: {
+        permissions: Array<string>;
+    };
     path: {
         projectId: string;
         userId: string;
@@ -1427,11 +1429,11 @@ export type PutApiProjectsByProjectIdMembersByUserIdPermissionsResponses = {
         id: string;
         name: string;
         slug: string;
-        description: string | unknown;
+        description: string | null;
         gitUrl: string;
         createdByUserId: string;
         orgId: string;
-        ownerUsername: string | unknown;
+        ownerUsername: string | null;
         memberships: Array<{
             userId: string;
             permissions: Array<string>;
@@ -1545,64 +1547,64 @@ export type GetApiStepDefinitionsResponses = {
         projectId: string;
         key: string;
         name: string;
-        description: string | unknown;
-        prompt: string | unknown;
+        description: string | null;
+        prompt: string | null;
         version: number;
         kind: 'built_in' | 'user_defined' | 'code';
         entrypointJson: {
             sourceFile: string;
-        } | unknown;
+        } | null;
         executionMode: 'workspace' | 'no_workspace';
         inputSchemaJson: {
             [key: string]: unknown;
         };
         resultSchemaJson: {
             [key: string]: unknown;
-        } | unknown;
+        } | null;
         errors: Array<string>;
         retry: Array<{
             on: Array<string>;
             maxAttempts: number;
         }>;
         grants: Array<{
-            resource: string;
-            action: string;
+            resource: 'workItem';
+            action: 'read';
             scope: 'self' | 'children' | 'project';
         } | {
-            resource: string;
-            action: string;
+            resource: 'workItem';
+            action: 'update';
             scope: 'self' | 'children';
         } | {
-            resource: string;
-            action: string;
+            resource: 'workItem';
+            action: 'comment';
             scope: 'self' | 'children';
         } | {
-            resource: string;
-            action: string;
+            resource: 'workItem';
+            action: 'label';
             scope: 'self' | 'children';
             labels: Array<string>;
         } | {
-            resource: string;
-            action: string;
+            resource: 'workItem';
+            action: 'block';
             scope: 'self' | 'children';
         } | {
-            resource: string;
-            action: string;
+            resource: 'workItem';
+            action: 'close';
             scope: 'self' | 'children';
         } | {
-            resource: string;
-            action: string;
-            scope: string;
+            resource: 'workItem';
+            action: 'create';
+            scope: 'children';
             labels: Array<string>;
         }>;
-        maxTurns: number | unknown;
+        maxTurns: number | null;
         concurrency: {
             max: number;
             waiting: number;
-        } | unknown;
+        } | null;
         opencodeMcpJson: {
             [key: string]: {
-                type: string;
+                type: 'local';
                 command: Array<string>;
                 cwd?: string;
                 environment?: {
@@ -1617,7 +1619,7 @@ export type GetApiStepDefinitionsResponses = {
                 };
                 protocol?: 'legacy' | 'auto' | '2026-07-28';
             } | {
-                type: string;
+                type: 'remote';
                 url: string;
                 headers?: {
                     [key: string]: string;
@@ -1629,7 +1631,7 @@ export type GetApiStepDefinitionsResponses = {
                     callback_port?: number;
                     redirect_uri?: string;
                     auth_server_metadata_url?: string;
-                } | boolean;
+                } | false;
                 disabled?: boolean;
                 codemode?: boolean;
                 timeout?: {
@@ -1639,7 +1641,7 @@ export type GetApiStepDefinitionsResponses = {
                 };
                 protocol?: 'legacy' | 'auto' | '2026-07-28';
             } | {
-                type: string;
+                type: 'ref';
                 name?: string;
                 disabled?: boolean;
                 codemode?: boolean;
@@ -1650,13 +1652,13 @@ export type GetApiStepDefinitionsResponses = {
                 };
                 protocol?: 'legacy' | 'auto' | '2026-07-28';
             };
-        } | unknown;
+        } | null;
         healthChecksJson: Array<{
             name?: string;
             severity: 'required' | 'warn';
             timeoutSeconds: number;
             serialGroup?: string;
-            kind: string;
+            kind: 'tool';
             tool: string;
             mcp?: string;
             args?: {
@@ -1667,36 +1669,36 @@ export type GetApiStepDefinitionsResponses = {
             severity: 'required' | 'warn';
             timeoutSeconds: number;
             serialGroup?: string;
-            kind: string;
+            kind: 'cli';
             command: Array<string>;
             expectExitCode: number;
-        }> | unknown;
+        }> | null;
         envJson: Array<{
             name: string;
-            source: string;
+            source: 'value';
             value: string;
             secret: boolean;
             applies: 'agent' | 'setup' | 'both';
         } | {
             name: string;
-            source: string;
+            source: 'inherit';
             from: string;
             secret: boolean;
             optional: boolean;
             default?: string;
             mcp?: string;
             applies: 'agent' | 'setup' | 'both';
-        }> | unknown;
-        devcontainerConfigPath: string | unknown;
-        managedRuntime: 'bun1' | 'node24' | unknown;
+        }> | null;
+        devcontainerConfigPath: string | null;
+        managedRuntime: 'bun1' | 'node24' | null;
         repo: {
-            mode: string;
+            mode: 'none';
         } | {
-            mode: string;
+            mode: 'readOnly';
             gitCredentials: 'auto' | 'none';
         } | {
-            mode: string;
-            message: string | unknown;
+            mode: 'readWrite';
+            message: string | null;
             onPushFailure: 'fail' | 'warn';
             gitCredentials: 'auto' | 'none';
         };
@@ -1713,64 +1715,64 @@ export type PostApiStepDefinitionsData = {
         projectId: string;
         key: string;
         name: string;
-        description: string | unknown;
-        prompt?: string | unknown;
+        description: string | null;
+        prompt?: string | null;
         version: number;
         kind: 'built_in' | 'user_defined' | 'code';
         entrypointJson?: {
             sourceFile: string;
-        } | unknown;
+        } | null;
         executionMode?: 'workspace' | 'no_workspace';
         inputSchemaJson: {
             [key: string]: unknown;
         };
         resultSchemaJson: {
             [key: string]: unknown;
-        } | unknown;
+        } | null;
         errors?: Array<string>;
         retry?: Array<{
             on: Array<string>;
             maxAttempts: number;
         }>;
         grants?: Array<{
-            resource: string;
-            action: string;
+            resource: 'workItem';
+            action: 'read';
             scope: 'self' | 'children' | 'project';
         } | {
-            resource: string;
-            action: string;
+            resource: 'workItem';
+            action: 'update';
             scope: 'self' | 'children';
         } | {
-            resource: string;
-            action: string;
+            resource: 'workItem';
+            action: 'comment';
             scope: 'self' | 'children';
         } | {
-            resource: string;
-            action: string;
+            resource: 'workItem';
+            action: 'label';
             scope: 'self' | 'children';
             labels: Array<string>;
         } | {
-            resource: string;
-            action: string;
+            resource: 'workItem';
+            action: 'block';
             scope: 'self' | 'children';
         } | {
-            resource: string;
-            action: string;
+            resource: 'workItem';
+            action: 'close';
             scope: 'self' | 'children';
         } | {
-            resource: string;
-            action: string;
-            scope: string;
+            resource: 'workItem';
+            action: 'create';
+            scope: 'children';
             labels: Array<string>;
         }>;
-        maxTurns?: number | unknown;
+        maxTurns?: number | null;
         concurrency?: {
             max: number;
             waiting: number;
-        } | unknown;
+        } | null;
         opencodeMcpJson?: {
             [key: string]: {
-                type: string;
+                type: 'local';
                 command: Array<string>;
                 cwd?: string;
                 environment?: {
@@ -1785,7 +1787,7 @@ export type PostApiStepDefinitionsData = {
                 };
                 protocol?: 'legacy' | 'auto' | '2026-07-28';
             } | {
-                type: string;
+                type: 'remote';
                 url: string;
                 headers?: {
                     [key: string]: string;
@@ -1797,7 +1799,7 @@ export type PostApiStepDefinitionsData = {
                     callback_port?: number;
                     redirect_uri?: string;
                     auth_server_metadata_url?: string;
-                } | boolean;
+                } | false;
                 disabled?: boolean;
                 codemode?: boolean;
                 timeout?: {
@@ -1807,7 +1809,7 @@ export type PostApiStepDefinitionsData = {
                 };
                 protocol?: 'legacy' | 'auto' | '2026-07-28';
             } | {
-                type: string;
+                type: 'ref';
                 name?: string;
                 disabled?: boolean;
                 codemode?: boolean;
@@ -1818,13 +1820,13 @@ export type PostApiStepDefinitionsData = {
                 };
                 protocol?: 'legacy' | 'auto' | '2026-07-28';
             };
-        } | unknown;
+        } | null;
         healthChecksJson?: Array<{
             name?: string;
-            severity: 'required' | 'warn';
-            timeoutSeconds: number;
+            severity?: 'required' | 'warn';
+            timeoutSeconds?: number;
             serialGroup?: string;
-            kind: string;
+            kind?: 'tool';
             tool: string;
             mcp?: string;
             args?: {
@@ -1832,39 +1834,39 @@ export type PostApiStepDefinitionsData = {
             };
         } | {
             name?: string;
-            severity: 'required' | 'warn';
-            timeoutSeconds: number;
+            severity?: 'required' | 'warn';
+            timeoutSeconds?: number;
             serialGroup?: string;
-            kind: string;
+            kind: 'cli';
             command: Array<string>;
-            expectExitCode: number;
-        }> | unknown;
+            expectExitCode?: number;
+        }> | null;
         envJson?: Array<{
             name: string;
-            source: string;
+            source: 'value';
             value: string;
             secret: boolean;
-            applies: 'agent' | 'setup' | 'both';
+            applies?: 'agent' | 'setup' | 'both';
         } | {
             name: string;
-            source: string;
+            source: 'inherit';
             from: string;
             secret: boolean;
             optional: boolean;
             default?: string;
             mcp?: string;
-            applies: 'agent' | 'setup' | 'both';
-        }> | unknown;
-        devcontainerConfigPath?: string | unknown;
-        managedRuntime?: 'bun1' | 'node24' | unknown;
+            applies?: 'agent' | 'setup' | 'both';
+        }> | null;
+        devcontainerConfigPath?: string | null;
+        managedRuntime?: 'bun1' | 'node24' | null;
         repo?: {
-            mode: string;
+            mode: 'none';
         } | {
-            mode: string;
+            mode: 'readOnly';
             gitCredentials?: 'auto' | 'none';
         } | {
-            mode: string;
-            message?: string | unknown;
+            mode: 'readWrite';
+            message?: string | null;
             onPushFailure?: 'fail' | 'warn';
             gitCredentials?: 'auto' | 'none';
         };
@@ -2022,64 +2024,64 @@ export type PostApiStepDefinitionsResponses = {
         projectId: string;
         key: string;
         name: string;
-        description: string | unknown;
-        prompt: string | unknown;
+        description: string | null;
+        prompt: string | null;
         version: number;
         kind: 'built_in' | 'user_defined' | 'code';
         entrypointJson: {
             sourceFile: string;
-        } | unknown;
+        } | null;
         executionMode: 'workspace' | 'no_workspace';
         inputSchemaJson: {
             [key: string]: unknown;
         };
         resultSchemaJson: {
             [key: string]: unknown;
-        } | unknown;
+        } | null;
         errors: Array<string>;
         retry: Array<{
             on: Array<string>;
             maxAttempts: number;
         }>;
         grants: Array<{
-            resource: string;
-            action: string;
+            resource: 'workItem';
+            action: 'read';
             scope: 'self' | 'children' | 'project';
         } | {
-            resource: string;
-            action: string;
+            resource: 'workItem';
+            action: 'update';
             scope: 'self' | 'children';
         } | {
-            resource: string;
-            action: string;
+            resource: 'workItem';
+            action: 'comment';
             scope: 'self' | 'children';
         } | {
-            resource: string;
-            action: string;
+            resource: 'workItem';
+            action: 'label';
             scope: 'self' | 'children';
             labels: Array<string>;
         } | {
-            resource: string;
-            action: string;
+            resource: 'workItem';
+            action: 'block';
             scope: 'self' | 'children';
         } | {
-            resource: string;
-            action: string;
+            resource: 'workItem';
+            action: 'close';
             scope: 'self' | 'children';
         } | {
-            resource: string;
-            action: string;
-            scope: string;
+            resource: 'workItem';
+            action: 'create';
+            scope: 'children';
             labels: Array<string>;
         }>;
-        maxTurns: number | unknown;
+        maxTurns: number | null;
         concurrency: {
             max: number;
             waiting: number;
-        } | unknown;
+        } | null;
         opencodeMcpJson: {
             [key: string]: {
-                type: string;
+                type: 'local';
                 command: Array<string>;
                 cwd?: string;
                 environment?: {
@@ -2094,7 +2096,7 @@ export type PostApiStepDefinitionsResponses = {
                 };
                 protocol?: 'legacy' | 'auto' | '2026-07-28';
             } | {
-                type: string;
+                type: 'remote';
                 url: string;
                 headers?: {
                     [key: string]: string;
@@ -2106,7 +2108,7 @@ export type PostApiStepDefinitionsResponses = {
                     callback_port?: number;
                     redirect_uri?: string;
                     auth_server_metadata_url?: string;
-                } | boolean;
+                } | false;
                 disabled?: boolean;
                 codemode?: boolean;
                 timeout?: {
@@ -2116,7 +2118,7 @@ export type PostApiStepDefinitionsResponses = {
                 };
                 protocol?: 'legacy' | 'auto' | '2026-07-28';
             } | {
-                type: string;
+                type: 'ref';
                 name?: string;
                 disabled?: boolean;
                 codemode?: boolean;
@@ -2127,13 +2129,13 @@ export type PostApiStepDefinitionsResponses = {
                 };
                 protocol?: 'legacy' | 'auto' | '2026-07-28';
             };
-        } | unknown;
+        } | null;
         healthChecksJson: Array<{
             name?: string;
             severity: 'required' | 'warn';
             timeoutSeconds: number;
             serialGroup?: string;
-            kind: string;
+            kind: 'tool';
             tool: string;
             mcp?: string;
             args?: {
@@ -2144,36 +2146,36 @@ export type PostApiStepDefinitionsResponses = {
             severity: 'required' | 'warn';
             timeoutSeconds: number;
             serialGroup?: string;
-            kind: string;
+            kind: 'cli';
             command: Array<string>;
             expectExitCode: number;
-        }> | unknown;
+        }> | null;
         envJson: Array<{
             name: string;
-            source: string;
+            source: 'value';
             value: string;
             secret: boolean;
             applies: 'agent' | 'setup' | 'both';
         } | {
             name: string;
-            source: string;
+            source: 'inherit';
             from: string;
             secret: boolean;
             optional: boolean;
             default?: string;
             mcp?: string;
             applies: 'agent' | 'setup' | 'both';
-        }> | unknown;
-        devcontainerConfigPath: string | unknown;
-        managedRuntime: 'bun1' | 'node24' | unknown;
+        }> | null;
+        devcontainerConfigPath: string | null;
+        managedRuntime: 'bun1' | 'node24' | null;
         repo: {
-            mode: string;
+            mode: 'none';
         } | {
-            mode: string;
+            mode: 'readOnly';
             gitCredentials: 'auto' | 'none';
         } | {
-            mode: string;
-            message: string | unknown;
+            mode: 'readWrite';
+            message: string | null;
             onPushFailure: 'fail' | 'warn';
             gitCredentials: 'auto' | 'none';
         };
@@ -2190,64 +2192,64 @@ export type PutApiStepDefinitionsData = {
         projectId: string;
         key: string;
         name: string;
-        description: string | unknown;
-        prompt?: string | unknown;
+        description: string | null;
+        prompt?: string | null;
         version: number;
         kind: 'built_in' | 'user_defined' | 'code';
         entrypointJson?: {
             sourceFile: string;
-        } | unknown;
+        } | null;
         executionMode?: 'workspace' | 'no_workspace';
         inputSchemaJson: {
             [key: string]: unknown;
         };
         resultSchemaJson: {
             [key: string]: unknown;
-        } | unknown;
+        } | null;
         errors?: Array<string>;
         retry?: Array<{
             on: Array<string>;
             maxAttempts: number;
         }>;
         grants?: Array<{
-            resource: string;
-            action: string;
+            resource: 'workItem';
+            action: 'read';
             scope: 'self' | 'children' | 'project';
         } | {
-            resource: string;
-            action: string;
+            resource: 'workItem';
+            action: 'update';
             scope: 'self' | 'children';
         } | {
-            resource: string;
-            action: string;
+            resource: 'workItem';
+            action: 'comment';
             scope: 'self' | 'children';
         } | {
-            resource: string;
-            action: string;
+            resource: 'workItem';
+            action: 'label';
             scope: 'self' | 'children';
             labels: Array<string>;
         } | {
-            resource: string;
-            action: string;
+            resource: 'workItem';
+            action: 'block';
             scope: 'self' | 'children';
         } | {
-            resource: string;
-            action: string;
+            resource: 'workItem';
+            action: 'close';
             scope: 'self' | 'children';
         } | {
-            resource: string;
-            action: string;
-            scope: string;
+            resource: 'workItem';
+            action: 'create';
+            scope: 'children';
             labels: Array<string>;
         }>;
-        maxTurns?: number | unknown;
+        maxTurns?: number | null;
         concurrency?: {
             max: number;
             waiting: number;
-        } | unknown;
+        } | null;
         opencodeMcpJson?: {
             [key: string]: {
-                type: string;
+                type: 'local';
                 command: Array<string>;
                 cwd?: string;
                 environment?: {
@@ -2262,7 +2264,7 @@ export type PutApiStepDefinitionsData = {
                 };
                 protocol?: 'legacy' | 'auto' | '2026-07-28';
             } | {
-                type: string;
+                type: 'remote';
                 url: string;
                 headers?: {
                     [key: string]: string;
@@ -2274,7 +2276,7 @@ export type PutApiStepDefinitionsData = {
                     callback_port?: number;
                     redirect_uri?: string;
                     auth_server_metadata_url?: string;
-                } | boolean;
+                } | false;
                 disabled?: boolean;
                 codemode?: boolean;
                 timeout?: {
@@ -2284,7 +2286,7 @@ export type PutApiStepDefinitionsData = {
                 };
                 protocol?: 'legacy' | 'auto' | '2026-07-28';
             } | {
-                type: string;
+                type: 'ref';
                 name?: string;
                 disabled?: boolean;
                 codemode?: boolean;
@@ -2295,13 +2297,13 @@ export type PutApiStepDefinitionsData = {
                 };
                 protocol?: 'legacy' | 'auto' | '2026-07-28';
             };
-        } | unknown;
+        } | null;
         healthChecksJson?: Array<{
             name?: string;
-            severity: 'required' | 'warn';
-            timeoutSeconds: number;
+            severity?: 'required' | 'warn';
+            timeoutSeconds?: number;
             serialGroup?: string;
-            kind: string;
+            kind?: 'tool';
             tool: string;
             mcp?: string;
             args?: {
@@ -2309,39 +2311,39 @@ export type PutApiStepDefinitionsData = {
             };
         } | {
             name?: string;
-            severity: 'required' | 'warn';
-            timeoutSeconds: number;
+            severity?: 'required' | 'warn';
+            timeoutSeconds?: number;
             serialGroup?: string;
-            kind: string;
+            kind: 'cli';
             command: Array<string>;
-            expectExitCode: number;
-        }> | unknown;
+            expectExitCode?: number;
+        }> | null;
         envJson?: Array<{
             name: string;
-            source: string;
+            source: 'value';
             value: string;
             secret: boolean;
-            applies: 'agent' | 'setup' | 'both';
+            applies?: 'agent' | 'setup' | 'both';
         } | {
             name: string;
-            source: string;
+            source: 'inherit';
             from: string;
             secret: boolean;
             optional: boolean;
             default?: string;
             mcp?: string;
-            applies: 'agent' | 'setup' | 'both';
-        }> | unknown;
-        devcontainerConfigPath?: string | unknown;
-        managedRuntime?: 'bun1' | 'node24' | unknown;
+            applies?: 'agent' | 'setup' | 'both';
+        }> | null;
+        devcontainerConfigPath?: string | null;
+        managedRuntime?: 'bun1' | 'node24' | null;
         repo?: {
-            mode: string;
+            mode: 'none';
         } | {
-            mode: string;
+            mode: 'readOnly';
             gitCredentials?: 'auto' | 'none';
         } | {
-            mode: string;
-            message?: string | unknown;
+            mode: 'readWrite';
+            message?: string | null;
             onPushFailure?: 'fail' | 'warn';
             gitCredentials?: 'auto' | 'none';
         };
@@ -2461,64 +2463,64 @@ export type PutApiStepDefinitionsResponses = {
         projectId: string;
         key: string;
         name: string;
-        description: string | unknown;
-        prompt: string | unknown;
+        description: string | null;
+        prompt: string | null;
         version: number;
         kind: 'built_in' | 'user_defined' | 'code';
         entrypointJson: {
             sourceFile: string;
-        } | unknown;
+        } | null;
         executionMode: 'workspace' | 'no_workspace';
         inputSchemaJson: {
             [key: string]: unknown;
         };
         resultSchemaJson: {
             [key: string]: unknown;
-        } | unknown;
+        } | null;
         errors: Array<string>;
         retry: Array<{
             on: Array<string>;
             maxAttempts: number;
         }>;
         grants: Array<{
-            resource: string;
-            action: string;
+            resource: 'workItem';
+            action: 'read';
             scope: 'self' | 'children' | 'project';
         } | {
-            resource: string;
-            action: string;
+            resource: 'workItem';
+            action: 'update';
             scope: 'self' | 'children';
         } | {
-            resource: string;
-            action: string;
+            resource: 'workItem';
+            action: 'comment';
             scope: 'self' | 'children';
         } | {
-            resource: string;
-            action: string;
+            resource: 'workItem';
+            action: 'label';
             scope: 'self' | 'children';
             labels: Array<string>;
         } | {
-            resource: string;
-            action: string;
+            resource: 'workItem';
+            action: 'block';
             scope: 'self' | 'children';
         } | {
-            resource: string;
-            action: string;
+            resource: 'workItem';
+            action: 'close';
             scope: 'self' | 'children';
         } | {
-            resource: string;
-            action: string;
-            scope: string;
+            resource: 'workItem';
+            action: 'create';
+            scope: 'children';
             labels: Array<string>;
         }>;
-        maxTurns: number | unknown;
+        maxTurns: number | null;
         concurrency: {
             max: number;
             waiting: number;
-        } | unknown;
+        } | null;
         opencodeMcpJson: {
             [key: string]: {
-                type: string;
+                type: 'local';
                 command: Array<string>;
                 cwd?: string;
                 environment?: {
@@ -2533,7 +2535,7 @@ export type PutApiStepDefinitionsResponses = {
                 };
                 protocol?: 'legacy' | 'auto' | '2026-07-28';
             } | {
-                type: string;
+                type: 'remote';
                 url: string;
                 headers?: {
                     [key: string]: string;
@@ -2545,7 +2547,7 @@ export type PutApiStepDefinitionsResponses = {
                     callback_port?: number;
                     redirect_uri?: string;
                     auth_server_metadata_url?: string;
-                } | boolean;
+                } | false;
                 disabled?: boolean;
                 codemode?: boolean;
                 timeout?: {
@@ -2555,7 +2557,7 @@ export type PutApiStepDefinitionsResponses = {
                 };
                 protocol?: 'legacy' | 'auto' | '2026-07-28';
             } | {
-                type: string;
+                type: 'ref';
                 name?: string;
                 disabled?: boolean;
                 codemode?: boolean;
@@ -2566,13 +2568,13 @@ export type PutApiStepDefinitionsResponses = {
                 };
                 protocol?: 'legacy' | 'auto' | '2026-07-28';
             };
-        } | unknown;
+        } | null;
         healthChecksJson: Array<{
             name?: string;
             severity: 'required' | 'warn';
             timeoutSeconds: number;
             serialGroup?: string;
-            kind: string;
+            kind: 'tool';
             tool: string;
             mcp?: string;
             args?: {
@@ -2583,36 +2585,36 @@ export type PutApiStepDefinitionsResponses = {
             severity: 'required' | 'warn';
             timeoutSeconds: number;
             serialGroup?: string;
-            kind: string;
+            kind: 'cli';
             command: Array<string>;
             expectExitCode: number;
-        }> | unknown;
+        }> | null;
         envJson: Array<{
             name: string;
-            source: string;
+            source: 'value';
             value: string;
             secret: boolean;
             applies: 'agent' | 'setup' | 'both';
         } | {
             name: string;
-            source: string;
+            source: 'inherit';
             from: string;
             secret: boolean;
             optional: boolean;
             default?: string;
             mcp?: string;
             applies: 'agent' | 'setup' | 'both';
-        }> | unknown;
-        devcontainerConfigPath: string | unknown;
-        managedRuntime: 'bun1' | 'node24' | unknown;
+        }> | null;
+        devcontainerConfigPath: string | null;
+        managedRuntime: 'bun1' | 'node24' | null;
         repo: {
-            mode: string;
+            mode: 'none';
         } | {
-            mode: string;
+            mode: 'readOnly';
             gitCredentials: 'auto' | 'none';
         } | {
-            mode: string;
-            message: string | unknown;
+            mode: 'readWrite';
+            message: string | null;
             onPushFailure: 'fail' | 'warn';
             gitCredentials: 'auto' | 'none';
         };
@@ -2742,64 +2744,64 @@ export type GetApiStepDefinitionsByStepDefinitionIdResponses = {
         projectId: string;
         key: string;
         name: string;
-        description: string | unknown;
-        prompt: string | unknown;
+        description: string | null;
+        prompt: string | null;
         version: number;
         kind: 'built_in' | 'user_defined' | 'code';
         entrypointJson: {
             sourceFile: string;
-        } | unknown;
+        } | null;
         executionMode: 'workspace' | 'no_workspace';
         inputSchemaJson: {
             [key: string]: unknown;
         };
         resultSchemaJson: {
             [key: string]: unknown;
-        } | unknown;
+        } | null;
         errors: Array<string>;
         retry: Array<{
             on: Array<string>;
             maxAttempts: number;
         }>;
         grants: Array<{
-            resource: string;
-            action: string;
+            resource: 'workItem';
+            action: 'read';
             scope: 'self' | 'children' | 'project';
         } | {
-            resource: string;
-            action: string;
+            resource: 'workItem';
+            action: 'update';
             scope: 'self' | 'children';
         } | {
-            resource: string;
-            action: string;
+            resource: 'workItem';
+            action: 'comment';
             scope: 'self' | 'children';
         } | {
-            resource: string;
-            action: string;
+            resource: 'workItem';
+            action: 'label';
             scope: 'self' | 'children';
             labels: Array<string>;
         } | {
-            resource: string;
-            action: string;
+            resource: 'workItem';
+            action: 'block';
             scope: 'self' | 'children';
         } | {
-            resource: string;
-            action: string;
+            resource: 'workItem';
+            action: 'close';
             scope: 'self' | 'children';
         } | {
-            resource: string;
-            action: string;
-            scope: string;
+            resource: 'workItem';
+            action: 'create';
+            scope: 'children';
             labels: Array<string>;
         }>;
-        maxTurns: number | unknown;
+        maxTurns: number | null;
         concurrency: {
             max: number;
             waiting: number;
-        } | unknown;
+        } | null;
         opencodeMcpJson: {
             [key: string]: {
-                type: string;
+                type: 'local';
                 command: Array<string>;
                 cwd?: string;
                 environment?: {
@@ -2814,7 +2816,7 @@ export type GetApiStepDefinitionsByStepDefinitionIdResponses = {
                 };
                 protocol?: 'legacy' | 'auto' | '2026-07-28';
             } | {
-                type: string;
+                type: 'remote';
                 url: string;
                 headers?: {
                     [key: string]: string;
@@ -2826,7 +2828,7 @@ export type GetApiStepDefinitionsByStepDefinitionIdResponses = {
                     callback_port?: number;
                     redirect_uri?: string;
                     auth_server_metadata_url?: string;
-                } | boolean;
+                } | false;
                 disabled?: boolean;
                 codemode?: boolean;
                 timeout?: {
@@ -2836,7 +2838,7 @@ export type GetApiStepDefinitionsByStepDefinitionIdResponses = {
                 };
                 protocol?: 'legacy' | 'auto' | '2026-07-28';
             } | {
-                type: string;
+                type: 'ref';
                 name?: string;
                 disabled?: boolean;
                 codemode?: boolean;
@@ -2847,13 +2849,13 @@ export type GetApiStepDefinitionsByStepDefinitionIdResponses = {
                 };
                 protocol?: 'legacy' | 'auto' | '2026-07-28';
             };
-        } | unknown;
+        } | null;
         healthChecksJson: Array<{
             name?: string;
             severity: 'required' | 'warn';
             timeoutSeconds: number;
             serialGroup?: string;
-            kind: string;
+            kind: 'tool';
             tool: string;
             mcp?: string;
             args?: {
@@ -2864,36 +2866,36 @@ export type GetApiStepDefinitionsByStepDefinitionIdResponses = {
             severity: 'required' | 'warn';
             timeoutSeconds: number;
             serialGroup?: string;
-            kind: string;
+            kind: 'cli';
             command: Array<string>;
             expectExitCode: number;
-        }> | unknown;
+        }> | null;
         envJson: Array<{
             name: string;
-            source: string;
+            source: 'value';
             value: string;
             secret: boolean;
             applies: 'agent' | 'setup' | 'both';
         } | {
             name: string;
-            source: string;
+            source: 'inherit';
             from: string;
             secret: boolean;
             optional: boolean;
             default?: string;
             mcp?: string;
             applies: 'agent' | 'setup' | 'both';
-        }> | unknown;
-        devcontainerConfigPath: string | unknown;
-        managedRuntime: 'bun1' | 'node24' | unknown;
+        }> | null;
+        devcontainerConfigPath: string | null;
+        managedRuntime: 'bun1' | 'node24' | null;
         repo: {
-            mode: string;
+            mode: 'none';
         } | {
-            mode: string;
+            mode: 'readOnly';
             gitCredentials: 'auto' | 'none';
         } | {
-            mode: string;
-            message: string | unknown;
+            mode: 'readWrite';
+            message: string | null;
             onPushFailure: 'fail' | 'warn';
             gitCredentials: 'auto' | 'none';
         };
@@ -3023,64 +3025,64 @@ export type PutApiStepDefinitionsByStepDefinitionIdArchiveResponses = {
         projectId: string;
         key: string;
         name: string;
-        description: string | unknown;
-        prompt: string | unknown;
+        description: string | null;
+        prompt: string | null;
         version: number;
         kind: 'built_in' | 'user_defined' | 'code';
         entrypointJson: {
             sourceFile: string;
-        } | unknown;
+        } | null;
         executionMode: 'workspace' | 'no_workspace';
         inputSchemaJson: {
             [key: string]: unknown;
         };
         resultSchemaJson: {
             [key: string]: unknown;
-        } | unknown;
+        } | null;
         errors: Array<string>;
         retry: Array<{
             on: Array<string>;
             maxAttempts: number;
         }>;
         grants: Array<{
-            resource: string;
-            action: string;
+            resource: 'workItem';
+            action: 'read';
             scope: 'self' | 'children' | 'project';
         } | {
-            resource: string;
-            action: string;
+            resource: 'workItem';
+            action: 'update';
             scope: 'self' | 'children';
         } | {
-            resource: string;
-            action: string;
+            resource: 'workItem';
+            action: 'comment';
             scope: 'self' | 'children';
         } | {
-            resource: string;
-            action: string;
+            resource: 'workItem';
+            action: 'label';
             scope: 'self' | 'children';
             labels: Array<string>;
         } | {
-            resource: string;
-            action: string;
+            resource: 'workItem';
+            action: 'block';
             scope: 'self' | 'children';
         } | {
-            resource: string;
-            action: string;
+            resource: 'workItem';
+            action: 'close';
             scope: 'self' | 'children';
         } | {
-            resource: string;
-            action: string;
-            scope: string;
+            resource: 'workItem';
+            action: 'create';
+            scope: 'children';
             labels: Array<string>;
         }>;
-        maxTurns: number | unknown;
+        maxTurns: number | null;
         concurrency: {
             max: number;
             waiting: number;
-        } | unknown;
+        } | null;
         opencodeMcpJson: {
             [key: string]: {
-                type: string;
+                type: 'local';
                 command: Array<string>;
                 cwd?: string;
                 environment?: {
@@ -3095,7 +3097,7 @@ export type PutApiStepDefinitionsByStepDefinitionIdArchiveResponses = {
                 };
                 protocol?: 'legacy' | 'auto' | '2026-07-28';
             } | {
-                type: string;
+                type: 'remote';
                 url: string;
                 headers?: {
                     [key: string]: string;
@@ -3107,7 +3109,7 @@ export type PutApiStepDefinitionsByStepDefinitionIdArchiveResponses = {
                     callback_port?: number;
                     redirect_uri?: string;
                     auth_server_metadata_url?: string;
-                } | boolean;
+                } | false;
                 disabled?: boolean;
                 codemode?: boolean;
                 timeout?: {
@@ -3117,7 +3119,7 @@ export type PutApiStepDefinitionsByStepDefinitionIdArchiveResponses = {
                 };
                 protocol?: 'legacy' | 'auto' | '2026-07-28';
             } | {
-                type: string;
+                type: 'ref';
                 name?: string;
                 disabled?: boolean;
                 codemode?: boolean;
@@ -3128,13 +3130,13 @@ export type PutApiStepDefinitionsByStepDefinitionIdArchiveResponses = {
                 };
                 protocol?: 'legacy' | 'auto' | '2026-07-28';
             };
-        } | unknown;
+        } | null;
         healthChecksJson: Array<{
             name?: string;
             severity: 'required' | 'warn';
             timeoutSeconds: number;
             serialGroup?: string;
-            kind: string;
+            kind: 'tool';
             tool: string;
             mcp?: string;
             args?: {
@@ -3145,36 +3147,36 @@ export type PutApiStepDefinitionsByStepDefinitionIdArchiveResponses = {
             severity: 'required' | 'warn';
             timeoutSeconds: number;
             serialGroup?: string;
-            kind: string;
+            kind: 'cli';
             command: Array<string>;
             expectExitCode: number;
-        }> | unknown;
+        }> | null;
         envJson: Array<{
             name: string;
-            source: string;
+            source: 'value';
             value: string;
             secret: boolean;
             applies: 'agent' | 'setup' | 'both';
         } | {
             name: string;
-            source: string;
+            source: 'inherit';
             from: string;
             secret: boolean;
             optional: boolean;
             default?: string;
             mcp?: string;
             applies: 'agent' | 'setup' | 'both';
-        }> | unknown;
-        devcontainerConfigPath: string | unknown;
-        managedRuntime: 'bun1' | 'node24' | unknown;
+        }> | null;
+        devcontainerConfigPath: string | null;
+        managedRuntime: 'bun1' | 'node24' | null;
         repo: {
-            mode: string;
+            mode: 'none';
         } | {
-            mode: string;
+            mode: 'readOnly';
             gitCredentials: 'auto' | 'none';
         } | {
-            mode: string;
-            message: string | unknown;
+            mode: 'readWrite';
+            message: string | null;
             onPushFailure: 'fail' | 'warn';
             gitCredentials: 'auto' | 'none';
         };
@@ -3190,15 +3192,15 @@ export type PostApiTasksData = {
     body: {
         projectId: string;
         workItemId: string;
-        inputJson?: unknown;
-        executionTimeoutSeconds?: number | unknown;
+        inputJson?: unknown | null;
+        executionTimeoutSeconds?: number | null;
         stepDefinitionId: string;
         stepDefinitionVersion: number;
     } | {
         projectId: string;
         workItemId: string;
-        inputJson?: unknown;
-        executionTimeoutSeconds?: number | unknown;
+        inputJson?: unknown | null;
+        executionTimeoutSeconds?: number | null;
         prompt: string;
     };
     path?: never;
@@ -3353,51 +3355,51 @@ export type PostApiTasksResponses = {
             id: string;
             projectId: string;
             workItemId: string;
-            stepDefinitionId: string | unknown;
+            stepDefinitionId: string | null;
             kind: 'agent' | 'code';
-            name: string | unknown;
-            taskExecutionConfigId: string | unknown;
-            inputJson: unknown;
-            retryJson: unknown;
+            name: string | null;
+            taskExecutionConfigId: string | null;
+            inputJson: unknown | null;
+            retryJson: unknown | null;
             grants: Array<{
-                resource: string;
-                action: string;
+                resource: 'workItem';
+                action: 'read';
                 scope: 'self' | 'children' | 'project';
             } | {
-                resource: string;
-                action: string;
+                resource: 'workItem';
+                action: 'update';
                 scope: 'self' | 'children';
             } | {
-                resource: string;
-                action: string;
+                resource: 'workItem';
+                action: 'comment';
                 scope: 'self' | 'children';
             } | {
-                resource: string;
-                action: string;
+                resource: 'workItem';
+                action: 'label';
                 scope: 'self' | 'children';
                 labels: Array<string>;
             } | {
-                resource: string;
-                action: string;
+                resource: 'workItem';
+                action: 'block';
                 scope: 'self' | 'children';
             } | {
-                resource: string;
-                action: string;
+                resource: 'workItem';
+                action: 'close';
                 scope: 'self' | 'children';
             } | {
-                resource: string;
-                action: string;
-                scope: string;
+                resource: 'workItem';
+                action: 'create';
+                scope: 'children';
                 labels: Array<string>;
             }>;
-            maxTurns: number | unknown;
-            heartbeatSeconds: number | unknown;
-            executionTimeoutSeconds: number | unknown;
+            maxTurns: number | null;
+            heartbeatSeconds: number | null;
+            executionTimeoutSeconds: number | null;
             status: 'waiting_for_concurrency_slot' | 'waiting_for_work' | 'queued' | 'running' | 'waiting_for_person' | 'succeeded' | 'failed' | 'cancelled';
-            resultJson: unknown;
-            errorJson: unknown;
-            startedByUserId: string | unknown;
-            previousTaskId: string | unknown;
+            resultJson: unknown | null;
+            errorJson: unknown | null;
+            startedByUserId: string | null;
+            previousTaskId: string | null;
             createdAt: string;
             updatedAt: string;
         };
@@ -3408,30 +3410,30 @@ export type PostApiTasksResponses = {
             reason: 'initial' | 'retry' | 'continuation';
             projectId: string;
             workItemId: string;
-            taskExecutionConfigId: string | unknown;
-            name: string | unknown;
+            taskExecutionConfigId: string | null;
+            name: string | null;
             kind: 'agent' | 'code';
-            previousTaskRunId: string | unknown;
-            baseBranch: string | unknown;
-            heartbeatSeconds: number | unknown;
+            previousTaskRunId: string | null;
+            baseBranch: string | null;
+            heartbeatSeconds: number | null;
             status: 'pending' | 'queued' | 'running' | 'succeeded' | 'failed' | 'timeout' | 'abandoned' | 'cancelled' | 'skipped' | 'yielded';
-            inputJson: unknown;
-            claimedBy: string | unknown;
-            claimedAt: string | unknown;
-            lastHeartbeatAt: string | unknown;
-            leaseExpiresAt: string | unknown;
-            executionTimeoutSeconds: number | unknown;
-            executionDeadlineAt: string | unknown;
-            startedAt: string | unknown;
-            completedAt: string | unknown;
-            resultJson: unknown;
-            errorJson: unknown;
-            workBranch: string | unknown;
-            createdFromBranch: string | unknown;
-            sessionRestored: boolean | unknown;
+            inputJson: unknown | null;
+            claimedBy: string | null;
+            claimedAt: string | null;
+            lastHeartbeatAt: string | null;
+            leaseExpiresAt: string | null;
+            executionTimeoutSeconds: number | null;
+            executionDeadlineAt: string | null;
+            startedAt: string | null;
+            completedAt: string | null;
+            resultJson: unknown | null;
+            errorJson: unknown | null;
+            workBranch: string | null;
+            createdFromBranch: string | null;
+            sessionRestored: boolean | null;
             createdAt: string;
             updatedAt: string;
-        } | unknown;
+        } | null;
     };
 };
 
@@ -3557,6 +3559,148 @@ export type PostApiTasksByTaskIdCancelResponses = {
 
 export type PostApiTasksByTaskIdCancelResponse = PostApiTasksByTaskIdCancelResponses[keyof PostApiTasksByTaskIdCancelResponses];
 
+export type PostApiTasksByTaskIdRetryData = {
+    body: {
+        expectedLatestRunId: string | null;
+    };
+    path: {
+        taskId: string;
+    };
+    query?: never;
+    url: '/api/tasks/{taskId}/retry';
+};
+
+export type PostApiTasksByTaskIdRetryErrors = {
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 404
+     */
+    404: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 409
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type PostApiTasksByTaskIdRetryError = PostApiTasksByTaskIdRetryErrors[keyof PostApiTasksByTaskIdRetryErrors];
+
+export type PostApiTasksByTaskIdRetryResponses = {
+    /**
+     * Response for status 200
+     */
+    200: {
+        taskId: string;
+        taskRunId: string | null;
+    };
+};
+
+export type PostApiTasksByTaskIdRetryResponse = PostApiTasksByTaskIdRetryResponses[keyof PostApiTasksByTaskIdRetryResponses];
+
 export type GetApiTasksByTaskIdData = {
     body?: never;
     path: {
@@ -3674,59 +3818,59 @@ export type GetApiTasksByTaskIdResponses = {
         id: string;
         projectId: string;
         workItemId: string;
-        stepDefinitionId: string | unknown;
+        stepDefinitionId: string | null;
         kind: 'agent' | 'code';
-        name: string | unknown;
-        taskExecutionConfigId: string | unknown;
-        inputJson: unknown;
-        retryJson: unknown;
+        name: string | null;
+        taskExecutionConfigId: string | null;
+        inputJson: unknown | null;
+        retryJson: unknown | null;
         grants: Array<{
-            resource: string;
-            action: string;
+            resource: 'workItem';
+            action: 'read';
             scope: 'self' | 'children' | 'project';
         } | {
-            resource: string;
-            action: string;
+            resource: 'workItem';
+            action: 'update';
             scope: 'self' | 'children';
         } | {
-            resource: string;
-            action: string;
+            resource: 'workItem';
+            action: 'comment';
             scope: 'self' | 'children';
         } | {
-            resource: string;
-            action: string;
+            resource: 'workItem';
+            action: 'label';
             scope: 'self' | 'children';
             labels: Array<string>;
         } | {
-            resource: string;
-            action: string;
+            resource: 'workItem';
+            action: 'block';
             scope: 'self' | 'children';
         } | {
-            resource: string;
-            action: string;
+            resource: 'workItem';
+            action: 'close';
             scope: 'self' | 'children';
         } | {
-            resource: string;
-            action: string;
-            scope: string;
+            resource: 'workItem';
+            action: 'create';
+            scope: 'children';
             labels: Array<string>;
         }>;
-        maxTurns: number | unknown;
-        heartbeatSeconds: number | unknown;
-        executionTimeoutSeconds: number | unknown;
+        maxTurns: number | null;
+        heartbeatSeconds: number | null;
+        executionTimeoutSeconds: number | null;
         status: 'waiting_for_concurrency_slot' | 'waiting_for_work' | 'queued' | 'running' | 'waiting_for_person' | 'succeeded' | 'failed' | 'cancelled';
-        resultJson: unknown;
-        errorJson: unknown;
-        startedByUserId: string | unknown;
-        previousTaskId: string | unknown;
+        resultJson: unknown | null;
+        errorJson: unknown | null;
+        startedByUserId: string | null;
+        previousTaskId: string | null;
         createdAt: string;
         updatedAt: string;
         waitingOnYou: boolean;
         waitingOn: Array<{
             userId: string;
-            username: string | unknown;
+            username: string | null;
         }>;
-        conversationId: string | unknown;
+        conversationId: string | null;
         workItem: {
             id: string;
             platformKey: string;
@@ -3734,24 +3878,24 @@ export type GetApiTasksByTaskIdResponses = {
         };
         startedBy: {
             userId: string;
-            username: string | unknown;
-            image: string | unknown;
-        } | unknown;
+            username: string | null;
+            image: string | null;
+        } | null;
         source: {
-            kind: string;
+            kind: 'step_definition';
             stepDefinitionId: string;
             key: string;
             name: string;
             version: number;
         } | {
-            kind: string;
+            kind: 'prompt';
             promptPreview: string;
         } | {
-            kind: string;
-            name: string | unknown;
+            kind: 'code';
+            name: string | null;
         };
-        pipelineRunId: string | unknown;
-        nodeId: string | unknown;
+        pipelineRunId: string | null;
+        nodeId: string | null;
     };
 };
 
@@ -3877,27 +4021,27 @@ export type GetApiTasksByTaskIdRunsResponses = {
         reason: 'initial' | 'retry' | 'continuation';
         projectId: string;
         workItemId: string;
-        taskExecutionConfigId: string | unknown;
-        name: string | unknown;
+        taskExecutionConfigId: string | null;
+        name: string | null;
         kind: 'agent' | 'code';
-        previousTaskRunId: string | unknown;
-        baseBranch: string | unknown;
-        heartbeatSeconds: number | unknown;
+        previousTaskRunId: string | null;
+        baseBranch: string | null;
+        heartbeatSeconds: number | null;
         status: 'pending' | 'queued' | 'running' | 'succeeded' | 'failed' | 'timeout' | 'abandoned' | 'cancelled' | 'skipped' | 'yielded';
-        inputJson: unknown;
-        claimedBy: string | unknown;
-        claimedAt: string | unknown;
-        lastHeartbeatAt: string | unknown;
-        leaseExpiresAt: string | unknown;
-        executionTimeoutSeconds: number | unknown;
-        executionDeadlineAt: string | unknown;
-        startedAt: string | unknown;
-        completedAt: string | unknown;
-        resultJson: unknown;
-        errorJson: unknown;
-        workBranch: string | unknown;
-        createdFromBranch: string | unknown;
-        sessionRestored: boolean | unknown;
+        inputJson: unknown | null;
+        claimedBy: string | null;
+        claimedAt: string | null;
+        lastHeartbeatAt: string | null;
+        leaseExpiresAt: string | null;
+        executionTimeoutSeconds: number | null;
+        executionDeadlineAt: string | null;
+        startedAt: string | null;
+        completedAt: string | null;
+        resultJson: unknown | null;
+        errorJson: unknown | null;
+        workBranch: string | null;
+        createdFromBranch: string | null;
+        sessionRestored: boolean | null;
         createdAt: string;
         updatedAt: string;
     }>;
@@ -3913,10 +4057,10 @@ export type GetApiProjectsByProjectIdTasksData = {
     query?: {
         status?: 'waiting_for_concurrency_slot' | 'waiting_for_work' | 'queued' | 'running' | 'waiting_for_person' | 'succeeded' | 'failed' | 'cancelled' | Array<'waiting_for_concurrency_slot' | 'waiting_for_work' | 'queued' | 'running' | 'waiting_for_person' | 'succeeded' | 'failed' | 'cancelled'>;
         kind?: 'agent' | 'code';
-        waitingOnMe?: boolean;
-        startedByMe?: boolean;
+        waitingOnMe?: boolean | string;
+        startedByMe?: boolean | string;
         workItemId?: string | Array<string>;
-        latestPerWorkItem?: boolean;
+        latestPerWorkItem?: boolean | string;
         limit?: number;
         before?: string;
     };
@@ -4032,26 +4176,26 @@ export type GetApiProjectsByProjectIdTasksResponses = {
             id: string;
             projectId: string;
             kind: 'agent' | 'code';
-            name: string | unknown;
+            name: string | null;
             status: 'waiting_for_concurrency_slot' | 'waiting_for_work' | 'queued' | 'running' | 'waiting_for_person' | 'succeeded' | 'failed' | 'cancelled';
             createdAt: string;
             updatedAt: string;
-            runNumber: number | unknown;
-            durationMs: number | unknown;
+            runNumber: number | null;
+            durationMs: number | null;
             latest: {
                 kind: 'error' | 'message' | 'log';
                 text: string;
-            } | unknown;
+            } | null;
             pipelineRun: {
                 name: string;
                 number: number;
-            } | unknown;
+            } | null;
             waitingOnYou: boolean;
             waitingOn: Array<{
                 userId: string;
-                username: string | unknown;
+                username: string | null;
             }>;
-            conversationId: string | unknown;
+            conversationId: string | null;
             workItem: {
                 id: string;
                 platformKey: string;
@@ -4059,26 +4203,26 @@ export type GetApiProjectsByProjectIdTasksResponses = {
             };
             startedBy: {
                 userId: string;
-                username: string | unknown;
-                image: string | unknown;
-            } | unknown;
+                username: string | null;
+                image: string | null;
+            } | null;
             source: {
-                kind: string;
+                kind: 'step_definition';
                 stepDefinitionId: string;
                 key: string;
                 name: string;
                 version: number;
             } | {
-                kind: string;
+                kind: 'prompt';
                 promptPreview: string;
             } | {
-                kind: string;
-                name: string | unknown;
+                kind: 'code';
+                name: string | null;
             };
-            pipelineRunId: string | unknown;
-            nodeId: string | unknown;
+            pipelineRunId: string | null;
+            nodeId: string | null;
         }>;
-        nextCursor: string | unknown;
+        nextCursor: string | null;
         counts: {
             [key: string]: number;
         };
@@ -4091,8 +4235,8 @@ export type PostApiTaskRunsClaimsData = {
     body: {
         projectId: string;
         workerId: string;
-        batchSize: number;
-        leaseDurationSeconds: number;
+        batchSize?: number;
+        leaseDurationSeconds?: number;
         workItemId?: string;
     };
     path?: never;
@@ -4212,27 +4356,27 @@ export type PostApiTaskRunsClaimsResponses = {
             reason: 'initial' | 'retry' | 'continuation';
             projectId: string;
             workItemId: string;
-            taskExecutionConfigId: string | unknown;
-            name: string | unknown;
+            taskExecutionConfigId: string | null;
+            name: string | null;
             kind: 'agent' | 'code';
-            previousTaskRunId: string | unknown;
-            baseBranch: string | unknown;
-            heartbeatSeconds: number | unknown;
+            previousTaskRunId: string | null;
+            baseBranch: string | null;
+            heartbeatSeconds: number | null;
             status: 'pending' | 'queued' | 'running' | 'succeeded' | 'failed' | 'timeout' | 'abandoned' | 'cancelled' | 'skipped' | 'yielded';
-            inputJson: unknown;
-            claimedBy: string | unknown;
-            claimedAt: string | unknown;
-            lastHeartbeatAt: string | unknown;
-            leaseExpiresAt: string | unknown;
-            executionTimeoutSeconds: number | unknown;
-            executionDeadlineAt: string | unknown;
-            startedAt: string | unknown;
-            completedAt: string | unknown;
-            resultJson: unknown;
-            errorJson: unknown;
-            workBranch: string | unknown;
-            createdFromBranch: string | unknown;
-            sessionRestored: boolean | unknown;
+            inputJson: unknown | null;
+            claimedBy: string | null;
+            claimedAt: string | null;
+            lastHeartbeatAt: string | null;
+            leaseExpiresAt: string | null;
+            executionTimeoutSeconds: number | null;
+            executionDeadlineAt: string | null;
+            startedAt: string | null;
+            completedAt: string | null;
+            resultJson: unknown | null;
+            errorJson: unknown | null;
+            workBranch: string | null;
+            createdFromBranch: string | null;
+            sessionRestored: boolean | null;
             createdAt: string;
             updatedAt: string;
         };
@@ -4245,7 +4389,7 @@ export type PostApiTaskRunsClaimsResponse = PostApiTaskRunsClaimsResponses[keyof
 export type PutApiTaskRunsByTaskRunIdHeartbeatData = {
     body: {
         claimToken: string;
-        leaseDurationSeconds: number;
+        leaseDurationSeconds?: number;
     };
     path: {
         taskRunId: string;
@@ -4384,27 +4528,27 @@ export type PutApiTaskRunsByTaskRunIdHeartbeatResponses = {
         reason: 'initial' | 'retry' | 'continuation';
         projectId: string;
         workItemId: string;
-        taskExecutionConfigId: string | unknown;
-        name: string | unknown;
+        taskExecutionConfigId: string | null;
+        name: string | null;
         kind: 'agent' | 'code';
-        previousTaskRunId: string | unknown;
-        baseBranch: string | unknown;
-        heartbeatSeconds: number | unknown;
+        previousTaskRunId: string | null;
+        baseBranch: string | null;
+        heartbeatSeconds: number | null;
         status: 'pending' | 'queued' | 'running' | 'succeeded' | 'failed' | 'timeout' | 'abandoned' | 'cancelled' | 'skipped' | 'yielded';
-        inputJson: unknown;
-        claimedBy: string | unknown;
-        claimedAt: string | unknown;
-        lastHeartbeatAt: string | unknown;
-        leaseExpiresAt: string | unknown;
-        executionTimeoutSeconds: number | unknown;
-        executionDeadlineAt: string | unknown;
-        startedAt: string | unknown;
-        completedAt: string | unknown;
-        resultJson: unknown;
-        errorJson: unknown;
-        workBranch: string | unknown;
-        createdFromBranch: string | unknown;
-        sessionRestored: boolean | unknown;
+        inputJson: unknown | null;
+        claimedBy: string | null;
+        claimedAt: string | null;
+        lastHeartbeatAt: string | null;
+        leaseExpiresAt: string | null;
+        executionTimeoutSeconds: number | null;
+        executionDeadlineAt: string | null;
+        startedAt: string | null;
+        completedAt: string | null;
+        resultJson: unknown | null;
+        errorJson: unknown | null;
+        workBranch: string | null;
+        createdFromBranch: string | null;
+        sessionRestored: boolean | null;
         createdAt: string;
         updatedAt: string;
     };
@@ -4548,9 +4692,9 @@ export type PostApiTaskRunsByTaskRunIdWorkerContextResponses = {
      */
     200: {
         projectId: string;
-        projectPath: string | unknown;
+        projectPath: string | null;
         gitUrl: string;
-        baseWorkBranch: string | unknown;
+        baseWorkBranch: string | null;
         projectOpencodeConfig: {
             relativePath: string;
             present: boolean;
@@ -4558,13 +4702,13 @@ export type PostApiTaskRunsByTaskRunIdWorkerContextResponses = {
                 name: string;
                 description: string;
                 run: string;
-                cwd: string | unknown;
+                cwd: string | null;
             }>;
             services: Array<{
                 name: string;
                 description: string;
                 run: string;
-                cwd: string | unknown;
+                cwd: string | null;
                 dependsOn: Array<string>;
                 expose: {
                     targetPort: number;
@@ -4578,86 +4722,86 @@ export type PostApiTaskRunsByTaskRunIdWorkerContextResponses = {
             kind: 'agent' | 'code';
             key: string;
             name: string;
-            inputJson: unknown;
-            executionTimeoutSeconds: number | unknown;
-            prompt: string | unknown;
+            inputJson: unknown | null;
+            executionTimeoutSeconds: number | null;
+            prompt: string | null;
             entrypointJson: {
                 sourceFile: string;
-            } | unknown;
+            } | null;
             resultSchemaJson: {
                 [key: string]: unknown;
-            } | unknown;
-            turnsRemaining: number | unknown;
+            } | null;
+            turnsRemaining: number | null;
             workItemId: string;
             grants: Array<{
-                resource: string;
-                action: string;
+                resource: 'workItem';
+                action: 'read';
                 scope: 'self' | 'children' | 'project';
             } | {
-                resource: string;
-                action: string;
+                resource: 'workItem';
+                action: 'update';
                 scope: 'self' | 'children';
             } | {
-                resource: string;
-                action: string;
+                resource: 'workItem';
+                action: 'comment';
                 scope: 'self' | 'children';
             } | {
-                resource: string;
-                action: string;
+                resource: 'workItem';
+                action: 'label';
                 scope: 'self' | 'children';
                 labels: Array<string>;
             } | {
-                resource: string;
-                action: string;
+                resource: 'workItem';
+                action: 'block';
                 scope: 'self' | 'children';
             } | {
-                resource: string;
-                action: string;
+                resource: 'workItem';
+                action: 'close';
                 scope: 'self' | 'children';
             } | {
-                resource: string;
-                action: string;
-                scope: string;
+                resource: 'workItem';
+                action: 'create';
+                scope: 'children';
                 labels: Array<string>;
             }>;
         };
         runtime: {
             executionMode: 'workspace' | 'no_workspace';
-            devcontainerConfigPath: string | unknown;
-            managedRuntime: 'bun1' | 'node24' | unknown;
+            devcontainerConfigPath: string | null;
+            managedRuntime: 'bun1' | 'node24' | null;
             repo: {
-                mode: string;
+                mode: 'none';
             } | {
-                mode: string;
+                mode: 'readOnly';
                 gitCredentials: 'auto' | 'none';
             } | {
-                mode: string;
-                message: string | unknown;
+                mode: 'readWrite';
+                message: string | null;
                 onPushFailure: 'fail' | 'warn';
                 gitCredentials: 'auto' | 'none';
             };
             envJson: Array<{
                 name: string;
-                source: string;
+                source: 'value';
                 value: string;
                 secret: boolean;
                 applies: 'agent' | 'setup' | 'both';
             } | {
                 name: string;
-                source: string;
+                source: 'inherit';
                 from: string;
                 secret: boolean;
                 optional: boolean;
                 default?: string;
                 mcp?: string;
                 applies: 'agent' | 'setup' | 'both';
-            }> | unknown;
+            }> | null;
             healthChecksJson: Array<{
                 name?: string;
                 severity: 'required' | 'warn';
                 timeoutSeconds: number;
                 serialGroup?: string;
-                kind: string;
+                kind: 'tool';
                 tool: string;
                 mcp?: string;
                 args?: {
@@ -4668,13 +4812,13 @@ export type PostApiTaskRunsByTaskRunIdWorkerContextResponses = {
                 severity: 'required' | 'warn';
                 timeoutSeconds: number;
                 serialGroup?: string;
-                kind: string;
+                kind: 'cli';
                 command: Array<string>;
                 expectExitCode: number;
-            }> | unknown;
+            }> | null;
             opencodeMcpJson: {
                 [key: string]: {
-                    type: string;
+                    type: 'local';
                     command: Array<string>;
                     cwd?: string;
                     environment?: {
@@ -4689,7 +4833,7 @@ export type PostApiTaskRunsByTaskRunIdWorkerContextResponses = {
                     };
                     protocol?: 'legacy' | 'auto' | '2026-07-28';
                 } | {
-                    type: string;
+                    type: 'remote';
                     url: string;
                     headers?: {
                         [key: string]: string;
@@ -4701,7 +4845,7 @@ export type PostApiTaskRunsByTaskRunIdWorkerContextResponses = {
                         callback_port?: number;
                         redirect_uri?: string;
                         auth_server_metadata_url?: string;
-                    } | boolean;
+                    } | false;
                     disabled?: boolean;
                     codemode?: boolean;
                     timeout?: {
@@ -4711,7 +4855,7 @@ export type PostApiTaskRunsByTaskRunIdWorkerContextResponses = {
                     };
                     protocol?: 'legacy' | 'auto' | '2026-07-28';
                 } | {
-                    type: string;
+                    type: 'ref';
                     name?: string;
                     disabled?: boolean;
                     codemode?: boolean;
@@ -4722,7 +4866,7 @@ export type PostApiTaskRunsByTaskRunIdWorkerContextResponses = {
                     };
                     protocol?: 'legacy' | 'auto' | '2026-07-28';
                 };
-            } | unknown;
+            } | null;
         };
         agentPrompt: {
             sessionTitle: string;
@@ -4734,12 +4878,12 @@ export type PostApiTaskRunsByTaskRunIdWorkerContextResponses = {
             status: 'pending' | 'queued' | 'running' | 'succeeded' | 'failed' | 'timeout' | 'abandoned' | 'cancelled' | 'skipped' | 'yielded';
             transcriptRelativePath: string;
             findingsRelativePath: string;
-            findingsJson: unknown;
-        } | unknown;
+            findingsJson: unknown | null;
+        } | null;
         restoreSession: {
             downloadUrl: string;
             message: string;
-        } | unknown;
+        } | null;
     };
 };
 
@@ -4750,34 +4894,34 @@ export type PostApiTaskRunsByTaskRunIdCompletionsData = {
         claimToken: string;
         status: 'succeeded' | 'failed';
         resultJson: unknown;
-        errorJson: unknown;
-        workBranch?: string | unknown;
-        createdFromBranch?: string | unknown;
-        sessionRestored?: boolean | unknown;
+        errorJson: unknown | null;
+        workBranch?: string | null;
+        createdFromBranch?: string | null;
+        sessionRestored?: boolean | null;
         workItemChanges?: Array<{
-            kind: string;
+            kind: 'label';
             workItemId: string;
             add?: Array<string>;
             remove?: Array<string>;
         } | {
-            kind: string;
+            kind: 'block';
             blockedWorkItemId: string;
             blockingWorkItemId: string;
             remove?: boolean;
         } | {
-            kind: string;
+            kind: 'describe';
             workItemId: string;
             description: string;
             descriptionVersion: number;
         } | {
-            kind: string;
+            kind: 'comment';
             workItemId: string;
             body: string;
         } | {
-            kind: string;
+            kind: 'close';
             workItemId: string;
             reason: 'completed' | 'out_of_scope' | 'superseded';
-            resolution?: string | unknown;
+            resolution?: string | null;
         }>;
     };
     path: {
@@ -4917,27 +5061,27 @@ export type PostApiTaskRunsByTaskRunIdCompletionsResponses = {
         reason: 'initial' | 'retry' | 'continuation';
         projectId: string;
         workItemId: string;
-        taskExecutionConfigId: string | unknown;
-        name: string | unknown;
+        taskExecutionConfigId: string | null;
+        name: string | null;
         kind: 'agent' | 'code';
-        previousTaskRunId: string | unknown;
-        baseBranch: string | unknown;
-        heartbeatSeconds: number | unknown;
+        previousTaskRunId: string | null;
+        baseBranch: string | null;
+        heartbeatSeconds: number | null;
         status: 'pending' | 'queued' | 'running' | 'succeeded' | 'failed' | 'timeout' | 'abandoned' | 'cancelled' | 'skipped' | 'yielded';
-        inputJson: unknown;
-        claimedBy: string | unknown;
-        claimedAt: string | unknown;
-        lastHeartbeatAt: string | unknown;
-        leaseExpiresAt: string | unknown;
-        executionTimeoutSeconds: number | unknown;
-        executionDeadlineAt: string | unknown;
-        startedAt: string | unknown;
-        completedAt: string | unknown;
-        resultJson: unknown;
-        errorJson: unknown;
-        workBranch: string | unknown;
-        createdFromBranch: string | unknown;
-        sessionRestored: boolean | unknown;
+        inputJson: unknown | null;
+        claimedBy: string | null;
+        claimedAt: string | null;
+        lastHeartbeatAt: string | null;
+        leaseExpiresAt: string | null;
+        executionTimeoutSeconds: number | null;
+        executionDeadlineAt: string | null;
+        startedAt: string | null;
+        completedAt: string | null;
+        resultJson: unknown | null;
+        errorJson: unknown | null;
+        workBranch: string | null;
+        createdFromBranch: string | null;
+        sessionRestored: boolean | null;
         createdAt: string;
         updatedAt: string;
     };
@@ -4949,10 +5093,10 @@ export type PostApiTaskRunsByTaskRunIdYieldsData = {
     body: {
         claimToken: string;
         message: string;
-        workBranch?: string | unknown;
-        createdFromBranch?: string | unknown;
-        sessionObjectKey?: string | unknown;
-        sessionRestored?: boolean | unknown;
+        workBranch?: string | null;
+        createdFromBranch?: string | null;
+        sessionObjectKey?: string | null;
+        sessionRestored?: boolean | null;
     };
     path: {
         taskRunId: string;
@@ -5091,27 +5235,27 @@ export type PostApiTaskRunsByTaskRunIdYieldsResponses = {
         reason: 'initial' | 'retry' | 'continuation';
         projectId: string;
         workItemId: string;
-        taskExecutionConfigId: string | unknown;
-        name: string | unknown;
+        taskExecutionConfigId: string | null;
+        name: string | null;
         kind: 'agent' | 'code';
-        previousTaskRunId: string | unknown;
-        baseBranch: string | unknown;
-        heartbeatSeconds: number | unknown;
+        previousTaskRunId: string | null;
+        baseBranch: string | null;
+        heartbeatSeconds: number | null;
         status: 'pending' | 'queued' | 'running' | 'succeeded' | 'failed' | 'timeout' | 'abandoned' | 'cancelled' | 'skipped' | 'yielded';
-        inputJson: unknown;
-        claimedBy: string | unknown;
-        claimedAt: string | unknown;
-        lastHeartbeatAt: string | unknown;
-        leaseExpiresAt: string | unknown;
-        executionTimeoutSeconds: number | unknown;
-        executionDeadlineAt: string | unknown;
-        startedAt: string | unknown;
-        completedAt: string | unknown;
-        resultJson: unknown;
-        errorJson: unknown;
-        workBranch: string | unknown;
-        createdFromBranch: string | unknown;
-        sessionRestored: boolean | unknown;
+        inputJson: unknown | null;
+        claimedBy: string | null;
+        claimedAt: string | null;
+        lastHeartbeatAt: string | null;
+        leaseExpiresAt: string | null;
+        executionTimeoutSeconds: number | null;
+        executionDeadlineAt: string | null;
+        startedAt: string | null;
+        completedAt: string | null;
+        resultJson: unknown | null;
+        errorJson: unknown | null;
+        workBranch: string | null;
+        createdFromBranch: string | null;
+        sessionRestored: boolean | null;
         createdAt: string;
         updatedAt: string;
     };
@@ -5239,27 +5383,27 @@ export type PutApiTaskRunsByTaskRunIdRunningResponses = {
         reason: 'initial' | 'retry' | 'continuation';
         projectId: string;
         workItemId: string;
-        taskExecutionConfigId: string | unknown;
-        name: string | unknown;
+        taskExecutionConfigId: string | null;
+        name: string | null;
         kind: 'agent' | 'code';
-        previousTaskRunId: string | unknown;
-        baseBranch: string | unknown;
-        heartbeatSeconds: number | unknown;
+        previousTaskRunId: string | null;
+        baseBranch: string | null;
+        heartbeatSeconds: number | null;
         status: 'pending' | 'queued' | 'running' | 'succeeded' | 'failed' | 'timeout' | 'abandoned' | 'cancelled' | 'skipped' | 'yielded';
-        inputJson: unknown;
-        claimedBy: string | unknown;
-        claimedAt: string | unknown;
-        lastHeartbeatAt: string | unknown;
-        leaseExpiresAt: string | unknown;
-        executionTimeoutSeconds: number | unknown;
-        executionDeadlineAt: string | unknown;
-        startedAt: string | unknown;
-        completedAt: string | unknown;
-        resultJson: unknown;
-        errorJson: unknown;
-        workBranch: string | unknown;
-        createdFromBranch: string | unknown;
-        sessionRestored: boolean | unknown;
+        inputJson: unknown | null;
+        claimedBy: string | null;
+        claimedAt: string | null;
+        lastHeartbeatAt: string | null;
+        leaseExpiresAt: string | null;
+        executionTimeoutSeconds: number | null;
+        executionDeadlineAt: string | null;
+        startedAt: string | null;
+        completedAt: string | null;
+        resultJson: unknown | null;
+        errorJson: unknown | null;
+        workBranch: string | null;
+        createdFromBranch: string | null;
+        sessionRestored: boolean | null;
         createdAt: string;
         updatedAt: string;
     };
@@ -5272,9 +5416,9 @@ export type GetApiTaskRunsByTaskRunIdLogsData = {
     path: {
         taskRunId: string;
     };
-    query: {
-        from: number;
-        limit: number;
+    query?: {
+        from?: number;
+        limit?: number;
     };
     url: '/api/task-runs/{taskRunId}/logs';
 };
@@ -5666,27 +5810,27 @@ export type GetApiTaskRunsByTaskRunIdResponses = {
         reason: 'initial' | 'retry' | 'continuation';
         projectId: string;
         workItemId: string;
-        taskExecutionConfigId: string | unknown;
-        name: string | unknown;
+        taskExecutionConfigId: string | null;
+        name: string | null;
         kind: 'agent' | 'code';
-        previousTaskRunId: string | unknown;
-        baseBranch: string | unknown;
-        heartbeatSeconds: number | unknown;
+        previousTaskRunId: string | null;
+        baseBranch: string | null;
+        heartbeatSeconds: number | null;
         status: 'pending' | 'queued' | 'running' | 'succeeded' | 'failed' | 'timeout' | 'abandoned' | 'cancelled' | 'skipped' | 'yielded';
-        inputJson: unknown;
-        claimedBy: string | unknown;
-        claimedAt: string | unknown;
-        lastHeartbeatAt: string | unknown;
-        leaseExpiresAt: string | unknown;
-        executionTimeoutSeconds: number | unknown;
-        executionDeadlineAt: string | unknown;
-        startedAt: string | unknown;
-        completedAt: string | unknown;
-        resultJson: unknown;
-        errorJson: unknown;
-        workBranch: string | unknown;
-        createdFromBranch: string | unknown;
-        sessionRestored: boolean | unknown;
+        inputJson: unknown | null;
+        claimedBy: string | null;
+        claimedAt: string | null;
+        lastHeartbeatAt: string | null;
+        leaseExpiresAt: string | null;
+        executionTimeoutSeconds: number | null;
+        executionDeadlineAt: string | null;
+        startedAt: string | null;
+        completedAt: string | null;
+        resultJson: unknown | null;
+        errorJson: unknown | null;
+        workBranch: string | null;
+        createdFromBranch: string | null;
+        sessionRestored: boolean | null;
         createdAt: string;
         updatedAt: string;
     };
@@ -5795,27 +5939,27 @@ export type GetApiTaskRunsResponses = {
         reason: 'initial' | 'retry' | 'continuation';
         projectId: string;
         workItemId: string;
-        taskExecutionConfigId: string | unknown;
-        name: string | unknown;
+        taskExecutionConfigId: string | null;
+        name: string | null;
         kind: 'agent' | 'code';
-        previousTaskRunId: string | unknown;
-        baseBranch: string | unknown;
-        heartbeatSeconds: number | unknown;
+        previousTaskRunId: string | null;
+        baseBranch: string | null;
+        heartbeatSeconds: number | null;
         status: 'pending' | 'queued' | 'running' | 'succeeded' | 'failed' | 'timeout' | 'abandoned' | 'cancelled' | 'skipped' | 'yielded';
-        inputJson: unknown;
-        claimedBy: string | unknown;
-        claimedAt: string | unknown;
-        lastHeartbeatAt: string | unknown;
-        leaseExpiresAt: string | unknown;
-        executionTimeoutSeconds: number | unknown;
-        executionDeadlineAt: string | unknown;
-        startedAt: string | unknown;
-        completedAt: string | unknown;
-        resultJson: unknown;
-        errorJson: unknown;
-        workBranch: string | unknown;
-        createdFromBranch: string | unknown;
-        sessionRestored: boolean | unknown;
+        inputJson: unknown | null;
+        claimedBy: string | null;
+        claimedAt: string | null;
+        lastHeartbeatAt: string | null;
+        leaseExpiresAt: string | null;
+        executionTimeoutSeconds: number | null;
+        executionDeadlineAt: string | null;
+        startedAt: string | null;
+        completedAt: string | null;
+        resultJson: unknown | null;
+        errorJson: unknown | null;
+        workBranch: string | null;
+        createdFromBranch: string | null;
+        sessionRestored: boolean | null;
         createdAt: string;
         updatedAt: string;
     }>;
@@ -5956,7 +6100,7 @@ export type GetApiTaskRunsByTaskRunIdLogsArchiveResponses = {
      * Response for status 200
      */
     200: {
-        url: string | unknown;
+        url: string | null;
         sizeBytes: number;
     };
 };
@@ -6130,6 +6274,7 @@ export type PostApiTaskRunsByTaskRunIdWorkItemReadsData = {
     body: {
         claimToken: string;
         workItemId: string;
+        commentsCursor?: string;
     };
     path: {
         taskRunId: string;
@@ -6265,37 +6410,51 @@ export type PostApiTaskRunsByTaskRunIdWorkItemReadsResponses = {
         id: string;
         title: string;
         labels: Array<string>;
-        description: string | unknown;
+        description: string | null;
         descriptionVersion: number;
         fields: {
             [key: string]: unknown;
         };
         platform: 'jira' | 'github' | 'bitbucket' | 'linear' | 'scarn' | 'custom';
         platformKey: string;
-        parentWorkItemId: string | unknown;
+        parentWorkItemId: string | null;
         state: 'open' | 'closed';
-        closeReason: 'completed' | 'out_of_scope' | 'superseded' | unknown;
-        resolution: string | unknown;
+        closeReason: 'completed' | 'out_of_scope' | 'superseded' | null;
+        resolution: string | null;
         blockers: Array<{
             id: string;
             title: string;
             state: 'open' | 'closed';
             labels: Array<string>;
-            closeReason: 'completed' | 'out_of_scope' | 'superseded' | unknown;
-            resolution: string | unknown;
+            closeReason: 'completed' | 'out_of_scope' | 'superseded' | null;
+            resolution: string | null;
             blockedBy: Array<string>;
-            latestTaskStatus: 'waiting_for_concurrency_slot' | 'waiting_for_work' | 'queued' | 'running' | 'waiting_for_person' | 'succeeded' | 'failed' | 'cancelled' | unknown;
+            latestTaskStatus: 'waiting_for_concurrency_slot' | 'waiting_for_work' | 'queued' | 'running' | 'waiting_for_person' | 'succeeded' | 'failed' | 'cancelled' | null;
         }>;
         children: Array<{
             id: string;
             title: string;
             state: 'open' | 'closed';
             labels: Array<string>;
-            closeReason: 'completed' | 'out_of_scope' | 'superseded' | unknown;
-            resolution: string | unknown;
+            closeReason: 'completed' | 'out_of_scope' | 'superseded' | null;
+            resolution: string | null;
             blockedBy: Array<string>;
-            latestTaskStatus: 'waiting_for_concurrency_slot' | 'waiting_for_work' | 'queued' | 'running' | 'waiting_for_person' | 'succeeded' | 'failed' | 'cancelled' | unknown;
+            latestTaskStatus: 'waiting_for_concurrency_slot' | 'waiting_for_work' | 'queued' | 'running' | 'waiting_for_person' | 'succeeded' | 'failed' | 'cancelled' | null;
         }>;
+        comments: {
+            items: Array<{
+                id: string;
+                parentCommentId: string | null;
+                body: string;
+                authorKind: 'user' | 'agent';
+                authorName: string;
+                isPinned: boolean;
+                createdAt: string;
+                updatedAt: string;
+            }>;
+            totalCount: number;
+            nextCursor: string | null;
+        };
     };
 };
 
@@ -6742,10 +6901,10 @@ export type GetApiTaskRunsByTaskRunIdArtifactsResponses = {
         taskRunId: string;
         projectId: string;
         relativeStorePath: string;
-        storeRef: string | unknown;
-        objectKey: string | unknown;
-        sizeBytes: number | unknown;
-        contentType: string | unknown;
+        storeRef: string | null;
+        objectKey: string | null;
+        sizeBytes: number | null;
+        contentType: string | null;
         kind: 'generic' | 'playwright-trace' | 'video' | 'image';
         createdAt: string;
     }>;
@@ -6897,10 +7056,10 @@ export type PostApiTaskRunsByTaskRunIdArtifactsResponses = {
         taskRunId: string;
         projectId: string;
         relativeStorePath: string;
-        storeRef: string | unknown;
-        objectKey: string | unknown;
-        sizeBytes: number | unknown;
-        contentType: string | unknown;
+        storeRef: string | null;
+        objectKey: string | null;
+        sizeBytes: number | null;
+        contentType: string | null;
         kind: 'generic' | 'playwright-trace' | 'video' | 'image';
         createdAt: string;
     };
@@ -7061,9 +7220,9 @@ export type GetApiTaskRunsByTaskRunIdArtifactsByArtifactIdDownloadUrlResponses =
      * Response for status 200
      */
     200: {
-        url: string | unknown;
+        url: string | null;
         sizeBytes: number;
-        contentType: string | unknown;
+        contentType: string | null;
         relativeStorePath: string;
     };
 };
@@ -7191,7 +7350,7 @@ export type GetApiTaskRunsByTaskRunIdArtifactFailuresResponses = {
         kind: 'generic' | 'playwright-trace' | 'video' | 'image';
         errorCode: string;
         errorMessage: string;
-        httpStatus: number | unknown;
+        httpStatus: number | null;
         createdAt: string;
     }>;
 };
@@ -7346,7 +7505,7 @@ export type PostApiTaskRunsByTaskRunIdArtifactFailuresResponses = {
         kind: 'generic' | 'playwright-trace' | 'video' | 'image';
         errorCode: string;
         errorMessage: string;
-        httpStatus: number | unknown;
+        httpStatus: number | null;
         createdAt: string;
     };
 };
@@ -7514,7 +7673,7 @@ export type PostApiPipelineDefinitionsResponses = {
         projectId: string;
         key: string;
         name: string;
-        archivedAt: string | unknown;
+        archivedAt: string | null;
         currentVersion: {
             id: string;
             pipelineDefinitionId: string;
@@ -7529,7 +7688,7 @@ export type PostApiPipelineDefinitionsResponses = {
                 stepDefinitionId: string;
             }>;
             createdAt: string;
-        } | unknown;
+        } | null;
         createdAt: string;
         updatedAt: string;
     };
@@ -7820,7 +7979,7 @@ export type PostApiPipelineDefinitionsByPipelineDefinitionIdVersionsResponses = 
             projectId: string;
             key: string;
             name: string;
-            archivedAt: string | unknown;
+            archivedAt: string | null;
             currentVersion: {
                 id: string;
                 pipelineDefinitionId: string;
@@ -7835,7 +7994,7 @@ export type PostApiPipelineDefinitionsByPipelineDefinitionIdVersionsResponses = 
                     stepDefinitionId: string;
                 }>;
                 createdAt: string;
-            } | unknown;
+            } | null;
             createdAt: string;
             updatedAt: string;
         };
@@ -7963,7 +8122,7 @@ export type PutApiPipelineDefinitionsByPipelineDefinitionIdVersionsByVersionActi
         projectId: string;
         key: string;
         name: string;
-        archivedAt: string | unknown;
+        archivedAt: string | null;
         currentVersion: {
             id: string;
             pipelineDefinitionId: string;
@@ -7978,7 +8137,7 @@ export type PutApiPipelineDefinitionsByPipelineDefinitionIdVersionsByVersionActi
                 stepDefinitionId: string;
             }>;
             createdAt: string;
-        } | unknown;
+        } | null;
         createdAt: string;
         updatedAt: string;
     };
@@ -8104,7 +8263,7 @@ export type PutApiPipelineDefinitionsByPipelineDefinitionIdArchiveResponses = {
         projectId: string;
         key: string;
         name: string;
-        archivedAt: string | unknown;
+        archivedAt: string | null;
         currentVersion: {
             id: string;
             pipelineDefinitionId: string;
@@ -8119,7 +8278,7 @@ export type PutApiPipelineDefinitionsByPipelineDefinitionIdArchiveResponses = {
                 stepDefinitionId: string;
             }>;
             createdAt: string;
-        } | unknown;
+        } | null;
         createdAt: string;
         updatedAt: string;
     };
@@ -8245,7 +8404,7 @@ export type PutApiPipelineDefinitionsByPipelineDefinitionIdUnarchiveResponses = 
         projectId: string;
         key: string;
         name: string;
-        archivedAt: string | unknown;
+        archivedAt: string | null;
         currentVersion: {
             id: string;
             pipelineDefinitionId: string;
@@ -8260,7 +8419,7 @@ export type PutApiPipelineDefinitionsByPipelineDefinitionIdUnarchiveResponses = 
                 stepDefinitionId: string;
             }>;
             createdAt: string;
-        } | unknown;
+        } | null;
         createdAt: string;
         updatedAt: string;
     };
@@ -8405,7 +8564,7 @@ export type GetApiPipelineDefinitionsByPipelineDefinitionIdResponses = {
         projectId: string;
         key: string;
         name: string;
-        archivedAt: string | unknown;
+        archivedAt: string | null;
         currentVersion: {
             id: string;
             pipelineDefinitionId: string;
@@ -8420,7 +8579,7 @@ export type GetApiPipelineDefinitionsByPipelineDefinitionIdResponses = {
                 stepDefinitionId: string;
             }>;
             createdAt: string;
-        } | unknown;
+        } | null;
         createdAt: string;
         updatedAt: string;
     };
@@ -8566,7 +8725,9 @@ export type GetApiProjectsByProjectIdPipelineDefinitionsData = {
     path: {
         projectId: string;
     };
-    query?: never;
+    query?: {
+        includeArchived?: boolean | 'true' | 'false';
+    };
     url: '/api/projects/{projectId}/pipeline-definitions';
 };
 
@@ -8660,7 +8821,7 @@ export type GetApiProjectsByProjectIdPipelineDefinitionsResponses = {
         projectId: string;
         key: string;
         name: string;
-        archivedAt: string | unknown;
+        archivedAt: string | null;
         currentVersion: {
             id: string;
             pipelineDefinitionId: string;
@@ -8675,7 +8836,7 @@ export type GetApiProjectsByProjectIdPipelineDefinitionsResponses = {
                 stepDefinitionId: string;
             }>;
             createdAt: string;
-        } | unknown;
+        } | null;
         createdAt: string;
         updatedAt: string;
     }>;
@@ -8819,7 +8980,7 @@ export type GetApiProjectsByProjectIdAutomationsResponses = {
         id: string;
         projectId: string;
         key: string;
-        title: string | unknown;
+        title: string | null;
         scope: 'workItem' | 'project';
         enabled: boolean;
         latestVersion: {
@@ -8831,7 +8992,7 @@ export type GetApiProjectsByProjectIdAutomationsResponses = {
                 [key: string]: unknown;
             };
             publishedAt: string;
-        } | unknown;
+        } | null;
         createdAt: string;
         updatedAt: string;
     }>;
@@ -8977,7 +9138,7 @@ export type GetApiWorkItemsByWorkItemIdAutomationsResponses = {
             id: string;
             projectId: string;
             key: string;
-            title: string | unknown;
+            title: string | null;
             scope: 'workItem' | 'project';
             enabled: boolean;
             latestVersion: {
@@ -8989,7 +9150,7 @@ export type GetApiWorkItemsByWorkItemIdAutomationsResponses = {
                     [key: string]: unknown;
                 };
                 publishedAt: string;
-            } | unknown;
+            } | null;
             createdAt: string;
             updatedAt: string;
         };
@@ -9143,7 +9304,7 @@ export type PutApiProjectsByProjectIdAutomationsByKeyResponses = {
             id: string;
             projectId: string;
             key: string;
-            title: string | unknown;
+            title: string | null;
             scope: 'workItem' | 'project';
             enabled: boolean;
             latestVersion: {
@@ -9155,7 +9316,7 @@ export type PutApiProjectsByProjectIdAutomationsByKeyResponses = {
                     [key: string]: unknown;
                 };
                 publishedAt: string;
-            } | unknown;
+            } | null;
             createdAt: string;
             updatedAt: string;
         };
@@ -9301,7 +9462,7 @@ export type PostApiProjectsByProjectIdAutomationsByKeyEnableResponses = {
         id: string;
         projectId: string;
         key: string;
-        title: string | unknown;
+        title: string | null;
         scope: 'workItem' | 'project';
         enabled: boolean;
         latestVersion: {
@@ -9313,7 +9474,7 @@ export type PostApiProjectsByProjectIdAutomationsByKeyEnableResponses = {
                 [key: string]: unknown;
             };
             publishedAt: string;
-        } | unknown;
+        } | null;
         createdAt: string;
         updatedAt: string;
     };
@@ -9458,7 +9619,7 @@ export type PostApiProjectsByProjectIdAutomationsByKeyDisableResponses = {
         id: string;
         projectId: string;
         key: string;
-        title: string | unknown;
+        title: string | null;
         scope: 'workItem' | 'project';
         enabled: boolean;
         latestVersion: {
@@ -9470,7 +9631,7 @@ export type PostApiProjectsByProjectIdAutomationsByKeyDisableResponses = {
                 [key: string]: unknown;
             };
             publishedAt: string;
-        } | unknown;
+        } | null;
         createdAt: string;
         updatedAt: string;
     };
@@ -9612,7 +9773,7 @@ export type DeleteApiWorkItemsByWorkItemIdAutomationsByKeyResponses = {
      * Response for status 200
      */
     200: {
-        detached: boolean;
+        detached: true;
     };
 };
 
@@ -9757,7 +9918,7 @@ export type PostApiWorkItemsByWorkItemIdAutomationsByKeyResponses = {
             id: string;
             projectId: string;
             key: string;
-            title: string | unknown;
+            title: string | null;
             scope: 'workItem' | 'project';
             enabled: boolean;
             latestVersion: {
@@ -9769,7 +9930,7 @@ export type PostApiWorkItemsByWorkItemIdAutomationsByKeyResponses = {
                     [key: string]: unknown;
                 };
                 publishedAt: string;
-            } | unknown;
+            } | null;
             createdAt: string;
             updatedAt: string;
         };
@@ -9890,17 +10051,17 @@ export type GetApiPipelineExecutionsResponses = {
             pipelineDefinitionVersionId: string;
             runStatus: 'active' | 'waiting' | 'succeeded' | 'failed' | 'cancelled';
             status: 'queued' | 'running' | 'waiting' | 'succeeded' | 'failed' | 'cancelled';
-            waitingFor: 'decision' | 'reply' | unknown;
-            endNodeId: string | unknown;
+            waitingFor: 'decision' | 'reply' | null;
+            endNodeId: string | null;
             error: {
                 name: string;
                 message: string;
                 cause?: unknown;
-            } | unknown;
-            triggeredByUserId: string | unknown;
-            cancelledByUserId: string | unknown;
-            startedAt: string | unknown;
-            completedAt: string | unknown;
+            } | null;
+            triggeredByUserId: string | null;
+            cancelledByUserId: string | null;
+            startedAt: string | null;
+            completedAt: string | null;
             createdAt: string;
             updatedAt: string;
             openNodeIds: Array<string>;
@@ -10078,77 +10239,77 @@ export type PostApiPipelineExecutionsResponses = {
         pipelineDefinitionVersionId: string;
         runStatus: 'active' | 'waiting' | 'succeeded' | 'failed' | 'cancelled';
         status: 'queued' | 'running' | 'waiting' | 'succeeded' | 'failed' | 'cancelled';
-        waitingFor: 'decision' | 'reply' | unknown;
-        endNodeId: string | unknown;
+        waitingFor: 'decision' | 'reply' | null;
+        endNodeId: string | null;
         error: {
             name: string;
             message: string;
             cause?: unknown;
-        } | unknown;
-        triggeredByUserId: string | unknown;
-        cancelledByUserId: string | unknown;
-        startedAt: string | unknown;
-        completedAt: string | unknown;
+        } | null;
+        triggeredByUserId: string | null;
+        cancelledByUserId: string | null;
+        startedAt: string | null;
+        completedAt: string | null;
         createdAt: string;
         updatedAt: string;
         visits: Array<{
             id: string;
             nodeId: string;
             nodeKind: 'step' | 'wait' | 'succeed' | 'fail';
-            laneId: string | unknown;
-            fromVisitId: string | unknown;
-            fromLaneGroupId: string | unknown;
+            laneId: string | null;
+            fromVisitId: string | null;
+            fromLaneGroupId: string | null;
             transition: {
                 kind: 'start' | 'route' | 'otherwise' | 'catch' | 'merge';
                 index: number;
             };
             routing: {
                 [key: string]: unknown;
-            } | unknown;
+            } | null;
             status: 'active' | 'waiting' | 'succeeded' | 'failed' | 'cancelled' | 'superseded';
-            waitFor: 'decision' | 'reply' | unknown;
+            waitFor: 'decision' | 'reply' | null;
             actions: Array<{
                 key: string;
                 label: string;
                 body: 'optional' | 'required';
-            }> | unknown;
+            }> | null;
             input: {
                 [key: string]: unknown;
             };
-            result: unknown;
-            resultTaskId: string | unknown;
+            result: unknown | null;
+            resultTaskId: string | null;
             error: {
                 name: string;
                 message: string;
                 cause?: unknown;
-            } | unknown;
+            } | null;
             tasks: Array<{
                 taskId: string;
                 attemptNumber: number;
                 status: 'pending' | 'queued' | 'running' | 'succeeded' | 'failed' | 'timeout' | 'abandoned' | 'cancelled' | 'skipped' | 'yielded';
-                startedAt: string | unknown;
-                completedAt: string | unknown;
-                workBranch: string | unknown;
+                startedAt: string | null;
+                completedAt: string | null;
+                workBranch: string | null;
             }>;
             questions: Array<{
                 questionId: string;
                 commentId: string;
                 status: 'open' | 'answered' | 'not_needed';
             }>;
-            conversationId: string | unknown;
-            createdByUserId: string | unknown;
-            resolvedByUserId: string | unknown;
-            resolvedAt: string | unknown;
+            conversationId: string | null;
+            createdByUserId: string | null;
+            resolvedByUserId: string | null;
+            resolvedAt: string | null;
             createdAt: string;
-            completedAt: string | unknown;
+            completedAt: string | null;
         }>;
         laneGroups: Array<{
             id: string;
-            parentLaneId: string | unknown;
+            parentLaneId: string | null;
             spawnedByVisitId: string;
             kind: 'each' | 'all';
             laneCount: number;
-            maxConcurrency: number | unknown;
+            maxConcurrency: number | null;
             toleratedFailures: {
                 count: number;
             } | {
@@ -10160,23 +10321,23 @@ export type PostApiPipelineExecutionsResponses = {
             id: string;
             laneGroupId: string;
             index: number;
-            item: unknown;
+            item: unknown | null;
             route: {
                 kind: 'start' | 'route' | 'otherwise' | 'catch' | 'merge';
                 index: number;
             };
             origin: 'split' | 'merge';
             status: 'pending' | 'active' | 'arrived' | 'ended' | 'failed' | 'cancelled';
-            arrivedAtNodeId: string | unknown;
+            arrivedAtNodeId: string | null;
             arrivalArgs: {
                 [key: string]: unknown;
-            } | unknown;
-            arrivedFromVisitId: string | unknown;
+            } | null;
+            arrivedFromVisitId: string | null;
             arrivalTransition: {
                 kind: 'start' | 'route' | 'otherwise' | 'catch' | 'merge';
                 index: number;
-            } | unknown;
-            mergedIntoVisitId: string | unknown;
+            } | null;
+            mergedIntoVisitId: string | null;
         }>;
     };
 };
@@ -10325,77 +10486,77 @@ export type PostApiPipelineExecutionsByPipelineExecutionIdVisitsByVisitIdRerunRe
         pipelineDefinitionVersionId: string;
         runStatus: 'active' | 'waiting' | 'succeeded' | 'failed' | 'cancelled';
         status: 'queued' | 'running' | 'waiting' | 'succeeded' | 'failed' | 'cancelled';
-        waitingFor: 'decision' | 'reply' | unknown;
-        endNodeId: string | unknown;
+        waitingFor: 'decision' | 'reply' | null;
+        endNodeId: string | null;
         error: {
             name: string;
             message: string;
             cause?: unknown;
-        } | unknown;
-        triggeredByUserId: string | unknown;
-        cancelledByUserId: string | unknown;
-        startedAt: string | unknown;
-        completedAt: string | unknown;
+        } | null;
+        triggeredByUserId: string | null;
+        cancelledByUserId: string | null;
+        startedAt: string | null;
+        completedAt: string | null;
         createdAt: string;
         updatedAt: string;
         visits: Array<{
             id: string;
             nodeId: string;
             nodeKind: 'step' | 'wait' | 'succeed' | 'fail';
-            laneId: string | unknown;
-            fromVisitId: string | unknown;
-            fromLaneGroupId: string | unknown;
+            laneId: string | null;
+            fromVisitId: string | null;
+            fromLaneGroupId: string | null;
             transition: {
                 kind: 'start' | 'route' | 'otherwise' | 'catch' | 'merge';
                 index: number;
             };
             routing: {
                 [key: string]: unknown;
-            } | unknown;
+            } | null;
             status: 'active' | 'waiting' | 'succeeded' | 'failed' | 'cancelled' | 'superseded';
-            waitFor: 'decision' | 'reply' | unknown;
+            waitFor: 'decision' | 'reply' | null;
             actions: Array<{
                 key: string;
                 label: string;
                 body: 'optional' | 'required';
-            }> | unknown;
+            }> | null;
             input: {
                 [key: string]: unknown;
             };
-            result: unknown;
-            resultTaskId: string | unknown;
+            result: unknown | null;
+            resultTaskId: string | null;
             error: {
                 name: string;
                 message: string;
                 cause?: unknown;
-            } | unknown;
+            } | null;
             tasks: Array<{
                 taskId: string;
                 attemptNumber: number;
                 status: 'pending' | 'queued' | 'running' | 'succeeded' | 'failed' | 'timeout' | 'abandoned' | 'cancelled' | 'skipped' | 'yielded';
-                startedAt: string | unknown;
-                completedAt: string | unknown;
-                workBranch: string | unknown;
+                startedAt: string | null;
+                completedAt: string | null;
+                workBranch: string | null;
             }>;
             questions: Array<{
                 questionId: string;
                 commentId: string;
                 status: 'open' | 'answered' | 'not_needed';
             }>;
-            conversationId: string | unknown;
-            createdByUserId: string | unknown;
-            resolvedByUserId: string | unknown;
-            resolvedAt: string | unknown;
+            conversationId: string | null;
+            createdByUserId: string | null;
+            resolvedByUserId: string | null;
+            resolvedAt: string | null;
             createdAt: string;
-            completedAt: string | unknown;
+            completedAt: string | null;
         }>;
         laneGroups: Array<{
             id: string;
-            parentLaneId: string | unknown;
+            parentLaneId: string | null;
             spawnedByVisitId: string;
             kind: 'each' | 'all';
             laneCount: number;
-            maxConcurrency: number | unknown;
+            maxConcurrency: number | null;
             toleratedFailures: {
                 count: number;
             } | {
@@ -10407,23 +10568,23 @@ export type PostApiPipelineExecutionsByPipelineExecutionIdVisitsByVisitIdRerunRe
             id: string;
             laneGroupId: string;
             index: number;
-            item: unknown;
+            item: unknown | null;
             route: {
                 kind: 'start' | 'route' | 'otherwise' | 'catch' | 'merge';
                 index: number;
             };
             origin: 'split' | 'merge';
             status: 'pending' | 'active' | 'arrived' | 'ended' | 'failed' | 'cancelled';
-            arrivedAtNodeId: string | unknown;
+            arrivedAtNodeId: string | null;
             arrivalArgs: {
                 [key: string]: unknown;
-            } | unknown;
-            arrivedFromVisitId: string | unknown;
+            } | null;
+            arrivedFromVisitId: string | null;
             arrivalTransition: {
                 kind: 'start' | 'route' | 'otherwise' | 'catch' | 'merge';
                 index: number;
-            } | unknown;
-            mergedIntoVisitId: string | unknown;
+            } | null;
+            mergedIntoVisitId: string | null;
         }>;
     };
 };
@@ -10569,17 +10730,17 @@ export type PostApiPipelineExecutionsByPipelineExecutionIdQuestionsByQuestionIdA
         id: string;
         projectId: string;
         workItemId: string;
-        authorUserId: string | unknown;
+        authorUserId: string | null;
         authorKind: 'user' | 'agent';
-        agentSessionId: string | unknown;
-        sourceNotificationId: string | unknown;
-        externalCommentId: string | unknown;
-        externalCommentUrl: string | unknown;
-        authoredByTaskId: string | unknown;
-        authorName: string | unknown;
-        parentCommentId: string | unknown;
-        authorUsername: string | unknown;
-        authorImage: string | unknown;
+        agentSessionId: string | null;
+        sourceNotificationId: string | null;
+        externalCommentId: string | null;
+        externalCommentUrl: string | null;
+        authoredByTaskId: string | null;
+        authorName: string | null;
+        parentCommentId: string | null;
+        authorUsername: string | null;
+        authorImage: string | null;
         body: string;
         isPinned: boolean;
         createdAt: string;
@@ -10731,77 +10892,77 @@ export type PostApiPipelineExecutionsByPipelineExecutionIdQuestionsByQuestionIdC
         pipelineDefinitionVersionId: string;
         runStatus: 'active' | 'waiting' | 'succeeded' | 'failed' | 'cancelled';
         status: 'queued' | 'running' | 'waiting' | 'succeeded' | 'failed' | 'cancelled';
-        waitingFor: 'decision' | 'reply' | unknown;
-        endNodeId: string | unknown;
+        waitingFor: 'decision' | 'reply' | null;
+        endNodeId: string | null;
         error: {
             name: string;
             message: string;
             cause?: unknown;
-        } | unknown;
-        triggeredByUserId: string | unknown;
-        cancelledByUserId: string | unknown;
-        startedAt: string | unknown;
-        completedAt: string | unknown;
+        } | null;
+        triggeredByUserId: string | null;
+        cancelledByUserId: string | null;
+        startedAt: string | null;
+        completedAt: string | null;
         createdAt: string;
         updatedAt: string;
         visits: Array<{
             id: string;
             nodeId: string;
             nodeKind: 'step' | 'wait' | 'succeed' | 'fail';
-            laneId: string | unknown;
-            fromVisitId: string | unknown;
-            fromLaneGroupId: string | unknown;
+            laneId: string | null;
+            fromVisitId: string | null;
+            fromLaneGroupId: string | null;
             transition: {
                 kind: 'start' | 'route' | 'otherwise' | 'catch' | 'merge';
                 index: number;
             };
             routing: {
                 [key: string]: unknown;
-            } | unknown;
+            } | null;
             status: 'active' | 'waiting' | 'succeeded' | 'failed' | 'cancelled' | 'superseded';
-            waitFor: 'decision' | 'reply' | unknown;
+            waitFor: 'decision' | 'reply' | null;
             actions: Array<{
                 key: string;
                 label: string;
                 body: 'optional' | 'required';
-            }> | unknown;
+            }> | null;
             input: {
                 [key: string]: unknown;
             };
-            result: unknown;
-            resultTaskId: string | unknown;
+            result: unknown | null;
+            resultTaskId: string | null;
             error: {
                 name: string;
                 message: string;
                 cause?: unknown;
-            } | unknown;
+            } | null;
             tasks: Array<{
                 taskId: string;
                 attemptNumber: number;
                 status: 'pending' | 'queued' | 'running' | 'succeeded' | 'failed' | 'timeout' | 'abandoned' | 'cancelled' | 'skipped' | 'yielded';
-                startedAt: string | unknown;
-                completedAt: string | unknown;
-                workBranch: string | unknown;
+                startedAt: string | null;
+                completedAt: string | null;
+                workBranch: string | null;
             }>;
             questions: Array<{
                 questionId: string;
                 commentId: string;
                 status: 'open' | 'answered' | 'not_needed';
             }>;
-            conversationId: string | unknown;
-            createdByUserId: string | unknown;
-            resolvedByUserId: string | unknown;
-            resolvedAt: string | unknown;
+            conversationId: string | null;
+            createdByUserId: string | null;
+            resolvedByUserId: string | null;
+            resolvedAt: string | null;
             createdAt: string;
-            completedAt: string | unknown;
+            completedAt: string | null;
         }>;
         laneGroups: Array<{
             id: string;
-            parentLaneId: string | unknown;
+            parentLaneId: string | null;
             spawnedByVisitId: string;
             kind: 'each' | 'all';
             laneCount: number;
-            maxConcurrency: number | unknown;
+            maxConcurrency: number | null;
             toleratedFailures: {
                 count: number;
             } | {
@@ -10813,23 +10974,23 @@ export type PostApiPipelineExecutionsByPipelineExecutionIdQuestionsByQuestionIdC
             id: string;
             laneGroupId: string;
             index: number;
-            item: unknown;
+            item: unknown | null;
             route: {
                 kind: 'start' | 'route' | 'otherwise' | 'catch' | 'merge';
                 index: number;
             };
             origin: 'split' | 'merge';
             status: 'pending' | 'active' | 'arrived' | 'ended' | 'failed' | 'cancelled';
-            arrivedAtNodeId: string | unknown;
+            arrivedAtNodeId: string | null;
             arrivalArgs: {
                 [key: string]: unknown;
-            } | unknown;
-            arrivedFromVisitId: string | unknown;
+            } | null;
+            arrivedFromVisitId: string | null;
             arrivalTransition: {
                 kind: 'start' | 'route' | 'otherwise' | 'catch' | 'merge';
                 index: number;
-            } | unknown;
-            mergedIntoVisitId: string | unknown;
+            } | null;
+            mergedIntoVisitId: string | null;
         }>;
     };
 };
@@ -10977,77 +11138,77 @@ export type PutApiPipelineExecutionsByPipelineExecutionIdCancelResponses = {
         pipelineDefinitionVersionId: string;
         runStatus: 'active' | 'waiting' | 'succeeded' | 'failed' | 'cancelled';
         status: 'queued' | 'running' | 'waiting' | 'succeeded' | 'failed' | 'cancelled';
-        waitingFor: 'decision' | 'reply' | unknown;
-        endNodeId: string | unknown;
+        waitingFor: 'decision' | 'reply' | null;
+        endNodeId: string | null;
         error: {
             name: string;
             message: string;
             cause?: unknown;
-        } | unknown;
-        triggeredByUserId: string | unknown;
-        cancelledByUserId: string | unknown;
-        startedAt: string | unknown;
-        completedAt: string | unknown;
+        } | null;
+        triggeredByUserId: string | null;
+        cancelledByUserId: string | null;
+        startedAt: string | null;
+        completedAt: string | null;
         createdAt: string;
         updatedAt: string;
         visits: Array<{
             id: string;
             nodeId: string;
             nodeKind: 'step' | 'wait' | 'succeed' | 'fail';
-            laneId: string | unknown;
-            fromVisitId: string | unknown;
-            fromLaneGroupId: string | unknown;
+            laneId: string | null;
+            fromVisitId: string | null;
+            fromLaneGroupId: string | null;
             transition: {
                 kind: 'start' | 'route' | 'otherwise' | 'catch' | 'merge';
                 index: number;
             };
             routing: {
                 [key: string]: unknown;
-            } | unknown;
+            } | null;
             status: 'active' | 'waiting' | 'succeeded' | 'failed' | 'cancelled' | 'superseded';
-            waitFor: 'decision' | 'reply' | unknown;
+            waitFor: 'decision' | 'reply' | null;
             actions: Array<{
                 key: string;
                 label: string;
                 body: 'optional' | 'required';
-            }> | unknown;
+            }> | null;
             input: {
                 [key: string]: unknown;
             };
-            result: unknown;
-            resultTaskId: string | unknown;
+            result: unknown | null;
+            resultTaskId: string | null;
             error: {
                 name: string;
                 message: string;
                 cause?: unknown;
-            } | unknown;
+            } | null;
             tasks: Array<{
                 taskId: string;
                 attemptNumber: number;
                 status: 'pending' | 'queued' | 'running' | 'succeeded' | 'failed' | 'timeout' | 'abandoned' | 'cancelled' | 'skipped' | 'yielded';
-                startedAt: string | unknown;
-                completedAt: string | unknown;
-                workBranch: string | unknown;
+                startedAt: string | null;
+                completedAt: string | null;
+                workBranch: string | null;
             }>;
             questions: Array<{
                 questionId: string;
                 commentId: string;
                 status: 'open' | 'answered' | 'not_needed';
             }>;
-            conversationId: string | unknown;
-            createdByUserId: string | unknown;
-            resolvedByUserId: string | unknown;
-            resolvedAt: string | unknown;
+            conversationId: string | null;
+            createdByUserId: string | null;
+            resolvedByUserId: string | null;
+            resolvedAt: string | null;
             createdAt: string;
-            completedAt: string | unknown;
+            completedAt: string | null;
         }>;
         laneGroups: Array<{
             id: string;
-            parentLaneId: string | unknown;
+            parentLaneId: string | null;
             spawnedByVisitId: string;
             kind: 'each' | 'all';
             laneCount: number;
-            maxConcurrency: number | unknown;
+            maxConcurrency: number | null;
             toleratedFailures: {
                 count: number;
             } | {
@@ -11059,28 +11220,152 @@ export type PutApiPipelineExecutionsByPipelineExecutionIdCancelResponses = {
             id: string;
             laneGroupId: string;
             index: number;
-            item: unknown;
+            item: unknown | null;
             route: {
                 kind: 'start' | 'route' | 'otherwise' | 'catch' | 'merge';
                 index: number;
             };
             origin: 'split' | 'merge';
             status: 'pending' | 'active' | 'arrived' | 'ended' | 'failed' | 'cancelled';
-            arrivedAtNodeId: string | unknown;
+            arrivedAtNodeId: string | null;
             arrivalArgs: {
                 [key: string]: unknown;
-            } | unknown;
-            arrivedFromVisitId: string | unknown;
+            } | null;
+            arrivedFromVisitId: string | null;
             arrivalTransition: {
                 kind: 'start' | 'route' | 'otherwise' | 'catch' | 'merge';
                 index: number;
-            } | unknown;
-            mergedIntoVisitId: string | unknown;
+            } | null;
+            mergedIntoVisitId: string | null;
         }>;
     };
 };
 
 export type PutApiPipelineExecutionsByPipelineExecutionIdCancelResponse = PutApiPipelineExecutionsByPipelineExecutionIdCancelResponses[keyof PutApiPipelineExecutionsByPipelineExecutionIdCancelResponses];
+
+export type PostApiProjectsByProjectIdWorkSignalTokenData = {
+    body: {
+        workerId?: string;
+    };
+    path: {
+        projectId: string;
+    };
+    query?: never;
+    url: '/api/projects/{projectId}/work-signal-token';
+};
+
+export type PostApiProjectsByProjectIdWorkSignalTokenErrors = {
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 404
+     */
+    404: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type PostApiProjectsByProjectIdWorkSignalTokenError = PostApiProjectsByProjectIdWorkSignalTokenErrors[keyof PostApiProjectsByProjectIdWorkSignalTokenErrors];
+
+export type PostApiProjectsByProjectIdWorkSignalTokenResponses = {
+    /**
+     * Response for status 200
+     */
+    200: {
+        url: string;
+        token: string;
+        expiresAt: string;
+    };
+};
+
+export type PostApiProjectsByProjectIdWorkSignalTokenResponse = PostApiProjectsByProjectIdWorkSignalTokenResponses[keyof PostApiProjectsByProjectIdWorkSignalTokenResponses];
 
 export type PutApiPipelineExecutionsBatchCancelData = {
     body: {
@@ -11345,7 +11630,7 @@ export type PostApiPipelineExecutionsByPipelineExecutionIdVisitsByVisitIdMessage
             taskId: string;
             authorUserId: string;
             body: string;
-            quoteText: string | unknown;
+            quoteText: string | null;
             createdAt: string;
         };
         pipelineExecution: {
@@ -11357,77 +11642,77 @@ export type PostApiPipelineExecutionsByPipelineExecutionIdVisitsByVisitIdMessage
             pipelineDefinitionVersionId: string;
             runStatus: 'active' | 'waiting' | 'succeeded' | 'failed' | 'cancelled';
             status: 'queued' | 'running' | 'waiting' | 'succeeded' | 'failed' | 'cancelled';
-            waitingFor: 'decision' | 'reply' | unknown;
-            endNodeId: string | unknown;
+            waitingFor: 'decision' | 'reply' | null;
+            endNodeId: string | null;
             error: {
                 name: string;
                 message: string;
                 cause?: unknown;
-            } | unknown;
-            triggeredByUserId: string | unknown;
-            cancelledByUserId: string | unknown;
-            startedAt: string | unknown;
-            completedAt: string | unknown;
+            } | null;
+            triggeredByUserId: string | null;
+            cancelledByUserId: string | null;
+            startedAt: string | null;
+            completedAt: string | null;
             createdAt: string;
             updatedAt: string;
             visits: Array<{
                 id: string;
                 nodeId: string;
                 nodeKind: 'step' | 'wait' | 'succeed' | 'fail';
-                laneId: string | unknown;
-                fromVisitId: string | unknown;
-                fromLaneGroupId: string | unknown;
+                laneId: string | null;
+                fromVisitId: string | null;
+                fromLaneGroupId: string | null;
                 transition: {
                     kind: 'start' | 'route' | 'otherwise' | 'catch' | 'merge';
                     index: number;
                 };
                 routing: {
                     [key: string]: unknown;
-                } | unknown;
+                } | null;
                 status: 'active' | 'waiting' | 'succeeded' | 'failed' | 'cancelled' | 'superseded';
-                waitFor: 'decision' | 'reply' | unknown;
+                waitFor: 'decision' | 'reply' | null;
                 actions: Array<{
                     key: string;
                     label: string;
                     body: 'optional' | 'required';
-                }> | unknown;
+                }> | null;
                 input: {
                     [key: string]: unknown;
                 };
-                result: unknown;
-                resultTaskId: string | unknown;
+                result: unknown | null;
+                resultTaskId: string | null;
                 error: {
                     name: string;
                     message: string;
                     cause?: unknown;
-                } | unknown;
+                } | null;
                 tasks: Array<{
                     taskId: string;
                     attemptNumber: number;
                     status: 'pending' | 'queued' | 'running' | 'succeeded' | 'failed' | 'timeout' | 'abandoned' | 'cancelled' | 'skipped' | 'yielded';
-                    startedAt: string | unknown;
-                    completedAt: string | unknown;
-                    workBranch: string | unknown;
+                    startedAt: string | null;
+                    completedAt: string | null;
+                    workBranch: string | null;
                 }>;
                 questions: Array<{
                     questionId: string;
                     commentId: string;
                     status: 'open' | 'answered' | 'not_needed';
                 }>;
-                conversationId: string | unknown;
-                createdByUserId: string | unknown;
-                resolvedByUserId: string | unknown;
-                resolvedAt: string | unknown;
+                conversationId: string | null;
+                createdByUserId: string | null;
+                resolvedByUserId: string | null;
+                resolvedAt: string | null;
                 createdAt: string;
-                completedAt: string | unknown;
+                completedAt: string | null;
             }>;
             laneGroups: Array<{
                 id: string;
-                parentLaneId: string | unknown;
+                parentLaneId: string | null;
                 spawnedByVisitId: string;
                 kind: 'each' | 'all';
                 laneCount: number;
-                maxConcurrency: number | unknown;
+                maxConcurrency: number | null;
                 toleratedFailures: {
                     count: number;
                 } | {
@@ -11439,23 +11724,23 @@ export type PostApiPipelineExecutionsByPipelineExecutionIdVisitsByVisitIdMessage
                 id: string;
                 laneGroupId: string;
                 index: number;
-                item: unknown;
+                item: unknown | null;
                 route: {
                     kind: 'start' | 'route' | 'otherwise' | 'catch' | 'merge';
                     index: number;
                 };
                 origin: 'split' | 'merge';
                 status: 'pending' | 'active' | 'arrived' | 'ended' | 'failed' | 'cancelled';
-                arrivedAtNodeId: string | unknown;
+                arrivedAtNodeId: string | null;
                 arrivalArgs: {
                     [key: string]: unknown;
-                } | unknown;
-                arrivedFromVisitId: string | unknown;
+                } | null;
+                arrivedFromVisitId: string | null;
                 arrivalTransition: {
                     kind: 'start' | 'route' | 'otherwise' | 'catch' | 'merge';
                     index: number;
-                } | unknown;
-                mergedIntoVisitId: string | unknown;
+                } | null;
+                mergedIntoVisitId: string | null;
             }>;
         };
     };
@@ -11466,7 +11751,7 @@ export type PostApiPipelineExecutionsByPipelineExecutionIdVisitsByVisitIdMessage
 export type PostApiPipelineExecutionsByPipelineExecutionIdVisitsByVisitIdDecisionData = {
     body: {
         action: string;
-        body?: string | unknown;
+        body?: string | null;
     };
     path: {
         pipelineExecutionId: string;
@@ -11608,77 +11893,77 @@ export type PostApiPipelineExecutionsByPipelineExecutionIdVisitsByVisitIdDecisio
         pipelineDefinitionVersionId: string;
         runStatus: 'active' | 'waiting' | 'succeeded' | 'failed' | 'cancelled';
         status: 'queued' | 'running' | 'waiting' | 'succeeded' | 'failed' | 'cancelled';
-        waitingFor: 'decision' | 'reply' | unknown;
-        endNodeId: string | unknown;
+        waitingFor: 'decision' | 'reply' | null;
+        endNodeId: string | null;
         error: {
             name: string;
             message: string;
             cause?: unknown;
-        } | unknown;
-        triggeredByUserId: string | unknown;
-        cancelledByUserId: string | unknown;
-        startedAt: string | unknown;
-        completedAt: string | unknown;
+        } | null;
+        triggeredByUserId: string | null;
+        cancelledByUserId: string | null;
+        startedAt: string | null;
+        completedAt: string | null;
         createdAt: string;
         updatedAt: string;
         visits: Array<{
             id: string;
             nodeId: string;
             nodeKind: 'step' | 'wait' | 'succeed' | 'fail';
-            laneId: string | unknown;
-            fromVisitId: string | unknown;
-            fromLaneGroupId: string | unknown;
+            laneId: string | null;
+            fromVisitId: string | null;
+            fromLaneGroupId: string | null;
             transition: {
                 kind: 'start' | 'route' | 'otherwise' | 'catch' | 'merge';
                 index: number;
             };
             routing: {
                 [key: string]: unknown;
-            } | unknown;
+            } | null;
             status: 'active' | 'waiting' | 'succeeded' | 'failed' | 'cancelled' | 'superseded';
-            waitFor: 'decision' | 'reply' | unknown;
+            waitFor: 'decision' | 'reply' | null;
             actions: Array<{
                 key: string;
                 label: string;
                 body: 'optional' | 'required';
-            }> | unknown;
+            }> | null;
             input: {
                 [key: string]: unknown;
             };
-            result: unknown;
-            resultTaskId: string | unknown;
+            result: unknown | null;
+            resultTaskId: string | null;
             error: {
                 name: string;
                 message: string;
                 cause?: unknown;
-            } | unknown;
+            } | null;
             tasks: Array<{
                 taskId: string;
                 attemptNumber: number;
                 status: 'pending' | 'queued' | 'running' | 'succeeded' | 'failed' | 'timeout' | 'abandoned' | 'cancelled' | 'skipped' | 'yielded';
-                startedAt: string | unknown;
-                completedAt: string | unknown;
-                workBranch: string | unknown;
+                startedAt: string | null;
+                completedAt: string | null;
+                workBranch: string | null;
             }>;
             questions: Array<{
                 questionId: string;
                 commentId: string;
                 status: 'open' | 'answered' | 'not_needed';
             }>;
-            conversationId: string | unknown;
-            createdByUserId: string | unknown;
-            resolvedByUserId: string | unknown;
-            resolvedAt: string | unknown;
+            conversationId: string | null;
+            createdByUserId: string | null;
+            resolvedByUserId: string | null;
+            resolvedAt: string | null;
             createdAt: string;
-            completedAt: string | unknown;
+            completedAt: string | null;
         }>;
         laneGroups: Array<{
             id: string;
-            parentLaneId: string | unknown;
+            parentLaneId: string | null;
             spawnedByVisitId: string;
             kind: 'each' | 'all';
             laneCount: number;
-            maxConcurrency: number | unknown;
+            maxConcurrency: number | null;
             toleratedFailures: {
                 count: number;
             } | {
@@ -11690,23 +11975,23 @@ export type PostApiPipelineExecutionsByPipelineExecutionIdVisitsByVisitIdDecisio
             id: string;
             laneGroupId: string;
             index: number;
-            item: unknown;
+            item: unknown | null;
             route: {
                 kind: 'start' | 'route' | 'otherwise' | 'catch' | 'merge';
                 index: number;
             };
             origin: 'split' | 'merge';
             status: 'pending' | 'active' | 'arrived' | 'ended' | 'failed' | 'cancelled';
-            arrivedAtNodeId: string | unknown;
+            arrivedAtNodeId: string | null;
             arrivalArgs: {
                 [key: string]: unknown;
-            } | unknown;
-            arrivedFromVisitId: string | unknown;
+            } | null;
+            arrivedFromVisitId: string | null;
             arrivalTransition: {
                 kind: 'start' | 'route' | 'otherwise' | 'catch' | 'merge';
                 index: number;
-            } | unknown;
-            mergedIntoVisitId: string | unknown;
+            } | null;
+            mergedIntoVisitId: string | null;
         }>;
     };
 };
@@ -11835,77 +12120,77 @@ export type GetApiPipelineExecutionsByPipelineExecutionIdResponses = {
         pipelineDefinitionVersionId: string;
         runStatus: 'active' | 'waiting' | 'succeeded' | 'failed' | 'cancelled';
         status: 'queued' | 'running' | 'waiting' | 'succeeded' | 'failed' | 'cancelled';
-        waitingFor: 'decision' | 'reply' | unknown;
-        endNodeId: string | unknown;
+        waitingFor: 'decision' | 'reply' | null;
+        endNodeId: string | null;
         error: {
             name: string;
             message: string;
             cause?: unknown;
-        } | unknown;
-        triggeredByUserId: string | unknown;
-        cancelledByUserId: string | unknown;
-        startedAt: string | unknown;
-        completedAt: string | unknown;
+        } | null;
+        triggeredByUserId: string | null;
+        cancelledByUserId: string | null;
+        startedAt: string | null;
+        completedAt: string | null;
         createdAt: string;
         updatedAt: string;
         visits: Array<{
             id: string;
             nodeId: string;
             nodeKind: 'step' | 'wait' | 'succeed' | 'fail';
-            laneId: string | unknown;
-            fromVisitId: string | unknown;
-            fromLaneGroupId: string | unknown;
+            laneId: string | null;
+            fromVisitId: string | null;
+            fromLaneGroupId: string | null;
             transition: {
                 kind: 'start' | 'route' | 'otherwise' | 'catch' | 'merge';
                 index: number;
             };
             routing: {
                 [key: string]: unknown;
-            } | unknown;
+            } | null;
             status: 'active' | 'waiting' | 'succeeded' | 'failed' | 'cancelled' | 'superseded';
-            waitFor: 'decision' | 'reply' | unknown;
+            waitFor: 'decision' | 'reply' | null;
             actions: Array<{
                 key: string;
                 label: string;
                 body: 'optional' | 'required';
-            }> | unknown;
+            }> | null;
             input: {
                 [key: string]: unknown;
             };
-            result: unknown;
-            resultTaskId: string | unknown;
+            result: unknown | null;
+            resultTaskId: string | null;
             error: {
                 name: string;
                 message: string;
                 cause?: unknown;
-            } | unknown;
+            } | null;
             tasks: Array<{
                 taskId: string;
                 attemptNumber: number;
                 status: 'pending' | 'queued' | 'running' | 'succeeded' | 'failed' | 'timeout' | 'abandoned' | 'cancelled' | 'skipped' | 'yielded';
-                startedAt: string | unknown;
-                completedAt: string | unknown;
-                workBranch: string | unknown;
+                startedAt: string | null;
+                completedAt: string | null;
+                workBranch: string | null;
             }>;
             questions: Array<{
                 questionId: string;
                 commentId: string;
                 status: 'open' | 'answered' | 'not_needed';
             }>;
-            conversationId: string | unknown;
-            createdByUserId: string | unknown;
-            resolvedByUserId: string | unknown;
-            resolvedAt: string | unknown;
+            conversationId: string | null;
+            createdByUserId: string | null;
+            resolvedByUserId: string | null;
+            resolvedAt: string | null;
             createdAt: string;
-            completedAt: string | unknown;
+            completedAt: string | null;
         }>;
         laneGroups: Array<{
             id: string;
-            parentLaneId: string | unknown;
+            parentLaneId: string | null;
             spawnedByVisitId: string;
             kind: 'each' | 'all';
             laneCount: number;
-            maxConcurrency: number | unknown;
+            maxConcurrency: number | null;
             toleratedFailures: {
                 count: number;
             } | {
@@ -11917,23 +12202,23 @@ export type GetApiPipelineExecutionsByPipelineExecutionIdResponses = {
             id: string;
             laneGroupId: string;
             index: number;
-            item: unknown;
+            item: unknown | null;
             route: {
                 kind: 'start' | 'route' | 'otherwise' | 'catch' | 'merge';
                 index: number;
             };
             origin: 'split' | 'merge';
             status: 'pending' | 'active' | 'arrived' | 'ended' | 'failed' | 'cancelled';
-            arrivedAtNodeId: string | unknown;
+            arrivedAtNodeId: string | null;
             arrivalArgs: {
                 [key: string]: unknown;
-            } | unknown;
-            arrivedFromVisitId: string | unknown;
+            } | null;
+            arrivedFromVisitId: string | null;
             arrivalTransition: {
                 kind: 'start' | 'route' | 'otherwise' | 'catch' | 'merge';
                 index: number;
-            } | unknown;
-            mergedIntoVisitId: string | unknown;
+            } | null;
+            mergedIntoVisitId: string | null;
         }>;
     };
 };
@@ -12059,7 +12344,7 @@ export type GetApiPipelineExecutionsByPipelineExecutionIdVisitsByVisitIdThreadRe
         nodeId: string;
         runs: Array<{
             taskRunId: string;
-            previousTaskRunId: string | unknown;
+            previousTaskRunId: string | null;
             status: 'pending' | 'queued' | 'running' | 'succeeded' | 'failed' | 'timeout' | 'abandoned' | 'cancelled' | 'skipped' | 'yielded';
             createdAt: string;
             messages: Array<{
@@ -12067,10 +12352,10 @@ export type GetApiPipelineExecutionsByPipelineExecutionIdVisitsByVisitIdThreadRe
                 taskId: string;
                 authorUserId: string;
                 body: string;
-                quoteText: string | unknown;
+                quoteText: string | null;
                 createdAt: string;
             }>;
-            sessionRestored: boolean | unknown;
+            sessionRestored: boolean | null;
         }>;
     };
 };
@@ -12303,7 +12588,7 @@ export type GetApiWorkItemsByWorkItemIdQuestionsResponses = {
         waitingOnYou: boolean;
         waitingOn: Array<{
             userId: string;
-            username: string | unknown;
+            username: string | null;
         }>;
     }>;
 };
@@ -12445,13 +12730,13 @@ export type GetApiConversationsByConversationIdResponses = {
     200: {
         id: string;
         projectId: string;
-        workItemId: string | unknown;
+        workItemId: string | null;
         status: 'agent_turn' | 'waiting_for_person' | 'reply_pending' | 'closed';
         messages: Array<{
             id: string;
             authorKind: 'agent' | 'person' | 'system';
-            authorName: string | unknown;
-            taskRunId: string | unknown;
+            authorName: string | null;
+            taskRunId: string | null;
             body: string;
             createdAt: string;
         }>;
@@ -12459,10 +12744,10 @@ export type GetApiConversationsByConversationIdResponses = {
             pipelineExecutionId: string;
             visitId: string;
             nodeId: string;
-        } | unknown;
-        endsWith: 'findings' | 'conversation' | unknown;
+        } | null;
+        endsWith: 'findings' | 'conversation' | null;
         createdAt: string;
-        closedAt: string | unknown;
+        closedAt: string | null;
     };
 };
 
@@ -12603,15 +12888,15 @@ export type GetApiWorkItemsByWorkItemIdConversationsResponses = {
     200: Array<{
         id: string;
         status: 'agent_turn' | 'waiting_for_person' | 'reply_pending' | 'closed';
-        nodeId: string | unknown;
-        pipelineExecutionId: string | unknown;
-        visitId: string | unknown;
-        lastMessageAt: string | unknown;
+        nodeId: string | null;
+        pipelineExecutionId: string | null;
+        visitId: string | null;
+        lastMessageAt: string | null;
         messages: Array<{
             id: string;
             authorKind: 'agent' | 'person' | 'system';
-            authorName: string | unknown;
-            taskRunId: string | unknown;
+            authorName: string | null;
+            taskRunId: string | null;
             body: string;
             createdAt: string;
         }>;
@@ -12758,13 +13043,13 @@ export type PostApiConversationsByConversationIdMessagesResponses = {
     200: {
         id: string;
         projectId: string;
-        workItemId: string | unknown;
+        workItemId: string | null;
         status: 'agent_turn' | 'waiting_for_person' | 'reply_pending' | 'closed';
         messages: Array<{
             id: string;
             authorKind: 'agent' | 'person' | 'system';
-            authorName: string | unknown;
-            taskRunId: string | unknown;
+            authorName: string | null;
+            taskRunId: string | null;
             body: string;
             createdAt: string;
         }>;
@@ -12772,10 +13057,10 @@ export type PostApiConversationsByConversationIdMessagesResponses = {
             pipelineExecutionId: string;
             visitId: string;
             nodeId: string;
-        } | unknown;
-        endsWith: 'findings' | 'conversation' | unknown;
+        } | null;
+        endsWith: 'findings' | 'conversation' | null;
         createdAt: string;
-        closedAt: string | unknown;
+        closedAt: string | null;
     };
 };
 
@@ -12916,13 +13201,13 @@ export type PostApiConversationsByConversationIdContinueResponses = {
     200: {
         id: string;
         projectId: string;
-        workItemId: string | unknown;
+        workItemId: string | null;
         status: 'agent_turn' | 'waiting_for_person' | 'reply_pending' | 'closed';
         messages: Array<{
             id: string;
             authorKind: 'agent' | 'person' | 'system';
-            authorName: string | unknown;
-            taskRunId: string | unknown;
+            authorName: string | null;
+            taskRunId: string | null;
             body: string;
             createdAt: string;
         }>;
@@ -12930,10 +13215,10 @@ export type PostApiConversationsByConversationIdContinueResponses = {
             pipelineExecutionId: string;
             visitId: string;
             nodeId: string;
-        } | unknown;
-        endsWith: 'findings' | 'conversation' | unknown;
+        } | null;
+        endsWith: 'findings' | 'conversation' | null;
         createdAt: string;
-        closedAt: string | unknown;
+        closedAt: string | null;
     };
 };
 
@@ -13074,13 +13359,13 @@ export type PostApiConversationsByConversationIdDoneResponses = {
     200: {
         id: string;
         projectId: string;
-        workItemId: string | unknown;
+        workItemId: string | null;
         status: 'agent_turn' | 'waiting_for_person' | 'reply_pending' | 'closed';
         messages: Array<{
             id: string;
             authorKind: 'agent' | 'person' | 'system';
-            authorName: string | unknown;
-            taskRunId: string | unknown;
+            authorName: string | null;
+            taskRunId: string | null;
             body: string;
             createdAt: string;
         }>;
@@ -13088,10 +13373,10 @@ export type PostApiConversationsByConversationIdDoneResponses = {
             pipelineExecutionId: string;
             visitId: string;
             nodeId: string;
-        } | unknown;
-        endsWith: 'findings' | 'conversation' | unknown;
+        } | null;
+        endsWith: 'findings' | 'conversation' | null;
         createdAt: string;
-        closedAt: string | unknown;
+        closedAt: string | null;
     };
 };
 
@@ -13332,30 +13617,30 @@ export type GetApiWorkItemsByWorkItemIdResponses = {
         id: string;
         projectId: string;
         platform: 'jira' | 'github' | 'bitbucket' | 'linear' | 'scarn' | 'custom';
-        platformId?: string | unknown;
+        platformId?: string | null;
         platformKey: string;
-        url?: string | unknown;
+        url?: string | null;
         title: string;
         description: string;
         descriptionVersion: number;
-        sourceCreatedAt: string | unknown;
-        sourceUpdatedAt: string | unknown;
+        sourceCreatedAt: string | null;
+        sourceUpdatedAt: string | null;
         fields: {
             [key: string]: unknown;
-        } | unknown;
+        } | null;
         labels: Array<string>;
-        createdByUserId: string | unknown;
-        createdByUsername: string | unknown;
-        createdByImage: string | unknown;
-        assigneeUserId: string | unknown;
-        parentWorkItemId: string | unknown;
+        createdByUserId: string | null;
+        createdByUsername: string | null;
+        createdByImage: string | null;
+        assigneeUserId: string | null;
+        parentWorkItemId: string | null;
         state: 'open' | 'closed';
-        closeReason: 'completed' | 'out_of_scope' | 'superseded' | unknown;
-        resolution: string | unknown;
-        closedAt: string | unknown;
-        closedByUserId: string | unknown;
-        closedByTaskId: string | unknown;
-        spawnedByTaskId: string | unknown;
+        closeReason: 'completed' | 'out_of_scope' | 'superseded' | null;
+        resolution: string | null;
+        closedAt: string | null;
+        closedByUserId: string | null;
+        closedByTaskId: string | null;
+        spawnedByTaskId: string | null;
         createdAt: string;
         updatedAt: string;
     };
@@ -13368,7 +13653,7 @@ export type PatchApiWorkItemsByWorkItemIdData = {
         title?: string;
         description?: string;
         descriptionVersion?: number;
-        assigneeUserId?: string | unknown;
+        assigneeUserId?: string | null;
     };
     path: {
         workItemId: string;
@@ -13523,30 +13808,30 @@ export type PatchApiWorkItemsByWorkItemIdResponses = {
         id: string;
         projectId: string;
         platform: 'jira' | 'github' | 'bitbucket' | 'linear' | 'scarn' | 'custom';
-        platformId?: string | unknown;
+        platformId?: string | null;
         platformKey: string;
-        url?: string | unknown;
+        url?: string | null;
         title: string;
         description: string;
         descriptionVersion: number;
-        sourceCreatedAt: string | unknown;
-        sourceUpdatedAt: string | unknown;
+        sourceCreatedAt: string | null;
+        sourceUpdatedAt: string | null;
         fields: {
             [key: string]: unknown;
-        } | unknown;
+        } | null;
         labels: Array<string>;
-        createdByUserId: string | unknown;
-        createdByUsername: string | unknown;
-        createdByImage: string | unknown;
-        assigneeUserId: string | unknown;
-        parentWorkItemId: string | unknown;
+        createdByUserId: string | null;
+        createdByUsername: string | null;
+        createdByImage: string | null;
+        assigneeUserId: string | null;
+        parentWorkItemId: string | null;
         state: 'open' | 'closed';
-        closeReason: 'completed' | 'out_of_scope' | 'superseded' | unknown;
-        resolution: string | unknown;
-        closedAt: string | unknown;
-        closedByUserId: string | unknown;
-        closedByTaskId: string | unknown;
-        spawnedByTaskId: string | unknown;
+        closeReason: 'completed' | 'out_of_scope' | 'superseded' | null;
+        resolution: string | null;
+        closedAt: string | null;
+        closedByUserId: string | null;
+        closedByTaskId: string | null;
+        spawnedByTaskId: string | null;
         createdAt: string;
         updatedAt: string;
     };
@@ -13671,38 +13956,38 @@ export type GetApiWorkItemsByWorkItemIdChildrenResponses = {
         id: string;
         projectId: string;
         platform: 'jira' | 'github' | 'bitbucket' | 'linear' | 'scarn' | 'custom';
-        platformId?: string | unknown;
+        platformId?: string | null;
         platformKey: string;
-        url?: string | unknown;
+        url?: string | null;
         title: string;
         description: string;
         descriptionVersion: number;
-        sourceCreatedAt: string | unknown;
-        sourceUpdatedAt: string | unknown;
+        sourceCreatedAt: string | null;
+        sourceUpdatedAt: string | null;
         fields: {
             [key: string]: unknown;
-        } | unknown;
+        } | null;
         labels: Array<string>;
-        createdByUserId: string | unknown;
-        createdByUsername: string | unknown;
-        createdByImage: string | unknown;
-        assigneeUserId: string | unknown;
-        parentWorkItemId: string | unknown;
+        createdByUserId: string | null;
+        createdByUsername: string | null;
+        createdByImage: string | null;
+        assigneeUserId: string | null;
+        parentWorkItemId: string | null;
         state: 'open' | 'closed';
-        closeReason: 'completed' | 'out_of_scope' | 'superseded' | unknown;
-        resolution: string | unknown;
-        closedAt: string | unknown;
-        closedByUserId: string | unknown;
-        closedByTaskId: string | unknown;
-        spawnedByTaskId: string | unknown;
+        closeReason: 'completed' | 'out_of_scope' | 'superseded' | null;
+        resolution: string | null;
+        closedAt: string | null;
+        closedByUserId: string | null;
+        closedByTaskId: string | null;
+        spawnedByTaskId: string | null;
         createdAt: string;
         updatedAt: string;
         status: 'needs_person' | 'running' | 'ready' | 'blocked' | 'closed';
         assignee: {
             userId: string;
-            username: string | unknown;
-            image: string | unknown;
-        } | unknown;
+            username: string | null;
+            image: string | null;
+        } | null;
         openBlockers: Array<{
             id: string;
             title: string;
@@ -13713,12 +13998,12 @@ export type GetApiWorkItemsByWorkItemIdChildrenResponses = {
             step: {
                 key: string;
                 name: string;
-            } | unknown;
-            startedAt: string | unknown;
+            } | null;
+            startedAt: string | null;
             updatedAt: string;
-            question: string | unknown;
-            failure: string | unknown;
-        } | unknown;
+            question: string | null;
+            failure: string | null;
+        } | null;
     }>;
 };
 
@@ -13852,16 +14137,16 @@ export type PostApiWorkItemsData = {
     body: {
         projectId: string;
         platform: 'jira' | 'github' | 'bitbucket' | 'linear' | 'scarn' | 'custom';
-        platformId?: string | unknown;
+        platformId?: string | null;
         platformKey: string;
-        url?: string | unknown;
+        url?: string | null;
         title: string;
         description: string;
-        sourceCreatedAt: string | unknown;
-        sourceUpdatedAt: string | unknown;
+        sourceCreatedAt: string | null;
+        sourceUpdatedAt: string | null;
         fields: {
             [key: string]: unknown;
-        } | unknown;
+        } | null;
         state?: 'open' | 'closed';
         labels?: Array<string>;
         id?: string;
@@ -14017,30 +14302,30 @@ export type PostApiWorkItemsResponses = {
         id: string;
         projectId: string;
         platform: 'jira' | 'github' | 'bitbucket' | 'linear' | 'scarn' | 'custom';
-        platformId?: string | unknown;
+        platformId?: string | null;
         platformKey: string;
-        url?: string | unknown;
+        url?: string | null;
         title: string;
         description: string;
         descriptionVersion: number;
-        sourceCreatedAt: string | unknown;
-        sourceUpdatedAt: string | unknown;
+        sourceCreatedAt: string | null;
+        sourceUpdatedAt: string | null;
         fields: {
             [key: string]: unknown;
-        } | unknown;
+        } | null;
         labels: Array<string>;
-        createdByUserId: string | unknown;
-        createdByUsername: string | unknown;
-        createdByImage: string | unknown;
-        assigneeUserId: string | unknown;
-        parentWorkItemId: string | unknown;
+        createdByUserId: string | null;
+        createdByUsername: string | null;
+        createdByImage: string | null;
+        assigneeUserId: string | null;
+        parentWorkItemId: string | null;
         state: 'open' | 'closed';
-        closeReason: 'completed' | 'out_of_scope' | 'superseded' | unknown;
-        resolution: string | unknown;
-        closedAt: string | unknown;
-        closedByUserId: string | unknown;
-        closedByTaskId: string | unknown;
-        spawnedByTaskId: string | unknown;
+        closeReason: 'completed' | 'out_of_scope' | 'superseded' | null;
+        resolution: string | null;
+        closedAt: string | null;
+        closedByUserId: string | null;
+        closedByTaskId: string | null;
+        spawnedByTaskId: string | null;
         createdAt: string;
         updatedAt: string;
     };
@@ -14052,16 +14337,16 @@ export type PutApiWorkItemsData = {
     body: {
         projectId: string;
         platform: 'jira' | 'github' | 'bitbucket' | 'linear' | 'scarn' | 'custom';
-        platformId?: string | unknown;
+        platformId?: string | null;
         platformKey: string;
-        url?: string | unknown;
+        url?: string | null;
         title: string;
         description: string;
-        sourceCreatedAt: string | unknown;
-        sourceUpdatedAt: string | unknown;
+        sourceCreatedAt: string | null;
+        sourceUpdatedAt: string | null;
         fields: {
             [key: string]: unknown;
-        } | unknown;
+        } | null;
         state?: 'open' | 'closed';
         labels?: Array<string>;
     };
@@ -14197,30 +14482,30 @@ export type PutApiWorkItemsResponses = {
         id: string;
         projectId: string;
         platform: 'jira' | 'github' | 'bitbucket' | 'linear' | 'scarn' | 'custom';
-        platformId?: string | unknown;
+        platformId?: string | null;
         platformKey: string;
-        url?: string | unknown;
+        url?: string | null;
         title: string;
         description: string;
         descriptionVersion: number;
-        sourceCreatedAt: string | unknown;
-        sourceUpdatedAt: string | unknown;
+        sourceCreatedAt: string | null;
+        sourceUpdatedAt: string | null;
         fields: {
             [key: string]: unknown;
-        } | unknown;
+        } | null;
         labels: Array<string>;
-        createdByUserId: string | unknown;
-        createdByUsername: string | unknown;
-        createdByImage: string | unknown;
-        assigneeUserId: string | unknown;
-        parentWorkItemId: string | unknown;
+        createdByUserId: string | null;
+        createdByUsername: string | null;
+        createdByImage: string | null;
+        assigneeUserId: string | null;
+        parentWorkItemId: string | null;
         state: 'open' | 'closed';
-        closeReason: 'completed' | 'out_of_scope' | 'superseded' | unknown;
-        resolution: string | unknown;
-        closedAt: string | unknown;
-        closedByUserId: string | unknown;
-        closedByTaskId: string | unknown;
-        spawnedByTaskId: string | unknown;
+        closeReason: 'completed' | 'out_of_scope' | 'superseded' | null;
+        resolution: string | null;
+        closedAt: string | null;
+        closedByUserId: string | null;
+        closedByTaskId: string | null;
+        spawnedByTaskId: string | null;
         createdAt: string;
         updatedAt: string;
     };
@@ -14350,16 +14635,16 @@ export type PostApiWorkItemsBatchData = {
     body: Array<{
         projectId: string;
         platform: 'jira' | 'github' | 'bitbucket' | 'linear' | 'scarn' | 'custom';
-        platformId?: string | unknown;
+        platformId?: string | null;
         platformKey: string;
-        url?: string | unknown;
+        url?: string | null;
         title: string;
         description: string;
-        sourceCreatedAt: string | unknown;
-        sourceUpdatedAt: string | unknown;
+        sourceCreatedAt: string | null;
+        sourceUpdatedAt: string | null;
         fields: {
             [key: string]: unknown;
-        } | unknown;
+        } | null;
         state?: 'open' | 'closed';
         labels?: Array<string>;
     }>;
@@ -14514,30 +14799,30 @@ export type PostApiWorkItemsBatchResponses = {
         id: string;
         projectId: string;
         platform: 'jira' | 'github' | 'bitbucket' | 'linear' | 'scarn' | 'custom';
-        platformId?: string | unknown;
+        platformId?: string | null;
         platformKey: string;
-        url?: string | unknown;
+        url?: string | null;
         title: string;
         description: string;
         descriptionVersion: number;
-        sourceCreatedAt: string | unknown;
-        sourceUpdatedAt: string | unknown;
+        sourceCreatedAt: string | null;
+        sourceUpdatedAt: string | null;
         fields: {
             [key: string]: unknown;
-        } | unknown;
+        } | null;
         labels: Array<string>;
-        createdByUserId: string | unknown;
-        createdByUsername: string | unknown;
-        createdByImage: string | unknown;
-        assigneeUserId: string | unknown;
-        parentWorkItemId: string | unknown;
+        createdByUserId: string | null;
+        createdByUsername: string | null;
+        createdByImage: string | null;
+        assigneeUserId: string | null;
+        parentWorkItemId: string | null;
         state: 'open' | 'closed';
-        closeReason: 'completed' | 'out_of_scope' | 'superseded' | unknown;
-        resolution: string | unknown;
-        closedAt: string | unknown;
-        closedByUserId: string | unknown;
-        closedByTaskId: string | unknown;
-        spawnedByTaskId: string | unknown;
+        closeReason: 'completed' | 'out_of_scope' | 'superseded' | null;
+        resolution: string | null;
+        closedAt: string | null;
+        closedByUserId: string | null;
+        closedByTaskId: string | null;
+        spawnedByTaskId: string | null;
         createdAt: string;
         updatedAt: string;
     }>;
@@ -14549,16 +14834,16 @@ export type PutApiWorkItemsBatchData = {
     body: Array<{
         projectId: string;
         platform: 'jira' | 'github' | 'bitbucket' | 'linear' | 'scarn' | 'custom';
-        platformId?: string | unknown;
+        platformId?: string | null;
         platformKey: string;
-        url?: string | unknown;
+        url?: string | null;
         title: string;
         description: string;
-        sourceCreatedAt: string | unknown;
-        sourceUpdatedAt: string | unknown;
+        sourceCreatedAt: string | null;
+        sourceUpdatedAt: string | null;
         fields: {
             [key: string]: unknown;
-        } | unknown;
+        } | null;
         state?: 'open' | 'closed';
         labels?: Array<string>;
     }>;
@@ -14694,30 +14979,30 @@ export type PutApiWorkItemsBatchResponses = {
         id: string;
         projectId: string;
         platform: 'jira' | 'github' | 'bitbucket' | 'linear' | 'scarn' | 'custom';
-        platformId?: string | unknown;
+        platformId?: string | null;
         platformKey: string;
-        url?: string | unknown;
+        url?: string | null;
         title: string;
         description: string;
         descriptionVersion: number;
-        sourceCreatedAt: string | unknown;
-        sourceUpdatedAt: string | unknown;
+        sourceCreatedAt: string | null;
+        sourceUpdatedAt: string | null;
         fields: {
             [key: string]: unknown;
-        } | unknown;
+        } | null;
         labels: Array<string>;
-        createdByUserId: string | unknown;
-        createdByUsername: string | unknown;
-        createdByImage: string | unknown;
-        assigneeUserId: string | unknown;
-        parentWorkItemId: string | unknown;
+        createdByUserId: string | null;
+        createdByUsername: string | null;
+        createdByImage: string | null;
+        assigneeUserId: string | null;
+        parentWorkItemId: string | null;
         state: 'open' | 'closed';
-        closeReason: 'completed' | 'out_of_scope' | 'superseded' | unknown;
-        resolution: string | unknown;
-        closedAt: string | unknown;
-        closedByUserId: string | unknown;
-        closedByTaskId: string | unknown;
-        spawnedByTaskId: string | unknown;
+        closeReason: 'completed' | 'out_of_scope' | 'superseded' | null;
+        resolution: string | null;
+        closedAt: string | null;
+        closedByUserId: string | null;
+        closedByTaskId: string | null;
+        spawnedByTaskId: string | null;
         createdAt: string;
         updatedAt: string;
     }>;
@@ -14883,30 +15168,30 @@ export type PatchApiWorkItemsByWorkItemIdLabelsResponses = {
         id: string;
         projectId: string;
         platform: 'jira' | 'github' | 'bitbucket' | 'linear' | 'scarn' | 'custom';
-        platformId?: string | unknown;
+        platformId?: string | null;
         platformKey: string;
-        url?: string | unknown;
+        url?: string | null;
         title: string;
         description: string;
         descriptionVersion: number;
-        sourceCreatedAt: string | unknown;
-        sourceUpdatedAt: string | unknown;
+        sourceCreatedAt: string | null;
+        sourceUpdatedAt: string | null;
         fields: {
             [key: string]: unknown;
-        } | unknown;
+        } | null;
         labels: Array<string>;
-        createdByUserId: string | unknown;
-        createdByUsername: string | unknown;
-        createdByImage: string | unknown;
-        assigneeUserId: string | unknown;
-        parentWorkItemId: string | unknown;
+        createdByUserId: string | null;
+        createdByUsername: string | null;
+        createdByImage: string | null;
+        assigneeUserId: string | null;
+        parentWorkItemId: string | null;
         state: 'open' | 'closed';
-        closeReason: 'completed' | 'out_of_scope' | 'superseded' | unknown;
-        resolution: string | unknown;
-        closedAt: string | unknown;
-        closedByUserId: string | unknown;
-        closedByTaskId: string | unknown;
-        spawnedByTaskId: string | unknown;
+        closeReason: 'completed' | 'out_of_scope' | 'superseded' | null;
+        resolution: string | null;
+        closedAt: string | null;
+        closedByUserId: string | null;
+        closedByTaskId: string | null;
+        spawnedByTaskId: string | null;
         createdAt: string;
         updatedAt: string;
     };
@@ -14916,7 +15201,7 @@ export type PatchApiWorkItemsByWorkItemIdLabelsResponse = PatchApiWorkItemsByWor
 
 export type PatchApiWorkItemsByWorkItemIdParentData = {
     body: {
-        parentWorkItemId: string | unknown;
+        parentWorkItemId: string | null;
     };
     path: {
         workItemId: string;
@@ -15052,30 +15337,30 @@ export type PatchApiWorkItemsByWorkItemIdParentResponses = {
         id: string;
         projectId: string;
         platform: 'jira' | 'github' | 'bitbucket' | 'linear' | 'scarn' | 'custom';
-        platformId?: string | unknown;
+        platformId?: string | null;
         platformKey: string;
-        url?: string | unknown;
+        url?: string | null;
         title: string;
         description: string;
         descriptionVersion: number;
-        sourceCreatedAt: string | unknown;
-        sourceUpdatedAt: string | unknown;
+        sourceCreatedAt: string | null;
+        sourceUpdatedAt: string | null;
         fields: {
             [key: string]: unknown;
-        } | unknown;
+        } | null;
         labels: Array<string>;
-        createdByUserId: string | unknown;
-        createdByUsername: string | unknown;
-        createdByImage: string | unknown;
-        assigneeUserId: string | unknown;
-        parentWorkItemId: string | unknown;
+        createdByUserId: string | null;
+        createdByUsername: string | null;
+        createdByImage: string | null;
+        assigneeUserId: string | null;
+        parentWorkItemId: string | null;
         state: 'open' | 'closed';
-        closeReason: 'completed' | 'out_of_scope' | 'superseded' | unknown;
-        resolution: string | unknown;
-        closedAt: string | unknown;
-        closedByUserId: string | unknown;
-        closedByTaskId: string | unknown;
-        spawnedByTaskId: string | unknown;
+        closeReason: 'completed' | 'out_of_scope' | 'superseded' | null;
+        resolution: string | null;
+        closedAt: string | null;
+        closedByUserId: string | null;
+        closedByTaskId: string | null;
+        spawnedByTaskId: string | null;
         createdAt: string;
         updatedAt: string;
     };
@@ -15085,11 +15370,11 @@ export type PatchApiWorkItemsByWorkItemIdParentResponse = PatchApiWorkItemsByWor
 
 export type PutApiWorkItemsByWorkItemIdStateData = {
     body: {
-        state: string;
-        reason: 'completed' | 'out_of_scope' | 'superseded';
-        resolution?: string | unknown;
+        state: 'closed';
+        reason?: 'completed' | 'out_of_scope' | 'superseded';
+        resolution?: string | null;
     } | {
-        state: string;
+        state: 'open';
     };
     path: {
         workItemId: string;
@@ -15244,30 +15529,30 @@ export type PutApiWorkItemsByWorkItemIdStateResponses = {
         id: string;
         projectId: string;
         platform: 'jira' | 'github' | 'bitbucket' | 'linear' | 'scarn' | 'custom';
-        platformId?: string | unknown;
+        platformId?: string | null;
         platformKey: string;
-        url?: string | unknown;
+        url?: string | null;
         title: string;
         description: string;
         descriptionVersion: number;
-        sourceCreatedAt: string | unknown;
-        sourceUpdatedAt: string | unknown;
+        sourceCreatedAt: string | null;
+        sourceUpdatedAt: string | null;
         fields: {
             [key: string]: unknown;
-        } | unknown;
+        } | null;
         labels: Array<string>;
-        createdByUserId: string | unknown;
-        createdByUsername: string | unknown;
-        createdByImage: string | unknown;
-        assigneeUserId: string | unknown;
-        parentWorkItemId: string | unknown;
+        createdByUserId: string | null;
+        createdByUsername: string | null;
+        createdByImage: string | null;
+        assigneeUserId: string | null;
+        parentWorkItemId: string | null;
         state: 'open' | 'closed';
-        closeReason: 'completed' | 'out_of_scope' | 'superseded' | unknown;
-        resolution: string | unknown;
-        closedAt: string | unknown;
-        closedByUserId: string | unknown;
-        closedByTaskId: string | unknown;
-        spawnedByTaskId: string | unknown;
+        closeReason: 'completed' | 'out_of_scope' | 'superseded' | null;
+        resolution: string | null;
+        closedAt: string | null;
+        closedByUserId: string | null;
+        closedByTaskId: string | null;
+        spawnedByTaskId: string | null;
         createdAt: string;
         updatedAt: string;
     };
@@ -15411,17 +15696,17 @@ export type GetApiWorkItemCommentsResponses = {
         id: string;
         projectId: string;
         workItemId: string;
-        authorUserId: string | unknown;
+        authorUserId: string | null;
         authorKind: 'user' | 'agent';
-        agentSessionId: string | unknown;
-        sourceNotificationId: string | unknown;
-        externalCommentId: string | unknown;
-        externalCommentUrl: string | unknown;
-        authoredByTaskId: string | unknown;
-        authorName: string | unknown;
-        parentCommentId: string | unknown;
-        authorUsername: string | unknown;
-        authorImage: string | unknown;
+        agentSessionId: string | null;
+        sourceNotificationId: string | null;
+        externalCommentId: string | null;
+        externalCommentUrl: string | null;
+        authoredByTaskId: string | null;
+        authorName: string | null;
+        parentCommentId: string | null;
+        authorUsername: string | null;
+        authorImage: string | null;
         body: string;
         isPinned: boolean;
         createdAt: string;
@@ -15569,17 +15854,17 @@ export type PostApiWorkItemCommentsResponses = {
         id: string;
         projectId: string;
         workItemId: string;
-        authorUserId: string | unknown;
+        authorUserId: string | null;
         authorKind: 'user' | 'agent';
-        agentSessionId: string | unknown;
-        sourceNotificationId: string | unknown;
-        externalCommentId: string | unknown;
-        externalCommentUrl: string | unknown;
-        authoredByTaskId: string | unknown;
-        authorName: string | unknown;
-        parentCommentId: string | unknown;
-        authorUsername: string | unknown;
-        authorImage: string | unknown;
+        agentSessionId: string | null;
+        sourceNotificationId: string | null;
+        externalCommentId: string | null;
+        externalCommentUrl: string | null;
+        authoredByTaskId: string | null;
+        authorName: string | null;
+        parentCommentId: string | null;
+        authorUsername: string | null;
+        authorImage: string | null;
         body: string;
         isPinned: boolean;
         createdAt: string;
@@ -15864,17 +16149,17 @@ export type PatchApiWorkItemCommentsByCommentIdResponses = {
         id: string;
         projectId: string;
         workItemId: string;
-        authorUserId: string | unknown;
+        authorUserId: string | null;
         authorKind: 'user' | 'agent';
-        agentSessionId: string | unknown;
-        sourceNotificationId: string | unknown;
-        externalCommentId: string | unknown;
-        externalCommentUrl: string | unknown;
-        authoredByTaskId: string | unknown;
-        authorName: string | unknown;
-        parentCommentId: string | unknown;
-        authorUsername: string | unknown;
-        authorImage: string | unknown;
+        agentSessionId: string | null;
+        sourceNotificationId: string | null;
+        externalCommentId: string | null;
+        externalCommentUrl: string | null;
+        authoredByTaskId: string | null;
+        authorName: string | null;
+        parentCommentId: string | null;
+        authorUsername: string | null;
+        authorImage: string | null;
         body: string;
         isPinned: boolean;
         createdAt: string;
@@ -16022,17 +16307,17 @@ export type PostApiWorkItemCommentsByCommentIdPinResponses = {
         id: string;
         projectId: string;
         workItemId: string;
-        authorUserId: string | unknown;
+        authorUserId: string | null;
         authorKind: 'user' | 'agent';
-        agentSessionId: string | unknown;
-        sourceNotificationId: string | unknown;
-        externalCommentId: string | unknown;
-        externalCommentUrl: string | unknown;
-        authoredByTaskId: string | unknown;
-        authorName: string | unknown;
-        parentCommentId: string | unknown;
-        authorUsername: string | unknown;
-        authorImage: string | unknown;
+        agentSessionId: string | null;
+        sourceNotificationId: string | null;
+        externalCommentId: string | null;
+        externalCommentUrl: string | null;
+        authoredByTaskId: string | null;
+        authorName: string | null;
+        parentCommentId: string | null;
+        authorUsername: string | null;
+        authorImage: string | null;
         body: string;
         isPinned: boolean;
         createdAt: string;
@@ -16159,11 +16444,11 @@ export type GetApiWorkItemCommentDraftsResponses = {
         notification: {
             id: string;
             projectId: string;
-            workItemId: string | unknown;
-            pipelineExecutionId: string | unknown;
-            taskId: string | unknown;
-            agentSessionId: string | unknown;
-            recipientUserId: string | unknown;
+            workItemId: string | null;
+            pipelineExecutionId: string | null;
+            taskId: string | null;
+            agentSessionId: string | null;
+            recipientUserId: string | null;
             kind: 'feedback_request' | 'status_update' | 'blocked' | 'result_ready' | 'warning' | 'integration_auto_sync_paused';
             audience: 'assignee' | 'reporter' | 'project_admins' | 'specific_users';
             title: string;
@@ -16173,44 +16458,44 @@ export type GetApiWorkItemCommentDraftsResponses = {
             status: 'pending' | 'delivered' | 'partially_delivered' | 'suppressed' | 'failed';
             payloadJson: {
                 [key: string]: unknown;
-            } | unknown;
+            } | null;
             createdAt: string;
             updatedAt: string;
         };
-        lastError: string | unknown;
+        lastError: string | null;
         artifactResolution: {
             markers: Array<{
                 markerIndex: number;
                 kind: 'embed' | 'link';
                 ref: {
-                    type: string;
+                    type: 'signal';
                     stepKey: string;
                     signalKey: string;
                 } | {
-                    type: string;
+                    type: 'path';
                     pattern: string;
                 };
                 caption: string;
                 standalone: boolean;
                 status: 'resolved' | 'unavailable';
                 required: boolean;
-                reason: string | unknown;
+                reason: string | null;
                 artifact: {
                     artifactId: string;
                     name: string;
-                    contentType: string | unknown;
+                    contentType: string | null;
                     kind: string;
-                    sizeBytes: number | unknown;
-                } | unknown;
+                    sizeBytes: number | null;
+                } | null;
             }>;
             leftOut: Array<{
                 markerIndex: number;
                 ref: {
-                    type: string;
+                    type: 'signal';
                     stepKey: string;
                     signalKey: string;
                 } | {
-                    type: string;
+                    type: 'path';
                     pattern: string;
                 };
                 caption: string;
@@ -16221,7 +16506,7 @@ export type GetApiWorkItemCommentDraftsResponses = {
                 code: string;
                 message: string;
             }>;
-        } | unknown;
+        } | null;
     }>;
 };
 
@@ -16414,17 +16699,17 @@ export type PostApiWorkItemCommentDraftsByNotificationIdApproveResponses = {
         id: string;
         projectId: string;
         workItemId: string;
-        authorUserId: string | unknown;
+        authorUserId: string | null;
         authorKind: 'user' | 'agent';
-        agentSessionId: string | unknown;
-        sourceNotificationId: string | unknown;
-        externalCommentId: string | unknown;
-        externalCommentUrl: string | unknown;
-        authoredByTaskId: string | unknown;
-        authorName: string | unknown;
-        parentCommentId: string | unknown;
-        authorUsername: string | unknown;
-        authorImage: string | unknown;
+        agentSessionId: string | null;
+        sourceNotificationId: string | null;
+        externalCommentId: string | null;
+        externalCommentUrl: string | null;
+        authoredByTaskId: string | null;
+        authorName: string | null;
+        parentCommentId: string | null;
+        authorUsername: string | null;
+        authorImage: string | null;
         body: string;
         isPinned: boolean;
         createdAt: string;
@@ -16569,11 +16854,11 @@ export type PostApiWorkItemCommentDraftsByNotificationIdRejectResponses = {
     200: {
         id: string;
         projectId: string;
-        workItemId: string | unknown;
-        pipelineExecutionId: string | unknown;
-        taskId: string | unknown;
-        agentSessionId: string | unknown;
-        recipientUserId: string | unknown;
+        workItemId: string | null;
+        pipelineExecutionId: string | null;
+        taskId: string | null;
+        agentSessionId: string | null;
+        recipientUserId: string | null;
         kind: 'feedback_request' | 'status_update' | 'blocked' | 'result_ready' | 'warning' | 'integration_auto_sync_paused';
         audience: 'assignee' | 'reporter' | 'project_admins' | 'specific_users';
         title: string;
@@ -16583,7 +16868,7 @@ export type PostApiWorkItemCommentDraftsByNotificationIdRejectResponses = {
         status: 'pending' | 'delivered' | 'partially_delivered' | 'suppressed' | 'failed';
         payloadJson: {
             [key: string]: unknown;
-        } | unknown;
+        } | null;
         createdAt: string;
         updatedAt: string;
     };
@@ -16729,7 +17014,7 @@ export type GetApiWorkItemBlocksResponses = {
             projectId: string;
             blockedWorkItemId: string;
             blockingWorkItemId: string;
-            createdByUserId: string | unknown;
+            createdByUserId: string | null;
             createdAt: string;
         }>;
         blocking: Array<{
@@ -16737,7 +17022,7 @@ export type GetApiWorkItemBlocksResponses = {
             projectId: string;
             blockedWorkItemId: string;
             blockingWorkItemId: string;
-            createdByUserId: string | unknown;
+            createdByUserId: string | null;
             createdAt: string;
         }>;
     };
@@ -16883,7 +17168,7 @@ export type PostApiWorkItemBlocksResponses = {
         projectId: string;
         blockedWorkItemId: string;
         blockingWorkItemId: string;
-        createdByUserId: string | unknown;
+        createdByUserId: string | null;
         createdAt: string;
     };
 };
@@ -17127,13 +17412,13 @@ export type GetApiProjectsByProjectIdArtifactsResponses = {
             taskRunId: string;
             projectId: string;
             relativeStorePath: string;
-            storeRef: string | unknown;
-            objectKey: string | unknown;
-            sizeBytes: number | unknown;
-            contentType: string | unknown;
+            storeRef: string | null;
+            objectKey: string | null;
+            sizeBytes: number | null;
+            contentType: string | null;
             kind: 'generic' | 'playwright-trace' | 'video' | 'image';
             createdAt: string;
-            nodeKey: string | unknown;
+            nodeKey: string | null;
         }>;
         hasMore: boolean;
     };
@@ -17379,14 +17664,14 @@ export type GetApiProjectsByProjectIdArtifactsByArtifactIdResponses = {
         taskRunId: string;
         projectId: string;
         relativeStorePath: string;
-        sizeBytes: number | unknown;
-        contentType: string | unknown;
+        sizeBytes: number | null;
+        contentType: string | null;
         kind: 'generic' | 'playwright-trace' | 'video' | 'image';
         createdAt: string;
         status: 'available' | 'expired' | 'deleted';
-        pipelineRunId: string | unknown;
-        attemptNumber: number | unknown;
-        nodeKey: string | unknown;
+        pipelineRunId: string | null;
+        attemptNumber: number | null;
+        nodeKey: string | null;
     };
 };
 
@@ -17631,11 +17916,11 @@ export type GetApiProjectsByProjectIdNotificationsResponses = {
     200: Array<{
         id: string;
         projectId: string;
-        workItemId: string | unknown;
-        pipelineExecutionId: string | unknown;
-        taskId: string | unknown;
-        agentSessionId: string | unknown;
-        recipientUserId: string | unknown;
+        workItemId: string | null;
+        pipelineExecutionId: string | null;
+        taskId: string | null;
+        agentSessionId: string | null;
+        recipientUserId: string | null;
         kind: 'feedback_request' | 'status_update' | 'blocked' | 'result_ready' | 'warning' | 'integration_auto_sync_paused';
         audience: 'assignee' | 'reporter' | 'project_admins' | 'specific_users';
         title: string;
@@ -17645,7 +17930,7 @@ export type GetApiProjectsByProjectIdNotificationsResponses = {
         status: 'pending' | 'delivered' | 'partially_delivered' | 'suppressed' | 'failed';
         payloadJson: {
             [key: string]: unknown;
-        } | unknown;
+        } | null;
         createdAt: string;
         updatedAt: string;
     }>;
@@ -17770,11 +18055,11 @@ export type GetApiProjectsByProjectIdNotificationsByNotificationIdResponses = {
     200: {
         id: string;
         projectId: string;
-        workItemId: string | unknown;
-        pipelineExecutionId: string | unknown;
-        taskId: string | unknown;
-        agentSessionId: string | unknown;
-        recipientUserId: string | unknown;
+        workItemId: string | null;
+        pipelineExecutionId: string | null;
+        taskId: string | null;
+        agentSessionId: string | null;
+        recipientUserId: string | null;
         kind: 'feedback_request' | 'status_update' | 'blocked' | 'result_ready' | 'warning' | 'integration_auto_sync_paused';
         audience: 'assignee' | 'reporter' | 'project_admins' | 'specific_users';
         title: string;
@@ -17784,7 +18069,7 @@ export type GetApiProjectsByProjectIdNotificationsByNotificationIdResponses = {
         status: 'pending' | 'delivered' | 'partially_delivered' | 'suppressed' | 'failed';
         payloadJson: {
             [key: string]: unknown;
-        } | unknown;
+        } | null;
         createdAt: string;
         updatedAt: string;
         deliveries: Array<{
@@ -17792,11 +18077,11 @@ export type GetApiProjectsByProjectIdNotificationsByNotificationIdResponses = {
             notificationId: string;
             channel: 'in_app' | 'work_item_platform_comment' | 'email' | 'slack';
             status: 'pending' | 'sent' | 'failed' | 'suppressed';
-            suppressionReason: string | unknown;
-            externalUrl: string | unknown;
-            externalId: string | unknown;
+            suppressionReason: string | null;
+            externalUrl: string | null;
+            externalId: string | null;
             createdAt: string;
-            sentAt: string | unknown;
+            sentAt: string | null;
         }>;
     };
 };
@@ -18039,11 +18324,11 @@ export type PostApiProjectsByProjectIdNotificationsByNotificationIdRespondRespon
     200: {
         id: string;
         projectId: string;
-        workItemId: string | unknown;
-        pipelineExecutionId: string | unknown;
-        taskId: string | unknown;
-        agentSessionId: string | unknown;
-        recipientUserId: string | unknown;
+        workItemId: string | null;
+        pipelineExecutionId: string | null;
+        taskId: string | null;
+        agentSessionId: string | null;
+        recipientUserId: string | null;
         kind: 'feedback_request' | 'status_update' | 'blocked' | 'result_ready' | 'warning' | 'integration_auto_sync_paused';
         audience: 'assignee' | 'reporter' | 'project_admins' | 'specific_users';
         title: string;
@@ -18053,7 +18338,7 @@ export type PostApiProjectsByProjectIdNotificationsByNotificationIdRespondRespon
         status: 'pending' | 'delivered' | 'partially_delivered' | 'suppressed' | 'failed';
         payloadJson: {
             [key: string]: unknown;
-        } | unknown;
+        } | null;
         createdAt: string;
         updatedAt: string;
     };
@@ -18188,9 +18473,9 @@ export type GetApiProjectsByProjectIdInboxWaitsResponses = {
             askedAt: string;
             waitingOn: Array<{
                 userId: string;
-                username: string | unknown;
+                username: string | null;
             }>;
-            kind: string;
+            kind: 'reply';
             questionId: string;
             commentId: string;
             body: string;
@@ -18207,10 +18492,10 @@ export type GetApiProjectsByProjectIdInboxWaitsResponses = {
             askedAt: string;
             waitingOn: Array<{
                 userId: string;
-                username: string | unknown;
+                username: string | null;
             }>;
-            kind: string;
-            title: string | unknown;
+            kind: 'decision';
+            title: string | null;
             actions: Array<{
                 key: string;
                 label: string;
@@ -18225,11 +18510,11 @@ export type GetApiProjectsByProjectIdInboxWaitsResponses = {
             parent: {
                 id: string;
                 title: string;
-            } | unknown;
+            } | null;
             waitingSince: string;
             waitingOn: Array<{
                 userId: string;
-                username: string | unknown;
+                username: string | null;
             }>;
         }>;
     };
@@ -18481,10 +18766,10 @@ export type GetApiProjectsByProjectIdNotificationRulesResponses = {
         kind: 'feedback_request' | 'status_update' | 'blocked' | 'result_ready' | 'warning' | 'integration_auto_sync_paused';
         channel: 'in_app' | 'work_item_platform_comment' | 'email' | 'slack';
         enabled: boolean;
-        minPriority: 'low' | 'normal' | 'high' | 'urgent' | unknown;
+        minPriority: 'low' | 'normal' | 'high' | 'urgent' | null;
         conditionsJson: {
             [key: string]: unknown;
-        } | unknown;
+        } | null;
         createdAt: string;
         updatedAt: string;
     }>;
@@ -18497,10 +18782,10 @@ export type PutApiProjectsByProjectIdNotificationRulesData = {
         kind: 'feedback_request' | 'status_update' | 'blocked' | 'result_ready' | 'warning' | 'integration_auto_sync_paused';
         channel: 'in_app' | 'work_item_platform_comment' | 'email' | 'slack';
         enabled: boolean;
-        minPriority: 'low' | 'normal' | 'high' | 'urgent' | unknown;
+        minPriority: 'low' | 'normal' | 'high' | 'urgent' | null;
         conditionsJson: {
             [key: string]: unknown;
-        } | unknown;
+        } | null;
     };
     path: {
         projectId: string;
@@ -18619,10 +18904,10 @@ export type PutApiProjectsByProjectIdNotificationRulesResponses = {
         kind: 'feedback_request' | 'status_update' | 'blocked' | 'result_ready' | 'warning' | 'integration_auto_sync_paused';
         channel: 'in_app' | 'work_item_platform_comment' | 'email' | 'slack';
         enabled: boolean;
-        minPriority: 'low' | 'normal' | 'high' | 'urgent' | unknown;
+        minPriority: 'low' | 'normal' | 'high' | 'urgent' | null;
         conditionsJson: {
             [key: string]: unknown;
-        } | unknown;
+        } | null;
         createdAt: string;
         updatedAt: string;
     };
@@ -18752,21 +19037,21 @@ export type GetApiProjectsByProjectIdIntegrationsResponses = {
             state: 'off' | 'on' | 'paused';
             syncsAs: {
                 userId: string;
-                displayName: string | unknown;
+                displayName: string | null;
                 secretName: string;
-            } | unknown;
-            pausedReason: 'key_removed' | 'key_rejected' | 'key_expired' | 'owner_left_project' | 'access_lost' | unknown;
-            pausedDetail: string | unknown;
-            pausedAt: string | unknown;
+            } | null;
+            pausedReason: 'key_removed' | 'key_rejected' | 'key_expired' | 'owner_left_project' | 'access_lost' | null;
+            pausedDetail: string | null;
+            pausedAt: string | null;
         };
-        lastSyncedAt: string | unknown;
-        lastError: string | unknown;
-        firstSyncHorizonDays: number | unknown;
+        lastSyncedAt: string | null;
+        lastError: string | null;
+        firstSyncHorizonDays: number | null;
         createdAt: string;
         updatedAt: string;
-        kind: string;
-        platform: string;
-        authMode: string;
+        kind: 'github_app';
+        platform: 'github';
+        authMode: 'github_app';
         installationId: string;
         externalScope: {
             repos: Array<{
@@ -18783,21 +19068,21 @@ export type GetApiProjectsByProjectIdIntegrationsResponses = {
             state: 'off' | 'on' | 'paused';
             syncsAs: {
                 userId: string;
-                displayName: string | unknown;
+                displayName: string | null;
                 secretName: string;
-            } | unknown;
-            pausedReason: 'key_removed' | 'key_rejected' | 'key_expired' | 'owner_left_project' | 'access_lost' | unknown;
-            pausedDetail: string | unknown;
-            pausedAt: string | unknown;
+            } | null;
+            pausedReason: 'key_removed' | 'key_rejected' | 'key_expired' | 'owner_left_project' | 'access_lost' | null;
+            pausedDetail: string | null;
+            pausedAt: string | null;
         };
-        lastSyncedAt: string | unknown;
-        lastError: string | unknown;
-        firstSyncHorizonDays: number | unknown;
+        lastSyncedAt: string | null;
+        lastError: string | null;
+        firstSyncHorizonDays: number | null;
         createdAt: string;
         updatedAt: string;
-        kind: string;
-        platform: string;
-        authMode: string;
+        kind: 'github_token';
+        platform: 'github';
+        authMode: 'user_credential';
         externalScope: {
             repos: Array<{
                 id: number;
@@ -18813,21 +19098,21 @@ export type GetApiProjectsByProjectIdIntegrationsResponses = {
             state: 'off' | 'on' | 'paused';
             syncsAs: {
                 userId: string;
-                displayName: string | unknown;
+                displayName: string | null;
                 secretName: string;
-            } | unknown;
-            pausedReason: 'key_removed' | 'key_rejected' | 'key_expired' | 'owner_left_project' | 'access_lost' | unknown;
-            pausedDetail: string | unknown;
-            pausedAt: string | unknown;
+            } | null;
+            pausedReason: 'key_removed' | 'key_rejected' | 'key_expired' | 'owner_left_project' | 'access_lost' | null;
+            pausedDetail: string | null;
+            pausedAt: string | null;
         };
-        lastSyncedAt: string | unknown;
-        lastError: string | unknown;
-        firstSyncHorizonDays: number | unknown;
+        lastSyncedAt: string | null;
+        lastError: string | null;
+        firstSyncHorizonDays: number | null;
         createdAt: string;
         updatedAt: string;
-        kind: string;
-        platform: string;
-        authMode: string;
+        kind: 'bitbucket';
+        platform: 'bitbucket';
+        authMode: 'user_credential';
         externalScope: {
             repos: Array<{
                 workspace: string;
@@ -18844,21 +19129,21 @@ export type GetApiProjectsByProjectIdIntegrationsResponses = {
             state: 'off' | 'on' | 'paused';
             syncsAs: {
                 userId: string;
-                displayName: string | unknown;
+                displayName: string | null;
                 secretName: string;
-            } | unknown;
-            pausedReason: 'key_removed' | 'key_rejected' | 'key_expired' | 'owner_left_project' | 'access_lost' | unknown;
-            pausedDetail: string | unknown;
-            pausedAt: string | unknown;
+            } | null;
+            pausedReason: 'key_removed' | 'key_rejected' | 'key_expired' | 'owner_left_project' | 'access_lost' | null;
+            pausedDetail: string | null;
+            pausedAt: string | null;
         };
-        lastSyncedAt: string | unknown;
-        lastError: string | unknown;
-        firstSyncHorizonDays: number | unknown;
+        lastSyncedAt: string | null;
+        lastError: string | null;
+        firstSyncHorizonDays: number | null;
         createdAt: string;
         updatedAt: string;
-        kind: string;
-        platform: string;
-        authMode: string;
+        kind: 'jira';
+        platform: 'jira';
+        authMode: 'user_credential';
         externalScope: {
             baseUrl: string;
             projectKeys: Array<string>;
@@ -19009,21 +19294,21 @@ export type PostApiProjectsByProjectIdIntegrationsResponses = {
             state: 'off' | 'on' | 'paused';
             syncsAs: {
                 userId: string;
-                displayName: string | unknown;
+                displayName: string | null;
                 secretName: string;
-            } | unknown;
-            pausedReason: 'key_removed' | 'key_rejected' | 'key_expired' | 'owner_left_project' | 'access_lost' | unknown;
-            pausedDetail: string | unknown;
-            pausedAt: string | unknown;
+            } | null;
+            pausedReason: 'key_removed' | 'key_rejected' | 'key_expired' | 'owner_left_project' | 'access_lost' | null;
+            pausedDetail: string | null;
+            pausedAt: string | null;
         };
-        lastSyncedAt: string | unknown;
-        lastError: string | unknown;
-        firstSyncHorizonDays: number | unknown;
+        lastSyncedAt: string | null;
+        lastError: string | null;
+        firstSyncHorizonDays: number | null;
         createdAt: string;
         updatedAt: string;
-        kind: string;
-        platform: string;
-        authMode: string;
+        kind: 'github_app';
+        platform: 'github';
+        authMode: 'github_app';
         installationId: string;
         externalScope: {
             repos: Array<{
@@ -19040,21 +19325,21 @@ export type PostApiProjectsByProjectIdIntegrationsResponses = {
             state: 'off' | 'on' | 'paused';
             syncsAs: {
                 userId: string;
-                displayName: string | unknown;
+                displayName: string | null;
                 secretName: string;
-            } | unknown;
-            pausedReason: 'key_removed' | 'key_rejected' | 'key_expired' | 'owner_left_project' | 'access_lost' | unknown;
-            pausedDetail: string | unknown;
-            pausedAt: string | unknown;
+            } | null;
+            pausedReason: 'key_removed' | 'key_rejected' | 'key_expired' | 'owner_left_project' | 'access_lost' | null;
+            pausedDetail: string | null;
+            pausedAt: string | null;
         };
-        lastSyncedAt: string | unknown;
-        lastError: string | unknown;
-        firstSyncHorizonDays: number | unknown;
+        lastSyncedAt: string | null;
+        lastError: string | null;
+        firstSyncHorizonDays: number | null;
         createdAt: string;
         updatedAt: string;
-        kind: string;
-        platform: string;
-        authMode: string;
+        kind: 'github_token';
+        platform: 'github';
+        authMode: 'user_credential';
         externalScope: {
             repos: Array<{
                 id: number;
@@ -19070,21 +19355,21 @@ export type PostApiProjectsByProjectIdIntegrationsResponses = {
             state: 'off' | 'on' | 'paused';
             syncsAs: {
                 userId: string;
-                displayName: string | unknown;
+                displayName: string | null;
                 secretName: string;
-            } | unknown;
-            pausedReason: 'key_removed' | 'key_rejected' | 'key_expired' | 'owner_left_project' | 'access_lost' | unknown;
-            pausedDetail: string | unknown;
-            pausedAt: string | unknown;
+            } | null;
+            pausedReason: 'key_removed' | 'key_rejected' | 'key_expired' | 'owner_left_project' | 'access_lost' | null;
+            pausedDetail: string | null;
+            pausedAt: string | null;
         };
-        lastSyncedAt: string | unknown;
-        lastError: string | unknown;
-        firstSyncHorizonDays: number | unknown;
+        lastSyncedAt: string | null;
+        lastError: string | null;
+        firstSyncHorizonDays: number | null;
         createdAt: string;
         updatedAt: string;
-        kind: string;
-        platform: string;
-        authMode: string;
+        kind: 'bitbucket';
+        platform: 'bitbucket';
+        authMode: 'user_credential';
         externalScope: {
             repos: Array<{
                 workspace: string;
@@ -19101,21 +19386,21 @@ export type PostApiProjectsByProjectIdIntegrationsResponses = {
             state: 'off' | 'on' | 'paused';
             syncsAs: {
                 userId: string;
-                displayName: string | unknown;
+                displayName: string | null;
                 secretName: string;
-            } | unknown;
-            pausedReason: 'key_removed' | 'key_rejected' | 'key_expired' | 'owner_left_project' | 'access_lost' | unknown;
-            pausedDetail: string | unknown;
-            pausedAt: string | unknown;
+            } | null;
+            pausedReason: 'key_removed' | 'key_rejected' | 'key_expired' | 'owner_left_project' | 'access_lost' | null;
+            pausedDetail: string | null;
+            pausedAt: string | null;
         };
-        lastSyncedAt: string | unknown;
-        lastError: string | unknown;
-        firstSyncHorizonDays: number | unknown;
+        lastSyncedAt: string | null;
+        lastError: string | null;
+        firstSyncHorizonDays: number | null;
         createdAt: string;
         updatedAt: string;
-        kind: string;
-        platform: string;
-        authMode: string;
+        kind: 'jira';
+        platform: 'jira';
+        authMode: 'user_credential';
         externalScope: {
             baseUrl: string;
             projectKeys: Array<string>;
@@ -19581,21 +19866,21 @@ export type DeleteApiProjectsByProjectIdIntegrationsByIntegrationIdAutoSyncRespo
             state: 'off' | 'on' | 'paused';
             syncsAs: {
                 userId: string;
-                displayName: string | unknown;
+                displayName: string | null;
                 secretName: string;
-            } | unknown;
-            pausedReason: 'key_removed' | 'key_rejected' | 'key_expired' | 'owner_left_project' | 'access_lost' | unknown;
-            pausedDetail: string | unknown;
-            pausedAt: string | unknown;
+            } | null;
+            pausedReason: 'key_removed' | 'key_rejected' | 'key_expired' | 'owner_left_project' | 'access_lost' | null;
+            pausedDetail: string | null;
+            pausedAt: string | null;
         };
-        lastSyncedAt: string | unknown;
-        lastError: string | unknown;
-        firstSyncHorizonDays: number | unknown;
+        lastSyncedAt: string | null;
+        lastError: string | null;
+        firstSyncHorizonDays: number | null;
         createdAt: string;
         updatedAt: string;
-        kind: string;
-        platform: string;
-        authMode: string;
+        kind: 'github_app';
+        platform: 'github';
+        authMode: 'github_app';
         installationId: string;
         externalScope: {
             repos: Array<{
@@ -19612,21 +19897,21 @@ export type DeleteApiProjectsByProjectIdIntegrationsByIntegrationIdAutoSyncRespo
             state: 'off' | 'on' | 'paused';
             syncsAs: {
                 userId: string;
-                displayName: string | unknown;
+                displayName: string | null;
                 secretName: string;
-            } | unknown;
-            pausedReason: 'key_removed' | 'key_rejected' | 'key_expired' | 'owner_left_project' | 'access_lost' | unknown;
-            pausedDetail: string | unknown;
-            pausedAt: string | unknown;
+            } | null;
+            pausedReason: 'key_removed' | 'key_rejected' | 'key_expired' | 'owner_left_project' | 'access_lost' | null;
+            pausedDetail: string | null;
+            pausedAt: string | null;
         };
-        lastSyncedAt: string | unknown;
-        lastError: string | unknown;
-        firstSyncHorizonDays: number | unknown;
+        lastSyncedAt: string | null;
+        lastError: string | null;
+        firstSyncHorizonDays: number | null;
         createdAt: string;
         updatedAt: string;
-        kind: string;
-        platform: string;
-        authMode: string;
+        kind: 'github_token';
+        platform: 'github';
+        authMode: 'user_credential';
         externalScope: {
             repos: Array<{
                 id: number;
@@ -19642,21 +19927,21 @@ export type DeleteApiProjectsByProjectIdIntegrationsByIntegrationIdAutoSyncRespo
             state: 'off' | 'on' | 'paused';
             syncsAs: {
                 userId: string;
-                displayName: string | unknown;
+                displayName: string | null;
                 secretName: string;
-            } | unknown;
-            pausedReason: 'key_removed' | 'key_rejected' | 'key_expired' | 'owner_left_project' | 'access_lost' | unknown;
-            pausedDetail: string | unknown;
-            pausedAt: string | unknown;
+            } | null;
+            pausedReason: 'key_removed' | 'key_rejected' | 'key_expired' | 'owner_left_project' | 'access_lost' | null;
+            pausedDetail: string | null;
+            pausedAt: string | null;
         };
-        lastSyncedAt: string | unknown;
-        lastError: string | unknown;
-        firstSyncHorizonDays: number | unknown;
+        lastSyncedAt: string | null;
+        lastError: string | null;
+        firstSyncHorizonDays: number | null;
         createdAt: string;
         updatedAt: string;
-        kind: string;
-        platform: string;
-        authMode: string;
+        kind: 'bitbucket';
+        platform: 'bitbucket';
+        authMode: 'user_credential';
         externalScope: {
             repos: Array<{
                 workspace: string;
@@ -19673,21 +19958,21 @@ export type DeleteApiProjectsByProjectIdIntegrationsByIntegrationIdAutoSyncRespo
             state: 'off' | 'on' | 'paused';
             syncsAs: {
                 userId: string;
-                displayName: string | unknown;
+                displayName: string | null;
                 secretName: string;
-            } | unknown;
-            pausedReason: 'key_removed' | 'key_rejected' | 'key_expired' | 'owner_left_project' | 'access_lost' | unknown;
-            pausedDetail: string | unknown;
-            pausedAt: string | unknown;
+            } | null;
+            pausedReason: 'key_removed' | 'key_rejected' | 'key_expired' | 'owner_left_project' | 'access_lost' | null;
+            pausedDetail: string | null;
+            pausedAt: string | null;
         };
-        lastSyncedAt: string | unknown;
-        lastError: string | unknown;
-        firstSyncHorizonDays: number | unknown;
+        lastSyncedAt: string | null;
+        lastError: string | null;
+        firstSyncHorizonDays: number | null;
         createdAt: string;
         updatedAt: string;
-        kind: string;
-        platform: string;
-        authMode: string;
+        kind: 'jira';
+        platform: 'jira';
+        authMode: 'user_credential';
         externalScope: {
             baseUrl: string;
             projectKeys: Array<string>;
@@ -19860,21 +20145,21 @@ export type PutApiProjectsByProjectIdIntegrationsByIntegrationIdAutoSyncResponse
             state: 'off' | 'on' | 'paused';
             syncsAs: {
                 userId: string;
-                displayName: string | unknown;
+                displayName: string | null;
                 secretName: string;
-            } | unknown;
-            pausedReason: 'key_removed' | 'key_rejected' | 'key_expired' | 'owner_left_project' | 'access_lost' | unknown;
-            pausedDetail: string | unknown;
-            pausedAt: string | unknown;
+            } | null;
+            pausedReason: 'key_removed' | 'key_rejected' | 'key_expired' | 'owner_left_project' | 'access_lost' | null;
+            pausedDetail: string | null;
+            pausedAt: string | null;
         };
-        lastSyncedAt: string | unknown;
-        lastError: string | unknown;
-        firstSyncHorizonDays: number | unknown;
+        lastSyncedAt: string | null;
+        lastError: string | null;
+        firstSyncHorizonDays: number | null;
         createdAt: string;
         updatedAt: string;
-        kind: string;
-        platform: string;
-        authMode: string;
+        kind: 'github_app';
+        platform: 'github';
+        authMode: 'github_app';
         installationId: string;
         externalScope: {
             repos: Array<{
@@ -19891,21 +20176,21 @@ export type PutApiProjectsByProjectIdIntegrationsByIntegrationIdAutoSyncResponse
             state: 'off' | 'on' | 'paused';
             syncsAs: {
                 userId: string;
-                displayName: string | unknown;
+                displayName: string | null;
                 secretName: string;
-            } | unknown;
-            pausedReason: 'key_removed' | 'key_rejected' | 'key_expired' | 'owner_left_project' | 'access_lost' | unknown;
-            pausedDetail: string | unknown;
-            pausedAt: string | unknown;
+            } | null;
+            pausedReason: 'key_removed' | 'key_rejected' | 'key_expired' | 'owner_left_project' | 'access_lost' | null;
+            pausedDetail: string | null;
+            pausedAt: string | null;
         };
-        lastSyncedAt: string | unknown;
-        lastError: string | unknown;
-        firstSyncHorizonDays: number | unknown;
+        lastSyncedAt: string | null;
+        lastError: string | null;
+        firstSyncHorizonDays: number | null;
         createdAt: string;
         updatedAt: string;
-        kind: string;
-        platform: string;
-        authMode: string;
+        kind: 'github_token';
+        platform: 'github';
+        authMode: 'user_credential';
         externalScope: {
             repos: Array<{
                 id: number;
@@ -19921,21 +20206,21 @@ export type PutApiProjectsByProjectIdIntegrationsByIntegrationIdAutoSyncResponse
             state: 'off' | 'on' | 'paused';
             syncsAs: {
                 userId: string;
-                displayName: string | unknown;
+                displayName: string | null;
                 secretName: string;
-            } | unknown;
-            pausedReason: 'key_removed' | 'key_rejected' | 'key_expired' | 'owner_left_project' | 'access_lost' | unknown;
-            pausedDetail: string | unknown;
-            pausedAt: string | unknown;
+            } | null;
+            pausedReason: 'key_removed' | 'key_rejected' | 'key_expired' | 'owner_left_project' | 'access_lost' | null;
+            pausedDetail: string | null;
+            pausedAt: string | null;
         };
-        lastSyncedAt: string | unknown;
-        lastError: string | unknown;
-        firstSyncHorizonDays: number | unknown;
+        lastSyncedAt: string | null;
+        lastError: string | null;
+        firstSyncHorizonDays: number | null;
         createdAt: string;
         updatedAt: string;
-        kind: string;
-        platform: string;
-        authMode: string;
+        kind: 'bitbucket';
+        platform: 'bitbucket';
+        authMode: 'user_credential';
         externalScope: {
             repos: Array<{
                 workspace: string;
@@ -19952,21 +20237,21 @@ export type PutApiProjectsByProjectIdIntegrationsByIntegrationIdAutoSyncResponse
             state: 'off' | 'on' | 'paused';
             syncsAs: {
                 userId: string;
-                displayName: string | unknown;
+                displayName: string | null;
                 secretName: string;
-            } | unknown;
-            pausedReason: 'key_removed' | 'key_rejected' | 'key_expired' | 'owner_left_project' | 'access_lost' | unknown;
-            pausedDetail: string | unknown;
-            pausedAt: string | unknown;
+            } | null;
+            pausedReason: 'key_removed' | 'key_rejected' | 'key_expired' | 'owner_left_project' | 'access_lost' | null;
+            pausedDetail: string | null;
+            pausedAt: string | null;
         };
-        lastSyncedAt: string | unknown;
-        lastError: string | unknown;
-        firstSyncHorizonDays: number | unknown;
+        lastSyncedAt: string | null;
+        lastError: string | null;
+        firstSyncHorizonDays: number | null;
         createdAt: string;
         updatedAt: string;
-        kind: string;
-        platform: string;
-        authMode: string;
+        kind: 'jira';
+        platform: 'jira';
+        authMode: 'user_credential';
         externalScope: {
             baseUrl: string;
             projectKeys: Array<string>;
@@ -20072,7 +20357,7 @@ export type GetApiIntegrationsGithubReposResponses = {
      */
     200: Array<{
         installationId: string;
-        accountLogin: string | unknown;
+        accountLogin: string | null;
         repos: Array<{
             id: number;
             fullName: string;
@@ -20178,7 +20463,7 @@ export type PostApiIntegrationsGithubInstallationsByInstallationIdRefreshRespons
      */
     200: {
         installationId: string;
-        accountLogin: string | unknown;
+        accountLogin: string | null;
         repos: Array<{
             id: number;
             fullName: string;
@@ -20265,18 +20550,18 @@ export type PostApiProjectsRepoCheckResponses = {
      */
     200: {
         host: 'github' | 'bitbucket' | 'other';
-        webUrl: string | unknown;
+        webUrl: string | null;
         defaultName: string;
         alreadyExists: boolean;
         existingProject: {
             name: string;
             slug: string;
-            ownerUsername: string | unknown;
-        } | unknown;
+            ownerUsername: string | null;
+        } | null;
         githubApp?: {
             installationId: string;
-            accountLogin: string | unknown;
-        } | unknown;
+            accountLogin: string | null;
+        } | null;
     };
 };
 
@@ -20286,7 +20571,7 @@ export type PostApiProjectsIssueTrackerCheckData = {
     body: {
         gitUrl: string;
         issueTracker: {
-            type: string;
+            type: 'github_token';
             credential: {
                 secretId: string;
             } | {
@@ -20300,7 +20585,7 @@ export type PostApiProjectsIssueTrackerCheckData = {
             };
             firstSyncHorizonDays?: number;
         } | {
-            type: string;
+            type: 'bitbucket';
             credential: {
                 secretId: string;
             } | {
@@ -20314,7 +20599,7 @@ export type PostApiProjectsIssueTrackerCheckData = {
             };
             firstSyncHorizonDays?: number;
         } | {
-            type: string;
+            type: 'jira';
             baseUrl: string;
             projectKeys: Array<string>;
             credential: {
@@ -20479,13 +20764,13 @@ export type PostApiProjectsIssueTrackerCheckResponses = {
      * Response for status 200
      */
     200: {
-        ok: boolean;
+        ok: true;
         account: string;
         issuesEnabled: boolean;
         repo: {
             id: number;
             fullName: string;
-        } | unknown;
+        } | null;
     };
 };
 
@@ -20571,7 +20856,7 @@ export type GetApiProjectInvitesByTokenResponses = {
         projectId: string;
         projectName: string;
         projectSlug: string;
-        ownerUsername: string | unknown;
+        ownerUsername: string | null;
         role: 'admin' | 'contributor' | 'reviewer';
         restriction: 'specific_email' | 'any_authenticated_user';
         permissions: Array<string>;
@@ -20679,14 +20964,14 @@ export type GetApiProjectsByProjectIdInvitesResponses = {
     200: Array<{
         id: string;
         projectId: string;
-        email: string | unknown;
+        email: string | null;
         role: 'admin' | 'contributor' | 'reviewer';
         restriction: 'specific_email' | 'any_authenticated_user';
         permissions: Array<string>;
         invitedByUserId: string;
         status: 'pending' | 'accepted' | 'revoked' | 'expired';
         expiresAt: string;
-        acceptedAt: string | unknown;
+        acceptedAt: string | null;
         createdAt: string;
         updatedAt: string;
     }>;
@@ -20834,14 +21119,14 @@ export type PostApiProjectsByProjectIdInvitesResponses = {
         invite: {
             id: string;
             projectId: string;
-            email: string | unknown;
+            email: string | null;
             role: 'admin' | 'contributor' | 'reviewer';
             restriction: 'specific_email' | 'any_authenticated_user';
             permissions: Array<string>;
             invitedByUserId: string;
             status: 'pending' | 'accepted' | 'revoked' | 'expired';
             expiresAt: string;
-            acceptedAt: string | unknown;
+            acceptedAt: string | null;
             createdAt: string;
             updatedAt: string;
         };
@@ -20968,14 +21253,14 @@ export type PostApiProjectsByProjectIdInvitesByInviteIdRevokeResponses = {
     200: {
         id: string;
         projectId: string;
-        email: string | unknown;
+        email: string | null;
         role: 'admin' | 'contributor' | 'reviewer';
         restriction: 'specific_email' | 'any_authenticated_user';
         permissions: Array<string>;
         invitedByUserId: string;
         status: 'pending' | 'accepted' | 'revoked' | 'expired';
         expiresAt: string;
-        acceptedAt: string | unknown;
+        acceptedAt: string | null;
         createdAt: string;
         updatedAt: string;
     };
@@ -21137,14 +21422,14 @@ export type PostApiProjectInvitesByTokenAcceptResponses = {
     200: {
         id: string;
         projectId: string;
-        email: string | unknown;
+        email: string | null;
         role: 'admin' | 'contributor' | 'reviewer';
         restriction: 'specific_email' | 'any_authenticated_user';
         permissions: Array<string>;
         invitedByUserId: string;
         status: 'pending' | 'accepted' | 'revoked' | 'expired';
         expiresAt: string;
-        acceptedAt: string | unknown;
+        acceptedAt: string | null;
         createdAt: string;
         updatedAt: string;
     };
@@ -21507,13 +21792,13 @@ export type PostApiUsernameResponses = {
     200: {
         id: string;
         email: string;
-        username: string | unknown;
+        username: string | null;
         name: string;
         emailVerified: boolean;
         usernameChosen: boolean;
-        image: string | unknown;
-        createdAt: string | unknown;
-        updatedAt: string | unknown;
+        image: string | null;
+        createdAt: string | null;
+        updatedAt: string | null;
     };
 };
 
@@ -21615,14 +21900,14 @@ export type GetApiMeSecretsResponses = {
      */
     200: Array<{
         id: string;
-        kind: string;
+        kind: 'jira_api_key';
         name: string;
         metadata: {
             email: string;
         };
         lastFour: string;
         expiresAt: string;
-        lastUsedAt: string | unknown;
+        lastUsedAt: string | null;
         status: 'active' | 'expiring_soon' | 'expired';
         createdAt: string;
         updatedAt: string;
@@ -21634,14 +21919,14 @@ export type GetApiMeSecretsResponses = {
         }>;
     } | {
         id: string;
-        kind: string;
+        kind: 'github_token';
         name: string;
         metadata: {
-            login: string | unknown;
+            login: string | null;
         };
         lastFour: string;
-        expiresAt: string | unknown;
-        lastUsedAt: string | unknown;
+        expiresAt: string | null;
+        lastUsedAt: string | null;
         status: 'active' | 'expiring_soon' | 'expired';
         createdAt: string;
         updatedAt: string;
@@ -21653,14 +21938,14 @@ export type GetApiMeSecretsResponses = {
         }>;
     } | {
         id: string;
-        kind: string;
+        kind: 'bitbucket_api_token';
         name: string;
         metadata: {
             email: string;
         };
         lastFour: string;
         expiresAt: string;
-        lastUsedAt: string | unknown;
+        lastUsedAt: string | null;
         status: 'active' | 'expiring_soon' | 'expired';
         createdAt: string;
         updatedAt: string;
@@ -21677,19 +21962,19 @@ export type GetApiMeSecretsResponse = GetApiMeSecretsResponses[keyof GetApiMeSec
 
 export type PostApiMeSecretsData = {
     body: {
-        kind: string;
+        kind: 'jira_api_key';
         name: string;
         email: string;
         value: string;
         expiresAt: string;
     } | {
-        kind: string;
+        kind: 'github_token';
         name: string;
         value: string;
         login?: string;
-        expiresAt?: string | unknown;
+        expiresAt?: string | null;
     } | {
-        kind: string;
+        kind: 'bitbucket_api_token';
         name: string;
         email: string;
         value: string;
@@ -21806,14 +22091,14 @@ export type PostApiMeSecretsResponses = {
      */
     201: {
         id: string;
-        kind: string;
+        kind: 'jira_api_key';
         name: string;
         metadata: {
             email: string;
         };
         lastFour: string;
         expiresAt: string;
-        lastUsedAt: string | unknown;
+        lastUsedAt: string | null;
         status: 'active' | 'expiring_soon' | 'expired';
         createdAt: string;
         updatedAt: string;
@@ -21825,14 +22110,14 @@ export type PostApiMeSecretsResponses = {
         }>;
     } | {
         id: string;
-        kind: string;
+        kind: 'github_token';
         name: string;
         metadata: {
-            login: string | unknown;
+            login: string | null;
         };
         lastFour: string;
-        expiresAt: string | unknown;
-        lastUsedAt: string | unknown;
+        expiresAt: string | null;
+        lastUsedAt: string | null;
         status: 'active' | 'expiring_soon' | 'expired';
         createdAt: string;
         updatedAt: string;
@@ -21844,14 +22129,14 @@ export type PostApiMeSecretsResponses = {
         }>;
     } | {
         id: string;
-        kind: string;
+        kind: 'bitbucket_api_token';
         name: string;
         metadata: {
             email: string;
         };
         lastFour: string;
         expiresAt: string;
-        lastUsedAt: string | unknown;
+        lastUsedAt: string | null;
         status: 'active' | 'expiring_soon' | 'expired';
         createdAt: string;
         updatedAt: string;
@@ -21980,7 +22265,7 @@ export type DeleteApiMeSecretsBySecretIdResponses = {
      * Response for status 200
      */
     200: {
-        deleted: boolean;
+        deleted: true;
     };
 };
 
@@ -22122,14 +22407,14 @@ export type PatchApiMeSecretsBySecretIdResponses = {
      */
     200: {
         id: string;
-        kind: string;
+        kind: 'jira_api_key';
         name: string;
         metadata: {
             email: string;
         };
         lastFour: string;
         expiresAt: string;
-        lastUsedAt: string | unknown;
+        lastUsedAt: string | null;
         status: 'active' | 'expiring_soon' | 'expired';
         createdAt: string;
         updatedAt: string;
@@ -22141,14 +22426,14 @@ export type PatchApiMeSecretsBySecretIdResponses = {
         }>;
     } | {
         id: string;
-        kind: string;
+        kind: 'github_token';
         name: string;
         metadata: {
-            login: string | unknown;
+            login: string | null;
         };
         lastFour: string;
-        expiresAt: string | unknown;
-        lastUsedAt: string | unknown;
+        expiresAt: string | null;
+        lastUsedAt: string | null;
         status: 'active' | 'expiring_soon' | 'expired';
         createdAt: string;
         updatedAt: string;
@@ -22160,14 +22445,14 @@ export type PatchApiMeSecretsBySecretIdResponses = {
         }>;
     } | {
         id: string;
-        kind: string;
+        kind: 'bitbucket_api_token';
         name: string;
         metadata: {
             email: string;
         };
         lastFour: string;
         expiresAt: string;
-        lastUsedAt: string | unknown;
+        lastUsedAt: string | null;
         status: 'active' | 'expiring_soon' | 'expired';
         createdAt: string;
         updatedAt: string;
@@ -22298,14 +22583,14 @@ export type DeleteApiMeSecretsBySecretIdUsesByIntegrationIdResponses = {
      */
     200: {
         id: string;
-        kind: string;
+        kind: 'jira_api_key';
         name: string;
         metadata: {
             email: string;
         };
         lastFour: string;
         expiresAt: string;
-        lastUsedAt: string | unknown;
+        lastUsedAt: string | null;
         status: 'active' | 'expiring_soon' | 'expired';
         createdAt: string;
         updatedAt: string;
@@ -22317,14 +22602,14 @@ export type DeleteApiMeSecretsBySecretIdUsesByIntegrationIdResponses = {
         }>;
     } | {
         id: string;
-        kind: string;
+        kind: 'github_token';
         name: string;
         metadata: {
-            login: string | unknown;
+            login: string | null;
         };
         lastFour: string;
-        expiresAt: string | unknown;
-        lastUsedAt: string | unknown;
+        expiresAt: string | null;
+        lastUsedAt: string | null;
         status: 'active' | 'expiring_soon' | 'expired';
         createdAt: string;
         updatedAt: string;
@@ -22336,14 +22621,14 @@ export type DeleteApiMeSecretsBySecretIdUsesByIntegrationIdResponses = {
         }>;
     } | {
         id: string;
-        kind: string;
+        kind: 'bitbucket_api_token';
         name: string;
         metadata: {
             email: string;
         };
         lastFour: string;
         expiresAt: string;
-        lastUsedAt: string | unknown;
+        lastUsedAt: string | null;
         status: 'active' | 'expiring_soon' | 'expired';
         createdAt: string;
         updatedAt: string;

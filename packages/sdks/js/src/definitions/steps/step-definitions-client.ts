@@ -75,7 +75,8 @@ const buildStepDefinitionsClient = (stepDefinitions: StepDefinitions) => {
         entrypointJson: spec.entrypointJson ?? null,
         executionMode: spec.executionMode,
         devcontainerConfigPath: spec.devcontainerConfigPath,
-        managedRuntime: spec.managedRuntime,
+        managedRuntime:
+          spec.managedRuntime as UpsertStepDefinitionInput["managedRuntime"],
         repo: spec.repo,
         inputSchemaJson: spec.inputSchemaJson ?? ANY_OBJECT_SCHEMA,
         resultSchemaJson:

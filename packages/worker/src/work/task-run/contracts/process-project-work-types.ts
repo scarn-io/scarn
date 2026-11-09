@@ -35,6 +35,12 @@ export type ProcessProjectWorkInput = {
   concurrency: number;
   pollIntervalMs: number;
   maxPollIntervalMs?: number | undefined;
+  /**
+   * Idle backoff ceiling while the push wake-up socket is connected. The
+   * effective ceiling is `max(maxPollIntervalMs, connectedMaxPollIntervalMs)`;
+   * on disconnect it drops back to `maxPollIntervalMs`.
+   */
+  connectedMaxPollIntervalMs?: number | undefined;
   leaseDurationSeconds: number;
   workerId: string;
   workItemId?: string | undefined;
@@ -101,6 +107,12 @@ export type TaskLogLine = {
   level: TaskLogLevel;
 };
 
+export type WorkSignalToken = {
+  url: string;
+  token: string;
+  expiresAt: string;
+};
+
 export type TaskRunWorkerClient = {
   userId: UuidV7;
   /**
@@ -109,6 +121,17 @@ export type TaskRunWorkerClient = {
    * agent without `scarn-get-work-item`.
    */
   apiBaseUrl?: string | undefined;
+  /**
+   * Issues a short-lived token for the push wake-up socket. Resolves `null`
+   * when the server has push disabled (404). Absent on clients with no API
+   * behind them, which keeps the worker on plain polling.
+   */
+  issueWorkSignalToken?:
+    | ((input: {
+        projectId: UuidV7;
+        workerId: string;
+      }) => Promise<WorkSignalToken | null>)
+    | undefined;
   claimTaskRuns(input: {
     projectId: UuidV7;
     workerId: string;
@@ -689,6 +712,11 @@ export type ProjectWorkLogger = {
 
 export type { WorkEvent, WorkReporter, WorkActivity } from "./work-reporter";
 
+export type WorkSignalConnection = {
+  isConnected(): boolean;
+  disconnected(signal: AbortSignal): Promise<void>;
+};
+
 export type ProcessProjectWorkDeps = {
   workerClient: TaskRunWorkerClient;
   createRunTracker(): TaskRunTracker;
@@ -708,7 +736,28 @@ export type ProcessProjectWorkDeps = {
     TaskRuntimeEnvironmentOrchestrator | undefined;
   agentRunner: TaskAgentRunner;
   artifactStore: ArtifactStore;
-  sleep(milliseconds: number): Promise<void>;
+  /**
+   * Resolves after `milliseconds`. When raced against {@link wake}, `signal`
+   * aborts once the race settles so the losing timer can be cleared.
+   */
+  sleep(milliseconds: number, signal?: AbortSignal): Promise<void>;
+  /**
+   * Resolves when a push wake-up arrives (immediately if one arrived since the
+   * previous call). Raced against {@link sleep}; a wake re-polls at once and
+   * resets the idle backoff. `signal` aborts when sleep wins, so the stale
+   * waiter is dropped and a later wake is kept for the next call instead of
+   * being swallowed. Omitted means plain polling.
+   */
+  wake?: ((signal: AbortSignal) => Promise<void>) | undefined;
+  /**
+   * Connection state of the push wake-up socket. While connected, the idle
+   * backoff may grow to `connectedMaxPollIntervalMs`; `disconnected` resolves
+   * on the next disconnect (at once if not connected) so a long sleep can be
+   * cut back to the normal ceiling. Omitted means plain polling ceilings.
+   */
+  signalConnection?: WorkSignalConnection | undefined;
+  /** Clock for measuring idle sleeps; defaults to `Date.now`. */
+  now?: (() => number) | undefined;
   logger?: ProjectWorkLogger | undefined;
   /**
    * Optional user-facing presentation surface. Distinct from {@link logger}

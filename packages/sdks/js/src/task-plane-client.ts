@@ -136,6 +136,18 @@ const buildTaskPlaneClient = (taskRuns: TaskRuns) => {
     },
     listTaskArtifacts: async ({ taskRunId }: TaskRunRef) =>
       unwrap(await taskRuns.listTaskArtifacts({ path: { taskRunId } })),
+    /** Not unwrapped: callers read `response.status` (404 = push unavailable). */
+    issueWorkSignalToken: ({
+      projectId,
+      workerId,
+    }: {
+      projectId: string;
+      workerId?: string | undefined;
+    }) =>
+      taskRuns.issueWorkSignalToken({
+        path: { projectId },
+        body: workerId === undefined ? {} : { workerId },
+      }),
     getArtifactDownloadUrl: async ({
       taskRunId,
       artifactId,

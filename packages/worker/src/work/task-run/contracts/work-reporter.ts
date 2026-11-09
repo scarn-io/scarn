@@ -22,6 +22,10 @@ export type WorkEvent =
   | { type: "worker:polling" }
   | { type: "worker:idle"; pollIntervalMs: number }
   | { type: "worker:claimed"; count: number }
+  /** The push wake-up socket is open; idle sleeps end as soon as work lands. */
+  | { type: "worker:signal-connected" }
+  /** The push wake-up socket dropped; the worker keeps polling meanwhile. */
+  | { type: "worker:signal-disconnected" }
   | { type: "worker:complete"; processed: number; skipped: number }
   | { type: "task:starting"; taskRunId: string }
   | { type: "task:runtime-launching"; taskRunId: string }

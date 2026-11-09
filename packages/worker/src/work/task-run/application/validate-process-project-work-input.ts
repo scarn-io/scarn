@@ -36,6 +36,13 @@ export function validateProcessProjectWorkInput(
     assertPositiveInt(input.missingFindingsGraceMs, "missingFindingsGraceMs");
   }
 
+  if (input.connectedMaxPollIntervalMs !== undefined) {
+    assertPositiveInt(
+      input.connectedMaxPollIntervalMs,
+      "connectedMaxPollIntervalMs",
+    );
+  }
+
   if (input.maxPollIntervalMs !== undefined) {
     assertPositiveInt(input.maxPollIntervalMs, "maxPollIntervalMs");
 

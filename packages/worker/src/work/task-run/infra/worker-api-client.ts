@@ -85,5 +85,17 @@ export async function createTaskPlaneWorkerClient(
     loadTaskLogLines: buildLoadTaskLogLines(planeClient),
     readTaskRunWorkItem: async (input) =>
       await planeClient.readTaskRunWorkItem(input),
+    issueWorkSignalToken: async (input) => {
+      const result = await planeClient.issueWorkSignalToken(input);
+      if (result.response.status === 404) {
+        return null;
+      }
+      if (result.error !== undefined) {
+        throw new Error(
+          `Work signal token request failed (HTTP ${String(result.response.status)})`,
+        );
+      }
+      return result.data;
+    },
   };
 }

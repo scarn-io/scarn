@@ -7,6 +7,7 @@ import type {
   ProcessProjectWorkDeps,
   ProcessProjectWorkInput,
   ProcessProjectWorkResult,
+  WorkSignalConnection,
 } from "../contracts/process-project-work-types";
 import { validateProcessProjectWorkInput } from "./validate-process-project-work-input";
 
@@ -27,8 +28,25 @@ function resolveMaxPollIntervalMs(input: ProcessProjectWorkInput) {
   );
 }
 
+function resolveEffectiveMaxPollIntervalMs(
+  input: ProcessProjectWorkInput,
+  deps: ProcessProjectWorkDeps,
+) {
+  const maxPollIntervalMs = resolveMaxPollIntervalMs(input);
+
+  if (!deps.signalConnection?.isConnected()) {
+    return maxPollIntervalMs;
+  }
+
+  return Math.max(
+    maxPollIntervalMs,
+    input.connectedMaxPollIntervalMs ?? maxPollIntervalMs,
+  );
+}
+
 function nextPollIntervalMs(
   input: ProcessProjectWorkInput,
+  deps: ProcessProjectWorkDeps,
   currentPollIntervalMs: number,
   claimedCount: number,
 ) {
@@ -37,7 +55,7 @@ function nextPollIntervalMs(
   }
 
   return Math.min(
-    resolveMaxPollIntervalMs(input),
+    resolveEffectiveMaxPollIntervalMs(input, deps),
     currentPollIntervalMs * POLL_BACKOFF_MULTIPLIER,
   );
 }
@@ -145,6 +163,7 @@ function logWorkerStart(
     batchSize: input.batchSize,
     pollIntervalMs: input.pollIntervalMs,
     maxPollIntervalMs: resolveMaxPollIntervalMs(input),
+    connectedMaxPollIntervalMs: input.connectedMaxPollIntervalMs,
     leaseDurationSeconds: input.leaseDurationSeconds,
     workItemId: input.workItemId,
     preserveRuntimeOnComplete: input.preserveRuntimeOnComplete ?? false,
@@ -216,6 +235,38 @@ async function closeRunTracker(
   });
 }
 
+type IdleOutcome = "slept" | "woken" | "disconnected";
+
+async function idleFor(
+  deps: ProcessProjectWorkDeps,
+  milliseconds: number,
+  connection?: WorkSignalConnection,
+): Promise<IdleOutcome> {
+  if (!deps.wake && !connection) {
+    await deps.sleep(milliseconds);
+    return "slept";
+  }
+
+  const loser = new AbortController();
+  const racers: Promise<IdleOutcome>[] = [
+    deps.sleep(milliseconds, loser.signal).then(() => "slept" as const),
+  ];
+  if (deps.wake) {
+    racers.push(deps.wake(loser.signal).then(() => "woken" as const));
+  }
+  if (connection) {
+    racers.push(
+      connection.disconnected(loser.signal).then(() => "disconnected" as const),
+    );
+  }
+
+  try {
+    return await Promise.race(racers);
+  } finally {
+    loser.abort();
+  }
+}
+
 async function sleepBeforeNextPoll(
   input: ProcessProjectWorkInput,
   deps: ProcessProjectWorkDeps,
@@ -232,7 +283,36 @@ async function sleepBeforeNextPoll(
     type: "worker:idle",
     pollIntervalMs,
   });
-  await deps.sleep(pollIntervalMs);
+
+  const maxPollIntervalMs = resolveMaxPollIntervalMs(input);
+  const now = deps.now ?? Date.now;
+  const startedAt = now();
+  let outcome = await idleFor(
+    deps,
+    pollIntervalMs,
+    pollIntervalMs > maxPollIntervalMs ? deps.signalConnection : undefined,
+  );
+
+  if (outcome === "disconnected") {
+    const remainingMs = Math.max(0, maxPollIntervalMs - (now() - startedAt));
+    logger.log("worker", "Work signal disconnected; shortening idle sleep", {
+      projectId: input.projectId,
+      workerId: input.workerId,
+      remainingMs,
+    });
+    outcome = remainingMs > 0 ? await idleFor(deps, remainingMs) : "slept";
+  }
+
+  const woken = outcome === "woken";
+
+  if (woken) {
+    logger.log("worker", "Woken by work signal; polling now", {
+      projectId: input.projectId,
+      workerId: input.workerId,
+    });
+  }
+
+  return woken;
 }
 
 function shouldStopPolling(input: ProcessProjectWorkInput) {
@@ -289,6 +369,7 @@ async function runPollingLoop(
 
     currentPollIntervalMs = nextPollIntervalMs(
       input,
+      deps,
       currentPollIntervalMs,
       claims.length,
     );
@@ -301,7 +382,9 @@ async function runPollingLoop(
       return;
     }
 
-    await sleepBeforeNextPoll(input, deps, currentPollIntervalMs);
+    if (await sleepBeforeNextPoll(input, deps, currentPollIntervalMs)) {
+      currentPollIntervalMs = input.pollIntervalMs;
+    }
   }
 }
 

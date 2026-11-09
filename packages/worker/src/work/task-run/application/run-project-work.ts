@@ -23,10 +23,17 @@ import { DefaultLocalProjectRuntimeEnvironmentOrchestrator } from "../infra/loca
 import { DefaultLocalNoWorkspaceRuntimeEnvironmentOrchestrator } from "../infra/local-noworkspace-runtime-environment";
 import { DefaultOpencodeStepRunner } from "../infra/opencode-step-runner";
 import { createTaskPlaneWorkerClient } from "../infra/worker-api-client";
+import {
+  createWorkSignalClient,
+  type WorkSignalClient,
+  type WorkSignalClientOptions,
+} from "../infra/work-signal-client";
+import type { UuidV7 } from "../../../common/contracts/uuid-v7";
 
 const DEFAULT_WORK_CONCURRENCY = 1;
 const DEFAULT_POLL_INTERVAL_MS = 5_000;
 const DEFAULT_MAX_POLL_INTERVAL_MS = 600_000;
+const DEFAULT_CONNECTED_MAX_POLL_INTERVAL_MS = 1_800_000;
 const DEFAULT_LEASE_DURATION_SECONDS = 30;
 
 export type ProcessProjectWorkOptions = {
@@ -36,6 +43,8 @@ export type ProcessProjectWorkOptions = {
   concurrency?: number | undefined;
   pollIntervalMs?: number | undefined;
   maxPollIntervalMs?: number | undefined;
+  /** Idle backoff ceiling while the push wake-up socket is connected (ms). */
+  connectedMaxPollIntervalMs?: number | undefined;
   leaseDurationSeconds?: number | undefined;
   workerId?: string | undefined;
   workItemId?: string | undefined;
@@ -66,10 +75,32 @@ export type ProcessProjectWorkDeps = {
    * copies land under ~/.scarn/artifacts, remote uploads go through the API).
    */
   artifactStore?: ArtifactStore | undefined;
-  sleep(milliseconds: number): Promise<void>;
+  sleep(milliseconds: number, signal?: AbortSignal): Promise<void>;
   logger: ProjectWorkLogger;
   reporter?: WorkReporter | undefined;
+  /** Override the push wake-up client (tests); defaults to the WebSocket one. */
+  createWorkSignalClient?:
+    ((options: WorkSignalClientOptions) => WorkSignalClient) | undefined;
 };
+
+async function startWorkSignal(
+  workerClient: TaskRunWorkerClient,
+  projectId: UuidV7,
+  workerId: string,
+  deps: ProcessProjectWorkDeps,
+): Promise<WorkSignalClient | null> {
+  const issueToken = workerClient.issueWorkSignalToken;
+  if (!issueToken) {
+    return null;
+  }
+  const client = (deps.createWorkSignalClient ?? createWorkSignalClient)({
+    projectId,
+    fetchToken: () => issueToken({ projectId, workerId }),
+    reporter: deps.reporter,
+    logger: deps.logger,
+  });
+  return (await client.start()) ? client : null;
+}
 
 function loadDefaultDeps(
   dest?: DestinationStream,
@@ -97,9 +128,16 @@ function loadDefaultDeps(
         logger.child({ scope: "noworkspace-runtime-environment-orchestrator" }),
       ),
     agentRunner: new DefaultOpencodeStepRunner(),
-    sleep: (milliseconds) =>
+    sleep: (milliseconds, signal) =>
       new Promise((resolve) => {
-        setTimeout(resolve, milliseconds);
+        const timer = setTimeout(resolve, milliseconds);
+        signal?.addEventListener(
+          "abort",
+          () => {
+            clearTimeout(timer);
+          },
+          { once: true },
+        );
       }),
     logger: {
       debug: (scope, message, details) => {
@@ -163,6 +201,13 @@ function resolveMaxPollIntervalMs(
   return Math.max(resolved, pollIntervalMs);
 }
 
+function resolveConnectedMaxPollIntervalMs(value?: number): number {
+  return parsePositiveInt(
+    value ?? process.env["SCARN_WORK_CONNECTED_MAX_POLL_INTERVAL_MS"],
+    DEFAULT_CONNECTED_MAX_POLL_INTERVAL_MS,
+  );
+}
+
 function resolveLeaseDurationSeconds(value?: number): number {
   return parsePositiveInt(
     value ?? process.env["SCARN_WORK_LEASE_DURATION_SECONDS"],
@@ -196,6 +241,9 @@ export async function runProjectWork(
     options.maxPollIntervalMs,
     pollIntervalMs,
   );
+  const connectedMaxPollIntervalMs = resolveConnectedMaxPollIntervalMs(
+    options.connectedMaxPollIntervalMs,
+  );
   const leaseDurationSeconds = resolveLeaseDurationSeconds(
     options.leaseDurationSeconds,
   );
@@ -208,50 +256,62 @@ export async function runProjectWork(
     resolvedDeps.artifactStore ??
     resolveArtifactStores(workerEnv, { remoteUploader: workerClient });
 
-  return await processProjectWorkInCore(
-    {
-      projectId,
-      workerId,
-      batchSize,
-      concurrency,
-      pollIntervalMs,
-      maxPollIntervalMs,
-      leaseDurationSeconds,
-      workItemId: options.workItemId,
-      preserveRuntimeOnComplete: options.preserveRuntimeOnComplete,
-      once: options.once,
-      sessionStartTimeoutMs: options.sessionStartTimeoutMs,
-      missingFindingsGraceMs: options.missingFindingsGraceMs,
-      // Seed each claimed step's log masker with the .scarn/.env values
-      // (Path A) so injected secrets are redacted from the shipped feed.
-      secretValues: Object.values(options.localEnvVars ?? {}),
-      sourceBranch: options.sourceBranch,
-      workerEnv,
-    },
-    {
-      workerClient,
-      createRunTracker: () => resolvedDeps.createRunTracker(),
-      runtimeEnvironmentOrchestrator:
-        resolvedDeps.runtimeEnvironmentOrchestrator,
-      noWorkspaceRuntimeEnvironmentOrchestrator:
-        resolvedDeps.noWorkspaceRuntimeEnvironmentOrchestrator,
-      agentRunner: resolvedDeps.agentRunner,
-      artifactStore,
-      sleep: (milliseconds) => resolvedDeps.sleep(milliseconds),
-      logger: {
-        debug: (scope, message, details) => {
-          resolvedDeps.logger.debug(scope, message, details);
-        },
-        log: (scope, message, details) => {
-          resolvedDeps.logger.log(scope, message, details);
-        },
-        error: (scope, message, details) => {
-          resolvedDeps.logger.error(scope, message, details);
-        },
+  const workSignal = options.once
+    ? null
+    : await startWorkSignal(workerClient, projectId, workerId, resolvedDeps);
+
+  try {
+    return await processProjectWorkInCore(
+      {
+        projectId,
+        workerId,
+        batchSize,
+        concurrency,
+        pollIntervalMs,
+        maxPollIntervalMs,
+        connectedMaxPollIntervalMs,
+        leaseDurationSeconds,
+        workItemId: options.workItemId,
+        preserveRuntimeOnComplete: options.preserveRuntimeOnComplete,
+        once: options.once,
+        sessionStartTimeoutMs: options.sessionStartTimeoutMs,
+        missingFindingsGraceMs: options.missingFindingsGraceMs,
+        // Seed each claimed step's log masker with the .scarn/.env values
+        // (Path A) so injected secrets are redacted from the shipped feed.
+        secretValues: Object.values(options.localEnvVars ?? {}),
+        sourceBranch: options.sourceBranch,
+        workerEnv,
       },
-      reporter: resolvedDeps.reporter,
-    },
-  );
+      {
+        workerClient,
+        createRunTracker: () => resolvedDeps.createRunTracker(),
+        runtimeEnvironmentOrchestrator:
+          resolvedDeps.runtimeEnvironmentOrchestrator,
+        noWorkspaceRuntimeEnvironmentOrchestrator:
+          resolvedDeps.noWorkspaceRuntimeEnvironmentOrchestrator,
+        agentRunner: resolvedDeps.agentRunner,
+        artifactStore,
+        sleep: (milliseconds, signal) =>
+          resolvedDeps.sleep(milliseconds, signal),
+        wake: workSignal ? (signal) => workSignal.wake(signal) : undefined,
+        signalConnection: workSignal ?? undefined,
+        logger: {
+          debug: (scope, message, details) => {
+            resolvedDeps.logger.debug(scope, message, details);
+          },
+          log: (scope, message, details) => {
+            resolvedDeps.logger.log(scope, message, details);
+          },
+          error: (scope, message, details) => {
+            resolvedDeps.logger.error(scope, message, details);
+          },
+        },
+        reporter: resolvedDeps.reporter,
+      },
+    );
+  } finally {
+    workSignal?.stop();
+  }
 }
 
 export const processProjectWork = runProjectWork;

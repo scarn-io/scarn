@@ -492,23 +492,24 @@ scarn work
 scarn work <owner/slug>
 ```
 
-| Flag                             | Alias | Default                   | Description                                                                                                               |
-| -------------------------------- | ----- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| `--base-url <url>`               | —     | `https://app.scarn.io` | Override the API server URL                                                                                               |
-| `--once`                         | —     | `false`                   | Poll once and wait for any claimed jobs to finish                                                                         |
-| `--concurrency <n>`              | `-c`  | `1`                       | Max concurrently active jobs (env: `SCARN_WORK_CONCURRENCY`)                                                            |
-| `--batch-size <n>`               | `-b`  | value of `--concurrency`  | Max tasks claimed per poll                                                                                                |
-| `--lease-duration-seconds <n>`   | `-l`  | `30`                      | Seconds a claim lasts before the server can reclaim it; heartbeats extend it (env: `SCARN_WORK_LEASE_DURATION_SECONDS`) |
-| `--poll-interval-ms <n>`         | `-p`  | `5000`                    | Milliseconds between polls while there is work to claim (env: `SCARN_WORK_POLL_INTERVAL_MS`)                            |
-| `--max-poll-interval-ms <n>`     | —     | `600000`                  | Ceiling for the empty-poll backoff — see [Polling backoff](#polling-backoff) (env: `SCARN_WORK_MAX_POLL_INTERVAL_MS`)   |
-| `--worker-id <id>`               | `-w`  | auto                      | Worker identifier used while claiming tasks                                                                               |
-| `--work-item-id <id>`            | —     | —                         | Only process tasks for this work item ID                                                                                  |
-| `--source-branch <branch>`       | —     | your current local branch | Branch checked out for the run's first step — see [Source branch](#source-branch)                                         |
-| `--preserve-runtime-on-complete` | `-k`  | `false`                   | Keep runtime containers and workspace after the step (or, with `--dry-run`, after the report) for debugging               |
-| `--dry-run`                      | —     | `false`                   | Rehearse a real step's environment (devcontainer + OpenCode + MCP servers) and report its health instead                  |
-| `--step-id <id>`                 | —     | —                         | Dry run only: fetch this step definition's real MCP servers to test                                                       |
-| `--global-only`                  | —     | `false`                   | Dry run only: skip step-specific MCP injection and test whatever is already configured                                    |
-| `--pipeline-id <id>`             | —     | —                         | Dry run only: test this pipeline definition's first step — see [What a dry run tests](#what-a-dry-run-tests)              |
+| Flag                                   | Alias | Default                   | Description                                                                                                                               |
+| -------------------------------------- | ----- | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `--base-url <url>`                     | —     | `https://app.scarn.io`    | Override the API server URL                                                                                                               |
+| `--once`                               | —     | `false`                   | Poll once and wait for any claimed jobs to finish                                                                                         |
+| `--concurrency <n>`                    | `-c`  | `1`                       | Max concurrently active jobs (env: `SCARN_WORK_CONCURRENCY`)                                                                              |
+| `--batch-size <n>`                     | `-b`  | value of `--concurrency`  | Max tasks claimed per poll                                                                                                                |
+| `--lease-duration-seconds <n>`         | `-l`  | `30`                      | Seconds a claim lasts before the server can reclaim it; heartbeats extend it (env: `SCARN_WORK_LEASE_DURATION_SECONDS`)                   |
+| `--poll-interval-ms <n>`               | `-p`  | `5000`                    | Milliseconds between polls while there is work to claim (env: `SCARN_WORK_POLL_INTERVAL_MS`)                                              |
+| `--max-poll-interval-ms <n>`           | —     | `600000`                  | Ceiling for the empty-poll backoff — see [Polling backoff](#polling-backoff) (env: `SCARN_WORK_MAX_POLL_INTERVAL_MS`)                     |
+| `--connected-max-poll-interval-ms <n>` | —     | `1800000`                 | Backoff ceiling while [push wake-up](/scarn/guides/workers/#push-wake-up) is connected (env: `SCARN_WORK_CONNECTED_MAX_POLL_INTERVAL_MS`) |
+| `--worker-id <id>`                     | `-w`  | auto                      | Worker identifier used while claiming tasks                                                                                               |
+| `--work-item-id <id>`                  | —     | —                         | Only process tasks for this work item ID                                                                                                  |
+| `--source-branch <branch>`             | —     | your current local branch | Branch checked out for the run's first step — see [Source branch](#source-branch)                                                         |
+| `--preserve-runtime-on-complete`       | `-k`  | `false`                   | Keep runtime containers and workspace after the step (or, with `--dry-run`, after the report) for debugging                               |
+| `--dry-run`                            | —     | `false`                   | Rehearse a real step's environment (devcontainer + OpenCode + MCP servers) and report its health instead                                  |
+| `--step-id <id>`                       | —     | —                         | Dry run only: fetch this step definition's real MCP servers to test                                                                       |
+| `--global-only`                        | —     | `false`                   | Dry run only: skip step-specific MCP injection and test whatever is already configured                                                    |
+| `--pipeline-id <id>`                   | —     | —                         | Dry run only: test this pipeline definition's first step — see [What a dry run tests](#what-a-dry-run-tests)                              |
 
 #### Polling backoff
 
@@ -516,6 +517,12 @@ Each empty poll doubles the interval, starting from `--poll-interval-ms`, up to 
 resets as soon as work is claimed. Set the two equal for a fixed cadence. An idle worker can take up to
 `--max-poll-interval-ms` to notice new work; the 10-minute default is deliberately longer than the database's
 5-minute idle-suspend window, so idle workers let it sleep.
+
+While the [push wake-up](/scarn/guides/workers/#push-wake-up) connection is up, new work wakes the worker
+straight away, so the poll is only a safety net and backs off further: the ceiling becomes the larger of
+`--max-poll-interval-ms` and `--connected-max-poll-interval-ms` (30 minutes by default). If the connection
+drops, the ceiling returns to `--max-poll-interval-ms` at once, and a longer sleep already under way is cut
+short to match. Each (re)connect also triggers an immediate poll.
 
 #### Source branch
 
