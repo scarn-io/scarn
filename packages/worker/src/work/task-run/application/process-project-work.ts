@@ -54,6 +54,10 @@ function nextPollIntervalMs(
     return input.pollIntervalMs;
   }
 
+  if (deps.signalConnection?.isConnected()) {
+    return resolveEffectiveMaxPollIntervalMs(input, deps);
+  }
+
   return Math.min(
     resolveEffectiveMaxPollIntervalMs(input, deps),
     currentPollIntervalMs * POLL_BACKOFF_MULTIPLIER,

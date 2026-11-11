@@ -319,10 +319,11 @@ export const workCommand: CommandModule<object, WorkArguments> = {
       .option("connectedMaxPollIntervalMs", {
         alias: "connected-max-poll-interval-ms",
         describe:
-          "Ceiling the claim poll backs off to while the push wake-up " +
-          "connection is up (the larger of this and --maxPollIntervalMs " +
-          "applies). Drops back to --maxPollIntervalMs on disconnect. " +
-          "Defaults to 1800000 (30 minutes).",
+          "Safety-net poll interval while the push wake-up connection is " +
+          "up: an empty poll sleeps this long straight away, with no " +
+          "doubling (the larger of this and --maxPollIntervalMs applies). " +
+          "Drops back to --maxPollIntervalMs on disconnect. " +
+          "Defaults to 3600000 (60 minutes).",
         type: "number",
       })
       .option("once", {

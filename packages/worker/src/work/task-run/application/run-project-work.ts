@@ -33,7 +33,7 @@ import type { UuidV7 } from "../../../common/contracts/uuid-v7";
 const DEFAULT_WORK_CONCURRENCY = 1;
 const DEFAULT_POLL_INTERVAL_MS = 5_000;
 const DEFAULT_MAX_POLL_INTERVAL_MS = 600_000;
-const DEFAULT_CONNECTED_MAX_POLL_INTERVAL_MS = 1_800_000;
+const DEFAULT_CONNECTED_MAX_POLL_INTERVAL_MS = 3_600_000;
 const DEFAULT_LEASE_DURATION_SECONDS = 30;
 
 export type ProcessProjectWorkOptions = {

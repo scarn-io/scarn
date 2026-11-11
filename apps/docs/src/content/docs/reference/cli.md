@@ -501,7 +501,7 @@ scarn work <owner/slug>
 | `--lease-duration-seconds <n>`         | `-l`  | `30`                      | Seconds a claim lasts before the server can reclaim it; heartbeats extend it (env: `SCARN_WORK_LEASE_DURATION_SECONDS`)                   |
 | `--poll-interval-ms <n>`               | `-p`  | `5000`                    | Milliseconds between polls while there is work to claim (env: `SCARN_WORK_POLL_INTERVAL_MS`)                                              |
 | `--max-poll-interval-ms <n>`           | —     | `600000`                  | Ceiling for the empty-poll backoff — see [Polling backoff](#polling-backoff) (env: `SCARN_WORK_MAX_POLL_INTERVAL_MS`)                     |
-| `--connected-max-poll-interval-ms <n>` | —     | `1800000`                 | Backoff ceiling while [push wake-up](/scarn/guides/workers/#push-wake-up) is connected (env: `SCARN_WORK_CONNECTED_MAX_POLL_INTERVAL_MS`) |
+| `--connected-max-poll-interval-ms <n>` | —     | `3600000`                 | Safety-net poll interval while [push wake-up](/scarn/guides/workers/#push-wake-up) is connected (env: `SCARN_WORK_CONNECTED_MAX_POLL_INTERVAL_MS`) |
 | `--worker-id <id>`                     | `-w`  | auto                      | Worker identifier used while claiming tasks                                                                                               |
 | `--work-item-id <id>`                  | —     | —                         | Only process tasks for this work item ID                                                                                                  |
 | `--source-branch <branch>`             | —     | your current local branch | Branch checked out for the run's first step — see [Source branch](#source-branch)                                                         |
@@ -519,10 +519,11 @@ resets as soon as work is claimed. Set the two equal for a fixed cadence. An idl
 5-minute idle-suspend window, so idle workers let it sleep.
 
 While the [push wake-up](/scarn/guides/workers/#push-wake-up) connection is up, new work wakes the worker
-straight away, so the poll is only a safety net and backs off further: the ceiling becomes the larger of
-`--max-poll-interval-ms` and `--connected-max-poll-interval-ms` (30 minutes by default). If the connection
-drops, the ceiling returns to `--max-poll-interval-ms` at once, and a longer sleep already under way is cut
-short to match. Each (re)connect also triggers an immediate poll.
+straight away, so the poll is only a safety net: an empty poll skips the doubling and sleeps straight for
+the larger of `--max-poll-interval-ms` and `--connected-max-poll-interval-ms` (60 minutes by default). While
+work is being claimed it still polls every `--poll-interval-ms`. If the connection drops, the backoff returns
+to `--max-poll-interval-ms` at once, and a longer sleep already under way is cut short to match. Each
+(re)connect also triggers an immediate poll.
 
 #### Source branch
 

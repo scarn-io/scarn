@@ -39,9 +39,10 @@ export type ProcessProjectWorkInput = {
   pollIntervalMs: number;
   maxPollIntervalMs?: number | undefined;
   /**
-   * Idle backoff ceiling while the push wake-up socket is connected. The
-   * effective ceiling is `max(maxPollIntervalMs, connectedMaxPollIntervalMs)`;
-   * on disconnect it drops back to `maxPollIntervalMs`.
+   * Safety-net poll interval while the push wake-up socket is connected. An
+   * empty poll while connected sleeps straight for
+   * `max(maxPollIntervalMs, connectedMaxPollIntervalMs)` with no doubling;
+   * on disconnect the backoff drops back to `maxPollIntervalMs`.
    */
   connectedMaxPollIntervalMs?: number | undefined;
   leaseDurationSeconds: number;

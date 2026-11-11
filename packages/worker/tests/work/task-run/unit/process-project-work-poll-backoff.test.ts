@@ -113,7 +113,7 @@ describe("claim-poll idle backoff", () => {
     ]);
   });
 
-  test("while the signal socket is connected, backs off to connectedMaxPollIntervalMs; once disconnected, to maxPollIntervalMs", async () => {
+  test("while the signal socket is connected, an empty poll sleeps straight for connectedMaxPollIntervalMs; once disconnected, backs off to maxPollIntervalMs", async () => {
     let call = 0;
     let connected = true;
     const claimTaskRuns = vi.fn(() => {
@@ -153,10 +153,10 @@ describe("claim-poll idle backoff", () => {
     }
 
     expect(sleepCalls).toEqual([
-      200,
-      400, // past maxPollIntervalMs: connected ceiling applies
-      800,
-      1_000, // capped at connectedMaxPollIntervalMs
+      1_000, // connected: no ramp, straight to connectedMaxPollIntervalMs
+      1_000,
+      1_000,
+      1_000,
       300, // disconnected: back to maxPollIntervalMs
       300,
     ]);
@@ -197,7 +197,48 @@ describe("claim-poll idle backoff", () => {
       expect(error).toBeInstanceOf(StopPolling);
     }
 
-    expect(sleepCalls).toEqual([200, 400, 400]);
+    expect(sleepCalls).toEqual([400, 400, 400]);
+  });
+
+  test("while connected, a claim drops back to pollIntervalMs and the next empty poll jumps straight to the connected interval", async () => {
+    let call = 0;
+    const claimTaskRuns = vi.fn(() => {
+      call += 1;
+      if (call === 2) {
+        return Promise.resolve([claim]);
+      }
+      return call <= 3
+        ? Promise.resolve([])
+        : Promise.reject(new StopPolling());
+    });
+    const sleepCalls: number[] = [];
+    const deps = {
+      ...buildDeps(claimTaskRuns, sleepCalls),
+      signalConnection: {
+        isConnected: () => true,
+        disconnected: () => new Promise<void>(() => {}),
+      },
+    } satisfies ProcessProjectWorkDeps;
+
+    const input: ProcessProjectWorkInput = {
+      projectId,
+      workerId: "worker-1",
+      batchSize: 3,
+      concurrency: 3,
+      pollIntervalMs: 100,
+      maxPollIntervalMs: 300,
+      connectedMaxPollIntervalMs: 1_000,
+      leaseDurationSeconds: 30,
+    };
+
+    try {
+      await processProjectWork(input, deps);
+      throw new Error("expected processProjectWork to reject");
+    } catch (error) {
+      expect(error).toBeInstanceOf(StopPolling);
+    }
+
+    expect(sleepCalls).toEqual([1_000, 100, 1_000]);
   });
 
   test("never backs off when maxPollIntervalMs is omitted (matches prior fixed-cadence behavior)", async () => {

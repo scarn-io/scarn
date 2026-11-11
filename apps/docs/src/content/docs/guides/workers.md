@@ -26,7 +26,7 @@ A backed-off worker would otherwise take up to 10 minutes to notice new work. Pu
 The message is only a hint. It carries no task data, and the worker still claims work through the normal poll, so a missed message only costs latency:
 
 - **On every (re)connect** the worker polls straight away, so it catches anything queued while it was disconnected.
-- **While connected,** the empty-poll backoff stretches to 30 minutes as a safety net (`--connected-max-poll-interval-ms`; see [Polling backoff](/scarn/reference/cli/#polling-backoff)).
+- **While connected,** an empty poll waits a full 60 minutes before the next safety-net poll (`--connected-max-poll-interval-ms`; see [Polling backoff](/scarn/reference/cli/#polling-backoff)).
 - **If the connection drops** (the terminal shows `Push wake-up disconnected; polling`), the worker falls back to the normal 10-minute backoff right away and keeps retrying the connection in the background.
 - **If the server has push wake-up turned off,** the worker just polls, exactly as before.
 

@@ -1,7 +1,7 @@
 /**
  * `runProjectWork` wiring for the connected safety-net poll: with the push
- * wake-up socket connected and nothing configured, idle backoff grows past the
- * 10-minute `maxPollIntervalMs` to the 30-minute connected ceiling.
+ * wake-up socket connected and nothing configured, every empty poll sleeps the
+ * full 60-minute connected interval, with no ramp from `pollIntervalMs`.
  */
 import { afterEach, beforeEach, describe, expect, test, vi } from "bun:test";
 import { processProjectWork } from "../../../../src/work/task-run/application/run-project-work";
@@ -101,19 +101,14 @@ async function runUntilStopped(options: {
 }
 
 describe("connected safety-net poll", () => {
-  test("defaults to a 30-minute ceiling while the work signal is connected", async () => {
-    expect(await runUntilStopped({})).toEqual([
-      10_000, 20_000, 40_000, 80_000, 160_000, 320_000, 640_000, 1_280_000,
-      1_800_000, 1_800_000,
-    ]);
+  test("defaults to a 60-minute safety-net poll while the work signal is connected", async () => {
+    expect(await runUntilStopped({})).toEqual(Array(10).fill(3_600_000));
   });
 
   test("reads SCARN_WORK_CONNECTED_MAX_POLL_INTERVAL_MS", async () => {
     process.env["SCARN_WORK_CONNECTED_MAX_POLL_INTERVAL_MS"] = "700000";
 
-    expect((await runUntilStopped({})).slice(-4)).toEqual([
-      640_000, 700_000, 700_000, 700_000,
-    ]);
+    expect(await runUntilStopped({})).toEqual(Array(10).fill(700_000));
   });
 
   test("the option overrides the env var", async () => {
@@ -123,6 +118,6 @@ describe("connected safety-net poll", () => {
       connectedMaxPollIntervalMs: 900_000,
     });
 
-    expect(sleepCalls.slice(-4)).toEqual([640_000, 900_000, 900_000, 900_000]);
+    expect(sleepCalls).toEqual(Array(10).fill(900_000));
   });
 });

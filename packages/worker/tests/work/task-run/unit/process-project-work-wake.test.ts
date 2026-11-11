@@ -178,11 +178,11 @@ describe("push wake-up during idle sleep", () => {
     await expectStopped(processProjectWork(connectedInput, deps));
 
     expect(sleepCalls).toEqual([
-      200,
-      400, // above maxPollIntervalMs: allowed while connected
-      800, // disconnected 120 ms in
+      1_000, // connected: straight to the connected interval
+      1_000,
+      1_000, // disconnected 120 ms in
       180, // remainder of the 300 ms normal ceiling; reconnect wakes it
-      200, // backoff restarted after the reconnect's claim
+      1_000, // connected again after the reconnect's empty claim
     ]);
     expect(claimTaskRuns).toHaveBeenCalledTimes(5);
   });
@@ -234,7 +234,7 @@ describe("push wake-up during idle sleep", () => {
 
     await expectStopped(processProjectWork(connectedInput, deps));
 
-    expect(sleepCalls).toEqual([800, 400]);
+    expect(sleepCalls).toEqual([1_000, 400]);
     expect(claimTaskRuns).toHaveBeenCalledTimes(3);
   });
 

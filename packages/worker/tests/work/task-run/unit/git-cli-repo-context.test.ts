@@ -5,7 +5,7 @@
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { RepoContextCommitUnavailableError } from "../../../../src/work/task-run/application/repo-context-commit-unavailable-error";
 import { GitCliRepoContext } from "../../../../src/work/task-run/infra/git-cli-repo-context";
 import {
@@ -13,6 +13,8 @@ import {
   writeRepoFile,
 } from "../../../runtime/runtime-service/unit/git-test-fixtures";
 import { rejectionOf } from "./helpers/orchestrator-launch-fakes";
+
+setDefaultTimeout(15_000);
 
 const roots: string[] = [];
 
