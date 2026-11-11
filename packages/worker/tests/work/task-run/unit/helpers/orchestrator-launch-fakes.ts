@@ -48,6 +48,7 @@ import type {
   DetectSubmodulesInput,
   SubmoduleService,
 } from "../../../../../src/runtime/runtime-service/application/submodule-service";
+import { FakeRepoContextGit } from "./fake-repo-context-git";
 import type { SubmoduleInfo } from "../../../../../src/runtime/runtime-service/domain/submodules";
 import type {
   ProvisionedWorkspace,
@@ -314,6 +315,8 @@ export class FakeOpencodeBootstrap extends DevcontainerOpencodeBootstrap {
  * Recording git credential relay opener. Never listens; `stop` is recorded so
  * tests can assert the session is torn down.
  */
+export { FakeRepoContextGit };
+
 export class FakeGitCredentialRelayOpener {
   openInputs: OpenGitCredentialRelaySessionInput[] = [];
   stopCalls = 0;
@@ -349,6 +352,7 @@ export type OrchestratorFakeDeps = {
   workspaceManager: FakeWorkspaceManager;
   gitCloneService: FakeGitCloneService;
   gitCommitPushService: FakeGitCommitPushService;
+  repoContextGit: FakeRepoContextGit;
   submoduleService: FakeSubmoduleService;
   devcontainerLauncher: FakeDevcontainerLauncher;
   payloadProvisioner: FakePayloadProvisioner;
@@ -373,6 +377,7 @@ export function buildOrchestratorFakeDeps(input: {
   providerOutputDir: string;
   log: CallLog;
   gitCommitPushService?: FakeGitCommitPushService;
+  repoContextGit?: FakeRepoContextGit;
   submoduleService?: FakeSubmoduleService;
 }): OrchestratorFakeDeps {
   const providerEnv = envFrom({
@@ -386,6 +391,7 @@ export function buildOrchestratorFakeDeps(input: {
     gitCloneService: new FakeGitCloneService(input.log),
     gitCommitPushService:
       input.gitCommitPushService ?? new FakeGitCommitPushService(),
+    repoContextGit: input.repoContextGit ?? new FakeRepoContextGit(input.log),
     submoduleService: input.submoduleService ?? new FakeSubmoduleService(),
     devcontainerLauncher: new FakeDevcontainerLauncher(input.log),
     payloadProvisioner: new FakePayloadProvisioner(input.log),

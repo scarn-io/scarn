@@ -4,6 +4,7 @@ import { monitorStartedClaimedTaskRun } from "./process-project-work-monitor";
 import { startProcessClaimedTaskRun } from "./process-claimed-task-run";
 import { resolveProjectWorkLogger } from "./process-project-work-logger";
 import { TaskLogStreaming } from "./start-task-log-streaming";
+import { TaskRunCancelledError } from "./task-run-cancelled-error";
 import type {
   ProcessProjectWorkDeps,
   ProcessProjectWorkInput,
@@ -107,7 +108,7 @@ export function scheduleClaimedTaskRunJob(
         input,
         streamingDeps,
         tracker,
-        startedTask,
+        { ...startedTask, isCancelled: () => heartbeat.isCancelled() },
         heartbeat,
         logStream,
       );
@@ -120,7 +121,9 @@ export function scheduleClaimedTaskRunJob(
       // AWS errors, etc.) reaches the API while the step is still "running"
       // and assertClaimOwnership will accept the appends.
       await logStream.stop();
-      if (executionError !== undefined) {
+      if (executionError instanceof TaskRunCancelledError) {
+        await heartbeat.stop();
+      } else if (executionError !== undefined) {
         // The heartbeat runs until the failure is reported: runtime cleanup
         // can outlast the lease, and a lapsed lease would replace the real
         // error with "abandoned".

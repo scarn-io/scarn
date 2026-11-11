@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { describe, expect, test, vi } from "bun:test";
 import { captureRejection } from "../../../support/capture-rejection";
+import { createWorkerClient } from "./helpers/claimed-task-fixtures";
 import { parseUuidV7 } from "../../../../src/common/contracts/uuid-v7";
 import {
   buildCurrentExecutionInfoPath,
@@ -93,21 +94,7 @@ function createDeps(
   completeTaskRun: ProcessProjectWorkDeps["workerClient"]["completeTaskRun"],
 ): ProcessProjectWorkDeps {
   return {
-    workerClient: {
-      userId: parseUuidV7("01966a2c-9494-7db5-aa46-0f8f5cbbe004"),
-      claimTaskRuns: vi.fn(),
-      heartbeatTaskRun: vi.fn(),
-      failTaskRun: vi.fn(),
-      completeTaskRun,
-      yieldTaskRun: vi.fn(),
-      appendTaskLogs: vi.fn(() => Promise.resolve({ nextOffset: 0 })),
-      getTaskRun: vi.fn(),
-      getTaskRunWorkerContext: vi.fn(),
-      createArtifactUploadUrl: vi.fn(),
-      createSessionUploadUrl: vi.fn(),
-      recordArtifact: vi.fn(),
-      recordArtifactFailure: vi.fn(),
-    },
+    workerClient: { ...createWorkerClient(), completeTaskRun },
     createRunTracker: vi.fn(),
     runtimeEnvironmentOrchestrator: {
       launch: vi.fn(),

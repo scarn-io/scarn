@@ -28,7 +28,7 @@ async function prepareYield(input: YieldInput, logMessage: string) {
   const pushOutcome = await startedTask.environment.commitAndPushWorkBranch?.({
     yielded: true,
   });
-  const sessionObjectKey = await saveAgentSession({
+  const session = await saveAgentSession({
     deps,
     startedTask,
     server: input.server,
@@ -44,7 +44,8 @@ async function prepareYield(input: YieldInput, logMessage: string) {
     workBranch:
       pushOutcome?.pushed === false ? null : startedTask.environment.workBranch,
     createdFromBranch: startedTask.environment.createdFromBranch,
-    sessionObjectKey,
+    sessionObjectKey: session?.objectKey ?? null,
+    sessionSizeBytes: session?.sizeBytes ?? null,
     sessionRestored: startedTask.sessionRestored ?? null,
   };
 }

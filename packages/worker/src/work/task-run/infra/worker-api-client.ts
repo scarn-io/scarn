@@ -15,9 +15,7 @@ type TaskPlaneClient = Pick<
 /**
  * Adapts the plane client's log reads to `@scarn/shared-core`'s
  * {@link TaskLogsClient}. The plane client already sends the bearer token, so
- * the per-call `headers` that interface carries are ignored. The cast covers
- * the generated SDK typing nullable fields as `T | unknown` (see
- * `InvestigateExecutionClient`); the runtime shapes match.
+ * the per-call `headers` that interface carries are ignored.
  */
 export function toTaskLogsClient(planeClient: TaskPlaneClient): TaskLogsClient {
   return {
@@ -32,7 +30,7 @@ export function toTaskLogsClient(planeClient: TaskPlaneClient): TaskLogsClient {
         query: { from: number; limit: number };
       }) => planeClient.readTaskLogs({ taskRunId: path.taskRunId, ...query }),
     },
-  } as unknown as TaskLogsClient;
+  };
 }
 
 /**
@@ -82,6 +80,8 @@ export async function createTaskPlaneWorkerClient(
       (await planeClient.getTaskRunWorkerContext(
         input,
       )) as TaskRunWorkerContextContract,
+    reportTaskRunBaseCommit: async (input) =>
+      await planeClient.reportTaskRunBaseCommit(input),
     loadTaskLogLines: buildLoadTaskLogLines(planeClient),
     readTaskRunWorkItem: async (input) =>
       await planeClient.readTaskRunWorkItem(input),

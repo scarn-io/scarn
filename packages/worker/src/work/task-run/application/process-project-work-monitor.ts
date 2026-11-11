@@ -26,6 +26,8 @@ import {
   handleMissingFindings,
 } from "./process-project-work-monitor-helpers";
 import { runTurnEnd, type TurnEndState } from "./process-project-work-turn-end";
+import { collectStepArtifactsOnFailure } from "./collect-step-artifacts-on-failure";
+import { TaskRunCancelledError } from "./task-run-cancelled-error";
 import type { AnyJsonValue } from "../../../common/contracts/json";
 
 // eslint-disable-next-line local/no-unknown-parameter-type
@@ -167,6 +169,9 @@ export async function monitorStartedClaimedTaskRun(
     const agentContext = resolveMonitorAgentContext(startedTask);
 
     for (;;) {
+      if (startedTask.isCancelled?.()) {
+        throw new TaskRunCancelledError(startedTask.taskRunId);
+      }
       const healthSnapshot =
         await startedTask.environment.checkContainerHealth?.();
       if (healthSnapshot) {
@@ -429,33 +434,9 @@ export async function monitorStartedClaimedTaskRun(
         error,
       });
     }
-    // Collect artifacts while the step is still "running": the server-side
-    // failTaskRun happens LATER in the caller's finally (after
-    // logStream.stop()), so uploads are still accepted here. Best-effort — a
-    // collection error is logged/swallowed so it never replaces the original
-    // error thrown below. Guard is idempotent against the success-path latch;
-    // eslint can't see the `true` write in the async onBeforeComplete closure.
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- intentional idempotency guard; latch is written in an async closure TS flow analysis can't track
-    if (!hasCollectedArtifacts) {
-      try {
-        await collectStepArtifacts(deps, startedTask, logger);
-        hasCollectedArtifacts = true;
-      } catch (collectionError) {
-        logger.error(
-          "worker",
-          "Failed to collect step artifacts on failure path",
-          {
-            taskRunId: startedTask.taskRunId,
-            error: collectionError,
-          },
-        );
-      }
-      // Ship the artifact log lines while the step is still "running". The
-      // caller's finally logStream.stop() also flushes while running on the
-      // failure path (failTaskRun runs after it), so this is
-      // belt-and-suspenders for deterministic, symmetric behaviour. Non-throwing
-      // per the shipper contract, so it can't mask the original error re-thrown below.
-      await logStream.flush();
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- latch is written in an async closure TS flow analysis can't track
+    if (!hasCollectedArtifacts && !(error instanceof TaskRunCancelledError)) {
+      await collectStepArtifactsOnFailure(deps, startedTask, logger, logStream);
     }
     // failClaimedTaskRunIfStillRunning is intentionally NOT called here. The
     // log shipper's final flush must complete before the step is marked

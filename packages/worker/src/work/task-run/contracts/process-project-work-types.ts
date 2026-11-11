@@ -26,6 +26,9 @@ import type {
 } from "../application/resolve-step-env";
 import type { WorkReporter } from "./work-reporter";
 import type { OpencodeServerHandle } from "../../../runtime/runtime-service/infra/opencode-server-contract";
+import type { RepoContextLaunchInput } from "./repo-context-launch-input";
+
+export type { RepoContextLaunchInput };
 
 export type { OpencodeServerHandle };
 
@@ -139,6 +142,16 @@ export type TaskRunWorkerClient = {
     leaseDurationSeconds: number;
     workItemId?: string | undefined;
   }): Promise<TaskRunWorkerClaim[]>;
+  /**
+   * Pins a chat run's commit, and its branch when the run has none. The
+   * first report wins; returns the stored values, which the run must use.
+   */
+  reportTaskRunBaseCommit(input: {
+    taskRunId: UuidV7;
+    claimToken: string;
+    baseCommit: string;
+    baseBranch?: string | undefined;
+  }): Promise<{ baseCommit: string; baseBranch: string | null }>;
   heartbeatTaskRun(input: {
     taskRunId: UuidV7;
     claimToken: string;
@@ -180,7 +193,8 @@ export type TaskRunWorkerClient = {
    * (already masked). The work branch fields follow the same rules as
    * {@link completeTaskRun}. `sessionObjectKey` is the key the exported
    * OpenCode session was uploaded to (see {@link createSessionUploadUrl}),
-   * null when the export or upload failed.
+   * null when the export or upload failed. `sessionSizeBytes` is the size of
+   * the uploaded body, null without a session.
    */
   yieldTaskRun(input: {
     taskRunId: UuidV7;
@@ -188,6 +202,7 @@ export type TaskRunWorkerClient = {
     workBranch: string | null;
     createdFromBranch: string | null;
     sessionObjectKey: string | null;
+    sessionSizeBytes: number | null;
     sessionRestored: boolean | null;
     message: string;
   }): Promise<void>;
@@ -539,6 +554,13 @@ export type TaskRuntimeEnvironmentOrchestrator = {
      */
     previousRun?: PreviousRunFilesInput | undefined;
     /**
+     * Set for a chat run: the workspace is parked detached on the pinned
+     * commit instead of a branch, and {@link baseWorkBranch} /
+     * {@link sourceBranch} are ignored. Only the workspace orchestrator
+     * supports it.
+     */
+    repoContext?: RepoContextLaunchInput | undefined;
+    /**
      * Receives timing lines for the clone (mirror refresh, local clone,
      * fallback) and the work-branch preparation at info level. Set from the
      * step's tee logger so they reach the shipped step log.
@@ -662,6 +684,11 @@ export type StartedClaimedTask = {
    */
   sessionRestored?: boolean | null | undefined;
   environment: TaskRuntimeEnvironment;
+  /**
+   * True once the server said the run is gone or the claim was revoked (see
+   * `TaskRunCancelledError`). Absent means never cancelled.
+   */
+  isCancelled?: (() => boolean) | undefined;
 };
 
 export type TaskRunTracker = {

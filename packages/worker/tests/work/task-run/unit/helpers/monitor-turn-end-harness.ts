@@ -145,6 +145,7 @@ export function createHarness(
       userId: parseUuidV7("01966a2c-9494-7db5-aa46-0f8f5cbbe004"),
       claimTaskRuns: vi.fn(),
       heartbeatTaskRun: vi.fn(),
+      reportTaskRunBaseCommit: vi.fn(),
       failTaskRun: vi.fn(() => Promise.resolve(undefined)),
       completeTaskRun,
       yieldTaskRun,

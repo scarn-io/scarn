@@ -8,6 +8,7 @@ import { resolveBaseWorkBranch } from "./process-claimed-task-run-helpers";
 import type { McpEnvRef, ResolvedStepEnv } from "./resolve-step-env";
 import type {
   ProcessProjectWorkDeps,
+  RepoContextLaunchInput,
   TaskRunWorkerClaim,
   TaskRunWorkerClient,
 } from "../contracts/process-project-work-types";
@@ -109,6 +110,12 @@ export async function launchRuntimeEnvironment(
       `Step "${input.workerContext.task.key}" does not use an agent but has execution mode no_workspace; no_workspace steps run OpenCode on the host and require an agent.`,
     );
   }
+  const repoContext = buildRepoContextLaunchInput(deps.workerClient, input);
+  if (repoContext && executionMode === "no_workspace") {
+    throw new Error(
+      "A conversation run needs a workspace to check out the repository; execution mode no_workspace is not supported.",
+    );
+  }
   const orchestrator = resolveRuntimeEnvironmentOrchestrator(
     deps,
     executionMode,
@@ -121,8 +128,11 @@ export async function launchRuntimeEnvironment(
     gitUrl: input.workerContext.gitUrl,
     claimToken: input.claimToken,
     onSecretValues: input.onSecretValues,
-    baseWorkBranch: resolveBaseWorkBranch(input.workerContext.baseWorkBranch),
-    sourceBranch: input.sourceBranch,
+    baseWorkBranch: repoContext
+      ? null
+      : resolveBaseWorkBranch(input.workerContext.baseWorkBranch),
+    sourceBranch: repoContext ? null : input.sourceBranch,
+    repoContext,
     stepKey: input.workerContext.task.key,
     opencodeMcpJson: input.workerContext.runtime.opencodeMcpJson,
     // The step prompt is delivered solely as the user message via promptAsync
@@ -177,6 +187,34 @@ export async function launchRuntimeEnvironment(
     ),
     logger: deps.logger,
   });
+}
+
+/**
+ * A chat run's commit pin: the stored commit, or (on its first run) a
+ * reporter that pins a resolved commit through the claim-authenticated
+ * endpoint and hands back the stored value. Undefined for non-chat runs.
+ */
+function buildRepoContextLaunchInput(
+  client: TaskRunWorkerClient,
+  input: {
+    claimToken: string;
+    workerContext: TaskRunWorkerContextContract;
+  },
+): RepoContextLaunchInput | undefined {
+  const { task, baseCommit } = input.workerContext;
+  if (!task.conversationId) return undefined;
+  return {
+    baseCommit: baseCommit ?? null,
+    pinBaseCommit: async (pin) => {
+      const stored = await client.reportTaskRunBaseCommit({
+        taskRunId: parseUuidV7(task.id),
+        claimToken: input.claimToken,
+        baseCommit: pin.baseCommit,
+        baseBranch: pin.baseBranch,
+      });
+      return stored.baseCommit;
+    },
+  };
 }
 
 /**

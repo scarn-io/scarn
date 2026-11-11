@@ -27,6 +27,7 @@ import type { ProviderAccessResolver } from "../contracts/agent-runtime/provider
 import type { RuntimeConfigMaterializer } from "../contracts/agent-runtime/runtime-config-materializer";
 import { DirectProviderAccessResolver } from "./provider-access/direct-provider-access-resolver";
 import { SessionRuntimeConfigMaterializer } from "./provider-access/session-runtime-config-materializer";
+import { GitCliRepoContext, type RepoContextGit } from "./git-cli-repo-context";
 
 export type LocalProjectRuntimeEnvironmentDeps = {
   workspaceManager: WorkspaceManager;
@@ -38,6 +39,8 @@ export type LocalProjectRuntimeEnvironmentDeps = {
    */
   gitCacheDir?: string | null | undefined;
   gitCommitPushService: GitCommitPushService;
+  /** Parks a chat run's clone on its pinned commit. */
+  repoContextGit: RepoContextGit;
   submoduleService: SubmoduleService;
   devcontainerLauncher: DevcontainerLauncher;
   // Scarn-managed OpenCode runtime payload + in-devcontainer bootstrap +
@@ -77,6 +80,7 @@ export function buildLocalProjectRuntimeDeps(
     gitCloneService,
     gitCacheDir: cacheDir,
     gitCommitPushService: new GitCliCommitPushService(logger),
+    repoContextGit: new GitCliRepoContext(),
     submoduleService: new GitCliSubmoduleService(logger),
     devcontainerLauncher: new DevcontainerCliLauncher(),
     payloadProvisioner: new OpencodeRuntimePayloadProvisioner(),

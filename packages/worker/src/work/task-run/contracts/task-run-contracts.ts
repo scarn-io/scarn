@@ -39,6 +39,11 @@ export type TaskRunWorkerContextContract = {
    * off the repo-local configured base branch or the cloned default.
    */
   baseWorkBranch?: string | null;
+  /**
+   * The full commit this run checks out, pinned the first time a chat ran.
+   * Null until pinned, and for runs that don't pin.
+   */
+  baseCommit?: string | null;
   projectOpencodeConfig: {
     relativePath: string;
     present: boolean;
@@ -82,6 +87,8 @@ export type TaskRunWorkerContextContract = {
     /** How many more turns the agent may hand to a person; null outside a pipeline run. */
     turnsRemaining?: number | null;
     workItemId?: string;
+    /** A chat's (repo conversation's) conversation; null for any other Task. */
+    conversationId?: string | null;
     /** What the agent's work item tools may do, and to which work items. */
     grants: Grant[];
   };

@@ -1,5 +1,6 @@
 import { describe, expect, test, vi } from "bun:test";
 import { monitorStartedClaimedTaskRun } from "../../../../src/work/task-run/application/process-project-work-monitor";
+import { TaskRunCancelledError } from "../../../../src/work/task-run/application/task-run-cancelled-error";
 import { captureRejection } from "../../../support/capture-rejection";
 import {
   createHarness,
@@ -10,7 +11,7 @@ import {
   writeExecutionInfo,
 } from "./helpers/monitor-turn-end-harness";
 
-async function setUp(input: { conversation: boolean }) {
+async function setUp(input: { conversation: boolean; cancelled?: boolean }) {
   const workspacePath = await createWorkspace();
   await writeExecutionInfo(workspacePath, {
     conversation: input.conversation,
@@ -19,6 +20,7 @@ async function setUp(input: { conversation: boolean }) {
   const startedTask = createStartedTask(workspacePath, () =>
     Promise.resolve({ pushed: true }),
   );
+  if (input.cancelled) startedTask.isCancelled = () => true;
   const harness = createHarness(startedTask, { finalText: "Done." });
   const order: string[] = [];
   const heartbeat = {
@@ -40,7 +42,7 @@ async function setUp(input: { conversation: boolean }) {
       heartbeat,
       harness.logStream,
     );
-  return { heartbeat, order, run };
+  return { heartbeat, order, run, harness };
 }
 
 describe("monitorStartedClaimedTaskRun — heartbeat", () => {
@@ -65,6 +67,28 @@ describe("monitorStartedClaimedTaskRun — heartbeat", () => {
       expect(failure.message).toMatch(/without findings submission/);
       expect(heartbeat.stop).not.toHaveBeenCalled();
       expect(order).toEqual(["cleanup"]);
+    },
+  );
+
+  test.concurrent(
+    "stops the agent and writes nothing once the run is cancelled",
+    async () => {
+      const { order, run, harness } = await setUp({
+        conversation: true,
+        cancelled: true,
+      });
+
+      const failure = await captureRejection(run());
+
+      expect(failure).toBeInstanceOf(TaskRunCancelledError);
+      expect(order).toEqual(["cleanup"]);
+      const { workerClient } = harness.deps;
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(workerClient.getTaskRun).not.toHaveBeenCalled();
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(workerClient.yieldTaskRun).not.toHaveBeenCalled();
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(workerClient.createSessionUploadUrl).not.toHaveBeenCalled();
     },
   );
 });

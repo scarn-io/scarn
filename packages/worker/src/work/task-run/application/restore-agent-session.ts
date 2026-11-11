@@ -32,7 +32,7 @@ export function buildRestoredPromptText(input: {
   }
   return (
     `Your workspace moved from \`${input.exportedDirectory}\` to ` +
-    `\`${input.workspaceFolder}\`; the files are the same as when you asked.\n\n` +
+    `\`${input.workspaceFolder}\`. It is a fresh checkout: files you changed but didn't commit and any runtime state from before are gone.\n\n` +
     input.message
   );
 }

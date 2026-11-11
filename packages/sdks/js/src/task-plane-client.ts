@@ -5,6 +5,7 @@ import type {
   PostApiTaskRunsByTaskRunIdArtifactFailuresData,
   PostApiTaskRunsByTaskRunIdArtifactUploadUrlData,
   PostApiTaskRunsByTaskRunIdArtifactsData,
+  PostApiTaskRunsByTaskRunIdBaseCommitData,
   PostApiTaskRunsByTaskRunIdCompletionsData,
   PostApiTaskRunsByTaskRunIdLogsData,
   PostApiTaskRunsByTaskRunIdSessionUploadUrlData,
@@ -66,6 +67,14 @@ const buildTaskPlaneClient = (taskRuns: TaskRuns) => {
     }: TaskRunRef & { claimToken: string }) =>
       unwrap(
         await taskRuns.getTaskRunWorkerContext({ path: { taskRunId }, body }),
+      ),
+    /** Pins the run's commit (first report wins); returns the stored values. */
+    reportTaskRunBaseCommit: async ({
+      taskRunId,
+      ...body
+    }: TaskRunRef & PostApiTaskRunsByTaskRunIdBaseCommitData["body"]) =>
+      unwrap(
+        await taskRuns.reportTaskRunBaseCommit({ path: { taskRunId }, body }),
       ),
     readTaskRunWorkItem: async ({
       taskRunId,

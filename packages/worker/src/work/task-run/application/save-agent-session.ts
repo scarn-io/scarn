@@ -1,8 +1,9 @@
 /**
  * Saves a yielding Task's agent session so the Task that answers can restore
  * it: exports the OpenCode session, masks secrets in it like any other log
- * output, and uploads it to the presigned URL the API mints. Best-effort: a
- * failure is logged and resolves null, and the Task yields without a session
+ * output, and uploads it to the presigned URL the API mints. Resolves the
+ * object key and the uploaded size, which the yield reports so the API can
+ * meter it. Best-effort: a failure is logged and resolves null, and the Task yields without a session
  * (the answer then starts a fresh session from the transcript).
  */
 import type {
@@ -14,6 +15,8 @@ import type {
 
 const SESSION_CONTENT_TYPE = "application/json";
 
+export type SavedAgentSession = { objectKey: string; sizeBytes: number };
+
 export async function saveAgentSession(input: {
   deps: ProcessProjectWorkDeps;
   startedTask: StartedClaimedTask;
@@ -22,10 +25,18 @@ export async function saveAgentSession(input: {
   mask(text: string): string;
   logger: ProjectWorkLogger;
   fetchImpl?: typeof fetch | undefined;
-}): Promise<string | null> {
+}): Promise<SavedAgentSession | null> {
   const { deps, startedTask, logger } = input;
   const exportSession = deps.agentRunner.exportSession?.bind(deps.agentRunner);
   if (!exportSession) return null;
+  if (startedTask.isCancelled?.()) {
+    logger.log(
+      "worker",
+      "Task run was cancelled; skipping the agent session export",
+      { taskRunId: startedTask.taskRunId },
+    );
+    return null;
+  }
   try {
     const exported = await exportSession({
       server: input.server,
@@ -56,7 +67,7 @@ export async function saveAgentSession(input: {
       taskRunId: startedTask.taskRunId,
       sizeBytes: body.byteLength,
     });
-    return objectKey;
+    return { objectKey, sizeBytes: body.byteLength };
   } catch (error) {
     logger.error(
       "worker",

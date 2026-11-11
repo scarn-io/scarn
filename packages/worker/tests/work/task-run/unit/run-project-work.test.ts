@@ -92,6 +92,7 @@ function createWorkerClient(
     userId,
     claimTaskRuns,
     heartbeatTaskRun,
+    reportTaskRunBaseCommit: vi.fn(),
     failTaskRun,
     completeTaskRun,
     yieldTaskRun: vi.fn(() => Promise.resolve(undefined)),

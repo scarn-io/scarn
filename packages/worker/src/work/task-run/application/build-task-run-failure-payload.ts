@@ -3,6 +3,11 @@ import {
   HEALTH_CHECK_FAILED_ERROR_NAME,
   HealthCheckFailedError,
 } from "./health-check-failed-error";
+import {
+  REPO_CONTEXT_COMMIT_UNAVAILABLE_ERROR_CODE,
+  REPO_CONTEXT_COMMIT_UNAVAILABLE_ERROR_NAME,
+  RepoContextCommitUnavailableError,
+} from "./repo-context-commit-unavailable-error";
 
 const WORKER_EXECUTION_FAILED_ERROR_CODE = "SCARN_WORKER_EXECUTION_FAILED";
 const STEP_FAILED_ERROR_NAME = "Scarn.StepFailed";
@@ -38,22 +43,36 @@ function toFailureMessage(error: TaskRunFailureInputError): string {
   return "Unknown failure";
 }
 
-export function buildTaskRunFailurePayload(error: TaskRunFailureInputError) {
-  const message = toFailureMessage(error);
-  const healthCheck = error instanceof HealthCheckFailedError;
+function failureIdentity(error: TaskRunFailureInputError): {
+  name: string;
+  code: string;
+} {
+  if (error instanceof HealthCheckFailedError) {
+    return {
+      name: HEALTH_CHECK_FAILED_ERROR_NAME,
+      code: HEALTH_CHECK_FAILED_ERROR_CODE,
+    };
+  }
+  if (error instanceof RepoContextCommitUnavailableError) {
+    return {
+      name: REPO_CONTEXT_COMMIT_UNAVAILABLE_ERROR_NAME,
+      code: REPO_CONTEXT_COMMIT_UNAVAILABLE_ERROR_CODE,
+    };
+  }
+  return {
+    name: STEP_FAILED_ERROR_NAME,
+    code: WORKER_EXECUTION_FAILED_ERROR_CODE,
+  };
+}
 
+export function buildTaskRunFailurePayload(error: TaskRunFailureInputError) {
   return {
     resultJson: {
       status: "failed",
     },
     errorJson: {
-      name: healthCheck
-        ? HEALTH_CHECK_FAILED_ERROR_NAME
-        : STEP_FAILED_ERROR_NAME,
-      code: healthCheck
-        ? HEALTH_CHECK_FAILED_ERROR_CODE
-        : WORKER_EXECUTION_FAILED_ERROR_CODE,
-      message,
+      ...failureIdentity(error),
+      message: toFailureMessage(error),
     },
   };
 }

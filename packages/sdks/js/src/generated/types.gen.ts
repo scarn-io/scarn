@@ -3354,7 +3354,7 @@ export type PostApiTasksResponses = {
         task: {
             id: string;
             projectId: string;
-            workItemId: string;
+            workItemId: string | null;
             stepDefinitionId: string | null;
             kind: 'agent' | 'code';
             name: string | null;
@@ -3409,12 +3409,13 @@ export type PostApiTasksResponses = {
             number: number;
             reason: 'initial' | 'retry' | 'continuation';
             projectId: string;
-            workItemId: string;
+            workItemId: string | null;
             taskExecutionConfigId: string | null;
             name: string | null;
             kind: 'agent' | 'code';
             previousTaskRunId: string | null;
             baseBranch: string | null;
+            baseCommit: string | null;
             heartbeatSeconds: number | null;
             status: 'pending' | 'queued' | 'running' | 'succeeded' | 'failed' | 'timeout' | 'abandoned' | 'cancelled' | 'skipped' | 'yielded';
             inputJson: unknown | null;
@@ -3817,7 +3818,7 @@ export type GetApiTasksByTaskIdResponses = {
     200: {
         id: string;
         projectId: string;
-        workItemId: string;
+        workItemId: string | null;
         stepDefinitionId: string | null;
         kind: 'agent' | 'code';
         name: string | null;
@@ -3875,7 +3876,11 @@ export type GetApiTasksByTaskIdResponses = {
             id: string;
             platformKey: string;
             title: string;
-        };
+        } | null;
+        repoConversation: {
+            id: string;
+            title: string;
+        } | null;
         startedBy: {
             userId: string;
             username: string | null;
@@ -4020,12 +4025,13 @@ export type GetApiTasksByTaskIdRunsResponses = {
         number: number;
         reason: 'initial' | 'retry' | 'continuation';
         projectId: string;
-        workItemId: string;
+        workItemId: string | null;
         taskExecutionConfigId: string | null;
         name: string | null;
         kind: 'agent' | 'code';
         previousTaskRunId: string | null;
         baseBranch: string | null;
+        baseCommit: string | null;
         heartbeatSeconds: number | null;
         status: 'pending' | 'queued' | 'running' | 'succeeded' | 'failed' | 'timeout' | 'abandoned' | 'cancelled' | 'skipped' | 'yielded';
         inputJson: unknown | null;
@@ -4061,6 +4067,7 @@ export type GetApiProjectsByProjectIdTasksData = {
         startedByMe?: boolean | string;
         workItemId?: string | Array<string>;
         latestPerWorkItem?: boolean | string;
+        excludeEndedChats?: boolean | string;
         limit?: number;
         before?: string;
     };
@@ -4200,7 +4207,11 @@ export type GetApiProjectsByProjectIdTasksResponses = {
                 id: string;
                 platformKey: string;
                 title: string;
-            };
+            } | null;
+            repoConversation: {
+                id: string;
+                title: string;
+            } | null;
             startedBy: {
                 userId: string;
                 username: string | null;
@@ -4355,12 +4366,13 @@ export type PostApiTaskRunsClaimsResponses = {
             number: number;
             reason: 'initial' | 'retry' | 'continuation';
             projectId: string;
-            workItemId: string;
+            workItemId: string | null;
             taskExecutionConfigId: string | null;
             name: string | null;
             kind: 'agent' | 'code';
             previousTaskRunId: string | null;
             baseBranch: string | null;
+            baseCommit: string | null;
             heartbeatSeconds: number | null;
             status: 'pending' | 'queued' | 'running' | 'succeeded' | 'failed' | 'timeout' | 'abandoned' | 'cancelled' | 'skipped' | 'yielded';
             inputJson: unknown | null;
@@ -4527,12 +4539,13 @@ export type PutApiTaskRunsByTaskRunIdHeartbeatResponses = {
         number: number;
         reason: 'initial' | 'retry' | 'continuation';
         projectId: string;
-        workItemId: string;
+        workItemId: string | null;
         taskExecutionConfigId: string | null;
         name: string | null;
         kind: 'agent' | 'code';
         previousTaskRunId: string | null;
         baseBranch: string | null;
+        baseCommit: string | null;
         heartbeatSeconds: number | null;
         status: 'pending' | 'queued' | 'running' | 'succeeded' | 'failed' | 'timeout' | 'abandoned' | 'cancelled' | 'skipped' | 'yielded';
         inputJson: unknown | null;
@@ -4555,6 +4568,169 @@ export type PutApiTaskRunsByTaskRunIdHeartbeatResponses = {
 };
 
 export type PutApiTaskRunsByTaskRunIdHeartbeatResponse = PutApiTaskRunsByTaskRunIdHeartbeatResponses[keyof PutApiTaskRunsByTaskRunIdHeartbeatResponses];
+
+export type PostApiTaskRunsByTaskRunIdBaseCommitData = {
+    body: {
+        claimToken: string;
+        baseCommit: string;
+        baseBranch?: string;
+    };
+    path: {
+        taskRunId: string;
+    };
+    query?: never;
+    url: '/api/task-runs/{taskRunId}/base-commit';
+};
+
+export type PostApiTaskRunsByTaskRunIdBaseCommitErrors = {
+    /**
+     * Response for status 400
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 404
+     */
+    404: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 409
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type PostApiTaskRunsByTaskRunIdBaseCommitError = PostApiTaskRunsByTaskRunIdBaseCommitErrors[keyof PostApiTaskRunsByTaskRunIdBaseCommitErrors];
+
+export type PostApiTaskRunsByTaskRunIdBaseCommitResponses = {
+    /**
+     * Response for status 200
+     */
+    200: {
+        baseCommit: string;
+        baseBranch: string | null;
+    };
+};
+
+export type PostApiTaskRunsByTaskRunIdBaseCommitResponse = PostApiTaskRunsByTaskRunIdBaseCommitResponses[keyof PostApiTaskRunsByTaskRunIdBaseCommitResponses];
 
 export type PostApiTaskRunsByTaskRunIdWorkerContextData = {
     body: {
@@ -4695,6 +4871,7 @@ export type PostApiTaskRunsByTaskRunIdWorkerContextResponses = {
         projectPath: string | null;
         gitUrl: string;
         baseWorkBranch: string | null;
+        baseCommit: string | null;
         projectOpencodeConfig: {
             relativePath: string;
             present: boolean;
@@ -4732,7 +4909,8 @@ export type PostApiTaskRunsByTaskRunIdWorkerContextResponses = {
                 [key: string]: unknown;
             } | null;
             turnsRemaining: number | null;
-            workItemId: string;
+            workItemId: string | null;
+            conversationId: string | null;
             grants: Array<{
                 resource: 'workItem';
                 action: 'read';
@@ -5060,12 +5238,13 @@ export type PostApiTaskRunsByTaskRunIdCompletionsResponses = {
         number: number;
         reason: 'initial' | 'retry' | 'continuation';
         projectId: string;
-        workItemId: string;
+        workItemId: string | null;
         taskExecutionConfigId: string | null;
         name: string | null;
         kind: 'agent' | 'code';
         previousTaskRunId: string | null;
         baseBranch: string | null;
+        baseCommit: string | null;
         heartbeatSeconds: number | null;
         status: 'pending' | 'queued' | 'running' | 'succeeded' | 'failed' | 'timeout' | 'abandoned' | 'cancelled' | 'skipped' | 'yielded';
         inputJson: unknown | null;
@@ -5096,6 +5275,7 @@ export type PostApiTaskRunsByTaskRunIdYieldsData = {
         workBranch?: string | null;
         createdFromBranch?: string | null;
         sessionObjectKey?: string | null;
+        sessionSizeBytes?: number | null;
         sessionRestored?: boolean | null;
     };
     path: {
@@ -5234,12 +5414,13 @@ export type PostApiTaskRunsByTaskRunIdYieldsResponses = {
         number: number;
         reason: 'initial' | 'retry' | 'continuation';
         projectId: string;
-        workItemId: string;
+        workItemId: string | null;
         taskExecutionConfigId: string | null;
         name: string | null;
         kind: 'agent' | 'code';
         previousTaskRunId: string | null;
         baseBranch: string | null;
+        baseCommit: string | null;
         heartbeatSeconds: number | null;
         status: 'pending' | 'queued' | 'running' | 'succeeded' | 'failed' | 'timeout' | 'abandoned' | 'cancelled' | 'skipped' | 'yielded';
         inputJson: unknown | null;
@@ -5382,12 +5563,13 @@ export type PutApiTaskRunsByTaskRunIdRunningResponses = {
         number: number;
         reason: 'initial' | 'retry' | 'continuation';
         projectId: string;
-        workItemId: string;
+        workItemId: string | null;
         taskExecutionConfigId: string | null;
         name: string | null;
         kind: 'agent' | 'code';
         previousTaskRunId: string | null;
         baseBranch: string | null;
+        baseCommit: string | null;
         heartbeatSeconds: number | null;
         status: 'pending' | 'queued' | 'running' | 'succeeded' | 'failed' | 'timeout' | 'abandoned' | 'cancelled' | 'skipped' | 'yielded';
         inputJson: unknown | null;
@@ -5809,12 +5991,13 @@ export type GetApiTaskRunsByTaskRunIdResponses = {
         number: number;
         reason: 'initial' | 'retry' | 'continuation';
         projectId: string;
-        workItemId: string;
+        workItemId: string | null;
         taskExecutionConfigId: string | null;
         name: string | null;
         kind: 'agent' | 'code';
         previousTaskRunId: string | null;
         baseBranch: string | null;
+        baseCommit: string | null;
         heartbeatSeconds: number | null;
         status: 'pending' | 'queued' | 'running' | 'succeeded' | 'failed' | 'timeout' | 'abandoned' | 'cancelled' | 'skipped' | 'yielded';
         inputJson: unknown | null;
@@ -5938,12 +6121,13 @@ export type GetApiTaskRunsResponses = {
         number: number;
         reason: 'initial' | 'retry' | 'continuation';
         projectId: string;
-        workItemId: string;
+        workItemId: string | null;
         taskExecutionConfigId: string | null;
         name: string | null;
         kind: 'agent' | 'code';
         previousTaskRunId: string | null;
         baseBranch: string | null;
+        baseCommit: string | null;
         heartbeatSeconds: number | null;
         status: 'pending' | 'queued' | 'running' | 'succeeded' | 'failed' | 'timeout' | 'abandoned' | 'cancelled' | 'skipped' | 'yielded';
         inputJson: unknown | null;
@@ -12595,6 +12779,141 @@ export type GetApiWorkItemsByWorkItemIdQuestionsResponses = {
 
 export type GetApiWorkItemsByWorkItemIdQuestionsResponse = GetApiWorkItemsByWorkItemIdQuestionsResponses[keyof GetApiWorkItemsByWorkItemIdQuestionsResponses];
 
+export type DeleteApiConversationsByConversationIdData = {
+    body?: never;
+    path: {
+        conversationId: string;
+    };
+    query?: never;
+    url: '/api/conversations/{conversationId}';
+};
+
+export type DeleteApiConversationsByConversationIdErrors = {
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 404
+     */
+    404: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 409
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type DeleteApiConversationsByConversationIdError = DeleteApiConversationsByConversationIdErrors[keyof DeleteApiConversationsByConversationIdErrors];
+
+export type DeleteApiConversationsByConversationIdResponses = {
+    /**
+     * Response for status 204
+     */
+    204: unknown;
+};
+
 export type GetApiConversationsByConversationIdData = {
     body?: never;
     path: {
@@ -12748,6 +13067,35 @@ export type GetApiConversationsByConversationIdResponses = {
         endsWith: 'findings' | 'conversation' | null;
         createdAt: string;
         closedAt: string | null;
+        taskId?: string;
+        creator?: {
+            userId: string;
+            username: string | null;
+            image: string | null;
+        } | null;
+        context?: {
+            kind: 'project_repo';
+            repository: string;
+            branch: string | null;
+            commit: string | null;
+            pinnedAt: string | null;
+        };
+        state?: 'queued' | 'running' | 'retry_queued' | 'waiting' | 'failed' | 'ended';
+        latestRun?: {
+            id: string;
+            status: 'pending' | 'queued' | 'running' | 'succeeded' | 'failed' | 'timeout' | 'abandoned' | 'cancelled' | 'skipped' | 'yielded';
+            reason: 'initial' | 'retry' | 'continuation';
+        } | null;
+        error?: {
+            code: string;
+            message: string;
+        } | null;
+        capabilities?: {
+            canReply: boolean;
+            canRetry: boolean;
+            canEnd: boolean;
+            canDelete: boolean;
+        };
     };
 };
 
@@ -12906,6 +13254,351 @@ export type GetApiWorkItemsByWorkItemIdConversationsResponses = {
 
 export type GetApiWorkItemsByWorkItemIdConversationsResponse = GetApiWorkItemsByWorkItemIdConversationsResponses[keyof GetApiWorkItemsByWorkItemIdConversationsResponses];
 
+export type GetApiProjectsByProjectIdConversationsData = {
+    body?: never;
+    path: {
+        projectId: string;
+    };
+    query?: {
+        before?: string;
+        limit?: number;
+    };
+    url: '/api/projects/{projectId}/conversations';
+};
+
+export type GetApiProjectsByProjectIdConversationsErrors = {
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 404
+     */
+    404: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 409
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type GetApiProjectsByProjectIdConversationsError = GetApiProjectsByProjectIdConversationsErrors[keyof GetApiProjectsByProjectIdConversationsErrors];
+
+export type GetApiProjectsByProjectIdConversationsResponses = {
+    /**
+     * Response for status 200
+     */
+    200: {
+        conversations: Array<{
+            id: string;
+            taskId: string;
+            preview: string;
+            creator: {
+                userId: string;
+                username: string | null;
+                image: string | null;
+            } | null;
+            state: 'queued' | 'running' | 'retry_queued' | 'waiting' | 'failed' | 'ended';
+            lastActivityAt: string;
+            shortCommit: string | null;
+            createdAt: string;
+        }>;
+        nextCursor: string | null;
+    };
+};
+
+export type GetApiProjectsByProjectIdConversationsResponse = GetApiProjectsByProjectIdConversationsResponses[keyof GetApiProjectsByProjectIdConversationsResponses];
+
+export type PostApiProjectsByProjectIdConversationsData = {
+    body: {
+        body: string;
+    };
+    path: {
+        projectId: string;
+    };
+    query?: never;
+    url: '/api/projects/{projectId}/conversations';
+};
+
+export type PostApiProjectsByProjectIdConversationsErrors = {
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 404
+     */
+    404: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 409
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type PostApiProjectsByProjectIdConversationsError = PostApiProjectsByProjectIdConversationsErrors[keyof PostApiProjectsByProjectIdConversationsErrors];
+
+export type PostApiProjectsByProjectIdConversationsResponses = {
+    /**
+     * Response for status 201
+     */
+    201: {
+        id: string;
+        projectId: string;
+        workItemId: string | null;
+        status: 'agent_turn' | 'waiting_for_person' | 'reply_pending' | 'closed';
+        messages: Array<{
+            id: string;
+            authorKind: 'agent' | 'person' | 'system';
+            authorName: string | null;
+            taskRunId: string | null;
+            body: string;
+            createdAt: string;
+        }>;
+        visit: {
+            pipelineExecutionId: string;
+            visitId: string;
+            nodeId: string;
+        } | null;
+        endsWith: 'findings' | 'conversation' | null;
+        createdAt: string;
+        closedAt: string | null;
+        taskId?: string;
+        creator?: {
+            userId: string;
+            username: string | null;
+            image: string | null;
+        } | null;
+        context?: {
+            kind: 'project_repo';
+            repository: string;
+            branch: string | null;
+            commit: string | null;
+            pinnedAt: string | null;
+        };
+        state?: 'queued' | 'running' | 'retry_queued' | 'waiting' | 'failed' | 'ended';
+        latestRun?: {
+            id: string;
+            status: 'pending' | 'queued' | 'running' | 'succeeded' | 'failed' | 'timeout' | 'abandoned' | 'cancelled' | 'skipped' | 'yielded';
+            reason: 'initial' | 'retry' | 'continuation';
+        } | null;
+        error?: {
+            code: string;
+            message: string;
+        } | null;
+        capabilities?: {
+            canReply: boolean;
+            canRetry: boolean;
+            canEnd: boolean;
+            canDelete: boolean;
+        };
+    };
+};
+
+export type PostApiProjectsByProjectIdConversationsResponse = PostApiProjectsByProjectIdConversationsResponses[keyof PostApiProjectsByProjectIdConversationsResponses];
+
 export type PostApiConversationsByConversationIdMessagesData = {
     body: {
         body: string;
@@ -13061,6 +13754,35 @@ export type PostApiConversationsByConversationIdMessagesResponses = {
         endsWith: 'findings' | 'conversation' | null;
         createdAt: string;
         closedAt: string | null;
+        taskId?: string;
+        creator?: {
+            userId: string;
+            username: string | null;
+            image: string | null;
+        } | null;
+        context?: {
+            kind: 'project_repo';
+            repository: string;
+            branch: string | null;
+            commit: string | null;
+            pinnedAt: string | null;
+        };
+        state?: 'queued' | 'running' | 'retry_queued' | 'waiting' | 'failed' | 'ended';
+        latestRun?: {
+            id: string;
+            status: 'pending' | 'queued' | 'running' | 'succeeded' | 'failed' | 'timeout' | 'abandoned' | 'cancelled' | 'skipped' | 'yielded';
+            reason: 'initial' | 'retry' | 'continuation';
+        } | null;
+        error?: {
+            code: string;
+            message: string;
+        } | null;
+        capabilities?: {
+            canReply: boolean;
+            canRetry: boolean;
+            canEnd: boolean;
+            canDelete: boolean;
+        };
     };
 };
 
@@ -13219,6 +13941,35 @@ export type PostApiConversationsByConversationIdContinueResponses = {
         endsWith: 'findings' | 'conversation' | null;
         createdAt: string;
         closedAt: string | null;
+        taskId?: string;
+        creator?: {
+            userId: string;
+            username: string | null;
+            image: string | null;
+        } | null;
+        context?: {
+            kind: 'project_repo';
+            repository: string;
+            branch: string | null;
+            commit: string | null;
+            pinnedAt: string | null;
+        };
+        state?: 'queued' | 'running' | 'retry_queued' | 'waiting' | 'failed' | 'ended';
+        latestRun?: {
+            id: string;
+            status: 'pending' | 'queued' | 'running' | 'succeeded' | 'failed' | 'timeout' | 'abandoned' | 'cancelled' | 'skipped' | 'yielded';
+            reason: 'initial' | 'retry' | 'continuation';
+        } | null;
+        error?: {
+            code: string;
+            message: string;
+        } | null;
+        capabilities?: {
+            canReply: boolean;
+            canRetry: boolean;
+            canEnd: boolean;
+            canDelete: boolean;
+        };
     };
 };
 
@@ -13377,10 +14128,415 @@ export type PostApiConversationsByConversationIdDoneResponses = {
         endsWith: 'findings' | 'conversation' | null;
         createdAt: string;
         closedAt: string | null;
+        taskId?: string;
+        creator?: {
+            userId: string;
+            username: string | null;
+            image: string | null;
+        } | null;
+        context?: {
+            kind: 'project_repo';
+            repository: string;
+            branch: string | null;
+            commit: string | null;
+            pinnedAt: string | null;
+        };
+        state?: 'queued' | 'running' | 'retry_queued' | 'waiting' | 'failed' | 'ended';
+        latestRun?: {
+            id: string;
+            status: 'pending' | 'queued' | 'running' | 'succeeded' | 'failed' | 'timeout' | 'abandoned' | 'cancelled' | 'skipped' | 'yielded';
+            reason: 'initial' | 'retry' | 'continuation';
+        } | null;
+        error?: {
+            code: string;
+            message: string;
+        } | null;
+        capabilities?: {
+            canReply: boolean;
+            canRetry: boolean;
+            canEnd: boolean;
+            canDelete: boolean;
+        };
     };
 };
 
 export type PostApiConversationsByConversationIdDoneResponse = PostApiConversationsByConversationIdDoneResponses[keyof PostApiConversationsByConversationIdDoneResponses];
+
+export type PostApiConversationsByConversationIdRetryData = {
+    body: {
+        expectedLatestRunId: string | null;
+    };
+    path: {
+        conversationId: string;
+    };
+    query?: never;
+    url: '/api/conversations/{conversationId}/retry';
+};
+
+export type PostApiConversationsByConversationIdRetryErrors = {
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 404
+     */
+    404: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 409
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type PostApiConversationsByConversationIdRetryError = PostApiConversationsByConversationIdRetryErrors[keyof PostApiConversationsByConversationIdRetryErrors];
+
+export type PostApiConversationsByConversationIdRetryResponses = {
+    /**
+     * Response for status 200
+     */
+    200: {
+        id: string;
+        projectId: string;
+        workItemId: string | null;
+        status: 'agent_turn' | 'waiting_for_person' | 'reply_pending' | 'closed';
+        messages: Array<{
+            id: string;
+            authorKind: 'agent' | 'person' | 'system';
+            authorName: string | null;
+            taskRunId: string | null;
+            body: string;
+            createdAt: string;
+        }>;
+        visit: {
+            pipelineExecutionId: string;
+            visitId: string;
+            nodeId: string;
+        } | null;
+        endsWith: 'findings' | 'conversation' | null;
+        createdAt: string;
+        closedAt: string | null;
+        taskId?: string;
+        creator?: {
+            userId: string;
+            username: string | null;
+            image: string | null;
+        } | null;
+        context?: {
+            kind: 'project_repo';
+            repository: string;
+            branch: string | null;
+            commit: string | null;
+            pinnedAt: string | null;
+        };
+        state?: 'queued' | 'running' | 'retry_queued' | 'waiting' | 'failed' | 'ended';
+        latestRun?: {
+            id: string;
+            status: 'pending' | 'queued' | 'running' | 'succeeded' | 'failed' | 'timeout' | 'abandoned' | 'cancelled' | 'skipped' | 'yielded';
+            reason: 'initial' | 'retry' | 'continuation';
+        } | null;
+        error?: {
+            code: string;
+            message: string;
+        } | null;
+        capabilities?: {
+            canReply: boolean;
+            canRetry: boolean;
+            canEnd: boolean;
+            canDelete: boolean;
+        };
+    };
+};
+
+export type PostApiConversationsByConversationIdRetryResponse = PostApiConversationsByConversationIdRetryResponses[keyof PostApiConversationsByConversationIdRetryResponses];
+
+export type PostApiConversationsByConversationIdEndData = {
+    body?: never;
+    path: {
+        conversationId: string;
+    };
+    query?: never;
+    url: '/api/conversations/{conversationId}/end';
+};
+
+export type PostApiConversationsByConversationIdEndErrors = {
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 404
+     */
+    404: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 409
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type PostApiConversationsByConversationIdEndError = PostApiConversationsByConversationIdEndErrors[keyof PostApiConversationsByConversationIdEndErrors];
+
+export type PostApiConversationsByConversationIdEndResponses = {
+    /**
+     * Response for status 200
+     */
+    200: {
+        id: string;
+        projectId: string;
+        workItemId: string | null;
+        status: 'agent_turn' | 'waiting_for_person' | 'reply_pending' | 'closed';
+        messages: Array<{
+            id: string;
+            authorKind: 'agent' | 'person' | 'system';
+            authorName: string | null;
+            taskRunId: string | null;
+            body: string;
+            createdAt: string;
+        }>;
+        visit: {
+            pipelineExecutionId: string;
+            visitId: string;
+            nodeId: string;
+        } | null;
+        endsWith: 'findings' | 'conversation' | null;
+        createdAt: string;
+        closedAt: string | null;
+        taskId?: string;
+        creator?: {
+            userId: string;
+            username: string | null;
+            image: string | null;
+        } | null;
+        context?: {
+            kind: 'project_repo';
+            repository: string;
+            branch: string | null;
+            commit: string | null;
+            pinnedAt: string | null;
+        };
+        state?: 'queued' | 'running' | 'retry_queued' | 'waiting' | 'failed' | 'ended';
+        latestRun?: {
+            id: string;
+            status: 'pending' | 'queued' | 'running' | 'succeeded' | 'failed' | 'timeout' | 'abandoned' | 'cancelled' | 'skipped' | 'yielded';
+            reason: 'initial' | 'retry' | 'continuation';
+        } | null;
+        error?: {
+            code: string;
+            message: string;
+        } | null;
+        capabilities?: {
+            canReply: boolean;
+            canRetry: boolean;
+            canEnd: boolean;
+            canDelete: boolean;
+        };
+    };
+};
+
+export type PostApiConversationsByConversationIdEndResponse = PostApiConversationsByConversationIdEndResponses[keyof PostApiConversationsByConversationIdEndResponses];
 
 export type DeleteApiWorkItemsByWorkItemIdData = {
     body?: never;
@@ -21560,6 +22716,7 @@ export type GetApiOrgsByOrgIdUsageResponses = {
         storageBreakdown: {
             artifactBytes: number;
             logBytes: number;
+            sessionBytes: number;
         };
         limits: {
             maxWritesPerMonth: number;

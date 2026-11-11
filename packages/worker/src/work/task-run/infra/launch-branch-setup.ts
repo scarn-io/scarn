@@ -2,7 +2,12 @@ import type { RepoConfig } from "@scarn/sdk/repo-config";
 import { loadProjectConfig } from "../../../project/project-config/infra/fs-project-config-repo";
 import type { GitCommitPushService } from "../../../runtime/runtime-service/application/git-commit-push-service";
 import { resolveConfiguredBaseWorkBranch } from "../application/process-claimed-task-run-helpers";
-import type { ProjectWorkLogger } from "../contracts/process-project-work-types";
+import type {
+  ProjectWorkLogger,
+  RepoContextLaunchInput,
+} from "../contracts/process-project-work-types";
+import type { RepoContextGit } from "./git-cli-repo-context";
+import { setUpRepoContext } from "./repo-context-setup";
 import { checkoutBaseBranch, prepareWorkBranch } from "./work-branch-manager";
 
 export type LaunchBranchSetup = {
@@ -23,6 +28,9 @@ export type LaunchBranchSetup = {
  * or pushed. The base is the server-handed predecessor branch, else the CLI's
  * source branch, else (step runs only) the repo-local configured base, else the
  * cloned default branch.
+ *
+ * A chat run (`repoContext` set) is instead parked detached on its pinned
+ * commit, with no work branch (see `setUpRepoContext`).
  */
 export async function setUpLaunchBranches(input: {
   gitCommitPushService: GitCommitPushService;
@@ -34,8 +42,24 @@ export async function setUpLaunchBranches(input: {
   baseWorkBranch?: string | null | undefined;
   sourceBranch?: string | null | undefined;
   localEnvVars: Record<string, string>;
+  repoContextGit: RepoContextGit;
+  repoContext?: RepoContextLaunchInput | undefined;
   logger?: ProjectWorkLogger | undefined;
 }): Promise<LaunchBranchSetup> {
+  if (input.repoContext) {
+    return {
+      workBranch: null,
+      createdFromBranch: null,
+      devcontainerLookupBranch: await setUpRepoContext({
+        repoContextGit: input.repoContextGit,
+        workspacePath: input.workspacePath,
+        resolvedBranch: input.resolvedBranch,
+        repoContext: input.repoContext,
+        logger: input.logger,
+      }),
+    };
+  }
+
   const { stepKey } = input;
   const projectConfig = stepKey
     ? await loadProjectConfig(input.workspacePath)

@@ -143,3 +143,18 @@ export async function cleanupEnvironment(input: {
     devcontainerId: input.devcontainerId,
   });
 }
+
+/**
+ * The host env of `devcontainer up`: the step's setup variables (D13) plus
+ * Scarn's own, which win on a name clash.
+ */
+export function devcontainerHostEnv(
+  setupEnv: Readonly<Record<string, string>> | undefined,
+  gitCacheDir: string | null | undefined,
+): { hostEnv?: Record<string, string> } {
+  const hostEnv: Record<string, string> = {
+    ...setupEnv,
+    ...(gitCacheDir ? { SCARN_GIT_CACHE_DIR: gitCacheDir } : {}),
+  };
+  return Object.keys(hostEnv).length > 0 ? { hostEnv } : {};
+}

@@ -1,4 +1,5 @@
 import { execFile } from "node:child_process";
+import { GitCliRepoContext } from "../../../../../src/work/task-run/infra/git-cli-repo-context";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -241,6 +242,7 @@ export function buildIntegrationDeps(input: {
       workspaceManager: new LocalWorkspaceManager(),
       gitCloneService,
       gitCommitPushService,
+      repoContextGit: new GitCliRepoContext(),
       submoduleService: new GitCliSubmoduleService(logger),
       devcontainerLauncher:
         input.devcontainerLauncher?.(containerRegistry) ?? devcontainerLauncher,

@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { buildTaskRunFailurePayload } from "../../../../src/work/task-run/application/build-task-run-failure-payload";
 import { HealthCheckFailedError } from "../../../../src/work/task-run/application/health-check-failed-error";
+import { RepoContextCommitUnavailableError } from "../../../../src/work/task-run/application/repo-context-commit-unavailable-error";
 
 describe("buildTaskRunFailurePayload", () => {
   test("names an ordinary error Scarn.StepFailed, with the generic worker-execution-failed code", () => {
@@ -22,6 +23,18 @@ describe("buildTaskRunFailurePayload", () => {
       name: "Scarn.HealthCheckFailed",
       code: "SCARN_HEALTH_CHECK_FAILED",
       message: 'Health check "greet" failed',
+    });
+  });
+
+  test("names a RepoContextCommitUnavailableError with REPO_CONTEXT_COMMIT_UNAVAILABLE", () => {
+    const error = new RepoContextCommitUnavailableError("abc123", "not found");
+
+    const payload = buildTaskRunFailurePayload(error);
+
+    expect(payload.errorJson).toEqual({
+      name: "Scarn.RepoContextCommitUnavailable",
+      code: "REPO_CONTEXT_COMMIT_UNAVAILABLE",
+      message: error.message,
     });
   });
 });

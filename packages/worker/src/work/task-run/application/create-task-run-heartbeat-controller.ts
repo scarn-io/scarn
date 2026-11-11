@@ -4,6 +4,7 @@ import type {
   ProcessProjectWorkDeps,
   TaskRunWorkerClient,
 } from "../contracts/process-project-work-types";
+import { isTaskRunCancelledResponse } from "./task-run-cancelled-error";
 
 function getHeartbeatPollDelayMs(leaseDurationSeconds: number) {
   return Math.max(1_000, Math.floor((leaseDurationSeconds * 1_000) / 2));
@@ -35,6 +36,7 @@ export function createTaskRunHeartbeatController(
     resolveStopSignal = resolve;
   });
   let activePollTimeout: ReturnType<typeof setTimeout> | null = null;
+  let cancelled = false;
 
   function waitForNextPoll(): Promise<void> {
     return new Promise((resolve) => {
@@ -69,6 +71,15 @@ export function createTaskRunHeartbeatController(
           taskRunId: input.taskRunId,
         });
       } catch (error) {
+        if (isTaskRunCancelledResponse(error)) {
+          cancelled = true;
+          logger.log(
+            "heartbeat",
+            "Task run is gone or its claim was revoked; stopping heartbeat",
+            { taskRunId: input.taskRunId },
+          );
+          return;
+        }
         logger.error("heartbeat", "Heartbeat failed", {
           taskRunId: input.taskRunId,
           error,
@@ -78,6 +89,13 @@ export function createTaskRunHeartbeatController(
   })();
 
   return {
+    /**
+     * True once a heartbeat was refused because the run is gone (404) or the
+     * claim was revoked (409). The loop stops itself at that point.
+     */
+    isCancelled(): boolean {
+      return cancelled;
+    },
     async stop() {
       logger.debug("heartbeat", "Stopping heartbeat loop", {
         taskRunId: input.taskRunId,

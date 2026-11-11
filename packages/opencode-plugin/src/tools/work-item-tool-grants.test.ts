@@ -85,6 +85,20 @@ describe("work item tools follow the grants", () => {
     expect(tools.has(SCARN_CREATE_WORK_ITEM_TOOL)).toBe(false);
   });
 
+  test("a chat run (no work item, no grants) gets no work item tools", () => {
+    expect(
+      createWorkItemTools("/unused", {
+        taskRunId: "task-run-1",
+        resultSchemaJson: null,
+        turnsRemaining: 3,
+        workItemId: null,
+        grants: [],
+        api: null,
+        workItemLinks: null,
+      }),
+    ).toEqual([]);
+  });
+
   test("descriptions name the scopes granted", () => {
     expect(
       toolsFor([grant("comment", "children")]).get(

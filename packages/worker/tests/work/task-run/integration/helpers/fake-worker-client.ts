@@ -56,6 +56,10 @@ export class FakeTaskRunWorkerClient implements TaskRunWorkerClient {
   readonly heartbeatCalls: HeartbeatTaskRunCall[] = [];
 
   private claimsDispensed = false;
+  private pinnedBaseCommit: {
+    baseCommit: string;
+    baseBranch: string | null;
+  } | null = null;
   private readonly claimTokensByStep = new Map<string, string>();
   private readonly terminalStatusByStep = new Map<
     string,
@@ -125,6 +129,20 @@ export class FakeTaskRunWorkerClient implements TaskRunWorkerClient {
   }): Promise<void> {
     this.heartbeatCalls.push({ ...input });
     return Promise.resolve();
+  }
+
+  /** First report wins, like the server. */
+  reportTaskRunBaseCommit(input: {
+    taskRunId: UuidV7;
+    claimToken: string;
+    baseCommit: string;
+    baseBranch?: string | undefined;
+  }): Promise<{ baseCommit: string; baseBranch: string | null }> {
+    this.pinnedBaseCommit ??= {
+      baseCommit: input.baseCommit,
+      baseBranch: input.baseBranch ?? null,
+    };
+    return Promise.resolve(this.pinnedBaseCommit);
   }
 
   failTaskRun(input: {

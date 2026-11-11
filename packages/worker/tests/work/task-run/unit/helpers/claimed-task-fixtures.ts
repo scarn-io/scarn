@@ -120,6 +120,7 @@ export function createWorkerClient(
     userId: requestedByUserId,
     claimTaskRuns: vi.fn(),
     heartbeatTaskRun: vi.fn(),
+    reportTaskRunBaseCommit: vi.fn(),
     failTaskRun: vi.fn(),
     completeTaskRun: vi.fn(),
     yieldTaskRun: vi.fn(),

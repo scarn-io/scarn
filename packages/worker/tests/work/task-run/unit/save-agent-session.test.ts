@@ -23,6 +23,7 @@ const EXPORTED: ExportedAgentSession = {
 function setup(options: {
   exportSession?: (() => Promise<ExportedAgentSession>) | null;
   uploadStatus?: number;
+  cancelled?: boolean;
 }) {
   const createSessionUploadUrl = vi.fn(() =>
     Promise.resolve({
@@ -50,6 +51,7 @@ function setup(options: {
       startedTask: {
         taskRunId: TASK_ID,
         claimToken: "claim-token",
+        isCancelled: () => options.cancelled ?? false,
       } as StartedClaimedTask,
       server: SERVER,
       agentSessionId: "ses_1",
@@ -61,12 +63,26 @@ function setup(options: {
 }
 
 describe("saveAgentSession", () => {
-  test("uploads the masked export and returns its key", async () => {
+  test("skips the export and upload once the run is cancelled", async () => {
+    const harness = setup({ cancelled: true });
+
+    const saved = await harness.run();
+
+    expect(saved).toBeNull();
+    expect(harness.exportSession).not.toHaveBeenCalled();
+    expect(harness.createSessionUploadUrl).not.toHaveBeenCalled();
+  });
+
+  test("uploads the masked export and returns its key and size", async () => {
     const harness = setup({});
 
-    expect(await harness.run()).toBe(`tasks/${TASK_ID}/session.json`);
+    const saved = await harness.run();
 
     const [url, init] = harness.fetchImpl.mock.calls[0] ?? [];
+    expect(saved).toEqual({
+      objectKey: `tasks/${TASK_ID}/session.json`,
+      sizeBytes: (init?.body as Uint8Array).byteLength,
+    });
     expect(url).toBe("https://objects.local/put");
     expect(init?.method).toBe("PUT");
     const uploaded = new TextDecoder().decode(init?.body as Uint8Array);

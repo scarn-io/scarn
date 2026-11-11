@@ -11,6 +11,7 @@ import type { UuidV7 } from "../../../common/contracts/uuid-v7";
 import type {
   AgentRuntime,
   ProjectWorkLogger,
+  RepoContextLaunchInput,
   TaskRuntimeEnvironment,
   TaskRuntimeEnvironmentOrchestrator,
 } from "../contracts/process-project-work-types";
@@ -28,6 +29,7 @@ import { noopLogger, type Logger } from "@scarn/observability/logging/host";
 import { noopReporter, type WorkReporter } from "../contracts/work-reporter";
 import {
   cleanupEnvironment,
+  devcontainerHostEnv,
   inspectContainerHealthStatus,
   patchDevcontainerEnv,
   resolveDevcontainerConfig,
@@ -55,21 +57,6 @@ export type LocalProjectRuntimeEnvironment = TaskRuntimeEnvironment;
 
 export type LocalProjectRuntimeEnvironmentOrchestrator =
   TaskRuntimeEnvironmentOrchestrator;
-
-/**
- * The host env of `devcontainer up`: the step's setup variables (D13) plus
- * Scarn's own, which win on a name clash.
- */
-function devcontainerHostEnv(
-  setupEnv: Readonly<Record<string, string>> | undefined,
-  gitCacheDir: string | null | undefined,
-): { hostEnv?: Record<string, string> } {
-  const hostEnv: Record<string, string> = {
-    ...setupEnv,
-    ...(gitCacheDir ? { SCARN_GIT_CACHE_DIR: gitCacheDir } : {}),
-  };
-  return Object.keys(hostEnv).length > 0 ? { hostEnv } : {};
-}
 
 /**
  * Single-container launch orchestrator.
@@ -160,6 +147,8 @@ export class DefaultLocalProjectRuntimeEnvironmentOrchestrator implements LocalP
       | undefined;
     /** See `TaskRuntimeEnvironmentOrchestrator.launch`'s `previousRun`. */
     previousRun?: PreviousRunFilesInput | undefined;
+    /** See `TaskRuntimeEnvironmentOrchestrator.launch`'s `repoContext`. */
+    repoContext?: RepoContextLaunchInput | undefined;
     /**
      * Receives the clone and work-branch timing lines at info level. Wired to
      * the step's tee logger so they ship in the durable log feed.
@@ -217,7 +206,7 @@ export class DefaultLocalProjectRuntimeEnvironmentOrchestrator implements LocalP
       });
 
       // Step 1b: Check out the base and, for a readWrite step, create the work
-      // branch off it right after clone.
+      // branch off it right after clone; a chat run is parked on its commit.
       const { workBranch, createdFromBranch, devcontainerLookupBranch } =
         await setUpLaunchBranches({
           gitCommitPushService: this.deps.gitCommitPushService,
@@ -229,6 +218,8 @@ export class DefaultLocalProjectRuntimeEnvironmentOrchestrator implements LocalP
           baseWorkBranch: input.baseWorkBranch,
           sourceBranch: input.sourceBranch,
           localEnvVars: this.localEnvVars,
+          repoContextGit: this.deps.repoContextGit,
+          repoContext: input.repoContext,
           logger: input.logger,
         });
 

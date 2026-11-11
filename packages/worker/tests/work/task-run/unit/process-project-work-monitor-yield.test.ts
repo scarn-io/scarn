@@ -41,6 +41,7 @@ describe("monitorStartedClaimedTaskRun — handing over", () => {
         workBranch: "scarn/task-1",
         createdFromBranch: "main",
         sessionObjectKey: null,
+        sessionSizeBytes: null,
         sessionRestored: null,
       });
       expect(harness.completeTaskRun).not.toHaveBeenCalled();

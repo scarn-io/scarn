@@ -178,8 +178,9 @@ describe("runAgentStepBranch — restoring a saved session", () => {
 
     expect(prompts(requests)[0]?.body).toEqual({
       text:
-        "Your workspace moved from `/workspaces/old` to `/workspaces/repo`; " +
-        `the files are the same as when you asked.\n\n${REPLY}`,
+        "Your workspace moved from `/workspaces/old` to `/workspaces/repo`. " +
+        "It is a fresh checkout: files you changed but didn't commit and any " +
+        `runtime state from before are gone.\n\n${REPLY}`,
     });
   });
 

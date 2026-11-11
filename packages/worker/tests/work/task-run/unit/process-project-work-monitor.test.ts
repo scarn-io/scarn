@@ -14,6 +14,7 @@ import type {
   ProcessProjectWorkInput,
   StartedClaimedTask,
   TaskRunTracker,
+  TaskRunWorkerClient,
 } from "../../../../src/work/task-run/contracts/process-project-work-types";
 import { buildTestZip } from "../../../support/build-test-zip";
 
@@ -57,9 +58,7 @@ function createTracker(): TaskRunTracker {
   };
 }
 
-function createInput(
-  startedTask: StartedClaimedTask,
-): ProcessProjectWorkInput {
+function createInput(startedTask: StartedClaimedTask): ProcessProjectWorkInput {
   return {
     projectId: startedTask.projectId,
     batchSize: 1,
@@ -72,8 +71,33 @@ function createInput(
   };
 }
 
+function createWorkerClient(input: {
+  status: "running" | "succeeded";
+  failTaskRun?: TaskRunWorkerClient["failTaskRun"];
+}): TaskRunWorkerClient {
+  return {
+    userId: parseUuidV7("01966a2c-9494-7db5-aa46-0f8f5cbbe004"),
+    claimTaskRuns: vi.fn(),
+    heartbeatTaskRun: vi.fn(),
+    reportTaskRunBaseCommit: vi.fn(),
+    failTaskRun: input.failTaskRun ?? vi.fn(() => Promise.resolve(undefined)),
+    completeTaskRun: vi.fn(() => Promise.resolve(undefined)),
+    yieldTaskRun: vi.fn(),
+    getTaskRun: vi.fn(() => Promise.resolve({ status: input.status })),
+    getTaskRunWorkerContext: vi.fn(),
+    createArtifactUploadUrl: vi.fn(),
+    createSessionUploadUrl: vi.fn(),
+    recordArtifact: vi.fn(),
+    recordArtifactFailure: vi.fn(),
+    appendTaskLogs: vi.fn(() => Promise.resolve({ nextOffset: 0 })),
+  };
+}
+
 const stopStub = () => ({ stop: vi.fn(() => Promise.resolve()) });
-const flushStub = () => ({ flush: vi.fn(() => Promise.resolve()), mask: (text: string) => text });
+const flushStub = () => ({
+  flush: vi.fn(() => Promise.resolve()),
+  mask: (text: string) => text,
+});
 
 describe("monitorStartedClaimedTaskRun", () => {
   test.concurrent(
@@ -89,21 +113,7 @@ describe("monitorStartedClaimedTaskRun", () => {
       const input = createInput(startedTask);
       let statusCall = 0;
       const deps: ProcessProjectWorkDeps = {
-        workerClient: {
-          userId: parseUuidV7("01966a2c-9494-7db5-aa46-0f8f5cbbe004"),
-          claimTaskRuns: vi.fn(),
-          heartbeatTaskRun: vi.fn(),
-          failTaskRun,
-          completeTaskRun: vi.fn(), yieldTaskRun: vi.fn(),
-          getTaskRun: vi.fn(() =>
-            Promise.resolve({ status: "running" as const }),
-          ),
-          getTaskRunWorkerContext: vi.fn(),
-          createArtifactUploadUrl: vi.fn(), createSessionUploadUrl: vi.fn(), recordArtifact: vi.fn(), recordArtifactFailure: vi.fn(),
-          appendTaskLogs: vi.fn(() =>
-            Promise.resolve({ nextOffset: 0 }),
-          ),
-        },
+        workerClient: createWorkerClient({ status: "running", failTaskRun }),
         createRunTracker: vi.fn(),
         runtimeEnvironmentOrchestrator: {
           launch: vi.fn(),
@@ -132,14 +142,25 @@ describe("monitorStartedClaimedTaskRun", () => {
       };
 
       expect(
-        monitorStartedClaimedTaskRun(input, deps, tracker, startedTask, stopStub(), flushStub()),
+        monitorStartedClaimedTaskRun(
+          input,
+          deps,
+          tracker,
+          startedTask,
+          stopStub(),
+          flushStub(),
+        ),
       ).rejects.toThrow(
         /without findings submission via scarn-submit-step-findings/,
       );
 
       const { agent, workspaceFolder } = startedTask.environment;
       expect(sendRetryPrompt).toHaveBeenCalledWith({
-        server: { baseUrl: agent?.baseUrl, password: agent?.password, workspaceFolder },
+        server: {
+          baseUrl: agent?.baseUrl,
+          password: agent?.password,
+          workspaceFolder,
+        },
         sessionId: startedTask.agentSessionId,
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         promptText: expect.stringContaining(
@@ -167,21 +188,7 @@ describe("monitorStartedClaimedTaskRun", () => {
       const input = createInput(startedTask);
       let statusCall = 0;
       const deps: ProcessProjectWorkDeps = {
-        workerClient: {
-          userId: parseUuidV7("01966a2c-9494-7db5-aa46-0f8f5cbbe004"),
-          claimTaskRuns: vi.fn(),
-          heartbeatTaskRun: vi.fn(),
-          failTaskRun: vi.fn(() => Promise.resolve(undefined)),
-          completeTaskRun: vi.fn(), yieldTaskRun: vi.fn(),
-          getTaskRun: vi.fn(() =>
-            Promise.resolve({ status: "running" as const }),
-          ),
-          getTaskRunWorkerContext: vi.fn(),
-          createArtifactUploadUrl: vi.fn(), createSessionUploadUrl: vi.fn(), recordArtifact: vi.fn(), recordArtifactFailure: vi.fn(),
-          appendTaskLogs: vi.fn(() =>
-            Promise.resolve({ nextOffset: 0 }),
-          ),
-        },
+        workerClient: createWorkerClient({ status: "running" }),
         createRunTracker: vi.fn(),
         runtimeEnvironmentOrchestrator: {
           launch: vi.fn(),
@@ -217,7 +224,14 @@ describe("monitorStartedClaimedTaskRun", () => {
       };
 
       expect(
-        monitorStartedClaimedTaskRun(input, deps, tracker, startedTask, stopStub(), flushStub()),
+        monitorStartedClaimedTaskRun(
+          input,
+          deps,
+          tracker,
+          startedTask,
+          stopStub(),
+          flushStub(),
+        ),
       ).rejects.toThrow(
         /without findings submission via scarn-submit-step-findings/,
       );
@@ -270,21 +284,7 @@ describe("monitorStartedClaimedTaskRun", () => {
 
       let statusCall = 0;
       const deps: ProcessProjectWorkDeps = {
-        workerClient: {
-          userId: parseUuidV7("01966a2c-9494-7db5-aa46-0f8f5cbbe004"),
-          claimTaskRuns: vi.fn(),
-          heartbeatTaskRun: vi.fn(),
-          failTaskRun: vi.fn(() => Promise.resolve(undefined)),
-          completeTaskRun: vi.fn(() => Promise.resolve(undefined)), yieldTaskRun: vi.fn(),
-          getTaskRun: vi.fn(() =>
-            Promise.resolve({ status: "succeeded" as const }),
-          ),
-          getTaskRunWorkerContext: vi.fn(),
-          createArtifactUploadUrl: vi.fn(), createSessionUploadUrl: vi.fn(), recordArtifact: vi.fn(), recordArtifactFailure: vi.fn(),
-          appendTaskLogs: vi.fn(() =>
-            Promise.resolve({ nextOffset: 0 }),
-          ),
-        },
+        workerClient: createWorkerClient({ status: "succeeded" }),
         createRunTracker: vi.fn(),
         runtimeEnvironmentOrchestrator: {
           launch: vi.fn(),
@@ -329,7 +329,14 @@ describe("monitorStartedClaimedTaskRun", () => {
         },
       };
 
-      await monitorStartedClaimedTaskRun(input, deps, tracker, startedTask, stopStub(), flushStub());
+      await monitorStartedClaimedTaskRun(
+        input,
+        deps,
+        tracker,
+        startedTask,
+        stopStub(),
+        flushStub(),
+      );
 
       expect(saveArtifact).toHaveBeenCalledTimes(1);
       expect(saveArtifact).toHaveBeenCalledWith({
@@ -371,21 +378,7 @@ describe("monitorStartedClaimedTaskRun", () => {
 
       let statusCall = 0;
       const deps: ProcessProjectWorkDeps = {
-        workerClient: {
-          userId: parseUuidV7("01966a2c-9494-7db5-aa46-0f8f5cbbe004"),
-          claimTaskRuns: vi.fn(),
-          heartbeatTaskRun: vi.fn(),
-          failTaskRun: vi.fn(() => Promise.resolve(undefined)),
-          completeTaskRun: vi.fn(() => Promise.resolve(undefined)), yieldTaskRun: vi.fn(),
-          getTaskRun: vi.fn(() =>
-            Promise.resolve({ status: "succeeded" as const }),
-          ),
-          getTaskRunWorkerContext: vi.fn(),
-          createArtifactUploadUrl: vi.fn(), createSessionUploadUrl: vi.fn(), recordArtifact: vi.fn(), recordArtifactFailure: vi.fn(),
-          appendTaskLogs: vi.fn(() =>
-            Promise.resolve({ nextOffset: 0 }),
-          ),
-        },
+        workerClient: createWorkerClient({ status: "succeeded" }),
         createRunTracker: vi.fn(),
         runtimeEnvironmentOrchestrator: {
           launch: vi.fn(),
@@ -426,7 +419,14 @@ describe("monitorStartedClaimedTaskRun", () => {
         },
       };
 
-      await monitorStartedClaimedTaskRun(input, deps, tracker, startedTask, stopStub(), flushStub());
+      await monitorStartedClaimedTaskRun(
+        input,
+        deps,
+        tracker,
+        startedTask,
+        stopStub(),
+        flushStub(),
+      );
 
       // The startup "not running yet" poll must not be mistaken for a finished
       // run: no missing-findings wait/retry should fire, and no retry prompt
