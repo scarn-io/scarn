@@ -12,13 +12,18 @@ function problem(status: number): Error {
   );
 }
 
-async function waitUntil(condition: () => boolean): Promise<void> {
-  for (let i = 0; i < 200 && !condition(); i += 1) {
+async function waitUntil(
+  condition: () => boolean,
+  maxTicks = 200,
+): Promise<void> {
+  for (let i = 0; i < maxTicks && !condition(); i += 1) {
     await new Promise((resolve) => setTimeout(resolve, 5));
   }
 }
 
-function startController(heartbeatTaskRun: () => Promise<void>) {
+function startController(
+  heartbeatTaskRun: TaskRunWorkerClient["heartbeatTaskRun"],
+) {
   const client = { heartbeatTaskRun } as unknown as TaskRunWorkerClient;
   return createTaskRunHeartbeatController(
     client,
@@ -44,6 +49,34 @@ describe("createTaskRunHeartbeatController", () => {
       expect(heartbeatTaskRun).toHaveBeenCalledTimes(1);
     },
   );
+
+  test("a 200 with a non-running status marks the run cancelled and stops the loop", async () => {
+    const heartbeatTaskRun = vi.fn(() =>
+      Promise.resolve({ status: "timeout" as const }),
+    );
+    const controller = startController(heartbeatTaskRun);
+
+    await waitUntil(() => controller.isCancelled());
+
+    expect(controller.isCancelled()).toBe(true);
+    expect(controller.lastKnownStatus()).toBe("timeout");
+    await controller.stop();
+    expect(heartbeatTaskRun).toHaveBeenCalledTimes(1);
+  });
+
+  test("a 200 with status running keeps the loop going", async () => {
+    const heartbeatTaskRun = vi.fn(() =>
+      Promise.resolve({ status: "running" as const }),
+    );
+    const controller = startController(heartbeatTaskRun);
+
+    await waitUntil(() => heartbeatTaskRun.mock.calls.length >= 2, 600);
+    await controller.stop();
+
+    expect(heartbeatTaskRun.mock.calls.length).toBeGreaterThanOrEqual(2);
+    expect(controller.isCancelled()).toBe(false);
+    expect(controller.lastKnownStatus()).toBe("running");
+  });
 
   test("a transient failure is not a cancellation", async () => {
     const heartbeatTaskRun = vi.fn(() =>

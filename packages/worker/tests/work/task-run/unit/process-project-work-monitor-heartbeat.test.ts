@@ -28,6 +28,7 @@ async function setUp(input: { conversation: boolean; cancelled?: boolean }) {
       order.push("heartbeat.stop");
       return Promise.resolve();
     }),
+    lastKnownStatus: () => "running" as const,
   };
   startedTask.environment.cleanup = vi.fn(() => {
     order.push("cleanup");

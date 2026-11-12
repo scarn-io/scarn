@@ -17,6 +17,7 @@ import type {
   TaskRunWorkerClient,
 } from "../../../../src/work/task-run/contracts/process-project-work-types";
 import { buildTestZip } from "../../../support/build-test-zip";
+import { stopStub } from "./helpers/monitor-turn-end-harness";
 
 function createStartedTask(workspacePath: string): StartedClaimedTask {
   return {
@@ -78,7 +79,7 @@ function createWorkerClient(input: {
   return {
     userId: parseUuidV7("01966a2c-9494-7db5-aa46-0f8f5cbbe004"),
     claimTaskRuns: vi.fn(),
-    heartbeatTaskRun: vi.fn(),
+    heartbeatTaskRun: vi.fn().mockResolvedValue({ status: "running" }),
     reportTaskRunBaseCommit: vi.fn(),
     failTaskRun: input.failTaskRun ?? vi.fn(() => Promise.resolve(undefined)),
     completeTaskRun: vi.fn(() => Promise.resolve(undefined)),
@@ -93,7 +94,6 @@ function createWorkerClient(input: {
   };
 }
 
-const stopStub = () => ({ stop: vi.fn(() => Promise.resolve()) });
 const flushStub = () => ({
   flush: vi.fn(() => Promise.resolve()),
   mask: (text: string) => text,

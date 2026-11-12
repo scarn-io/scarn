@@ -157,7 +157,7 @@ export type TaskRunWorkerClient = {
     taskRunId: UuidV7;
     claimToken: string;
     leaseDurationSeconds: number;
-  }): Promise<void>;
+  }): Promise<Pick<TaskRunContract, "status">>;
   failTaskRun(input: {
     taskRunId: UuidV7;
     claimToken: string;

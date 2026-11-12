@@ -4,6 +4,7 @@ import type {
   ProcessProjectWorkDeps,
   TaskRunWorkerClient,
 } from "../contracts/process-project-work-types";
+import type { TaskRunStatus } from "../contracts/task-run-contracts";
 import { isTaskRunCancelledResponse } from "./task-run-cancelled-error";
 
 function getHeartbeatPollDelayMs(leaseDurationSeconds: number) {
@@ -37,6 +38,7 @@ export function createTaskRunHeartbeatController(
   });
   let activePollTimeout: ReturnType<typeof setTimeout> | null = null;
   let cancelled = false;
+  let lastKnownStatus: TaskRunStatus = "running";
 
   function waitForNextPoll(): Promise<void> {
     return new Promise((resolve) => {
@@ -62,11 +64,21 @@ export function createTaskRunHeartbeatController(
           taskRunId: input.taskRunId,
           leaseDurationSeconds: input.leaseDurationSeconds,
         });
-        await client.heartbeatTaskRun({
+        const taskRun = await client.heartbeatTaskRun({
           taskRunId: input.taskRunId,
           claimToken: input.claimToken,
           leaseDurationSeconds: input.leaseDurationSeconds,
         });
+        lastKnownStatus = taskRun.status;
+        if (taskRun.status !== "running") {
+          cancelled = true;
+          logger.log(
+            "heartbeat",
+            "Task run is no longer running; stopping heartbeat",
+            { taskRunId: input.taskRunId, status: taskRun.status },
+          );
+          return;
+        }
         logger.debug("heartbeat", "Heartbeat accepted", {
           taskRunId: input.taskRunId,
         });
@@ -91,10 +103,15 @@ export function createTaskRunHeartbeatController(
   return {
     /**
      * True once a heartbeat was refused because the run is gone (404) or the
-     * claim was revoked (409). The loop stops itself at that point.
+     * claim was revoked (409), or was accepted but reported a status other
+     * than `running`. The loop stops itself at that point.
      */
     isCancelled(): boolean {
       return cancelled;
+    },
+    /** Status from the most recent accepted heartbeat; `running` until then. */
+    lastKnownStatus(): TaskRunStatus {
+      return lastKnownStatus;
     },
     async stop() {
       logger.debug("heartbeat", "Stopping heartbeat loop", {

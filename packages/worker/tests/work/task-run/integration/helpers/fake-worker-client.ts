@@ -126,9 +126,9 @@ export class FakeTaskRunWorkerClient implements TaskRunWorkerClient {
     taskRunId: UuidV7;
     claimToken: string;
     leaseDurationSeconds: number;
-  }): Promise<void> {
+  }): Promise<Pick<TaskRunContract, "status">> {
     this.heartbeatCalls.push({ ...input });
-    return Promise.resolve();
+    return Promise.resolve({ status: "running" });
   }
 
   /** First report wins, like the server. */

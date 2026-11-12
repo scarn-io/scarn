@@ -29,6 +29,7 @@ import { runTurnEnd, type TurnEndState } from "./process-project-work-turn-end";
 import { collectStepArtifactsOnFailure } from "./collect-step-artifacts-on-failure";
 import { TaskRunCancelledError } from "./task-run-cancelled-error";
 import type { AnyJsonValue } from "../../../common/contracts/json";
+import type { TaskRunStatus } from "../contracts/task-run-contracts";
 
 // eslint-disable-next-line local/no-unknown-parameter-type
 export function isExpectedStepOutputFailure(error: unknown): boolean {
@@ -71,7 +72,7 @@ export async function monitorStartedClaimedTaskRun(
   deps: ProcessProjectWorkDeps,
   tracker: TaskRunTracker,
   startedTask: Awaited<ReturnType<typeof startProcessClaimedTaskRun>>,
-  heartbeat: { stop(): Promise<void> },
+  heartbeat: { stop(): Promise<void>; lastKnownStatus(): TaskRunStatus },
   logStream: { flush(): Promise<void>; mask(text: string): string },
 ) {
   // The live log stream is created, attached, and stopped by the caller so it
@@ -169,27 +170,15 @@ export async function monitorStartedClaimedTaskRun(
     const agentContext = resolveMonitorAgentContext(startedTask);
 
     for (;;) {
-      if (startedTask.isCancelled?.()) {
-        throw new TaskRunCancelledError(startedTask.taskRunId);
-      }
-      const healthSnapshot =
-        await startedTask.environment.checkContainerHealth?.();
-      if (healthSnapshot) {
-        logger.debug("health", "Container healthcheck", {
-          projectId: input.projectId,
-          workerId: input.workerId,
-          taskRunId: startedTask.taskRunId,
-          localRuntimeSessionId: startedTask.localRuntimeSessionId,
-          runtimeContainerId: startedTask.environment.runtimeContainerId,
-          runtimeContainerStatus: healthSnapshot.runtimeContainerStatus,
-        });
-      }
-
-      const task = await deps.workerClient.getTaskRun({
-        taskRunId: startedTask.taskRunId,
-      });
-
-      if (hasSubmittedFindings && task.status !== "running") {
+      // Once findings are submitted the server moves the run out of
+      // "running", which the heartbeat sees as a revoked claim. The status
+      // read decides the outcome, so it must precede the cancel check.
+      if (hasSubmittedFindings) {
+        const task = await deps.workerClient.getTaskRun({ taskRunId });
+        if (task.status === "running") {
+          await deps.sleep(input.pollIntervalMs);
+          continue;
+        }
         if (task.status === "succeeded") {
           await markMonitorSucceeded(
             tracker,
@@ -215,6 +204,22 @@ export async function monitorStartedClaimedTaskRun(
         }
 
         return;
+      }
+
+      if (startedTask.isCancelled?.()) {
+        throw new TaskRunCancelledError(startedTask.taskRunId);
+      }
+      const healthSnapshot =
+        await startedTask.environment.checkContainerHealth?.();
+      if (healthSnapshot) {
+        logger.debug("health", "Container healthcheck", {
+          projectId: input.projectId,
+          workerId: input.workerId,
+          taskRunId: startedTask.taskRunId,
+          localRuntimeSessionId: startedTask.localRuntimeSessionId,
+          runtimeContainerId: startedTask.environment.runtimeContainerId,
+          runtimeContainerStatus: healthSnapshot.runtimeContainerStatus,
+        });
       }
 
       const sessionStatus =
@@ -253,11 +258,13 @@ export async function monitorStartedClaimedTaskRun(
         continue;
       }
 
-      const submissionResult = hasSubmittedFindings
-        ? "submitted"
-        : await tryPersistAgentFindings(deps, startedTask, {
-            onBeforeComplete: beforeComplete,
-          });
+      const submissionResult = await tryPersistAgentFindings(
+        deps,
+        startedTask,
+        {
+          onBeforeComplete: beforeComplete,
+        },
+      );
 
       // `promptAsync` is fire-and-forget: it queues the prompt and returns
       // before opencode begins streaming the model response. During that
@@ -387,7 +394,7 @@ export async function monitorStartedClaimedTaskRun(
           startedTask,
           logger,
           missingFindingsState,
-          task.status,
+          heartbeat.lastKnownStatus(),
           input.workerId,
           missingFindingsGraceMs,
         );

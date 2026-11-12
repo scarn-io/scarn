@@ -68,7 +68,10 @@ export function createInput(
   };
 }
 
-export const stopStub = () => ({ stop: vi.fn(() => Promise.resolve()) });
+export const stopStub = () => ({
+  stop: vi.fn(() => Promise.resolve()),
+  lastKnownStatus: () => "running" as const,
+});
 
 export const resultSchema = {
   type: "object",
@@ -95,7 +98,9 @@ export function createDeps(config: {
     workerClient: {
       userId: parseUuidV7("01966a2c-9494-7db5-aa46-0f8f5cbbe004"),
       claimTaskRuns: vi.fn(),
-      heartbeatTaskRun: vi.fn(),
+      heartbeatTaskRun: vi.fn(() =>
+        Promise.resolve({ status: "running" as const }),
+      ),
       reportTaskRunBaseCommit: vi.fn(),
       failTaskRun: vi.fn(() => Promise.resolve(undefined)),
       completeTaskRun: config.completeTaskRun,

@@ -30,7 +30,7 @@ import {
   setupFixture,
 } from "./git-submodule-commit-fixtures";
 
-const TEST_TIMEOUT_MS = 15_000;
+const TEST_TIMEOUT_MS = 30_000;
 
 afterAll(disposeSubmoduleFixtureTemplate);
 

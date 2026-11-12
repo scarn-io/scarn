@@ -47,9 +47,8 @@ const buildTaskPlaneClient = (taskRuns: TaskRuns) => {
     heartbeatTaskRun: async ({
       taskRunId,
       ...body
-    }: TaskRunRef & { claimToken: string; leaseDurationSeconds: number }) => {
-      unwrap(await taskRuns.heartbeatTaskRun({ path: { taskRunId }, body }));
-    },
+    }: TaskRunRef & { claimToken: string; leaseDurationSeconds: number }) =>
+      unwrap(await taskRuns.heartbeatTaskRun({ path: { taskRunId }, body })),
     getTaskRun: async ({ taskRunId }: TaskRunRef) =>
       unwrap(await taskRuns.getTaskRun({ path: { taskRunId } })),
     /** Not unwrapped: callers read `error.status` (e.g. a 402 read quota). */
