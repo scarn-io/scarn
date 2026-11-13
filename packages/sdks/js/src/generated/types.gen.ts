@@ -4393,6 +4393,11 @@ export type PostApiTaskRunsClaimsResponses = {
             updatedAt: string;
         };
         claimToken: string;
+        logFeed: {
+            url: string;
+            token: string;
+            expiresAt: string;
+        } | null;
     }>;
 };
 
@@ -11550,6 +11555,271 @@ export type PostApiProjectsByProjectIdWorkSignalTokenResponses = {
 };
 
 export type PostApiProjectsByProjectIdWorkSignalTokenResponse = PostApiProjectsByProjectIdWorkSignalTokenResponses[keyof PostApiProjectsByProjectIdWorkSignalTokenResponses];
+
+export type GetApiTaskRunsByTaskRunIdLogFeedTokenData = {
+    body?: never;
+    path: {
+        taskRunId: string;
+    };
+    query?: never;
+    url: '/api/task-runs/{taskRunId}/log-feed-token';
+};
+
+export type GetApiTaskRunsByTaskRunIdLogFeedTokenErrors = {
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 404
+     */
+    404: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type GetApiTaskRunsByTaskRunIdLogFeedTokenError = GetApiTaskRunsByTaskRunIdLogFeedTokenErrors[keyof GetApiTaskRunsByTaskRunIdLogFeedTokenErrors];
+
+export type GetApiTaskRunsByTaskRunIdLogFeedTokenResponses = {
+    /**
+     * Response for status 200
+     */
+    200: {
+        url: string;
+        token: string;
+        expiresAt: string;
+    };
+};
+
+export type GetApiTaskRunsByTaskRunIdLogFeedTokenResponse = GetApiTaskRunsByTaskRunIdLogFeedTokenResponses[keyof GetApiTaskRunsByTaskRunIdLogFeedTokenResponses];
+
+export type PostApiTaskRunsByTaskRunIdLogFeedTokenData = {
+    body: {
+        claimToken: string;
+    };
+    path: {
+        taskRunId: string;
+    };
+    query?: never;
+    url: '/api/task-runs/{taskRunId}/log-feed-token';
+};
+
+export type PostApiTaskRunsByTaskRunIdLogFeedTokenErrors = {
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 404
+     */
+    404: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 409
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type PostApiTaskRunsByTaskRunIdLogFeedTokenError = PostApiTaskRunsByTaskRunIdLogFeedTokenErrors[keyof PostApiTaskRunsByTaskRunIdLogFeedTokenErrors];
+
+export type PostApiTaskRunsByTaskRunIdLogFeedTokenResponses = {
+    /**
+     * Response for status 200
+     */
+    200: {
+        url: string;
+        token: string;
+        expiresAt: string;
+    };
+};
+
+export type PostApiTaskRunsByTaskRunIdLogFeedTokenResponse = PostApiTaskRunsByTaskRunIdLogFeedTokenResponses[keyof PostApiTaskRunsByTaskRunIdLogFeedTokenResponses];
 
 export type PutApiPipelineExecutionsBatchCancelData = {
     body: {

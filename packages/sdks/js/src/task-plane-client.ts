@@ -7,6 +7,7 @@ import type {
   PostApiTaskRunsByTaskRunIdArtifactsData,
   PostApiTaskRunsByTaskRunIdBaseCommitData,
   PostApiTaskRunsByTaskRunIdCompletionsData,
+  PostApiTaskRunsByTaskRunIdLogFeedTokenData,
   PostApiTaskRunsByTaskRunIdLogsData,
   PostApiTaskRunsByTaskRunIdSessionUploadUrlData,
   PostApiTaskRunsByTaskRunIdYieldsData,
@@ -156,6 +157,15 @@ const buildTaskPlaneClient = (taskRuns: TaskRuns) => {
         path: { projectId },
         body: workerId === undefined ? {} : { workerId },
       }),
+    /** Not unwrapped: callers read `response.status` (404 = live log feed unavailable). */
+    issueLogFeedWriteToken: ({
+      taskRunId,
+      ...body
+    }: TaskRunRef & PostApiTaskRunsByTaskRunIdLogFeedTokenData["body"]) =>
+      taskRuns.issueLogFeedWriteToken({ path: { taskRunId }, body }),
+    /** Not unwrapped: callers read `response.status` (404 = live log feed unavailable). */
+    issueLogFeedReadToken: ({ taskRunId }: TaskRunRef) =>
+      taskRuns.issueLogFeedReadToken({ path: { taskRunId } }),
     getArtifactDownloadUrl: async ({
       taskRunId,
       artifactId,

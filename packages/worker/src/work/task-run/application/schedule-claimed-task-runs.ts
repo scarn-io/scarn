@@ -55,6 +55,7 @@ export function scheduleClaimedTaskRunJob(
     logger: baseLogger,
     taskRunId: claim.task.id,
     claimToken: claim.claimToken,
+    logFeed: claim.logFeed ?? null,
     // Path A: seed the masker with the user's .scarn/.env values so they are
     // redacted from the shipped feed. Provider token(s) (Path B) are registered
     // later, from the runtime launch result.

@@ -25,6 +25,7 @@ import type {
   ResolvedStepEnv,
 } from "../application/resolve-step-env";
 import type { WorkReporter } from "./work-reporter";
+import type * as Tokens from "./socket-token-types";
 import type { OpencodeServerHandle } from "../../../runtime/runtime-service/infra/opencode-server-contract";
 import type { RepoContextLaunchInput } from "./repo-context-launch-input";
 
@@ -95,6 +96,7 @@ export type TaskRunWorkerClaim = {
     id: UuidV7;
   };
   claimToken: string;
+  logFeed?: Tokens.LogFeedToken | null | undefined;
 };
 
 export type TaskRunWorkerContext = TaskRunWorkerContextContract;
@@ -111,11 +113,7 @@ export type TaskLogLine = {
   level: TaskLogLevel;
 };
 
-export type WorkSignalToken = {
-  url: string;
-  token: string;
-  expiresAt: string;
-};
+export type { WorkSignalToken } from "./socket-token-types";
 
 export type TaskRunWorkerClient = {
   userId: UuidV7;
@@ -134,8 +132,9 @@ export type TaskRunWorkerClient = {
     | ((input: {
         projectId: UuidV7;
         workerId: string;
-      }) => Promise<WorkSignalToken | null>)
+      }) => Promise<Tokens.WorkSignalToken | null>)
     | undefined;
+  issueLogFeedWriteToken?: Tokens.IssueLogFeedWriteToken | undefined;
   claimTaskRuns(input: {
     projectId: UuidV7;
     workerId: string;

@@ -5,12 +5,19 @@ import type {
   TaskLogStream,
   TaskRunWorkerClient,
 } from "../contracts/process-project-work-types";
+import type { LogFeedSocket } from "../infra/log-feed-socket";
 import type { SecretMasker } from "./secret-masker";
 
 /** Overridable via `SCARN_LOG_FLUSH_INTERVAL_MS`. */
 const DEFAULT_FLUSH_INTERVAL_MS = 5_000;
 const DEFAULT_MAX_BATCH_LINES = 256;
 const DEFAULT_MAX_BUFFER_LINES = 10_000;
+/**
+ * JSON byte size cap for one batch's `lines` array. Mirrors `MAX_BATCH_BYTES`
+ * in `apps/work-signal/src/log-lines.ts` (and core's
+ * `LOG_FEED_MAX_BATCH_BYTES`); the log feed rejects larger batches.
+ */
+export const MAX_BATCH_BYTES = 512 * 1024;
 // Stay under the server-side per-line cap (16k chars) so one long line can't
 // fail validation for an entire batch.
 const MAX_LINE_CONTENT_LENGTH = 12_000;
@@ -75,6 +82,11 @@ const parseLogLevel = (value: string | undefined): LogLevel | undefined => {
   }
 };
 
+const encoder = new TextEncoder();
+
+const jsonByteLength = (line: TaskLogLine): number =>
+  encoder.encode(JSON.stringify(line)).byteLength;
+
 const parsePositiveInt = (value: string | undefined): number | undefined => {
   const trimmed = value?.trim();
   if (!trimmed || !/^\d+$/.test(trimmed)) {
@@ -89,6 +101,12 @@ export type TaskLogShipperDeps = {
   taskRunId: UuidV7;
   claimToken: string;
   /**
+   * The run's live log feed socket. When connected, batches go through it;
+   * otherwise, or when it rejects a batch, they go through
+   * `workerClient.appendTaskLogs`. Absent means HTTP only.
+   */
+  logFeed?: Pick<LogFeedSocket, "isConnected" | "append"> | undefined;
+  /**
    * Redacts known secret values from every line before it is buffered/shipped.
    * Required: the durable feed (Postgres + S3 archive) must never persist a
    * user's injected secrets. Pass a masker seeded with no values to opt out —
@@ -101,6 +119,8 @@ export type TaskLogShipperDeps = {
   /** Defaults to `SCARN_LOG_FLUSH_INTERVAL_MS` or 5s. */
   flushIntervalMs?: number;
   maxBatchLines?: number;
+  /** Defaults to {@link MAX_BATCH_BYTES}. */
+  maxBatchBytes?: number;
   maxBufferLines?: number;
   /**
    * Minimum severity shipped for the diagnostic streams (`worker`,
@@ -124,7 +144,11 @@ export class TaskLogShipper {
   private readonly deps: Required<
     Pick<
       TaskLogShipperDeps,
-      "flushIntervalMs" | "maxBatchLines" | "maxBufferLines" | "minShipLevel"
+      | "flushIntervalMs"
+      | "maxBatchLines"
+      | "maxBatchBytes"
+      | "maxBufferLines"
+      | "minShipLevel"
     >
   > &
     TaskLogShipperDeps;
@@ -144,6 +168,7 @@ export class TaskLogShipper {
         parsePositiveInt(process.env["SCARN_LOG_FLUSH_INTERVAL_MS"]) ??
         DEFAULT_FLUSH_INTERVAL_MS,
       maxBatchLines: deps.maxBatchLines ?? DEFAULT_MAX_BATCH_LINES,
+      maxBatchBytes: deps.maxBatchBytes ?? MAX_BATCH_BYTES,
       maxBufferLines: deps.maxBufferLines ?? DEFAULT_MAX_BUFFER_LINES,
       minShipLevel:
         deps.minShipLevel ??
@@ -233,15 +258,50 @@ export class TaskLogShipper {
     return this.inFlight;
   }
 
+  /**
+   * The next batch from the head of the buffer: at most `maxBatchLines` lines
+   * whose JSON array stays within `maxBatchBytes`, and always at least one line.
+   */
+  private nextBatch(): TaskLogLine[] {
+    let bytes = 2;
+    let count = 0;
+    for (const line of this.buffer) {
+      if (count === this.deps.maxBatchLines) {
+        break;
+      }
+      const lineBytes = jsonByteLength(line) + (count > 0 ? 1 : 0);
+      if (count > 0 && bytes + lineBytes > this.deps.maxBatchBytes) {
+        break;
+      }
+      bytes += lineBytes;
+      count += 1;
+    }
+    return this.buffer.slice(0, count);
+  }
+
+  /** Over the log feed socket when it's up; over HTTP otherwise or when it fails. */
+  private async send(batch: TaskLogLine[]): Promise<void> {
+    const logFeed = this.deps.logFeed;
+    if (logFeed?.isConnected()) {
+      try {
+        await logFeed.append(batch);
+        return;
+      } catch {
+        // Fall back to HTTP for this batch (Decision 11); the feed dedups by seq.
+      }
+    }
+    await this.deps.workerClient.appendTaskLogs({
+      taskRunId: this.deps.taskRunId,
+      claimToken: this.deps.claimToken,
+      lines: batch,
+    });
+  }
+
   private async drain(): Promise<void> {
     while (this.buffer.length > 0) {
-      const batch = this.buffer.slice(0, this.deps.maxBatchLines);
+      const batch = this.nextBatch();
       try {
-        await this.deps.workerClient.appendTaskLogs({
-          taskRunId: this.deps.taskRunId,
-          claimToken: this.deps.claimToken,
-          lines: batch,
-        });
+        await this.send(batch);
       } catch (error) {
         // Retain the unsent batch for the next flush; report and stop draining.
         this.deps.onError?.(error);

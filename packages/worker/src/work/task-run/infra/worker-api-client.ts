@@ -97,5 +97,17 @@ export async function createTaskPlaneWorkerClient(
       }
       return result.data;
     },
+    issueLogFeedWriteToken: async (input) => {
+      const result = await planeClient.issueLogFeedWriteToken(input);
+      if (result.response.status === 404 || result.response.status === 409) {
+        return null;
+      }
+      if (result.error !== undefined) {
+        throw new Error(
+          `Log feed token request failed (HTTP ${String(result.response.status)})`,
+        );
+      }
+      return result.data;
+    },
   };
 }

@@ -1,9 +1,15 @@
 import type { UuidV7 } from "../../../common/contracts/uuid-v7";
+import type { LogFeedToken } from "../contracts/socket-token-types";
 import type {
   OpencodeServerHandle,
   ProjectWorkLogger,
   TaskRunWorkerClient,
 } from "../contracts/process-project-work-types";
+import {
+  createLogFeedSocket,
+  type LogFeedSocket,
+  type LogFeedSocketOptions,
+} from "../infra/log-feed-socket";
 import { SecretMasker } from "./secret-masker";
 import { TaskLogShipper } from "./task-log-shipper";
 import { OpencodeLogTail } from "./opencode-log-tail";
@@ -81,6 +87,31 @@ const createStreamingLogger = (
   },
 });
 
+const createTaskLogFeedSocket = (input: {
+  workerClient: Pick<TaskRunWorkerClient, "issueLogFeedWriteToken">;
+  logger: ProjectWorkLogger;
+  taskRunId: UuidV7;
+  claimToken: string;
+  logFeed: LogFeedToken;
+  logFeedSocketOptions?:
+    Partial<Omit<LogFeedSocketOptions, "taskRunId" | "token">> | undefined;
+}): LogFeedSocket => {
+  const issueToken = input.workerClient.issueLogFeedWriteToken;
+  return createLogFeedSocket({
+    taskRunId: input.taskRunId,
+    token: input.logFeed,
+    refreshToken: async () =>
+      issueToken
+        ? await issueToken({
+            taskRunId: input.taskRunId,
+            claimToken: input.claimToken,
+          })
+        : null,
+    logger: input.logger,
+    ...input.logFeedSocketOptions,
+  });
+};
+
 /**
  * Live log streaming for a claimed task (GitHub-Actions-style).
  *
@@ -101,14 +132,26 @@ export class TaskLogStreaming {
   private readonly baseLogger: ProjectWorkLogger;
   private readonly taskRunId: UuidV7;
   private readonly secretMasker: SecretMasker;
+  private readonly logFeed: LogFeedSocket | null;
   private tail: OpencodeLogTail | null = null;
   private conversation: OpencodeConversationStreamer | null = null;
 
   constructor(input: {
-    workerClient: Pick<TaskRunWorkerClient, "appendTaskLogs">;
+    workerClient: Pick<
+      TaskRunWorkerClient,
+      "appendTaskLogs" | "issueLogFeedWriteToken"
+    >;
     logger: ProjectWorkLogger;
     taskRunId: UuidV7;
     claimToken: string;
+    /**
+     * The claim's log feed write access. When set, batches go over the log
+     * feed socket with HTTP as the fallback; `null` keeps logs on HTTP only.
+     */
+    logFeed?: LogFeedToken | null | undefined;
+    /** Overrides for the log feed socket (tests). */
+    logFeedSocketOptions?:
+      Partial<Omit<LogFeedSocketOptions, "taskRunId" | "token">> | undefined;
     /**
      * Initial set of secret values to redact from every shipped line (Path A:
      * the user's `.scarn/.env` values). Provider token(s) are added later via
@@ -119,10 +162,14 @@ export class TaskLogStreaming {
     this.baseLogger = input.logger;
     this.taskRunId = input.taskRunId;
     this.secretMasker = new SecretMasker(input.secretValues ?? []);
+    this.logFeed = input.logFeed
+      ? createTaskLogFeedSocket({ ...input, logFeed: input.logFeed })
+      : null;
     this.shipper = new TaskLogShipper({
       workerClient: input.workerClient,
       taskRunId: input.taskRunId,
       claimToken: input.claimToken,
+      logFeed: this.logFeed ?? undefined,
       secretMasker: this.secretMasker,
       onError: (error) => {
         // Use the base logger to avoid recursively shipping shipper errors.
@@ -135,6 +182,7 @@ export class TaskLogStreaming {
         });
       },
     });
+    this.logFeed?.start();
     this.shipper.start();
     this.logger = createStreamingLogger(this.baseLogger, this.shipper);
   }
@@ -242,10 +290,14 @@ export class TaskLogStreaming {
     await this.shipper.flush();
   }
 
-  /** Stop tailing and flush any remaining lines a final time. */
+  /**
+   * Stop tailing and flush any remaining lines a final time, waiting for the
+   * log feed to acknowledge them, then close the log feed socket.
+   */
   async stop(): Promise<void> {
     this.tail?.stop();
     this.conversation?.stop();
     await this.shipper.stop();
+    this.logFeed?.stop();
   }
 }

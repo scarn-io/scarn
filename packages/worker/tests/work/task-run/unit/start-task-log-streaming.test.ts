@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it, vi } from "bun:test";
 import { createUuidV7 } from "../../../../src/common/contracts/uuid-v7";
 import { TaskLogStreaming } from "../../../../src/work/task-run/application/start-task-log-streaming";
 import type {
@@ -6,6 +6,17 @@ import type {
   TaskLogLine,
   TaskRunWorkerClient,
 } from "../../../../src/work/task-run/contracts/process-project-work-types";
+import {
+  createFakeSocketFactory,
+  hourFromNow,
+  waitFor,
+} from "./helpers/fake-log-feed-socket";
+
+const silentLogger: ProjectWorkLogger = {
+  debug: () => {},
+  log: () => {},
+  error: () => {},
+};
 
 const buildWorkerClient = (
   sink: TaskLogLine[],
@@ -211,5 +222,80 @@ describe("TaskLogStreaming", () => {
     });
 
     await stream.stop();
+  });
+
+  it("opens no log feed socket when the claim has no log feed", async () => {
+    const sent: TaskLogLine[] = [];
+    const factory = createFakeSocketFactory();
+    const stream = new TaskLogStreaming({
+      workerClient: buildWorkerClient(sent),
+      logger: silentLogger,
+      taskRunId: createUuidV7(),
+      claimToken: "claim-token",
+      logFeed: null,
+      logFeedSocketOptions: { createSocket: factory.createSocket },
+    });
+
+    stream.logger.log("worker", "over http");
+    await stream.stop();
+
+    expect(factory.sockets).toHaveLength(0);
+    expect(sent.map((line) => line.content)).toEqual(["[worker] over http"]);
+  });
+
+  it("ships over the log feed socket, refreshes an expired token, and waits for the final ack on stop", async () => {
+    const sent: TaskLogLine[] = [];
+    const factory = createFakeSocketFactory();
+    const taskRunId = createUuidV7();
+    const issueLogFeedWriteToken = vi.fn(() =>
+      Promise.resolve({
+        url: "wss://feed.example/ws",
+        token: "token-2",
+        expiresAt: hourFromNow(),
+      }),
+    );
+    const stream = new TaskLogStreaming({
+      workerClient: { ...buildWorkerClient(sent), issueLogFeedWriteToken },
+      logger: silentLogger,
+      taskRunId,
+      claimToken: "claim-token",
+      logFeed: {
+        url: "wss://feed.example/ws",
+        token: "token-1",
+        expiresAt: hourFromNow(),
+      },
+      logFeedSocketOptions: {
+        createSocket: factory.createSocket,
+        minBackoffMs: 5,
+        maxBackoffMs: 10,
+      },
+    });
+    factory.sockets[0]?.open();
+
+    factory.sockets[0]?.serverClose(4001);
+    await waitFor(() => factory.sockets.length === 2);
+    expect(issueLogFeedWriteToken).toHaveBeenCalledWith({
+      taskRunId,
+      claimToken: "claim-token",
+    });
+    expect(factory.sockets[1]?.url).toBe("wss://feed.example/ws?token=token-2");
+    factory.sockets[1]?.open();
+
+    stream.logger.log("worker", "over the socket");
+    let stopped = false;
+    const stopping = stream.stop().then(() => {
+      stopped = true;
+    });
+    await waitFor(() => factory.sockets[1]?.appends.length === 1);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(stopped).toBe(false);
+
+    factory.sockets[1]?.ackAll();
+    await stopping;
+    expect(sent).toHaveLength(0);
+    expect(
+      factory.sockets[1]?.appends[0]?.lines.map((line) => line.content),
+    ).toEqual(["[worker] over the socket"]);
+    expect(factory.sockets[1]?.closedWith).toEqual({ code: 1000 });
   });
 });
