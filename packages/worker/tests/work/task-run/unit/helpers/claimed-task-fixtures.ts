@@ -142,7 +142,7 @@ export function runClaim(
   deps: ProcessProjectWorkDeps,
   options: {
     tracker?: TaskRunTracker;
-    workerEnv?: Record<string, string | undefined>;
+    localEnvVars?: Record<string, string>;
   } = {},
 ) {
   return startProcessClaimedTaskRun(
@@ -154,7 +154,7 @@ export function runClaim(
         claimToken: "claim-token",
       },
       leaseDurationSeconds: 30,
-      workerEnv: options.workerEnv,
+      localEnvVars: options.localEnvVars,
     },
     deps,
     deps.workerClient,
@@ -224,6 +224,7 @@ export function createRoutingDeps(input: {
         Promise.resolve({ sessionId: "agent-session-id" }),
       ),
       getSessionStatus: vi.fn(),
+      abort: vi.fn(() => Promise.resolve(undefined)),
       sendRetryPrompt: vi.fn(),
     },
     artifactStore: {

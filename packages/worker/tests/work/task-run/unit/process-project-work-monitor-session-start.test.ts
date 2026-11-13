@@ -118,6 +118,7 @@ describe("monitorStartedClaimedTaskRun session-start fail-fast", () => {
         // The session never reports running and never writes findings — the
         // failure mode when the in-container agent cannot reach the AI host.
         getSessionStatus: vi.fn(() => Promise.resolve({ running: false })),
+        abort: vi.fn(() => Promise.resolve(undefined)),
         sendRetryPrompt: vi.fn(() => Promise.resolve(undefined)),
       },
       artifactStore: {

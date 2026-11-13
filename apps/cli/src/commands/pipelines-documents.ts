@@ -7,10 +7,9 @@ import {
 } from "@scarn/sdk/definitions/pipelines";
 import {
   pipelineDocumentFileName,
-  resolveScarnBaseUrl,
   serializePipelineDocument,
 } from "@scarn/worker";
-import { connectApi, describeApiError } from "../lib/cli-api-client";
+import { describeApiError } from "../lib/cli-api-client";
 import { withReporter } from "../lib/command-output";
 import { CliError } from "../lib/cli-error";
 import {
@@ -22,61 +21,17 @@ import {
 } from "../lib/pipeline-documents";
 import type { BaseReporter } from "../lib/reporter-types";
 import {
-  NO_PROJECT_MESSAGE,
-  pickProjectRef,
-  PROJECT_ACTIONS,
-  resolveCliProjectRef,
-  type ProjectAction,
-} from "../lib/resolve-project-ref";
-import { syncIdentityFromDisk } from "../lib/telemetry";
+  connectProject,
+  withProjectOptions,
+  type ProjectArguments,
+} from "../lib/connect-project";
+import { PROJECT_ACTIONS } from "../lib/resolve-project-ref";
 
 /**
  * The JSON pipeline document commands: `validate`, `publish`, `activate` and
  * `run`, plus the single-document form of `pull` (`pull --key`). Each one
  * resolves the project from `--project` or `.scarn/scarn.jsonc`.
  */
-
-export interface ProjectArguments {
-  project: string | undefined;
-  baseUrl: string | undefined;
-}
-
-export const withProjectOptions = <T>(argv: Argv<T>) =>
-  argv
-    .option("project", {
-      type: "string",
-      describe:
-        'The project, as owner/slug (defaults to "project" in .scarn/scarn.jsonc)',
-    })
-    .option("baseUrl", {
-      alias: "base-url",
-      type: "string",
-      describe: "Scarn app base URL",
-    });
-
-export async function connectProject(
-  args: ProjectArguments,
-  action: ProjectAction,
-): Promise<
-  Awaited<ReturnType<typeof connectApi>> & {
-    baseUrl: string;
-    projectId: string;
-  }
-> {
-  const baseUrl = resolveScarnBaseUrl(args.baseUrl);
-  const projectRef = await pickProjectRef(args.project);
-  if (!projectRef) {
-    throw new CliError("no_project_id", NO_PROJECT_MESSAGE);
-  }
-  const api = await connectApi(baseUrl);
-  syncIdentityFromDisk(baseUrl);
-  const { id: projectId } = await resolveCliProjectRef({
-    baseUrl,
-    ref: projectRef,
-    action,
-  });
-  return { ...api, baseUrl, projectId };
-}
 
 async function findPipeline(
   baseUrl: string,

@@ -10,7 +10,6 @@ import workItemTranscript from "../../transcripts/02-work-item.txt?raw";
 import providerTranscript from "../../transcripts/03-provider.txt?raw";
 import sessionTranscript from "../../transcripts/04-session-start.txt?raw";
 import runOfferTranscript from "../../transcripts/05-run-offer.txt?raw";
-import workerTranscript from "../../transcripts/06-worker.txt?raw";
 
 :::tip[Have your assistant drive]
 Using Claude Code, Codex, or Copilot? Paste this page's URL and say _follow
@@ -135,14 +134,11 @@ Docker — see [Runtime](/scarn/getting-started/concepts/#runtime).
 
    <Transcript src={runOfferTranscript} />
 
-   Say yes. It queues the run and starts a
-   [worker](/scarn/getting-started/concepts/#worker) in the same terminal:
-
-   <Transcript src={workerTranscript} />
-
-   The worker polls until you press Ctrl+C. If the check or a step fails, run
-   `scarn pipelines design` again and tell the designer what happened. Said
-   no? See [Run a pipeline on any work item](/scarn/how-to/run-on-a-work-item/).
+   Say yes. It queues the run and hands it to your background
+   [worker](/scarn/getting-started/concepts/#worker). Follow it with
+   `scarn worker status`. If a step fails, run `scarn pipelines design`
+   again and tell the designer what happened. Said no? See
+   [Run a pipeline on any work item](/scarn/how-to/run-on-a-work-item/).
 
 7. **Watch it in the dashboard**
 

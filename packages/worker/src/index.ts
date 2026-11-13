@@ -60,6 +60,9 @@ export type {
 export { fetchAuthenticatedSession } from "./auth/session/application/fetch-authenticated-session";
 export { loadAuthenticatedSession } from "./auth/session/application/load-authenticated-session";
 export { persistAuthenticatedSession } from "./auth/session/application/persist-authenticated-session";
+export { WorkerAuthError } from "./auth/session/domain/worker-auth-error";
+export type { WorkerAuthErrorReason } from "./auth/session/domain/worker-auth-error";
+export { readLocalEnvVars } from "./project/local-env/read-local-env-vars";
 export { pollForAccessToken } from "./auth/session/application/poll-for-access-token";
 export { requestDeviceAuthorization } from "./auth/session/application/request-device-authorization";
 export { readProjectConfig } from "./project/project-config/application/read-project-config";
@@ -259,6 +262,8 @@ export type {
   ProcessProjectWorkResult,
   LocalRuntimeSessionStore,
 } from "./work/task-run/application/run-project-work";
+export { createDefaultProjectWorkDeps } from "./work/task-run/application/default-project-work-deps";
+export type { SlotPort } from "./work/worker-host/contracts/slot-port";
 export { noopReporter } from "./work/task-run/contracts/work-reporter";
 export type {
   WorkEvent,
@@ -301,3 +306,70 @@ export type {
   PipelineStudioServerHandle,
   RunPipelineStudioServerOptions,
 } from "./pipelines/pipeline-studio/application/run-pipeline-studio-server";
+export {
+  SqliteLocalRuntimeSessionStore,
+  getDefaultLocalRuntimeSessionDbPath,
+} from "./work/task-run/infra/sqlite-local-runtime-session-store";
+export type {
+  LocalRuntimeSessionRecord,
+  LocalRuntimeSessionStatus,
+} from "./work/task-run/infra/sqlite-local-runtime-session-store";
+export {
+  DEFAULT_WORKER_INSTANCE,
+  InvalidWorkerInstanceError,
+  isValidWorkerInstanceName,
+  resolveWorkerInstance,
+} from "./work/worker-host/domain/worker-instance";
+export {
+  ensureWorkerInstanceDir,
+  restrictFileMode,
+  workerDiscoveryFilePath,
+  workerInstanceDir,
+  workerLogFilePath,
+  workersRootDir,
+  writePrivateFile,
+} from "./work/worker-host/infra/worker-instance-paths";
+export { SqliteWorkerSettingsStore } from "./work/worker-host/infra/sqlite-worker-settings-store";
+export type { SqliteWorkerSettingsStoreOptions } from "./work/worker-host/infra/sqlite-worker-settings-store";
+export type {
+  SaveWorkerInstanceInput,
+  UpsertWorkerProjectInput,
+  WorkerInstanceSettings,
+  WorkerProjectSettings,
+  WorkerSettingsStore,
+} from "./work/worker-host/contracts/worker-settings";
+export { WorkerSupervisor } from "./work/worker-host/application/worker-supervisor";
+export type {
+  ActiveRunStatus,
+  AddOrUpdateProjectOutcome,
+  AddOrUpdateProjectResult,
+  CreateProjectWorker,
+  ProjectSettingsInput,
+  RecentRunsSource,
+  RemoveProjectResult,
+  SupervisedProjectWorker,
+  WorkerSupervisorOptions,
+  WorkerSupervisorState,
+  WorkerSupervisorStatus,
+} from "./work/worker-host/application/worker-supervisor";
+export {
+  WorkerBaseUrlMismatchError,
+  WorkerNotRunningError,
+} from "./work/worker-host/domain/worker-supervisor-errors";
+export {
+  ProjectWorker,
+  projectWorkerId,
+} from "./work/worker-host/application/project-worker";
+export type {
+  ProjectWorkerDeps,
+  ProjectWorkerStatus,
+} from "./work/worker-host/application/project-worker";
+export type {
+  ProjectWorkerErrorReason,
+  ProjectWorkerStateName,
+} from "./work/worker-host/domain/project-worker-state";
+export type {
+  ProjectSlotUsage,
+  SlotSnapshot,
+} from "./work/worker-host/domain/slot-allocator";
+export * from "./work/worker-host/control-api-exports";

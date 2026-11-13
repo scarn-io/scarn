@@ -1,29 +1,17 @@
-import type { PipelineStepRunStatus } from "./api-types";
-
 /**
- * Single-character status glyphs for the step rail (decision 8's "one line
- * per step (status glyph)"). No existing glyph convention was found
- * elsewhere in the CLI (`apps/cli/src/lib/reporter*.ts` uses `@clack/prompts`
- * spinners, not a fixed glyph table) or in the Next.js UI (`STATUS_COLOR_KEY`
- * in `apps/next/components/pipeline-graph/pipeline-graph-node-status.ts`
- * maps status to a *color*, not a character) — this table is a new choice
- * for this package, kept small and legible in a monospace terminal:
+ * Single-character status glyphs for the read commands, kept small and
+ * legible in a monospace terminal:
  *
- *   ✓ satisfied            — succeeded
- *   ✗ unsatisfied           — failed a policy check
- *   ● running               — in flight
+ *   ✓ satisfied / succeeded — done, successfully
+ *   ✗ unsatisfied / failed  — failed
+ *   ● running / active      — in flight
  *   ○ queued / pending      — not started yet
- *   ‼ blocked               — waiting on a human decision
- *   ⏱ timeout               — blew its execution deadline
+ *   ‼ blocked / waiting     — waiting on a human decision
+ *   ⏱ timeout               — blew its deadline
  *   ⚠ abandoned             — lost its worker lease
  *   ⊘ cancelled             — deliberately stopped
- *
- * Typed as `Record<PipelineStepRunStatus, string>` so the compiler enforces
- * every status has an entry — if `PipelineStepRunStatus` ever grows, this
- * table fails to typecheck until updated, rather than silently falling back
- * at runtime.
  */
-const STATUS_GLYPHS: Record<PipelineStepRunStatus, string> = {
+const LOOSE_STATUS_GLYPHS: Readonly<Record<string, string>> = {
   satisfied: "✓",
   unsatisfied: "✗",
   running: "●",
@@ -33,8 +21,27 @@ const STATUS_GLYPHS: Record<PipelineStepRunStatus, string> = {
   timeout: "⏱",
   abandoned: "⚠",
   cancelled: "⊘",
+  succeeded: "✓",
+  failed: "✗",
+  active: "●",
+  waiting: "‼",
+  waiting_for_person: "‼",
+  needs_person: "‼",
+  waiting_for_work: "○",
+  waiting_for_concurrency_slot: "○",
+  ready: "○",
+  open: "○",
+  answered: "✓",
+  closed: "✓",
+  not_needed: "⊘",
 };
 
-export function statusGlyph(status: PipelineStepRunStatus): string {
-  return STATUS_GLYPHS[status];
+/**
+ * Glyph for any status vocabulary the read commands list (run and visit
+ * status, Task status, work item and question states). Unknown statuses
+ * render as `·` rather than failing, since these come straight off the wire.
+ */
+export function looseStatusGlyph(status: string | null): string {
+  if (status === null) return "·";
+  return LOOSE_STATUS_GLYPHS[status] ?? "·";
 }

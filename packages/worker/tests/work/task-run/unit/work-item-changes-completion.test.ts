@@ -77,6 +77,7 @@ function createDeps(
     agentRunner: {
       promptAsync: vi.fn(),
       getSessionStatus: vi.fn(),
+      abort: vi.fn(() => Promise.resolve(undefined)),
       sendRetryPrompt: vi.fn(),
     },
     artifactStore: { saveArtifact: vi.fn() },

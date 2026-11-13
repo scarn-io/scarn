@@ -302,6 +302,7 @@ export async function runPipelineHealthChecksDryRun(
         claimToken: DRY_RUN_CLAIM_TOKEN,
         baseWorkBranch: null,
         sourceBranch: options.sourceBranch ?? null,
+        localEnvVars,
         stepKey: undefined,
         opencodeMcpJson: launch.opencodeMcpJson,
         currentExecutionInfo: {

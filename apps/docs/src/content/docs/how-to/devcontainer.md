@@ -84,7 +84,7 @@ After the file output, add a **"Why"** section (plain prose, ≤ 150 words) expl
 1. Create a `.devcontainer/` directory at your project root if it doesn't exist.
 2. Write the generated `devcontainer.json` (and optional `Dockerfile`) into that directory.
 3. Commit both files.
-4. Test locally by running `scarn work --once` — the worker will pull the image and report any missing tools in its logs.
+4. Test locally by running `scarn worker start --foreground --once`. The worker pulls the image and reports any missing tools in its logs.
 
 ## Multiple configs
 
@@ -124,10 +124,10 @@ Things to know when you write an alternate config:
 
 ## Troubleshooting
 
-| Symptom | Likely cause |
-|---------|--------------|
-| `scarn work` fails with "image not found" | Base image name is wrong or private — check `docker pull <image>` manually |
-| Agent can't find the package manager | Add an `onCreateCommand` to install deps, or use a `features` entry |
-| Container starts but step fails with missing binary | A system package or runtime tool is absent — add it via `features` or a custom `Dockerfile` |
+| Symptom                                                                        | Likely cause                                                                                                                                                              |
+| ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `scarn work` fails with "image not found"                                      | Base image name is wrong or private — check `docker pull <image>` manually                                                                                                |
+| Agent can't find the package manager                                           | Add an `onCreateCommand` to install deps, or use a `features` entry                                                                                                       |
+| Container starts but step fails with missing binary                            | A system package or runtime tool is absent — add it via `features` or a custom `Dockerfile`                                                                               |
 | Step fails with `Devcontainer config "..." not found in the cloned repository` | The path in `Runtime.devcontainer({ config })` does not exist on the branch the step starts from. Check the path and that the file is committed and pushed to that branch |
-| Execution is slow | The `onCreateCommand` runs on every job; move stable deps into the image |
+| Execution is slow                                                              | The `onCreateCommand` runs on every job; move stable deps into the image                                                                                                  |

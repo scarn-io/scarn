@@ -2,8 +2,8 @@ import { ProjectRefError, type ProjectRefErrorKind } from "@scarn/sdk/defaults";
 import { CoreError, SetupErrorCodes } from "@scarn/worker";
 
 /**
- * Every early exit of the onboarding commands (`init`, `pipelines design`,
- * `pipelines push`), as reported on `cli_command_failed`. A closed vocabulary
+ * Every classified early exit of a command (onboarding, reads, and the safe
+ * actions' `action_*` codes), as reported on `cli_command_failed`. A closed vocabulary
  * so failure-mix dashboards group cleanly; the human-readable message is never
  * sent, since it can carry local paths or remote URLs.
  */
@@ -40,19 +40,40 @@ export const CLI_ERROR_CODES = [
   "build_check_failed",
   "designer_exited_nonzero",
   "invalid_usage",
+  "confirmation_required",
+  "work_item_lookup_failed",
+  "body_unreadable",
+  "action_not_found",
+  "action_forbidden",
+  "action_conflict",
+  "action_rejected",
+  "action_failed",
+  "worker_already_running",
+  "worker_start_failed",
+  "worker_base_url_mismatch",
+  "worker_not_running",
+  "worker_version_mismatch",
+  "worker_unresponsive",
+  "worker_request_failed",
 ] as const;
 
 export type CliErrorCode = (typeof CLI_ERROR_CODES)[number];
 
-/** A CLI-owned failure carrying its {@link CliErrorCode}. */
+/**
+ * A CLI-owned failure carrying its {@link CliErrorCode}, and the process exit
+ * code it ends the command with (1 unless the error says otherwise).
+ */
 export class CliError extends Error {
+  public readonly exitCode: number;
+
   public constructor(
     public readonly code: CliErrorCode,
     message: string,
-    options?: ErrorOptions,
+    options?: ErrorOptions & { exitCode?: number | undefined },
   ) {
     super(message, options);
     this.name = "CliError";
+    this.exitCode = options?.exitCode ?? 1;
   }
 }
 

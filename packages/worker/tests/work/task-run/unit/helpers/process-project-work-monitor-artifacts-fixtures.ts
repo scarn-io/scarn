@@ -120,6 +120,7 @@ export function createDeps(config: {
     agentRunner: {
       promptAsync: vi.fn(),
       getSessionStatus: config.getSessionStatus,
+      abort: vi.fn(() => Promise.resolve(undefined)),
       sendRetryPrompt: vi.fn(() => Promise.resolve(undefined)),
     },
     artifactStore: {

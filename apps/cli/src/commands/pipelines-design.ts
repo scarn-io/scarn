@@ -14,6 +14,7 @@ import {
   resolveHostHome,
   runPipelineStudioServer,
   scaffoldPipelineBuilderDirectory,
+  readLocalEnvVars,
   SdkMcpToolLister,
   verifyRequirements,
   writeAgentToolsManifest,
@@ -39,6 +40,7 @@ import {
   type DesignRunTarget,
 } from "../lib/design-run-offer";
 import { ensureDesignRuntime } from "../lib/design-runtime";
+import { handOffToWorker } from "../lib/design-worker-handoff";
 import {
   runDesignSession,
   type DesignArguments,
@@ -59,14 +61,12 @@ import {
   promptWorkItemText,
 } from "../lib/design-work-item-adapters";
 import { createSignInPorts } from "../lib/ensure-signed-in";
-import { readLocalEnvVars } from "../lib/local-env-vars";
 import {
   builderDependenciesInstalled,
   NO_PACKAGE_MANAGER_MESSAGE,
   resolveBuilderInstaller,
   runBuilderInstall,
 } from "../lib/pipeline-builder-install";
-import { runWork } from "./work";
 import type { CommandContext } from "../lib/command-output";
 import type { BaseReporter } from "../lib/reporter-types";
 import { CliError } from "../lib/cli-error";
@@ -249,15 +249,12 @@ function buildRunOfferPorts(input: {
         workItemId: target.workItemId,
         pipelineDefinitionId,
       }),
-    // Everything else takes its flag default — including `once: false`, so the
-    // worker keeps polling: later steps are only queued as earlier ones advance,
-    // and a single pass would stop after the first. The user stops it when they
-    // have seen enough.
-    runWorker: () =>
-      runWork({
-        project: target.project,
+    handOffToWorker: () =>
+      handOffToWorker({
+        target,
         baseUrl,
-        workItemId: target.workItemId,
+        projectRoot: paths.projectRoot,
+        reporter,
       }),
   };
 }

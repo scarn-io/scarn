@@ -23,7 +23,7 @@ function line(overrides: Partial<LogLine>): LogLine {
 describe("formatLogs", () => {
   test("reports when there are no log lines yet", () => {
     const output = formatLogs({
-      stepKey: "investigate",
+      subject: "step investigate",
       lines: [],
       requestedStream: "all",
       source: "live",
@@ -33,7 +33,7 @@ describe("formatLogs", () => {
 
   test("labels the header with archive vs live source", () => {
     const archived = formatLogs({
-      stepKey: "investigate",
+      subject: "step investigate",
       lines: [line({ seq: 1 })],
       requestedStream: "all",
       source: "archive",
@@ -41,17 +41,17 @@ describe("formatLogs", () => {
     expect(archived).toContain("complete");
 
     const live = formatLogs({
-      stepKey: "investigate",
+      subject: "step investigate",
       lines: [line({ seq: 1 })],
       requestedStream: "all",
       source: "live",
     });
-    expect(live).toContain("(live snapshot, step still running)");
+    expect(live).toContain("(live snapshot, still running)");
   });
 
   test("renders worker/ai-server lines as [level] ts content", () => {
     const output = formatLogs({
-      stepKey: "investigate",
+      subject: "step investigate",
       lines: [
         line({
           seq: 1,
@@ -69,7 +69,7 @@ describe("formatLogs", () => {
 
   test("narrows to a single stream via requestedStream", () => {
     const output = formatLogs({
-      stepKey: "investigate",
+      subject: "step investigate",
       lines: [
         line({ seq: 1, stream: "worker", content: "worker line" }),
         line({ seq: 2, stream: "ai-server", content: "ai line" }),
@@ -125,7 +125,7 @@ describe("formatLogs", () => {
     );
 
     const output = formatLogs({
-      stepKey: "investigate",
+      subject: "step investigate",
       lines,
       requestedStream: "conversation",
       source: "archive",
@@ -141,7 +141,7 @@ describe("formatLogs", () => {
 
   test("falls back to raw content when a conversation line is not valid JSON", () => {
     const output = formatLogs({
-      stepKey: "investigate",
+      subject: "step investigate",
       lines: [line({ stream: "conversation", content: "not json" })],
       requestedStream: "conversation",
       source: "archive",
@@ -159,7 +159,7 @@ describe("formatLogs", () => {
     );
 
     const output = formatLogs({
-      stepKey: "investigate",
+      subject: "step investigate",
       lines: longLines,
       requestedStream: "all",
       source: "archive",
@@ -207,7 +207,7 @@ describe("formatLogs", () => {
 
   test("renderLogText/capLogBody are directly testable in isolation", () => {
     const rendered = renderLogText({
-      stepKey: "investigate",
+      subject: "step investigate",
       lines: [line({ seq: 1, content: "hello" })],
       requestedStream: "all",
       source: "live",
@@ -225,7 +225,7 @@ describe("renderConversationTranscript", () => {
   test("renders only the conversation stream, uncapped", () => {
     const longText = "x".repeat(MAX_LOG_RENDER_CHARS * 2);
     const transcript = renderConversationTranscript({
-      stepKey: "investigate",
+      subject: "step investigate",
       lines: [
         line({ seq: 0, stream: "worker", content: "worker noise" }),
         line({

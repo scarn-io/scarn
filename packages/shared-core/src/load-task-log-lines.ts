@@ -1,18 +1,26 @@
-import type { LogLine, Task } from "./lib/api-types";
-import { describeApiError } from "./lib/api-errors";
-import { fetchArchiveLogLines } from "./lib/investigate-execution-fetchers";
 import type {
-  AuthHeaders,
-  InvestigateExecutionClient,
-} from "./lib/investigate-execution-client";
+  LogLine,
+  ReadTaskLogsResult,
+  Task,
+  TaskLogArchive,
+} from "./lib/api-types";
+import { describeApiError } from "./lib/api-errors";
+import type { ApiResult, AuthHeaders } from "./lib/api-result";
 
-/** The two log reads {@link loadTaskLogLines} needs, so callers without a
- * full {@link InvestigateExecutionClient} (e.g. the worker) can pass one. */
+/** The two log reads {@link loadTaskLogLines} makes, so any caller holding a
+ * generated client (the CLI, the worker) can pass it. */
 export type TaskLogsClient = {
-  taskRuns: Pick<
-    InvestigateExecutionClient["taskRuns"],
-    "getTaskLogArchive" | "readTaskLogs"
-  >;
+  taskRuns: {
+    readTaskLogs: (options: {
+      path: { taskRunId: string };
+      query: { from: number; limit: number };
+      headers: AuthHeaders;
+    }) => Promise<ApiResult<ReadTaskLogsResult>>;
+    getTaskLogArchive: (options: {
+      path: { taskRunId: string };
+      headers: AuthHeaders;
+    }) => Promise<ApiResult<TaskLogArchive>>;
+  };
 };
 
 export type TaskLogLinesResult =
@@ -54,15 +62,75 @@ export async function loadTaskLogLines(
     return { lines: await fetchArchiveLogLines(data.url), source: "archive" };
   }
 
-  const { data, error } = await client.taskRuns.readTaskLogs({
-    path: { taskRunId: task.id },
-    query: { from: 0, limit: 2_000 },
-    headers,
-  });
-  if (error !== undefined) {
-    return {
-      unavailable: `could not load live logs: ${describeApiError(error)}`,
-    };
+  const live = await readLiveLogLines(client, headers, task.id, 0);
+  if ("unavailable" in live) return live;
+  return { lines: live.lines, source: "live" };
+}
+
+/** The live feed's page size: the API's maximum `limit`. */
+export const LIVE_LOG_PAGE_SIZE = 2_000;
+
+/**
+ * Reads every live-feed line after `from` (exclusive, a line `seq`), paging
+ * until a short page. `nextOffset` is the cursor for the next poll and
+ * `complete` is the last page's flag: the run is terminal and archived.
+ */
+export async function readLiveLogLines(
+  client: TaskLogsClient,
+  headers: AuthHeaders,
+  taskRunId: string,
+  from: number,
+): Promise<
+  | { lines: LogLine[]; nextOffset: number; complete: boolean }
+  | { unavailable: string }
+> {
+  const lines: LogLine[] = [];
+  let cursor = from;
+  for (;;) {
+    const { data, error } = await client.taskRuns.readTaskLogs({
+      path: { taskRunId },
+      query: { from: cursor, limit: LIVE_LOG_PAGE_SIZE },
+      headers,
+    });
+    if (error !== undefined) {
+      return {
+        unavailable: `could not load live logs: ${describeApiError(error)}`,
+      };
+    }
+    lines.push(...data.lines);
+    const advanced = data.nextOffset > cursor;
+    cursor = Math.max(cursor, data.nextOffset);
+    if (data.lines.length < LIVE_LOG_PAGE_SIZE || !advanced) {
+      return { lines, nextOffset: cursor, complete: data.complete };
+    }
   }
-  return { lines: data.lines, source: "live" };
+}
+
+/**
+ * Downloads and parses the NDJSON log archive at a presigned URL.
+ * `finalize-task-log.ts` stores the archive gzip-compressed with
+ * `Content-Encoding: gzip` (see `object-store.ts`'s `PutObjectInput.compress`
+ * doc comment: "HTTP clients fetching via a presigned URL decompress
+ * transparently"), so a plain `fetch` already receives decompressed bytes —
+ * no manual gunzip needed here. Malformed lines are skipped rather than
+ * failing the whole fetch.
+ */
+async function fetchArchiveLogLines(url: string): Promise<LogLine[]> {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(
+      `Failed to download log archive (HTTP ${String(response.status)}).`,
+    );
+  }
+  const text = await response.text();
+  const lines: LogLine[] = [];
+  for (const rawLine of text.split("\n")) {
+    if (rawLine.trim().length === 0) continue;
+    try {
+      lines.push(JSON.parse(rawLine) as LogLine);
+    } catch {
+      continue;
+    }
+  }
+  return lines;
 }

@@ -1,391 +1,113 @@
+/**
+ * `scarn work [project]`: a shortcut for `scarn worker start` followed by
+ * `scarn worker add`. It starts the instance's background worker when none
+ * runs, adds the project in the current checkout, prints where to follow it,
+ * and returns right away.
+ *
+ * `scarn work --dry-run` still rehearses a task's environment in this
+ * process; see `./work-dry-run`.
+ */
 import type { ArgumentsCamelCase, Argv, CommandModule } from "yargs";
-import { AnalyticsEvents } from "@scarn/observability/analytics/events";
+import { resolveWorkerInstance } from "@scarn/worker";
+import { withReporter } from "../lib/command-output";
 import {
-  resolveScarnBaseUrl,
-  resolveSourceBranch,
-  runProjectWork,
-} from "@scarn/worker";
+  addProjectToWorker,
+  reportAddedProject,
+  resolveProjectSettings,
+  withAddProjectOptions,
+  type AddProjectArguments,
+  type ProjectSettingsDeps,
+} from "./worker/add";
 import {
-  createCliLogger,
-  createTransport,
-  ensureLogDir,
-  resolveLogFilePath,
-} from "../lib/logger";
-import { createReporter } from "../lib/reporter";
-import { createRecordingReporter } from "../lib/reporter-record";
-import { runWorkDryRunCommand } from "../lib/dry-run-command";
-import { readLocalEnvVars } from "../lib/local-env-vars";
+  ensureWorkerRunning,
+  type EnsureWorkerRunningDeps,
+} from "./worker/background-start";
 import {
-  NO_PROJECT_MESSAGE,
-  pickProjectRef,
-  PROJECT_ACTIONS,
-  resolveCliProjectRef,
-} from "../lib/resolve-project-ref";
-import {
-  captureMilestone,
-  shutdownTelemetry,
-  syncIdentityFromDisk,
-} from "../lib/telemetry";
+  assertWorkerVersion,
+  type ConnectToWorkerDeps,
+} from "./worker/connect";
+import { runWorkDryRun } from "./work-dry-run";
 
-export interface WorkArguments {
-  /** The project as `owner/slug`; defaults to `"project"` in `.scarn/scarn.jsonc`. */
-  project: string | undefined;
-  baseUrl: string | undefined;
-  batchSize: number | undefined;
-  concurrency: number | undefined;
-  leaseDurationSeconds: number | undefined;
-  once: boolean;
-  preserveRuntimeOnComplete: boolean;
-  pollIntervalMs: number | undefined;
-  maxPollIntervalMs: number | undefined;
-  connectedMaxPollIntervalMs: number | undefined;
-  workerId: string | undefined;
-  workItemId: string | undefined;
-  /**
-   * Override the branch checked out for the first step of this run (instead
-   * of resolving and verifying the current local branch). Needed when
-   * "current branch" isn't meaningful (CI) or isn't what's wanted (targeting
-   * a colleague's branch). Unlike the auto-resolved current branch, an
-   * override only needs to exist on `origin` — it need not be checked out
-   * locally or match local HEAD.
-   */
-  sourceBranch: string | undefined;
-  /**
-   * Rehearse the environment a real task would launch — devcontainer
-   * + in-container OpenCode, with the targeted step's real MCP servers
-   * injected — then report container/OpenCode/MCP health instead of claiming
-   * and running a real task. See `stepId` / `globalOnly`.
-   */
+export type WorkArguments = AddProjectArguments & {
   dryRun: boolean;
-  /** Dry run only: fetch this step definition's real MCP servers to test. */
   stepId: string | undefined;
-  /**
-   * Dry run only: skip step-specific MCP injection and test whatever MCP
-   * servers are already configured. Implied automatically when the project
-   * has no step definitions yet.
-   */
   globalOnly: boolean;
-  /**
-   * Dry run only: resolve this **pipeline** id to its ordered step list and
-   * test its first step — unlike `stepId`, unambiguous by construction,
-   * since a pipeline id can never be mistaken for one of its own steps' ids.
-   * Wins outright over `stepId`/`globalOnly` when passed. This is what
-   * `pipelines design`'s post-push run offer uses (#146) to validate what it
-   * just pushed before queueing a run against it.
-   */
   pipelineId: string | undefined;
-}
-
-/**
- * What a programmatic caller has to decide. Every field is optional because each
- * one has a flag default: {@link WorkArguments} is the yargs envelope, where
- * "absent" is spelled `undefined`, so writing all ten out at a call site would
- * say nothing beyond which few were actually chosen.
- */
-export type WorkOptions = Partial<WorkArguments>;
-
-/**
- * The command body, callable without yargs' argv envelope so
- * `scarn pipelines design` can run the worker in-process when the user accepts
- * its closing offer (see `lib/design-run-offer.ts`) instead of re-spawning the
- * CLI. It owns the terminal for as long as it polls, and throws only on failures
- * that stop the worker outright — a failing task is absorbed by the polling loop.
- */
-export async function runWork(arguments_: WorkOptions): Promise<void> {
-  await ensureLogDir();
-  const logFilePath = resolveLogFilePath();
-  // Initialize the transport (and open the log file) before anything else logs.
-  createTransport();
-
-  const logger = createCliLogger("work-command");
-  const recordReportPath = process.env["SCARN_RECORD_REPORT"];
-  const reporter = recordReportPath
-    ? createRecordingReporter(createReporter({ logFilePath }), recordReportPath)
-    : createReporter({ logFilePath });
-  const baseUrl = resolveScarnBaseUrl(arguments_.baseUrl);
-  const projectRef = await pickProjectRef(arguments_.project);
-  // The two flag defaults yargs would have supplied, applied here so a
-  // programmatic caller only has to name what it actually chose.
-  const once = arguments_.once ?? false;
-  const preserveRuntimeOnComplete =
-    arguments_.preserveRuntimeOnComplete ?? false;
-  const dryRun = arguments_.dryRun ?? false;
-  const globalOnly = arguments_.globalOnly ?? false;
-
-  syncIdentityFromDisk(baseUrl);
-
-  if (!projectRef) {
-    reporter.error(NO_PROJECT_MESSAGE);
-    logger.error(NO_PROJECT_MESSAGE);
-    await shutdownTelemetry();
-    process.exit(1);
-  }
-
-  // Resolve (and verify) the branch to check out for the first step of this
-  // run, before anything else — a dry run rehearses this exact same
-  // resolution/verification, not just the real path. Fails fast rather than
-  // silently falling back to the repo's default branch.
-  let sourceBranch: string | null;
-  try {
-    const result = await resolveSourceBranch({
-      cwd: process.cwd(),
-      override: arguments_.sourceBranch,
-    });
-    sourceBranch = result.branch;
-    if (result.warning) {
-      reporter.warn(result.warning);
-      logger.warn({ branch: sourceBranch }, result.warning);
-    }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    reporter.error(message);
-    logger.error({ err: error }, "Failed to resolve the source branch");
-    await shutdownTelemetry();
-    process.exit(1);
-  }
-
-  reporter.start(dryRun ? "Scarn worker (dry run)" : "Scarn worker");
-  if (sourceBranch) {
-    reporter.info(`Using source branch: ${sourceBranch}`);
-  }
-
-  let projectId: string;
-  try {
-    ({ id: projectId } = await resolveCliProjectRef({
-      baseUrl,
-      ref: projectRef,
-      action: PROJECT_ACTIONS.work,
-    }));
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    reporter.error(message);
-    logger.error(
-      { err: error, project: projectRef },
-      "Failed to resolve the project",
-    );
-    await shutdownTelemetry();
-    process.exit(1);
-  }
-
-  logger.info(
-    {
-      project: projectRef,
-      projectId,
-      baseUrl,
-      batchSize: arguments_.batchSize,
-      concurrency: arguments_.concurrency,
-      leaseDurationSeconds: arguments_.leaseDurationSeconds,
-      once,
-      preserveRuntimeOnComplete,
-      pollIntervalMs: arguments_.pollIntervalMs,
-      maxPollIntervalMs: arguments_.maxPollIntervalMs,
-      connectedMaxPollIntervalMs: arguments_.connectedMaxPollIntervalMs,
-      workerId: arguments_.workerId,
-      workItemId: arguments_.workItemId,
-      dryRun,
-      stepId: arguments_.stepId,
-      globalOnly,
-      pipelineId: arguments_.pipelineId,
-      sourceBranch,
-    },
-    "Starting worker command",
-  );
-
-  const localEnvVars = await readLocalEnvVars();
-  logger.info(
-    {
-      varCount: Object.keys(localEnvVars).length,
-      varNames: Object.keys(localEnvVars),
-    },
-    "Loaded .scarn/.env",
-  );
-
-  try {
-    if (dryRun) {
-      const { ok } = await runWorkDryRunCommand({
-        projectId,
-        baseUrl,
-        stepId: arguments_.stepId,
-        globalOnly,
-        pipelineId: arguments_.pipelineId,
-        // Reuses the same flag as the real path: "preserve the runtime
-        // instead of tearing it down" means the same thing for a dry run.
-        keep: preserveRuntimeOnComplete,
-        localEnvVars,
-        reporter,
-        sourceBranch,
-      });
-
-      if (!ok) {
-        throw new Error(
-          "Dry run found unhealthy checks — see the report above.",
-        );
-      }
-
-      reporter.finish("Dry run healthy");
-      captureMilestone(AnalyticsEvents.CliDryRunPassed, { via: "work" });
-      return;
-    }
-
-    const result = await runProjectWork({
-      projectId,
-      baseUrl,
-      batchSize: arguments_.batchSize,
-      concurrency: arguments_.concurrency,
-      leaseDurationSeconds: arguments_.leaseDurationSeconds,
-      preserveRuntimeOnComplete,
-      once,
-      pollIntervalMs: arguments_.pollIntervalMs,
-      maxPollIntervalMs: arguments_.maxPollIntervalMs,
-      connectedMaxPollIntervalMs: arguments_.connectedMaxPollIntervalMs,
-      workerId: arguments_.workerId,
-      workItemId: arguments_.workItemId,
-      dest: createTransport(),
-      localEnvVars,
-      reporter,
-      sourceBranch,
-    });
-
-    if (once) {
-      logger.info(
-        {
-          projectId,
-          ...result,
-        },
-        "Single-pass work result",
-      );
-    }
-
-    reporter.finish("Done");
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    reporter.error(message);
-    reporter.finish(
-      dryRun ? "Dry run found problems" : "Worker stopped with errors",
-    );
-    logger.error(
-      { err: error },
-      dryRun ? "Work dry run failed" : "Worker command failed",
-    );
-    throw error;
-  }
-}
-
-export const workCommand: CommandModule<object, WorkArguments> = {
-  command: "work [project]",
-  describe: "Run the Scarn host worker for a project",
-  builder: (argv: Argv<object>) =>
-    argv
-      .positional("project", {
-        describe:
-          'The project to process work for, as owner/slug (defaults to "project" in .scarn/scarn.jsonc)',
-        type: "string",
-      })
-      .option("baseUrl", {
-        alias: "base-url",
-        describe: "Scarn app base URL",
-        type: "string",
-      })
-      .option("batchSize", {
-        alias: "b",
-        describe: "Maximum number of tasks to claim per poll",
-        type: "number",
-      })
-      .option("concurrency", {
-        alias: "c",
-        describe: "Maximum number of concurrently active jobs",
-        type: "number",
-      })
-      .option("leaseDurationSeconds", {
-        alias: "l",
-        describe: "How long the claim lease should last",
-        type: "number",
-      })
-      .option("pollIntervalMs", {
-        alias: "p",
-        describe: "How often to poll for new tasks",
-        type: "number",
-      })
-      .option("maxPollIntervalMs", {
-        alias: "max-poll-interval-ms",
-        describe:
-          "Ceiling the claim poll backs off to once there's no claimable " +
-          "work (doubles from --pollIntervalMs on each empty poll, resets " +
-          "the moment work is claimed). Pass the same value as " +
-          "--pollIntervalMs to poll at a fixed cadence instead. " +
-          "Defaults to 600000 (10 minutes).",
-        type: "number",
-      })
-      .option("connectedMaxPollIntervalMs", {
-        alias: "connected-max-poll-interval-ms",
-        describe:
-          "Safety-net poll interval while the push wake-up connection is " +
-          "up: an empty poll sleeps this long straight away, with no " +
-          "doubling (the larger of this and --maxPollIntervalMs applies). " +
-          "Drops back to --maxPollIntervalMs on disconnect. " +
-          "Defaults to 3600000 (60 minutes).",
-        type: "number",
-      })
-      .option("once", {
-        describe: "Poll a single time and wait for any claimed jobs to finish",
-        type: "boolean",
-        default: false,
-      })
-      .option("preserveRuntimeOnComplete", {
-        alias: "k",
-        describe:
-          "Keep runtime containers and workspace after task completion " +
-          "(or, with --dry-run, after the health report)",
-        type: "boolean",
-        default: false,
-      })
-      .option("workerId", {
-        alias: "w",
-        describe: "Optional worker identifier to use while claiming tasks",
-        type: "string",
-      })
-      .option("workItemId", {
-        alias: "work-item-id",
-        describe: "Only process tasks for this work item ID",
-        type: "string",
-      })
-      .option("sourceBranch", {
-        alias: "source-branch",
-        describe:
-          "Override the branch checked out for the first step of this run " +
-          "(defaults to your current local branch, which must exist and be " +
-          "in sync with its origin remote)",
-        type: "string",
-      })
-      .option("dryRun", {
-        alias: "dry-run",
-        describe:
-          "Rehearse the environment a real task would launch (devcontainer + " +
-          "OpenCode + MCP servers) and report its health instead of running work",
-        type: "boolean",
-        default: false,
-      })
-      .option("stepId", {
-        alias: "step-id",
-        describe:
-          "Dry run only: fetch this step definition's real MCP servers to test",
-        type: "string",
-      })
-      .option("globalOnly", {
-        alias: "global-only",
-        describe:
-          "Dry run only: skip step-specific MCP injection and test whatever " +
-          "is already configured",
-        type: "boolean",
-        default: false,
-      })
-      .option("pipelineId", {
-        alias: "pipeline-id",
-        describe:
-          "Dry run only: resolve this pipeline definition ID to its first " +
-          "step and test that (wins over --step-id/--global-only)",
-        type: "string",
-      }),
-  handler: (arguments_: ArgumentsCamelCase<WorkArguments>) =>
-    runWork(arguments_),
 };
+
+export type WorkShortcutDeps = ProjectSettingsDeps &
+  EnsureWorkerRunningDeps &
+  Pick<ConnectToWorkerDeps, "version" | "protocol">;
+
+/** Starts the background worker when needed, then adds the project to it. */
+export async function runWorkShortcut(
+  arguments_: AddProjectArguments,
+  deps: WorkShortcutDeps = {},
+): Promise<void> {
+  await withReporter("work-command", async ({ reporter }) => {
+    const instance = resolveWorkerInstance();
+    const settings = await resolveProjectSettings(arguments_, reporter, deps);
+    const { started, worker } = await ensureWorkerRunning(
+      { instance, baseUrl: settings.baseUrl },
+      deps,
+    );
+    assertWorkerVersion(instance, worker, deps);
+    reporter.info(
+      started
+        ? `Started worker instance ${instance} (pid ${String(worker.discovery.pid)}).`
+        : `Worker instance ${instance} is already running (pid ${String(worker.discovery.pid)}).`,
+    );
+    const result = await addProjectToWorker(instance, worker, settings);
+    reportAddedProject(instance, result, reporter);
+  });
+}
+
+const withDryRunOptions = <T>(argv: Argv<T>) =>
+  argv
+    .option("dryRun", {
+      alias: "dry-run",
+      describe:
+        "Rehearse the environment a real task would launch (devcontainer + " +
+        "OpenCode + MCP servers) and report its health instead of running work",
+      type: "boolean",
+      default: false,
+    })
+    .option("stepId", {
+      alias: "step-id",
+      describe:
+        "Dry run only: fetch this step definition's real MCP servers to test",
+      type: "string",
+    })
+    .option("globalOnly", {
+      alias: "global-only",
+      describe:
+        "Dry run only: skip step-specific MCP injection and test whatever " +
+        "is already configured",
+      type: "boolean",
+      default: false,
+    })
+    .option("pipelineId", {
+      alias: "pipeline-id",
+      describe:
+        "Dry run only: resolve this pipeline definition ID to its first " +
+        "step and test that (wins over --step-id/--global-only)",
+      type: "string",
+    });
+
+export function createWorkCommand(
+  deps: WorkShortcutDeps = {},
+): CommandModule<object, WorkArguments> {
+  return {
+    command: "work [project]",
+    describe:
+      "Start the background worker if needed and add this checkout's project to it",
+    builder: (argv: Argv<object>) =>
+      withDryRunOptions(withAddProjectOptions(argv)),
+    handler: (arguments_: ArgumentsCamelCase<WorkArguments>) =>
+      arguments_.dryRun
+        ? runWorkDryRun(arguments_)
+        : runWorkShortcut(arguments_, deps),
+  };
+}
+
+export const workCommand = createWorkCommand();

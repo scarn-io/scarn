@@ -4,7 +4,7 @@ import {
   NO_PIPELINE_MESSAGE,
   NOTHING_QUEUED_MESSAGE,
   RUN_LATER_PREFIX,
-  RUN_LAUNCH_MESSAGE,
+  RUN_HANDED_OFF_MESSAGE,
   RUN_REPAIR_GUIDANCE,
   runDesignRunOffer,
 } from "../src/lib/design-run-offer";
@@ -28,8 +28,8 @@ import {
  * user feels — whether they are asked at all, whether anything is queued when
  * they decline, and whether a failure sends them somewhere useful. The ordering
  * assertions matter as much as the outcomes: a run must be queued before the
- * worker looks for it, and the reporter block must be closed before the worker
- * takes over the terminal.
+ * worker is told about it, and the repair route must be said before the
+ * command returns.
  */
 
 describe("formatRunCommand", () => {
@@ -43,7 +43,7 @@ describe("formatRunCommand", () => {
 });
 
 describe("runDesignRunOffer", () => {
-  test("queues the run and starts the worker when the user accepts", async () => {
+  test("queues the run and hands it to the worker when the user accepts", async () => {
     const { reporter } = createRecorder();
     const { ports, calls, order } = createPorts();
 
@@ -56,40 +56,16 @@ describe("runDesignRunOffer", () => {
 
     expect(result.ran).toBe(true);
     // The dry-run gate runs before the confirm, and the queue only after it —
-    // a worker started before anything is queued has nothing to claim and
-    // polls into the void.
-    expect(order).toEqual(["runPipelineHealthDryRun", "queueRun", "runWorker"]);
+    // the worker is only told about the project once there is a run to claim.
+    expect(order).toEqual([
+      "runPipelineHealthDryRun",
+      "queueRun",
+      "handOffToWorker",
+    ]);
     expect(calls.confirmRun).toBe(1);
   });
 
-  test("closes the reporter block before the worker owns the terminal", async () => {
-    const { reporter } = createRecorder();
-    const { ports } = createPorts();
-    const order: string[] = [];
-
-    await runDesignRunOffer({
-      tuiExitedCleanly: true,
-      target: TARGET,
-      reporter: {
-        ...reporter,
-        finish: (message) => {
-          order.push(`finish:${message}`);
-        },
-      },
-      ports: {
-        ...ports,
-        runWorker: () => {
-          order.push("runWorker");
-          return Promise.resolve();
-        },
-      },
-    });
-
-    // The worker opens its own clack block; two live blocks cannot share a tty.
-    expect(order).toEqual([`finish:${RUN_LAUNCH_MESSAGE}`, "runWorker"]);
-  });
-
-  test("says how to repair a failed run before the worker starts", async () => {
+  test("says how to repair a failed run once the run is handed off", async () => {
     const { reporter, calls: reported } = createRecorder();
     const { ports } = createPorts();
     const order: string[] = [];
@@ -103,26 +79,26 @@ describe("runDesignRunOffer", () => {
           order.push(`info:${message}`);
           reporter.info(message);
         },
+        finish: (message) => {
+          order.push(`finish:${message}`);
+        },
       },
       ports: {
         ...ports,
-        runWorker: () => {
-          order.push("runWorker");
+        handOffToWorker: () => {
+          order.push("handOffToWorker");
           return Promise.resolve();
         },
       },
     });
 
-    // The worker swallows step failures into its own polling loop and never
-    // returns, so `runWorker` cannot reject on a failed step or a devcontainer
-    // that will not build. The only place the repair route can be stated is
-    // ahead of the run, where it is still on screen when the failure lands.
-    expect(order.indexOf(`info:${RUN_REPAIR_GUIDANCE}`)).toBeGreaterThanOrEqual(
-      0,
-    );
-    expect(order.indexOf(`info:${RUN_REPAIR_GUIDANCE}`)).toBeLessThan(
-      order.indexOf("runWorker"),
-    );
+    // The background worker runs the steps after the command returns, so the
+    // repair route is said here and the block closes after it.
+    expect(order).toEqual([
+      "handOffToWorker",
+      `info:${RUN_REPAIR_GUIDANCE}`,
+      `finish:${RUN_HANDED_OFF_MESSAGE}`,
+    ]);
     expect(messages(reported)).toContain(RUN_REPAIR_GUIDANCE);
   });
 
@@ -162,7 +138,7 @@ describe("runDesignRunOffer", () => {
     expect(result.ran).toBe(false);
     // Declining is not a deferred yes: nothing is queued on the user's behalf.
     expect(calls.queueRun).toBe(0);
-    expect(calls.runWorker).toBe(0);
+    expect(calls.handOffToWorker).toBe(0);
     // The command gets its own line so it can be copied whole, and the line
     // after it says why it will find nothing until a run is started.
     expect(messages(reported)).toContain(`${RUN_LATER_PREFIX} ${RUN_COMMAND}`);
@@ -191,7 +167,7 @@ describe("runDesignRunOffer", () => {
     expect(askedAbout).toBe(PIPELINE_ID);
     expect(calls.confirmRun).toBe(0);
     expect(calls.queueRun).toBe(0);
-    expect(calls.runWorker).toBe(0);
+    expect(calls.handOffToWorker).toBe(0);
     expect(calls.runPipelineHealthDryRun).toBe(0);
     expect(messages(reported)).toContain(DEVCONTAINER_MISSING_MESSAGE);
     expect(messages(reported)).toContain(`${RUN_LATER_PREFIX} ${RUN_COMMAND}`);
@@ -252,7 +228,7 @@ describe("runDesignRunOffer", () => {
     // Nothing was pushed, so there is nothing to promise the user.
     expect(calls.confirmRun).toBe(0);
     expect(calls.queueRun).toBe(0);
-    expect(calls.runWorker).toBe(0);
+    expect(calls.handOffToWorker).toBe(0);
     expect(messages(reported)).toContain(NO_PIPELINE_MESSAGE);
   });
 
@@ -293,14 +269,14 @@ describe("runDesignRunOffer", () => {
     // The user never saw this failure, so it has to be restated next to the fix.
     expect(error.message).toContain("the pipeline has no steps");
     expect(error.message).toContain(RUN_REPAIR_GUIDANCE);
-    expect(calls.runWorker).toBe(0);
+    expect(calls.handOffToWorker).toBe(0);
   });
 
-  test("points a failed run back at the design command", async () => {
+  test("fails the offer when the worker cannot take the run", async () => {
     const { reporter } = createRecorder();
     const { ports } = createPorts({
-      runWorker: () =>
-        Promise.reject(new Error("devcontainer build failed: exit 1")),
+      handOffToWorker: () =>
+        Promise.reject(new Error("worker did not answer within 15s")),
     });
 
     const error = await expectRejection(
@@ -312,13 +288,8 @@ describe("runDesignRunOffer", () => {
       }),
     );
 
-    // The edit loop is the repair loop — a build failure is something to tell
-    // the agent about, not something to debug alone.
-    expect(error.message).toContain(RUN_REPAIR_GUIDANCE);
-    // The worker printed its own failure through its own reporter; restating it
-    // here would show the same paragraph twice.
-    expect(error.message).not.toContain("devcontainer build failed");
-    expect(error.cause).toBeInstanceOf(Error);
+    // The run is queued but nothing will claim it; the worker's own error says why.
+    expect(error.message).toBe("worker did not answer within 15s");
   });
 
   test("passes the assigned pipeline to the queue", async () => {

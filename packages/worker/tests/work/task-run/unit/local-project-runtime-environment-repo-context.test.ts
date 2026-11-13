@@ -54,11 +54,14 @@ describe("launch with a repo context (chat run)", () => {
       gitCommitPushService: commitPush,
       repoContextGit,
     });
-    const orchestrator = new DefaultLocalProjectRuntimeEnvironmentOrchestrator(
+    const inner = new DefaultLocalProjectRuntimeEnvironmentOrchestrator(
       undefined,
-      localEnvVars,
       deps,
     );
+    const orchestrator = {
+      launch: (input: Parameters<typeof inner.launch>[0]) =>
+        inner.launch({ localEnvVars, ...input }),
+    };
     return { log, deps, commitPush, repoContextGit, orchestrator };
   }
 

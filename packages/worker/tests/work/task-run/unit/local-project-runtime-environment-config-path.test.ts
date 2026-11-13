@@ -59,7 +59,6 @@ describe("launch with a requested devcontainer config", () => {
     });
     const orchestrator = new DefaultLocalProjectRuntimeEnvironmentOrchestrator(
       undefined,
-      {},
       deps,
     );
     return { log, commitPush, deps, orchestrator };

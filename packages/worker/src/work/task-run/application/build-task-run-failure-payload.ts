@@ -8,6 +8,11 @@ import {
   REPO_CONTEXT_COMMIT_UNAVAILABLE_ERROR_NAME,
   RepoContextCommitUnavailableError,
 } from "./repo-context-commit-unavailable-error";
+import {
+  WORKER_STOPPED_ERROR_CODE,
+  WORKER_STOPPED_ERROR_NAME,
+  WorkerStoppedError,
+} from "./worker-stopped-error";
 
 const WORKER_EXECUTION_FAILED_ERROR_CODE = "SCARN_WORKER_EXECUTION_FAILED";
 const STEP_FAILED_ERROR_NAME = "Scarn.StepFailed";
@@ -57,6 +62,12 @@ function failureIdentity(error: TaskRunFailureInputError): {
     return {
       name: REPO_CONTEXT_COMMIT_UNAVAILABLE_ERROR_NAME,
       code: REPO_CONTEXT_COMMIT_UNAVAILABLE_ERROR_CODE,
+    };
+  }
+  if (error instanceof WorkerStoppedError) {
+    return {
+      name: WORKER_STOPPED_ERROR_NAME,
+      code: WORKER_STOPPED_ERROR_CODE,
     };
   }
   return {

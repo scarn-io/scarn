@@ -223,6 +223,27 @@ describe("DefaultOpencodeStepRunner", () => {
     ]);
   });
 
+  test("abort interrupts the session", async () => {
+    const requests = installFetch(({ method, url }) => {
+      if (
+        method === "POST" &&
+        url.pathname === "/api/session/session-1/interrupt"
+      ) {
+        return jsonResponse({ data: { interrupted: true } });
+      }
+      throw new Error(`Unexpected request: ${method} ${url.pathname}`);
+    });
+
+    await new DefaultOpencodeStepRunner().abort({
+      server: SERVER,
+      sessionId: "session-1",
+    });
+
+    expect(requests.map((request) => request.url.pathname)).toEqual([
+      "/api/session/session-1/interrupt",
+    ]);
+  });
+
   test("readLastTurn joins the latest assistant message's text parts", async () => {
     const requests = installFetch(({ url }) => {
       if (

@@ -21,120 +21,6 @@ export type ApiErrorBody = {
   detail?: string;
 };
 
-export type PipelineExecutionStatus =
-  | "queued"
-  | "running"
-  | "succeeded"
-  | "failed"
-  | "cancelled"
-  | "blocked"
-  | "routed";
-
-export type PipelineStepRunStatus =
-  | "pending"
-  | "queued"
-  | "running"
-  | "satisfied"
-  | "unsatisfied"
-  | "blocked"
-  | "cancelled"
-  | "abandoned"
-  | "timeout";
-
-export type PipelineStepRunSatisfactionStatus =
-  | "not_evaluated"
-  | "satisfied_by_policy"
-  | "satisfied_by_user"
-  | "unsatisfied_by_policy"
-  | "not_applicable";
-
-export type PipelineStepEvaluation = {
-  id: string;
-  decisionKind:
-    | "step_policy"
-    | "choice"
-    | "loop_until"
-    | "advance_each"
-    | "advance_all";
-  finalStatus: "pass" | "fail";
-  finalAction:
-    | "continue"
-    | "block"
-    | "complete"
-    | "route"
-    | "route_to_node"
-    | "repeat";
-  finalPayloadJson: Record<string, unknown> | null;
-  createdAt: string;
-};
-
-export type PipelineStepRun = {
-  id: string;
-  stepKey: string;
-  position: number;
-  nodeKind:
-    | "step"
-    | "fanOut"
-    | "cohortGate"
-    | "choice"
-    | "parallel"
-    | "loop"
-    | "succeed"
-    | "fail";
-  branchIndex: number | null;
-  status: PipelineStepRunStatus;
-  satisfactionStatus: PipelineStepRunSatisfactionStatus;
-  taskId: string | null;
-  workBranch: string | null;
-  outputJson: unknown;
-  evaluation: PipelineStepEvaluation | null;
-  acceptedByUserId: string | null;
-  acceptedAt: string | null;
-  acceptanceReason: string | null;
-  createdAt: string;
-  updatedAt: string;
-};
-
-export type PipelineExecutionAttempt = {
-  id: string;
-  attemptNumber: number;
-  currentStepKey: string | null;
-  startedAt: string | null;
-  completedAt: string | null;
-  status: PipelineExecutionStatus;
-  stepRuns: PipelineStepRun[];
-};
-
-export type PipelineExecution = {
-  id: string;
-  workItemId: string;
-  workItemTitle: string;
-  pipelineDefinitionId: string;
-  definitionStepCount: number;
-  status: PipelineExecutionStatus;
-  attempts: PipelineExecutionAttempt[];
-};
-
-export type PipelineStepDefinition = {
-  id: string;
-  key: string;
-  name: string;
-  position: number;
-};
-
-export type PipelineDefinition = {
-  id: string;
-  key: string;
-  name: string;
-  stepDefinitions: PipelineStepDefinition[];
-};
-
-export type WorkItem = {
-  id: string;
-  title: string;
-  url: string | null;
-};
-
 export type TaskStatus =
   | "pending"
   | "queued"
@@ -167,8 +53,7 @@ export const taskLogStreamValues = [
   "ai-server",
   "conversation",
 ] as const;
-export type TaskLogStream =
-  (typeof taskLogStreamValues)[number];
+export type TaskLogStream = (typeof taskLogStreamValues)[number];
 
 export type LogLevel = "debug" | "info" | "warn" | "error";
 
@@ -193,10 +78,7 @@ export type TaskLogArchive = {
 
 export type ConversationRole = "user" | "assistant";
 export type ConversationToolStatus =
-  | "pending"
-  | "running"
-  | "completed"
-  | "error";
+  "pending" | "running" | "completed" | "error";
 
 export type ConversationEvent =
   | {

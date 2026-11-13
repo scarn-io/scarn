@@ -267,6 +267,7 @@ describe("runProjectWork with push unavailable", () => {
         agentRunner: {
           promptAsync: vi.fn(() => Promise.reject(new Error("not used"))),
           getSessionStatus: vi.fn(() => Promise.resolve({ running: false })),
+          abort: vi.fn(() => Promise.resolve(undefined)),
           sendRetryPrompt: vi.fn(() => Promise.resolve(undefined)),
         },
         artifactStore: { saveArtifact: vi.fn() },

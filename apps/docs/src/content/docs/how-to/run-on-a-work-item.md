@@ -10,15 +10,16 @@ scarn work --work-item-id <id>
 Running a pipeline takes two things: a **queued run** on the
 [work item](/scarn/getting-started/concepts/#work-item), and a
 [worker](/scarn/getting-started/concepts/#worker) to execute it. The command
-above is the second half — it only claims steps already queued for that item.
-With nothing queued, it just polls. Queue the run first.
+above is the second half: it adds the project to this machine's background
+worker, which only claims steps already queued for that item. With nothing
+queued, the worker just polls. Queue the run first.
 
 ## Queue it from the dashboard
 
 1. Open your project in the
    [dashboard](/scarn/getting-started/concepts/#dashboard) and go to the
-   *Work Items* tab.
-2. Open the work item and select the *Pipeline executions* button at the top
+   _Work Items_ tab.
+2. Open the work item and select the _Pipeline executions_ button at the top
    right. A drawer lists the item's runs so far.
 3. Select **New**, pick the pipeline, and select **Create**.
 
@@ -36,17 +37,20 @@ scarn pipelines design --work-item-id <id>
 ```
 
 and when the session exits cleanly, it asks whether to run the pipeline the
-default automation routes to on that item. Say yes and it queues the run and starts the worker in
-the same terminal. Say no and it prints the `scarn work … --work-item-id`
+default automation routes to on that item. Say yes and it queues the run and hands it to the
+background worker, starting the worker if it isn't running. Say no and it prints the `scarn work … --work-item-id`
 command; nothing is queued, so queue the run from the dashboard before you use
 it. See [The run offer](/scarn/reference/cli/#the-run-offer) for every case
 where no offer appears.
 
 ## The worker
 
-`scarn work` keeps polling until you press Ctrl+C, because later steps
-queue as earlier ones advance; `--once` polls once, finishes whatever it claimed, and exits.
-`--work-item-id` scopes it to one item. Every flag:
+`scarn work` adds the project to this machine's background worker and
+returns. The worker keeps claiming steps, because later steps queue as
+earlier ones advance, until you run `scarn worker remove <owner/slug>` or
+`scarn worker stop`. `--work-item-id` scopes it to one item. To poll once
+in the foreground and exit, use
+`scarn worker start --foreground --once --work-item-id <id>`. Every flag:
 [`scarn work`](/scarn/reference/cli/#scarn-work-project). To run
 several workers, see [Running Workers](/scarn/guides/workers/).
 

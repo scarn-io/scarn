@@ -13,11 +13,10 @@ import type {
   ProcessProjectWorkDeps,
   ProcessProjectWorkInput,
   StartedClaimedTask,
-  TaskRunTracker,
   TaskRunWorkerClient,
 } from "../../../../src/work/task-run/contracts/process-project-work-types";
 import { buildTestZip } from "../../../support/build-test-zip";
-import { stopStub } from "./helpers/monitor-turn-end-harness";
+import { createTracker, stopStub } from "./helpers/monitor-turn-end-harness";
 
 function createStartedTask(workspacePath: string): StartedClaimedTask {
   return {
@@ -45,17 +44,6 @@ function createStartedTask(workspacePath: string): StartedClaimedTask {
       secretValues: [],
       cleanup: vi.fn(() => Promise.resolve()),
     },
-  };
-}
-
-function createTracker(): TaskRunTracker {
-  return {
-    createSession: vi.fn(),
-    markRunning: vi.fn(),
-    attachAgentSession: vi.fn(),
-    markSucceeded: vi.fn(),
-    markFailed: vi.fn(() => Promise.resolve()),
-    close: vi.fn(),
   };
 }
 
@@ -128,6 +116,7 @@ describe("monitorStartedClaimedTaskRun", () => {
               ? Promise.resolve({ running: true })
               : Promise.resolve({ running: false });
           }),
+          abort: vi.fn(() => Promise.resolve(undefined)),
           sendRetryPrompt,
         },
         artifactStore: {
@@ -210,6 +199,7 @@ describe("monitorStartedClaimedTaskRun", () => {
                 })
               : Promise.resolve({ running: false });
           }),
+          abort: vi.fn(() => Promise.resolve(undefined)),
           sendRetryPrompt: vi.fn(() => Promise.resolve(undefined)),
         },
         artifactStore: {
@@ -316,6 +306,7 @@ describe("monitorStartedClaimedTaskRun", () => {
             );
             return { running: false };
           }),
+          abort: vi.fn(() => Promise.resolve(undefined)),
           sendRetryPrompt: vi.fn(() => Promise.resolve(undefined)),
         },
         artifactStore: {
@@ -404,6 +395,7 @@ describe("monitorStartedClaimedTaskRun", () => {
             );
             return { running: false };
           }),
+          abort: vi.fn(() => Promise.resolve(undefined)),
           sendRetryPrompt,
         },
         artifactStore: {

@@ -62,6 +62,8 @@ Read first. Never ask for something you can discover.
   session's TUI had already exited — there was no live agent left to tell at
   the time. Investigate and fix it before anything else in this session; it
   is why that session's run offer could not queue a run.
+- If the opening message or the user says a run failed or misbehaved, read
+  the evidence yourself before asking anything (see "Debugging a run").
 - List this directory. Read every `.ts` file already here. Each pipeline's
   `<key>.json` is built from its `.ts`; read the `.ts`, never edit the JSON.
   Ignore `.scarn-studio-collect.mjs`; it is the studio's own helper, not a
@@ -486,6 +488,28 @@ Summarize in a few lines:
   one you write, and no run will succeed without it.
 - What to add in a future session — more tools for the investigation, or a
   second pipeline for a different class of work item.
+
+# Debugging a run
+
+When a pipeline run failed or did something unexpected, follow it from the
+work item down to the log line, then fix the `.ts` that caused it:
+
+```sh
+"$SCARN_CLI" runs list --work-item <ref> --status failed
+"$SCARN_CLI" runs thread <runId> --step <key>
+"$SCARN_CLI" tasks view <taskId>
+"$SCARN_CLI" logs <taskRunId> --grep "error|failed"
+"$SCARN_CLI" artifacts list <taskRunId>
+```
+
+- Each command's output ends with `→` lines naming the next command, ids
+  filled in. Follow them.
+- Add `--json` to any of them to get exactly one JSON document on stdout.
+- `"$SCARN_CLI" work-items view <ref>` shows the item's latest runs, Tasks
+  and open questions; `"$SCARN_CLI" pipelines show <key>` shows what was
+  published.
+- Do not rerun, message or cancel a run unless the user asks. `runs rerun`
+  and `runs cancel` need `--yes` in this shell.
 
 # How to behave
 

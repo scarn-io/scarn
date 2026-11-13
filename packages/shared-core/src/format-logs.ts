@@ -12,7 +12,9 @@ import type {
 export const MAX_LOG_RENDER_CHARS = 20_000;
 
 export type FormatLogsInput = {
-  stepKey: string;
+  /** What the log belongs to, completing `Logs for …`: e.g. `step build`
+   * or `Task run <id>`. */
+  subject: string;
   /** Log lines already filtered to the requested stream(s) by the caller,
    * in `seq` order. */
   lines: readonly LogLine[];
@@ -146,17 +148,33 @@ function renderStreamBlock(
 }
 
 /**
+ * Renders newly polled lines in `seq` order, each tagged with its stream,
+ * for `scarn logs --follow`. A conversation event is rendered on its own, so
+ * a part that streams in over several polls shows once per update.
+ */
+export function renderFollowedLines(lines: readonly LogLine[]): string[] {
+  return [...lines]
+    .sort((left, right) => left.seq - right.seq)
+    .flatMap((line) =>
+      (line.stream === "conversation"
+        ? renderConversationLines([line])
+        : [renderPlainLine(line)]
+      ).map((text) => `${line.stream} │ ${text}`),
+    );
+}
+
+/**
  * Renders the full, uncapped log text for {@link formatLogs}'s input —
  * everything past this point is presentation-layer capping
  * ({@link capLogBody}), not rendering.
  */
 export function renderLogText(input: FormatLogsInput): string {
-  const { stepKey, lines, requestedStream, source } = input;
+  const { subject, lines, requestedStream, source } = input;
   const streamsToRender =
     requestedStream === "all" ? STREAM_ORDER : [requestedStream];
 
   const header = [
-    `Logs for step ${stepKey} (${source === "archive" ? "complete" : "live snapshot, step still running"})`,
+    `Logs for ${subject} (${source === "archive" ? "complete" : "live snapshot, still running"})`,
     "",
   ];
 
@@ -186,7 +204,7 @@ export function renderConversationTranscript(
 
 /**
  * Splits a {@link renderLogText} result into its header block (the `Logs
- * for step ...` line plus the blank line that always follows it) and
+ * for ...` line plus the blank line that always follows it) and
  * everything after. Falls back to an empty header — capping the whole
  * string as body — if that blank-line boundary isn't found, e.g. for text
  * that didn't come from `renderLogText`.
@@ -206,7 +224,7 @@ function splitHeaderAndBody(rendered: string): {
 
 /**
  * Appends where the full log went (a file path, or why it was not saved) to
- * the `Logs for step ...` header line of a {@link renderLogText} result.
+ * the `Logs for ...` header line of a {@link renderLogText} result.
  */
 export function withFullLogLocation(
   rendered: string,

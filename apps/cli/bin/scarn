@@ -2,7 +2,7 @@
 
 const { spawnSync } = require("node:child_process");
 const { existsSync, readFileSync } = require("node:fs");
-const { resolve } = require("node:path");
+const { basename, resolve } = require("node:path");
 const pino = require("pino");
 const PinoPretty = require("pino-pretty");
 
@@ -144,6 +144,10 @@ const extraEnv = {
   // dist/devcontainer/, where build.ts also places scripts/updateUID.Dockerfile
   // (used on Linux when remapping the container user's UID/GID).
   SCARN_DEVCONTAINER_SCRIPT: devcontainerScriptPath,
+  // The name this wrapper was invoked as (e.g. `scarn` or the `scarn-dev`
+  // symlink). The worker uses it to pick its default instance, so a dev
+  // and a production install keep separate background workers.
+  SCARN_CLI_NAME: basename(process.argv[1]),
 };
 if (devSdkArtifactPath) extraEnv["SCARN_SDK_ARTIFACT_PATH"] = devSdkArtifactPath;
 

@@ -1,9 +1,9 @@
 ---
 title: Running Workers
-description: Use scarn work to claim and run tasks from the server
+description: Run the background worker that claims and runs tasks from the server
 ---
 
-A **worker** is a long-running process that polls the Scarn server for pending tasks, claims them under a time-limited lease, executes them using a local Docker environment, and reports results back.
+A **worker** is a long-running process that polls the Scarn server for pending tasks, claims them under a time-limited lease, executes them using a local Docker environment, and reports results back. Each machine runs one worker in the background, and it works on every project you add to it.
 
 ## Start a worker
 
@@ -11,7 +11,7 @@ A **worker** is a long-running process that polls the Scarn server for pending t
 scarn work
 ```
 
-By default the worker runs continuously, polling your project's task queue every 5 seconds. When a poll finds nothing to claim, the interval doubles, up to once every 10 minutes, and drops back to 5 seconds as soon as it claims work. With [push wake-up](#push-wake-up) connected, an idle worker still picks up new work within seconds.
+This starts the machine's background worker if it isn't already running, adds the project in your checkout to it, and returns; follow it with `scarn worker status` and `scarn worker logs -f`. The worker runs continuously, polling your project's task queue every 5 seconds. When a poll finds nothing to claim, the interval doubles, up to once every 10 minutes, and drops back to 5 seconds as soon as it claims work. With [push wake-up](#push-wake-up) connected, an idle worker still picks up new work within seconds.
 
 If your current directory contains `.scarn/scarn.jsonc`, the project is read from it automatically. Otherwise pass it explicitly, as `owner/slug` (see [Project refs](/scarn/reference/cli/#project-refs)):
 
@@ -19,15 +19,37 @@ If your current directory contains `.scarn/scarn.jsonc`, the project is read fro
 scarn work <owner/slug>
 ```
 
+Run `scarn work` again in another checkout to add that project too. Running it again for a project that's already added updates its settings.
+
+## Manage the background worker
+
+```bash
+scarn worker status
+scarn worker logs acme/app -f
+scarn worker config --max-concurrency 4
+scarn worker remove acme/app
+scarn worker stop
+```
+
+- **Projects.** The worker remembers each project's repository directory, source branch, limit and `--work-item-id` filter. They're saved, so when the worker starts again every project comes back. `scarn worker remove` forgets one; its running runs finish first. The project's `.scarn/.env` is read again for every claim.
+- **Limits.** `--max-concurrency` caps how many runs the worker has going at once across every project (`1` until you set it; `SCARN_WORK_CONCURRENCY` sets the first value). `scarn work -c <n>` caps one project within that. When there isn't room for every project, the free slots go to projects in the order they asked. Lowering a limit, or removing a project, never stops a run that's already going.
+- **Stopping.** `scarn worker stop` stops claiming and waits for running runs to finish. `scarn worker stop --force` aborts them, and each one fails with the code `WORKER_STOPPED`. A worker that crashes or is killed doesn't resume its runs; the server marks them abandoned. After a reboot, run `scarn worker start` (or `scarn work`) to bring it back.
+- **Cancelling one run.** `scarn worker cancel <taskRunId>` cancels the run's Task on the server, then stops it on this machine straight away. A Task that a pipeline step owns cancels the whole pipeline run, so it asks first. Code Tasks can't be cancelled.
+- **Problems.** `scarn worker status` shows a project that can't claim, with the reason: its repository is gone, the project isn't reachable, or its sign-in failed or now belongs to another user. Its running runs carry on, and it retries by itself. Fix your sign-in with `scarn auth login`; the worker picks it up without a restart.
+- **Upgrades.** The CLI only talks to a worker of its own version. After upgrading, run `scarn worker stop && scarn worker start`.
+- **In a terminal.** `scarn worker start --foreground` runs the worker in your terminal instead of in the background. The first Ctrl-C lets running runs finish; the second aborts them.
+
+The worker's files are in `~/.scarn/workers/scarn/`: `worker.log` (rotated by size and by day) and `worker.stdio.log`, which catches anything printed before the log opens. A worker belongs to one server. To run against another one on the same machine, start a separate worker with `SCARN_WORKER_INSTANCE=<name>`; it gets its own directory, saved projects and limit. Every command is in the [CLI reference](/scarn/reference/cli/#scarn-worker).
+
 ## Push wake-up
 
-A backed-off worker would otherwise take up to 10 minutes to notice new work. Push wake-up closes that gap: the worker holds a WebSocket open to Scarn's wake-up service, and when a run is queued for your project the server tells every connected worker to poll now. There's nothing to configure. The worker connects automatically when the server supports it, and the terminal shows `Push wake-up connected`.
+A backed-off worker would otherwise take up to 10 minutes to notice new work. Push wake-up closes that gap: the worker holds a WebSocket open to Scarn's wake-up service, and when a run is queued for your project the server tells every connected worker to poll now. There's nothing to configure. The worker connects automatically when the server supports it, and the worker log shows `Push wake-up connected`.
 
 The message is only a hint. It carries no task data, and the worker still claims work through the normal poll, so a missed message only costs latency:
 
 - **On every (re)connect** the worker polls straight away, so it catches anything queued while it was disconnected.
-- **While connected,** an empty poll waits a full 60 minutes before the next safety-net poll (`--connected-max-poll-interval-ms`; see [Polling backoff](/scarn/reference/cli/#polling-backoff)).
-- **If the connection drops** (the terminal shows `Push wake-up disconnected; polling`), the worker falls back to the normal 10-minute backoff right away and keeps retrying the connection in the background.
+- **While connected,** an empty poll waits a full 60 minutes before the next safety-net poll (`SCARN_WORK_CONNECTED_MAX_POLL_INTERVAL_MS`; see [Polling backoff](/scarn/reference/cli/#polling-backoff)).
+- **If the connection drops** (the log shows `Push wake-up disconnected; polling`), the worker falls back to the normal 10-minute backoff right away and keeps retrying the connection in the background.
 - **If the server has push wake-up turned off,** the worker just polls, exactly as before.
 
 The connection is outbound only, over `wss://` to a `*.workers.dev` host. If a firewall or proxy blocks that, the worker keeps working and polls instead.
@@ -229,10 +251,10 @@ Docker, an AI provider, and a Scarn sign-in are listed in [Installation](/scarn/
 For debugging or CI use cases, run a specific work item:
 
 ```bash
-scarn work --work-item-id <id> --once --preserve-runtime-on-complete
+scarn worker start --foreground --once --work-item-id <id> --preserve-runtime-on-complete
 ```
 
-This claims the specified item, runs it once, and keeps the container alive so you can inspect the execution environment.
+This runs in the foreground, polls once for the specified item, waits for what it claimed, and keeps the container alive so you can inspect the execution environment. It saves nothing and doesn't start a background worker. If the background worker is running, the runs count toward its `--max-concurrency`.
 
 ## Clean up Docker networks
 

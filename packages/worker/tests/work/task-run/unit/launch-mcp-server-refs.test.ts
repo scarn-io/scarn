@@ -69,7 +69,6 @@ describe("workspace launch resolves MCP server refs", () => {
       deps,
       orchestrator: new DefaultLocalProjectRuntimeEnvironmentOrchestrator(
         undefined,
-        {},
         deps,
       ),
     };
@@ -187,7 +186,6 @@ describe("workspace launch infers MCP ref env (D3)", () => {
     });
     const orchestrator = new DefaultLocalProjectRuntimeEnvironmentOrchestrator(
       undefined,
-      {},
       deps,
     );
     const { resolved, resolveMcpEnv } = planStepEnv({

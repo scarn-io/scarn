@@ -75,6 +75,7 @@ async function runUntilStopped(options: {
         agentRunner: {
           promptAsync: vi.fn(() => Promise.reject(new Error("Not used"))),
           getSessionStatus: vi.fn(() => Promise.resolve({ running: false })),
+          abort: vi.fn(() => Promise.resolve(undefined)),
           sendRetryPrompt: vi.fn(() => Promise.resolve(undefined)),
         },
         sleep: (milliseconds) => {
@@ -102,13 +103,13 @@ async function runUntilStopped(options: {
 
 describe("connected safety-net poll", () => {
   test("defaults to a 60-minute safety-net poll while the work signal is connected", async () => {
-    expect(await runUntilStopped({})).toEqual(Array(10).fill(3_600_000));
+    expect(await runUntilStopped({})).toEqual(Array<number>(10).fill(3_600_000));
   });
 
   test("reads SCARN_WORK_CONNECTED_MAX_POLL_INTERVAL_MS", async () => {
     process.env["SCARN_WORK_CONNECTED_MAX_POLL_INTERVAL_MS"] = "700000";
 
-    expect(await runUntilStopped({})).toEqual(Array(10).fill(700_000));
+    expect(await runUntilStopped({})).toEqual(Array<number>(10).fill(700_000));
   });
 
   test("the option overrides the env var", async () => {
@@ -118,6 +119,6 @@ describe("connected safety-net poll", () => {
       connectedMaxPollIntervalMs: 900_000,
     });
 
-    expect(sleepCalls).toEqual(Array(10).fill(900_000));
+    expect(sleepCalls).toEqual(Array<number>(10).fill(900_000));
   });
 });

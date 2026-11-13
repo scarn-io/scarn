@@ -57,7 +57,6 @@ describe("launch with a managed runtime", () => {
     });
     const orchestrator = new DefaultLocalProjectRuntimeEnvironmentOrchestrator(
       undefined,
-      {},
       deps,
     );
     return { log, commitPush, deps, orchestrator };

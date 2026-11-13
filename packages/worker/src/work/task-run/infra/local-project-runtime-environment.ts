@@ -68,13 +68,13 @@ export type LocalProjectRuntimeEnvironmentOrchestrator =
  * by the in-container OpenCode, so there is no MCP-host indirection.
  */
 export class DefaultLocalProjectRuntimeEnvironmentOrchestrator implements LocalProjectRuntimeEnvironmentOrchestrator {
+  /**
+   * With `deps` omitted, the production deps are built per launch, so git
+   * cache and credential relay settings in the run's `.scarn/.env` apply.
+   */
   constructor(
     private readonly logger: Logger = noopLogger,
-    private readonly localEnvVars: Record<string, string> = {},
-    private readonly deps: LocalProjectRuntimeEnvironmentDeps = buildLocalProjectRuntimeDeps(
-      logger,
-      localEnvVars,
-    ),
+    private readonly fixedDeps?: LocalProjectRuntimeEnvironmentDeps,
   ) {}
 
   async launch(input: {
@@ -101,6 +101,8 @@ export class DefaultLocalProjectRuntimeEnvironmentOrchestrator implements LocalP
      * when `baseWorkBranch` is present (a later step).
      */
     sourceBranch?: string | null | undefined;
+    /** See `TaskRuntimeEnvironmentOrchestrator.launch`'s `localEnvVars`. */
+    localEnvVars?: Readonly<Record<string, string>> | undefined;
     stepKey?: string | undefined;
     opencodeMcpJson?: OpenCodeMcpServers | null | undefined;
     currentExecutionInfo: CurrentExecutionInfo;
@@ -166,6 +168,9 @@ export class DefaultLocalProjectRuntimeEnvironmentOrchestrator implements LocalP
       : null;
     const reporter = input.reporter ?? noopReporter;
     const taskRunId = input.taskRunId ?? input.currentExecutionInfo.taskRunId;
+    const localEnvVars = input.localEnvVars ?? {};
+    const deps =
+      this.fixedDeps ?? buildLocalProjectRuntimeDeps(this.logger, localEnvVars);
     let workspacePath: string | null = null;
     let devcontainerId: string | null = null;
     let agent: AgentRuntime | null = null;
@@ -182,7 +187,7 @@ export class DefaultLocalProjectRuntimeEnvironmentOrchestrator implements LocalP
       });
 
       // Step 1: Create workspace + clone the repo into it.
-      const workspace = await this.deps.workspaceManager.createWorkspace({
+      const workspace = await deps.workspaceManager.createWorkspace({
         sessionId: input.sessionId,
       });
       workspacePath = workspace.workspacePath;
@@ -193,7 +198,7 @@ export class DefaultLocalProjectRuntimeEnvironmentOrchestrator implements LocalP
 
       reporter.event({ type: "task:runtime-cloning", taskRunId });
       const elapsedClone = startStopwatch();
-      const cloneResult = await this.deps.gitCloneService.cloneRepository({
+      const cloneResult = await deps.gitCloneService.cloneRepository({
         gitUrl: input.gitUrl,
         workspacePath,
         logger: input.logger,
@@ -209,7 +214,7 @@ export class DefaultLocalProjectRuntimeEnvironmentOrchestrator implements LocalP
       // branch off it right after clone; a chat run is parked on its commit.
       const { workBranch, createdFromBranch, devcontainerLookupBranch } =
         await setUpLaunchBranches({
-          gitCommitPushService: this.deps.gitCommitPushService,
+          gitCommitPushService: deps.gitCommitPushService,
           workspacePath,
           resolvedBranch: cloneResult.resolvedBranch,
           repo: input.repo,
@@ -217,8 +222,8 @@ export class DefaultLocalProjectRuntimeEnvironmentOrchestrator implements LocalP
           taskRunId: input.currentExecutionInfo.taskRunId,
           baseWorkBranch: input.baseWorkBranch,
           sourceBranch: input.sourceBranch,
-          localEnvVars: this.localEnvVars,
-          repoContextGit: this.deps.repoContextGit,
+          localEnvVars: localEnvVars,
+          repoContextGit: deps.repoContextGit,
           repoContext: input.repoContext,
           logger: input.logger,
         });
@@ -259,7 +264,7 @@ export class DefaultLocalProjectRuntimeEnvironmentOrchestrator implements LocalP
             installPipelineBuilder: !input.startAgent,
           })
         : await resolveDevcontainerConfig({
-            devcontainerLauncher: this.deps.devcontainerLauncher,
+            devcontainerLauncher: deps.devcontainerLauncher,
             workspacePath,
             requestedConfigPath: input.devcontainerConfigPath,
             lookupBranch: devcontainerLookupBranch,
@@ -289,17 +294,17 @@ export class DefaultLocalProjectRuntimeEnvironmentOrchestrator implements LocalP
 
       // Step 3a: Patch the cloned devcontainer.json before `up` with the
       // containerEnv from .scarn/.env (baked in as `-e KEY=VALUE`).
-      if (Object.keys(this.localEnvVars).length > 0) {
+      if (Object.keys(localEnvVars).length > 0) {
         await patchDevcontainerEnv(
           workspacePath,
           devcontainerConfigPath,
-          this.localEnvVars,
+          localEnvVars,
         );
         logWork("runtime", "Patched devcontainer.json with .scarn/.env vars", {
           sessionId: input.sessionId,
           devcontainerConfigPath,
-          varCount: Object.keys(this.localEnvVars).length,
-          varNames: Object.keys(this.localEnvVars),
+          varCount: Object.keys(localEnvVars).length,
+          varNames: Object.keys(localEnvVars),
         });
       } else {
         logWork("runtime", "No .scarn/.env vars to inject into devcontainer", {
@@ -308,7 +313,7 @@ export class DefaultLocalProjectRuntimeEnvironmentOrchestrator implements LocalP
       }
 
       gitCredentialRelay = await prepareGitCredentialRelay({
-        deps: this.deps,
+        deps: deps,
         repo: input.repo,
         sessionId: input.sessionId,
         runContext: {
@@ -331,7 +336,7 @@ export class DefaultLocalProjectRuntimeEnvironmentOrchestrator implements LocalP
       // runArgs. A step without an agent launches an unmodified devcontainer.
       const plan = input.startAgent
         ? await prepareAgentLaunch({
-            deps: this.deps,
+            deps: deps,
             sessionId: input.sessionId,
             projectId: input.projectId,
             requestedByUserId: input.requestedByUserId,
@@ -351,13 +356,13 @@ export class DefaultLocalProjectRuntimeEnvironmentOrchestrator implements LocalP
         type: "task:runtime-container-starting",
         taskRunId,
       });
-      const devcontainerResult = await this.deps.devcontainerLauncher.launch({
+      const devcontainerResult = await deps.devcontainerLauncher.launch({
         sessionId: input.sessionId,
         projectId: input.projectId,
         requestedByUserId: input.requestedByUserId,
         workspacePath,
         devcontainerConfigPath,
-        ...devcontainerHostEnv(input.setupEnv, this.deps.gitCacheDir),
+        ...devcontainerHostEnv(input.setupEnv, deps.gitCacheDir),
         onProgress: ({ kind, phase, level }) => {
           // Presentation: rolling live window in the terminal.
           reporter.event({
@@ -383,7 +388,7 @@ export class DefaultLocalProjectRuntimeEnvironmentOrchestrator implements LocalP
       // Skipped for steps that do not start an agent.
       agent = plan
         ? await startAgentInContainer({
-            deps: this.deps,
+            deps: deps,
             plan,
             sessionId: input.sessionId,
             containerId: devcontainerId,
@@ -421,8 +426,8 @@ export class DefaultLocalProjectRuntimeEnvironmentOrchestrator implements LocalP
         commitAndPushWorkBranch:
           capturedWorkBranch && input.repo.mode === "readWrite"
             ? buildCommitAndPushWorkBranch({
-                gitCommitPushService: this.deps.gitCommitPushService,
-                submoduleService: this.deps.submoduleService,
+                gitCommitPushService: deps.gitCommitPushService,
+                submoduleService: deps.submoduleService,
                 workspacePath: capturedWorkspacePath,
                 workBranch: capturedWorkBranch,
                 taskRunId: input.currentExecutionInfo.taskRunId,
@@ -464,13 +469,13 @@ export class DefaultLocalProjectRuntimeEnvironmentOrchestrator implements LocalP
           // container + workspace.
           await Promise.allSettled([
             agent
-              ? this.deps.opencodeBootstrap.stop(capturedDevcontainerId)
+              ? deps.opencodeBootstrap.stop(capturedDevcontainerId)
               : Promise.resolve(),
             gitCredentialRelay?.stop(),
             cleanupEnvironment({
               workspacePath: capturedWorkspacePath,
               devcontainerId: capturedDevcontainerId,
-              deps: this.deps,
+              deps: deps,
             }),
           ]);
         },
@@ -498,12 +503,12 @@ export class DefaultLocalProjectRuntimeEnvironmentOrchestrator implements LocalP
       // dies with the container.
       await Promise.allSettled([
         agent && devcontainerId
-          ? this.deps.opencodeBootstrap.stop(devcontainerId)
+          ? deps.opencodeBootstrap.stop(devcontainerId)
           : Promise.resolve(),
         cleanupEnvironment({
           workspacePath,
           devcontainerId,
-          deps: this.deps,
+          deps: deps,
         }),
       ]);
       throw error;

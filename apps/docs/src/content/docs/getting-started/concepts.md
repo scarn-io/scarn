@@ -86,11 +86,13 @@ pipeline it builds. It is published disabled; nothing starts until you run
 
 ## Worker
 
-A worker is `scarn work`: a process on your machine that claims tasks, runs
-the agent, and reports its result and artifacts back. A task is one attempt at one step for one
-work item. Nothing runs until a worker is up, and you
-can run as many as you like, on a laptop or a CI box. See
-[Running Workers](/scarn/guides/workers/).
+A worker is a process on your machine that claims tasks, runs the agent, and
+reports its result and artifacts back. A task is one attempt at one step for
+one work item. Each machine runs one worker in the background, and it works
+on every project you add to it: `scarn work` starts it and adds the project in
+your current checkout. Nothing runs until a worker is up, and you can run one
+on as many machines as you like, a laptop or a CI box. Manage it with
+`scarn worker`. See [Running Workers](/scarn/guides/workers/).
 
 ## Runtime
 

@@ -26,7 +26,6 @@ export function buildDryRunWorkspaceOrchestrator(
 ): TaskRuntimeEnvironmentOrchestrator {
   return new DefaultLocalProjectRuntimeEnvironmentOrchestrator(
     logger,
-    localEnvVars,
     buildLocalProjectRuntimeDeps(logger, localEnvVars, {
       providerAccessResolver: safeProviderAccessResolver,
       openGitCredentialRelaySession: null,

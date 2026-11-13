@@ -7,19 +7,26 @@ import { hideBin } from "yargs/helpers";
 import dotenv from "dotenv";
 import { CoreError } from "@scarn/worker";
 
+import { artifactsCommand } from "./commands/artifacts";
 import { authCommand } from "./commands/auth";
 import { automationsCommand } from "./commands/automations";
-import { executionCommand } from "./commands/execution";
 import { helloCommand } from "./commands/hello";
+import { inboxCommand } from "./commands/inbox";
 import { initCommand } from "./commands/init";
+import { logsCommand } from "./commands/logs";
 import { reportBugCommand } from "./commands/report-bug";
+import { runsCommand } from "./commands/runs";
 import { runtimeCommand } from "./commands/runtime";
 import { pipelinesCommand } from "./commands/pipelines";
+import { taskRunsCommand } from "./commands/task-runs";
+import { tasksCommand } from "./commands/tasks";
 import { telemetryCommand } from "./commands/telemetry";
 import { workCommand } from "./commands/work";
+import { workItemsCommand } from "./commands/work-items";
+import { workerCommand } from "./commands/worker";
 import { createCliLogger } from "./lib/logger";
 import { AnalyticsEvents } from "@scarn/observability/analytics/events";
-import { classifyCliError, CliUsageError } from "./lib/cli-error";
+import { classifyCliError, CliError, CliUsageError } from "./lib/cli-error";
 import { captureMilestone, shutdownTelemetry } from "./lib/telemetry";
 import { version as CLI_VERSION } from "../package.json";
 const logger = createCliLogger("cli");
@@ -82,16 +89,23 @@ export function createCli(
       dotenv.config({ path: arguments_.envFile ?? ".env", override: false });
       dotenv.config({ path: ".scarn.env", override: false });
     })
+    .command(artifactsCommand)
     .command(authCommand)
     .command(automationsCommand)
-    .command(executionCommand)
     .command(helloCommand)
+    .command(inboxCommand)
     .command(initCommand)
+    .command(logsCommand)
     .command(reportBugCommand)
+    .command(runsCommand)
     .command(runtimeCommand)
     .command(pipelinesCommand)
+    .command(taskRunsCommand)
+    .command(tasksCommand)
     .command(telemetryCommand)
     .command(workCommand)
+    .command(workItemsCommand)
+    .command(workerCommand)
     .demandCommand(1, "A command is required.");
 }
 
@@ -118,7 +132,7 @@ export async function run(
       logger.error({ error }, "Unknown CLI error.");
     }
 
-    return 1;
+    return error instanceof CliError ? error.exitCode : 1;
   } finally {
     // Bounded: never lets telemetry delay process exit by more than its own
     // timeout, whether the command above succeeded or threw.

@@ -74,6 +74,21 @@ describe("scarn work — source branch", () => {
     expect(result.stdout).toContain("--source-branch");
   });
 
+  test("--help no longer offers the foreground loop's flags", async () => {
+    const result = await runCli(["work", "--help"]);
+    for (const flag of [
+      "--once",
+      "--workerId",
+      "--batchSize",
+      "--pollIntervalMs",
+      "--max-poll-interval-ms",
+      "--connected-max-poll-interval-ms",
+      "--leaseDurationSeconds",
+    ]) {
+      expect(result.stdout).not.toContain(flag);
+    }
+  });
+
   test("fails fast when the current branch has never been pushed to origin", async () => {
     const { root, workspace } = buildRepoWithOrigin();
     try {
@@ -104,9 +119,9 @@ describe("scarn work — source branch", () => {
       const home = mkdtempSync(resolve(tmpdir(), "scarn-work-home-"));
       try {
         const result = await runWork([], { cwd: workspace, home });
-        expect(
-          hasReporterLine(result.stderr, "Using source branch: main"),
-        ).toBe(true);
+        expect(hasReporterLine(result.stderr, "does not exist on origin")).toBe(
+          false,
+        );
         expect(result.exitCode).toBe(1);
         expect(hasReporterLine(result.stderr, "Not signed in")).toBe(true);
       } finally {
@@ -117,15 +132,15 @@ describe("scarn work — source branch", () => {
     }
   });
 
-  test("skips the branch guard entirely when cwd is not a git repository", async () => {
+  test("refuses to run outside a git repository", async () => {
     const notARepo = mkdtempSync(resolve(tmpdir(), "scarn-work-norepo-"));
     const home = mkdtempSync(resolve(tmpdir(), "scarn-work-home-"));
     try {
       const result = await runWork([], { cwd: notARepo, home });
-      expect(hasReporterLine(result.stderr, "does not exist on origin")).toBe(
-        false,
-      );
-      expect(hasReporterLine(result.stderr, "Not signed in")).toBe(true);
+      expect(result.exitCode).toBe(1);
+      expect(
+        hasReporterLine(result.stderr, "Not inside a git repository"),
+      ).toBe(true);
     } finally {
       rmSync(notARepo, { recursive: true, force: true });
       rmSync(home, { recursive: true, force: true });

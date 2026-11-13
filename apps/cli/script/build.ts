@@ -1,7 +1,9 @@
+import { randomBytes } from "node:crypto";
 import { copyFile, mkdir, rm, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { dirname, resolve } from "node:path";
 import { version as packageVersion } from "../package.json";
+import { BAKED_CLI_BUILD_ID_DEFINE } from "../src/lib/build-constants";
 import { CLI_BUILD_TARGETS, type CliBuildTarget } from "./targets";
 import { resolveTelemetryDefines } from "./telemetry-defines";
 
@@ -70,11 +72,25 @@ async function buildTarget(
   }
 }
 
+/**
+ * A dev build's ID, so a rebuilt `scarn-dev` counts as a different worker
+ * version even when `package.json` hasn't changed.
+ */
+function createDevBuildId(): string {
+  const stamp = new Date().toISOString().replace(/[-:.TZ]/g, "");
+  return `${stamp}.${randomBytes(3).toString("hex")}`;
+}
+
 async function main(): Promise<void> {
   const isDev = process.argv.includes("--dev");
   const cliVersion = process.env["CLI_BUILD_VERSION"] ?? packageVersion;
 
   const versionDefine = `--define:process.env.CLI_BUILD_VERSION=${JSON.stringify(cliVersion)}`;
+  const buildIdDefines = isDev
+    ? [
+        `--define:${BAKED_CLI_BUILD_ID_DEFINE}=${JSON.stringify(createDevBuildId())}`,
+      ]
+    : [];
   const telemetryDefines = resolveTelemetryDefines();
 
   await rm(distDirectory, { recursive: true, force: true });
@@ -89,18 +105,14 @@ async function main(): Promise<void> {
     projectRoot,
     "../../packages/pipeline-studio-ui",
   );
-  process.stdout.write(
-    "Building @scarn/pipeline-studio-ui static assets...\n",
-  );
+  process.stdout.write("Building @scarn/pipeline-studio-ui static assets...\n");
   const uiBuild = Bun.spawn(["bun", "run", "build.ts"], {
     cwd: pipelineStudioUiDir,
     stdout: "inherit",
     stderr: "inherit",
   });
   if ((await uiBuild.exited) !== 0) {
-    throw new Error(
-      "Failed to build @scarn/pipeline-studio-ui static assets.",
-    );
+    throw new Error("Failed to build @scarn/pipeline-studio-ui static assets.");
   }
 
   // Copy the @devcontainers/cli bundle and its companion assets into dist/.
@@ -126,9 +138,8 @@ async function main(): Promise<void> {
   //
   // SCARN_DEVCONTAINER_SCRIPT (set by publish.ts and the dev shim) points at
   // the nested dist/devcontainer/dist/spec-node/devcontainers-cli.js path.
-  const devcontainerSrc = require.resolve(
-    "@devcontainers/cli/dist/spec-node/devContainersSpecCLI.js",
-  );
+  const devcontainerSrc =
+    require.resolve("@devcontainers/cli/dist/spec-node/devContainersSpecCLI.js");
   const devcontainerDest = resolve(
     distDirectory,
     "devcontainer",
@@ -139,9 +150,8 @@ async function main(): Promise<void> {
   await mkdir(dirname(devcontainerDest), { recursive: true });
   await copyFile(devcontainerSrc, devcontainerDest);
 
-  const updateUIDSrc = require.resolve(
-    "@devcontainers/cli/scripts/updateUID.Dockerfile",
-  );
+  const updateUIDSrc =
+    require.resolve("@devcontainers/cli/scripts/updateUID.Dockerfile");
   const updateUIDDest = resolve(
     distDirectory,
     "devcontainer",
@@ -153,7 +163,11 @@ async function main(): Promise<void> {
 
   for (const target of CLI_BUILD_TARGETS) {
     process.stdout.write(`Building ${target.outputName}...\n`);
-    await buildTarget(target, [versionDefine, ...telemetryDefines]);
+    await buildTarget(target, [
+      versionDefine,
+      ...buildIdDefines,
+      ...telemetryDefines,
+    ]);
   }
 
   if (isDev) {

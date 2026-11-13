@@ -56,6 +56,21 @@ export type LocalRuntimeSessionStore = TaskRunTracker & {
 
 const DEFAULT_DB_PATH = path.join(homedir(), ".scarn", "db.sqlite");
 
+const SESSION_COLUMNS = `
+  id,
+  project_id AS projectId,
+  task_id AS taskRunId,
+  status,
+  workspace_path AS workspacePath,
+  runtime_container_id AS runtimeContainerId,
+  agent_base_url AS agentBaseUrl,
+  opencode_session_id AS opencodeSessionId,
+  failure_reason AS failureReason,
+  metadata_json AS metadataJson,
+  created_at AS createdAt,
+  updated_at AS updatedAt,
+  completed_at AS completedAt`;
+
 export const getDefaultLocalRuntimeSessionDbPath = () =>
   process.env["SCARN_LOCAL_DB_PATH"]?.trim() || DEFAULT_DB_PATH;
 
@@ -182,6 +197,29 @@ export class SqliteLocalRuntimeSessionStore implements LocalRuntimeSessionStore 
     );
   }
 
+  /**
+   * The most recently finished sessions (succeeded or failed) for the given
+   * projects, newest first. `local_task_sessions` has no worker-instance
+   * column, so callers scope by the instance's project IDs.
+   */
+  listRecent(
+    limit: number,
+    projectIds: readonly string[],
+  ): LocalRuntimeSessionRecord[] {
+    if (projectIds.length === 0 || limit <= 0) {
+      return [];
+    }
+    const placeholders = projectIds.map(() => "?").join(", ");
+    return this.db
+      .query<LocalRuntimeSessionRecord, (string | number)[]>(
+        `SELECT ${SESSION_COLUMNS} FROM local_task_sessions
+         WHERE completed_at IS NOT NULL AND project_id IN (${placeholders})
+         ORDER BY completed_at DESC, id DESC
+         LIMIT ?`,
+      )
+      .all(...projectIds, Math.floor(limit));
+  }
+
   close() {
     this.db.close();
   }
@@ -189,7 +227,7 @@ export class SqliteLocalRuntimeSessionStore implements LocalRuntimeSessionStore 
   private getRecord(id: string): LocalRuntimeSessionRecord {
     const record = this.db
       .query<LocalRuntimeSessionRecord, [string]>(
-        "SELECT * FROM local_task_sessions WHERE id = ?",
+        `SELECT ${SESSION_COLUMNS} FROM local_task_sessions WHERE id = ?`,
       )
       .get(id);
 

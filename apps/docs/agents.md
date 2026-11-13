@@ -6,28 +6,28 @@ This file tells AI agents (Claude Code, Codex, etc.) when and how to update the 
 
 Update the documentation whenever you make changes in these areas:
 
-| Change area                                                                  | Docs to update                                                                                                                                                          |
-| ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| New CLI command or flag                                                      | `src/content/docs/reference/cli.md`                                                                                                                                     |
-| Changed CLI command name, flag, or default                                   | `src/content/docs/reference/cli.md`                                                                                                                                     |
-| New `defineStep`/`codeStep` option or `definePipeline` node kind             | `src/content/docs/reference/sdk.mdx` + relevant guide                                                                                                                   |
-| New SDK export or helper                                                     | `src/content/docs/reference/sdk.mdx`                                                                                                                                    |
-| New auth flow or credential storage behavior                                 | `src/content/docs/getting-started/installation.md`                                                                                                                      |
-| Product pitch, the loop, or who Scarn is for                               | `src/content/docs/index.mdx`                                                                                                                                            |
-| New or renamed core term (project, step, transition, runtime, …)             | `src/content/docs/getting-started/concepts.md`                                                                                                                          |
-| A new task a user does after the Quickstart                                  | A page in `src/content/docs/how-to/` (≤ 500 words, links to `guides/` for depth)                                                                                        |
-| New telemetry event, opt-out mechanism, or `scarn telemetry` flag          | `src/content/docs/reference/observability.md`                                                                                                                           |
+| Change area                                                                  | Docs to update                                                                                                                                                        |
+| ---------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| New CLI command or flag                                                      | `src/content/docs/reference/cli.md`                                                                                                                                   |
+| Changed CLI command name, flag, or default                                   | `src/content/docs/reference/cli.md`                                                                                                                                   |
+| New `defineStep`/`codeStep` option or `definePipeline` node kind             | `src/content/docs/reference/sdk.mdx` + relevant guide                                                                                                                 |
+| New SDK export or helper                                                     | `src/content/docs/reference/sdk.mdx`                                                                                                                                  |
+| New auth flow or credential storage behavior                                 | `src/content/docs/getting-started/installation.md`                                                                                                                    |
+| Product pitch, the loop, or who Scarn is for                                 | `src/content/docs/index.mdx`                                                                                                                                          |
+| New or renamed core term (project, step, transition, runtime, …)             | `src/content/docs/getting-started/concepts.md`                                                                                                                        |
+| A new task a user does after the Quickstart                                  | A page in `src/content/docs/how-to/` (≤ 500 words, links to `guides/` for depth)                                                                                      |
+| New telemetry event, opt-out mechanism, or `scarn telemetry` flag            | `src/content/docs/reference/observability.md`                                                                                                                         |
 | Changes to project init flow                                                 | `src/content/docs/reference/cli.md#scarn-init` first, then `src/content/docs/getting-started/quickstart.mdx` — the Quickstart shows only what the user types and sees |
-| New step concepts (declared errors, artifacts, MCP)                          | `src/content/docs/guides/steps.md`                                                                                                                                      |
-| New `definePipeline()` concepts (node kinds, conditions, lanes, JSON format) | `src/content/docs/guides/pipelines.mdx`                                                                                                                                 |
-| New project automation concepts                                              | `src/content/docs/guides/automations.md`                                                                                                                                |
+| New step concepts (declared errors, artifacts, MCP)                          | `src/content/docs/guides/steps.md`                                                                                                                                    |
+| New `definePipeline()` concepts (node kinds, conditions, lanes, JSON format) | `src/content/docs/guides/pipelines.mdx`                                                                                                                               |
+| New project automation concepts                                              | `src/content/docs/guides/automations.md`                                                                                                                              |
 | New worker flags                                                             | `src/content/docs/reference/cli.md#scarn-work-project`                                                                                                                |
-| New worker execution behavior                                                | `src/content/docs/guides/workers.md`                                                                                                                                    |
-| New dev container guidance                                                   | `src/content/docs/how-to/devcontainer.md`                                                                                                                               |
-| New GitHub/Bitbucket/Jira integration or sync behavior                       | `src/content/docs/how-to/integrations.md`                                                                                                                               |
-| Changes to the `/projects/new` flow or token saving                          | `src/content/docs/how-to/create-a-project.md`                                                                                                                           |
-| New reusable, interactive component worth showing off (not just documenting) | `src/content/docs/catalog/` — see "Adding a catalog entry" below                                                                                                        |
-| New top-level concept not fitting an existing page                           | Create a new page and add it to the sidebar in `astro.config.mjs`                                                                                                       |
+| New worker execution behavior                                                | `src/content/docs/guides/workers.md`                                                                                                                                  |
+| New dev container guidance                                                   | `src/content/docs/how-to/devcontainer.md`                                                                                                                             |
+| New GitHub/Bitbucket/Jira integration or sync behavior                       | `src/content/docs/how-to/integrations.md`                                                                                                                             |
+| Changes to the `/projects/new` flow or token saving                          | `src/content/docs/how-to/create-a-project.md`                                                                                                                         |
+| New reusable, interactive component worth showing off (not just documenting) | `src/content/docs/catalog/` — see "Adding a catalog entry" below                                                                                                      |
+| New top-level concept not fitting an existing page                           | Create a new page and add it to the sidebar in `astro.config.mjs`                                                                                                     |
 
 ## One home per fact
 
@@ -41,10 +41,10 @@ Each fact below has one canonical page. Mention it elsewhere in one sentence and
 | Devcontainer: the designer writes `.devcontainer/devcontainer.json` when missing (it doesn't build it); `Runtime.devcontainer()` for steps that need the code, `Runtime.host()` for steps that don't, so a first run can need Docker | `getting-started/concepts.md#runtime`                                       |
 | `.env` / `.env.example` secrets                                                                                                                                                                                                      | `guides/steps.md#secrets`                                                   |
 | `.opencode/` tools auto-load                                                                                                                                                                                                         | `guides/steps.md#tools-already-available-to-every-step`                     |
-| Worker flags                                                                                                                                                                                                                         | `reference/cli.md#scarn-work-project`                                     |
+| Worker flags                                                                                                                                                                                                                         | `reference/cli.md#scarn-work-project`                                       |
 | `typecheck → push → build → publish` loop                                                                                                                                                                                            | `guides/pipelines.mdx#writing-and-publishing`                               |
 | Conditions and branching (`.next({ routes, otherwise })`)                                                                                                                                                                            | `guides/pipelines.mdx#transitions`                                          |
-| "Use `design` unless you want to write it yourself"                                                                                                                                                                                  | `reference/cli.md#scarn-pipelines-init`                                   |
+| "Use `design` unless you want to write it yourself"                                                                                                                                                                                  | `reference/cli.md#scarn-pipelines-init`                                     |
 | `CliError` failure codes and their meanings                                                                                                                                                                                          | `reference/cli.md#failure-codes` (`reference/observability.md` links to it) |
 
 To check a fact has one home, search the published pages only — `rg <pattern> apps/docs/src/content/docs`. Transcripts under `src/content/transcripts/` legitimately repeat CLI output.
@@ -54,7 +54,7 @@ To check a fact has one home, search the published pages only — `rg <pattern> 
 - The Quickstart (`getting-started/quickstart.mdx`) is a tutorial: command → what you see → the one decision → link. Budget: ≤ 900 prose words, enforced by `bun run test` (`bun scripts/prose-words.ts <file> --max 900`). Internals belong in `reference/cli.md`.
 - A new term used on a getting-started page must be defined on `concepts.md` or linked on first use.
 - Quickstart transcripts (`src/content/transcripts/*.txt`) are captured, not written. Never paraphrase a reporter string; if one is wrong, fix the CLI. Each file's leading `#` lines record the CLI version and source, and `Transcript.astro` strips them when rendering.
-- Today `01`–`05` are derived from the reporter strings in the `apps/cli/src` files named in their headers (not live captures); `06` replays a recorded `scarn work` run. When you change a string in one of those files, update the transcript from the source in the same change and bump its version header. Replace a derived transcript with a live capture (e2e harness, `packages/e2e-tests/tests/setup-helpers.ts`) whenever you can.
+- Today `01`–`05` are derived from the reporter strings in the `apps/cli/src` files named in their headers (not live captures). The run offer hands the run to the background worker, so the Quickstart no longer shows a worker's own output. When you change a string in one of those files, update the transcript from the source in the same change and bump its version header. Replace a derived transcript with a live capture (e2e harness, `packages/e2e-tests/tests/setup-helpers.ts`) whenever you can.
 
 ## How to update docs
 
@@ -91,7 +91,7 @@ apps/docs/
 │       │   │   ├── change-a-pipeline.md    ← re-run the designer: tweak / route / new pipeline
 │       │   │   ├── let-a-step-read-your-repo.md ← host → devcontainer runtime
 │       │   │   ├── connect-a-tool-to-a-step.md  ← MCP servers and their secrets via the designer
-│       │   │   ├── run-on-a-work-item.md   ← queue a run, then `scarn work`
+│       │   │   ├── run-on-a-work-item.md   ← queue a run, then `scarn work` adds the project to the background worker
 │       │   │   ├── commit-your-pipeline.mdx ← what to commit, what's ignored, teammates
 │       │   │   ├── devcontainer.md         ← writing a .devcontainer/devcontainer.json by hand
 │       │   │   ├── create-a-project.md     ← URL-first project creation, issue tracker choice, saving tokens
@@ -100,7 +100,7 @@ apps/docs/
 │       │   │   ├── steps.md                ← defineStep()/codeStep() deep dive
 │       │   │   ├── pipelines.mdx           ← definePipeline() node graph and its JSON format
 │       │   │   ├── automations.md          ← project automations, default.ts routing
-│       │   │   └── workers.md              ← scarn work and worker options
+│       │   │   └── workers.md              ← the background worker, scarn work and worker options
 │       │   ├── reference/
 │       │   │   ├── cli.md                  ← complete CLI command reference
 │       │   │   ├── sdk.mdx                 ← TypeScript SDK types and helpers

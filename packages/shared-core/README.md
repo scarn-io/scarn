@@ -8,18 +8,21 @@ both sides use goes here. Contracts (what a document _is_) go in
   validator, condition evaluator, reference resolver and graph helpers. It
   is a separate entry so browser bundles (`pipeline-studio-ui`) don't pull
   in the formatters below.
-- `@scarn/shared-core`: execution investigation and log formatting,
-  described below.
+- `@scarn/shared-core`: the gather-and-format logic behind the CLI's
+  read commands, described below.
 
-## Execution investigation
+## Read commands
 
-Fetch-and-format logic for investigating a past pipeline execution: status,
-attempt/step detail, logs, and artifacts, read through the Scarn API with a
-caller-supplied authenticated client. `investigateExecution` (see
-`src/investigate-execution.ts`) is the entry point; `apps/cli`'s `execution
-view` command is a thin argv wrapper around it, and a future MCP server can
-call the same function in-process (see the plan at
-`docs/plans/execution-view-cli.md`, decision 1).
+Fetch-and-format logic for the agent-facing debugging commands (`scarn runs`,
+`scarn work-items`, and task logs), read through the Scarn API with a
+caller-supplied authenticated client. Each command has a `gather*` function
+that returns plain data (what `--json` prints) and a `format*` function that
+renders it as text ending in a `→ scarn …` next-command hint, e.g.
+`gatherRunList` / `formatRunList` (`src/gather-runs.ts`,
+`src/format-runs.ts`). Each takes a narrow client type (`RunReadClient`,
+`WorkItemReadClient`, `TaskLogsClient`) rather than the whole generated
+client. `loadTaskLogLines` and `formatLogs` load and render a task run's
+logs; the worker uses `loadTaskLogLines` too.
 
 This package owns the logic, not the CLI command, because two different
 "apps" — the CLI today, an MCP server later — need the same behavior, and
@@ -33,24 +36,24 @@ pull`'s real logic lives in `packages/worker`, not inline in
 Three packages in this repo talk to the Scarn API; each has a different
 audience and a different reason to exist:
 
-| Package                                             | Audience                                                                                                                | Abstraction level                                                                            | Release blast radius                                                |
-| --------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| `@scarn/sdk`                                      | External pipeline-definition authors, published to npm                                                                  | Raw generated HTTP client (`createScarnClient`) plus pipeline-definition authoring helpers | Public: a breaking change ships to every consumer outside this repo |
+| Package                                             | Audience                                                                                                                | Abstraction level                                                                          | Release blast radius                                                |
+| --------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------- |
+| `@scarn/sdk`                                        | External pipeline-definition authors, published to npm                                                                  | Raw generated HTTP client (`createScarnClient`) plus pipeline-definition authoring helpers | Public: a breaking change ships to every consumer outside this repo |
 | `packages/worker`                                   | The CLI's write-side executor — devcontainer/Docker orchestration, running a step, pushing/pulling pipeline definitions | Built on `@scarn/sdk`, adds auth, project config, and the whole Task runtime               | Internal, but large — depended on by `apps/cli` directly            |
-| `packages/shared-core` (this package's root export) | A human or agent debugging why an execution did what it did — read-only                                                 | Built on `@scarn/sdk`, adds fetch-resolve-format logic for one read-heavy flow             | Internal, narrow — no devcontainer/Docker/runtime dependencies      |
+| `packages/shared-core` (this package's root export) | A human or agent debugging why a pipeline run did what it did — read-only                                               | Built on `@scarn/sdk`, adds fetch-resolve-format logic for read-heavy flows                | Internal, narrow — no devcontainer/Docker/runtime dependencies      |
 
 `@scarn/sdk` is a _published_ package for pipeline-definition authors —
-different audience, different release discipline — so investigation logic
+different audience, different release discipline — so read logic
 that only this repo's own CLI/MCP surface consumes doesn't belong there.
 
 `packages/worker` is chartered as the write-side executor: it orchestrates
 devcontainers and Docker to actually run a step. A lightweight future MCP
-binary that only wants to answer "why did this execution fail" shouldn't
-have to pull in that whole runtime just to read an execution's status — the
+binary that only wants to answer "why did this run fail" shouldn't
+have to pull in that whole runtime just to read a run's status — the
 same reasoning that already keeps `packages/worker` (also built entirely on
 `@scarn/sdk`) out of `@scarn/sdk` itself applies one level up here.
 
-The investigation code depends only on `@scarn/sdk` for the generated client's
+The read code depends only on `@scarn/sdk` for the generated client's
 type (`ReturnType<typeof createScarnClient>`) — callers resolve
 authentication and construct the client themselves (see
 `apps/cli/src/lib/cli-api-client.ts`'s `connectApi`) and pass both in.

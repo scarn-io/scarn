@@ -45,9 +45,47 @@ Run the CLI directly from source:
 
 ```sh
 bun run apps/cli/src/index.ts hello
-bun run apps/cli/src/index.ts work 01966a2c-9494-7db5-aa46-0f8f5cbbe001
 bun run apps/cli/src/index.ts auth status
+bun run apps/cli/src/index.ts worker start --foreground
 ```
+
+## The background worker
+
+`scarn work`, `scarn pipelines design` and `scarn worker …` all talk to one
+background worker per machine and **instance**. The commands live in
+`src/commands/worker/`; the worker itself is in
+`packages/worker/src/work/worker-host/`. See "Background Worker" in
+`docs/architecture.md`, the terms in `packages/worker/CONTEXT.md` and
+`docs/adr/0004-background-worker.md`.
+
+| Command                                    | What it does                                                                                               |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------------------------- |
+| `worker start`                             | Starts the worker in the background (spawns `worker start --foreground`, detached) and waits for it.       |
+| `worker start --foreground`                | Runs the worker in this terminal. The first Ctrl-C drains, the second forces.                              |
+| `worker start --foreground --once [proj]`  | One claim pass for one project from this checkout; no control API, nothing saved. Used by the e2e tests.   |
+| `worker stop [--force]`                    | Drains (or with `--force` aborts every run with `WORKER_STOPPED`) and waits for the process to exit.       |
+| `worker status [--json] [--recent-runs n]` | The worker, its limits, each project, active and recent runs. Exits 3 when no worker runs.                 |
+| `worker logs [project] [--run id] [-f]`    | Reads `worker.log` from disk, so it works when the worker is stopped.                                      |
+| `worker config --max-concurrency <n>`      | Changes and saves the machine limit.                                                                       |
+| `worker add [project]`                     | Adds this checkout's project, or updates its settings (`-c`, `-k`, `--work-item-id`, `--source-branch`).   |
+| `worker remove <project>`                  | Removes a project and its saved settings; its running runs finish.                                         |
+| `worker cancel <taskRunId> [--yes]`        | Cancels the run's Task on the server, then aborts the run on this machine at once.                         |
+| `work [project]`                           | `worker start` (if needed) then `worker add`. `--dry-run` rehearses a task's environment in this terminal. |
+
+Things to know while working on it:
+
+- **Instances.** The instance is the name the CLI runs as (`scarn`, or
+  `scarn-dev` for a linked dev build), or `SCARN_WORKER_INSTANCE`. Its state
+  is in `~/.scarn/workers/<instance>/` (`worker.json`, `worker.lock`,
+  `worker.log*`, `worker.stdio.log`) plus its rows in `~/.scarn/db.sqlite`.
+  Use your own instance to test without touching your real worker:
+  `SCARN_WORKER_INSTANCE=my-test bun run apps/cli/src/index.ts worker start`.
+- **Versions must match.** Every command except `worker stop` refuses to talk
+  to a worker of another version. A dev build bakes a build ID in at compile
+  time (`__SCARN_CLI_BUILD_ID__`), so after rebuilding `scarn-dev`, run
+  `scarn-dev worker stop && scarn-dev worker start`. Running from source has
+  no build ID.
+- **Startup crashes** show up in `worker.stdio.log`, not `worker.log`.
 
 The CLI targets `https://app.scarn.io` by default. Point it at a local
 server with `--base-url` or the `SCARN_BASE_URL` environment variable.

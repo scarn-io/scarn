@@ -20,7 +20,7 @@ export type { ArtifactRetentionSettings, ConfigFile } from "./config-file";
 // as a whole, and other workspaces (e.g. `packages/worker`'s tests) need to
 // redirect `resolveHomeDir()` at a scratch directory the same way this
 // package's own tests do.
-export { setHomeDirForTests } from "./home-dir";
+export { resolveHomeDir, setHomeDirForTests } from "./home-dir";
 export { resolveScarnBaseUrl } from "./base-url";
 export {
   formatProjectRef,

@@ -44,7 +44,6 @@ describe("DefaultLocalProjectRuntimeEnvironmentOrchestrator.launch (startAgent: 
     const deps = buildDeps(log);
     const orchestrator = new DefaultLocalProjectRuntimeEnvironmentOrchestrator(
       undefined,
-      {},
       deps,
     );
 
@@ -75,11 +74,14 @@ describe("DefaultLocalProjectRuntimeEnvironmentOrchestrator.launch (startAgent: 
     const deps = buildDeps(log);
     const orchestrator = new DefaultLocalProjectRuntimeEnvironmentOrchestrator(
       undefined,
-      { MY_VAR: "my-value" },
       deps,
     );
 
-    await orchestrator.launch({ ...buildLaunchInput(), startAgent: false });
+    await orchestrator.launch({
+      ...buildLaunchInput(),
+      startAgent: false,
+      localEnvVars: { MY_VAR: "my-value" },
+    });
 
     const config = JSON.parse(
       await readFile(
@@ -98,7 +100,6 @@ describe("DefaultLocalProjectRuntimeEnvironmentOrchestrator.launch (startAgent: 
     const deps = buildDeps(log);
     const orchestrator = new DefaultLocalProjectRuntimeEnvironmentOrchestrator(
       undefined,
-      {},
       deps,
     );
 
@@ -120,7 +121,6 @@ describe("DefaultLocalProjectRuntimeEnvironmentOrchestrator.launch (startAgent: 
       Promise.reject(new Error("devcontainer up failed"));
     const orchestrator = new DefaultLocalProjectRuntimeEnvironmentOrchestrator(
       undefined,
-      {},
       deps,
     );
 
@@ -144,7 +144,6 @@ describe("sourceBranch launch behavior", () => {
     const commitPush = new FakeGitCommitPushService(log);
     const orchestrator = new DefaultLocalProjectRuntimeEnvironmentOrchestrator(
       undefined,
-      {},
       buildOrchestratorFakeDeps({
         workspacePath,
         providerOutputDir,

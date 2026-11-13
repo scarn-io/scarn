@@ -226,6 +226,18 @@ export class DefaultOpencodeStepRunner implements OpencodeStepRunner {
     });
   }
 
+  async abort(input: {
+    server: OpencodeServerHandle;
+    sessionId: string;
+  }): Promise<void> {
+    const client = createScarnOpencodeClient(input.server);
+    logWork("opencode", "Interrupting OpenCode session", {
+      agentBaseUrl: input.server.baseUrl,
+      sessionId: input.sessionId,
+    });
+    await client.session.interrupt({ sessionID: input.sessionId });
+  }
+
   /** The unsanitized export: a restored session needs the real tool outputs. */
   async exportSession(input: {
     server: OpencodeServerHandle;

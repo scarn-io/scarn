@@ -291,6 +291,7 @@ export async function runWorkDryRun(
         claimToken: DRY_RUN_CLAIM_TOKEN,
         baseWorkBranch: null,
         sourceBranch: options.sourceBranch ?? null,
+        localEnvVars: options.localEnvVars,
         // No stepKey: skips work-branch creation, so a dry run never pushes or
         // even creates a `scarn/...` branch.
         stepKey: undefined,

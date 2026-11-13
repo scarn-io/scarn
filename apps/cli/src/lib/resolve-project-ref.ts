@@ -25,6 +25,7 @@ export const PROJECT_ACTIONS = {
   activate: "activate pipelines in",
   run: "run pipelines in",
   automations: "manage automations in",
+  inspect: "inspect work items in",
 } as const;
 
 export type ProjectAction =

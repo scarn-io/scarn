@@ -5,6 +5,7 @@ import { startProcessClaimedTaskRun } from "./process-claimed-task-run";
 import { resolveProjectWorkLogger } from "./process-project-work-logger";
 import { TaskLogStreaming } from "./start-task-log-streaming";
 import { TaskRunCancelledError } from "./task-run-cancelled-error";
+import type { RunRegistry } from "./run-registry";
 import type {
   ProcessProjectWorkDeps,
   ProcessProjectWorkInput,
@@ -17,32 +18,14 @@ type WorkTotals = {
   skippedCount: number;
 };
 
-function trackCompletedJob(
-  totals: WorkTotals,
-  activeJobs: Set<Promise<void>>,
-  job: Promise<void>,
-) {
-  totals.processedCount += 1;
-  activeJobs.delete(job);
-}
-
-function trackRejectedJob(
-  totals: WorkTotals,
-  activeJobs: Set<Promise<void>>,
-  job: Promise<void>,
-) {
-  totals.skippedCount += 1;
-  activeJobs.delete(job);
-}
-
 export function scheduleClaimedTaskRunJob(
   input: ProcessProjectWorkInput,
   deps: ProcessProjectWorkDeps,
   claim: TaskRunWorkerClaim,
   tracker: ReturnType<ProcessProjectWorkDeps["createRunTracker"]>,
   totals: WorkTotals,
-  activeJobs: Set<Promise<void>>,
-) {
+  runs: RunRegistry,
+): Promise<void> {
   const baseLogger = resolveProjectWorkLogger(deps);
 
   // Start live log streaming as early as the claim so the *entire* lifecycle
@@ -56,10 +39,6 @@ export function scheduleClaimedTaskRunJob(
     taskRunId: claim.task.id,
     claimToken: claim.claimToken,
     logFeed: claim.logFeed ?? null,
-    // Path A: seed the masker with the user's .scarn/.env values so they are
-    // redacted from the shipped feed. Provider token(s) (Path B) are registered
-    // later, from the runtime launch result.
-    secretValues: input.secretValues,
   });
   const logger = logStream.logger;
   const streamingDeps: ProcessProjectWorkDeps = { ...deps, logger };
@@ -68,7 +47,7 @@ export function scheduleClaimedTaskRunJob(
     projectId: input.projectId,
     workerId: input.workerId,
     taskRunId: claim.task.id,
-    activeJobsBeforeSchedule: activeJobs.size,
+    activeJobsBeforeSchedule: runs.count({ projectId: input.projectId }),
   });
 
   const heartbeat = createTaskRunHeartbeatController(
@@ -81,121 +60,123 @@ export function scheduleClaimedTaskRunJob(
     },
   );
 
-  const job = (async () => {
-    // Capture any thrown error so the finally block can report the step as
-    // failed *after* flushing buffered logs. Flushing first is critical:
-    // appendTaskLogs rejects once the step leaves "running", so any
-    // lines still in the shipper buffer at the moment failTaskRun is
-    // called would be permanently lost.
-    let executionError: unknown = undefined;
-    try {
-      const startedTask = await startProcessClaimedTaskRun(
-        {
-          projectId: input.projectId,
-          requestedByUserId: deps.workerClient.userId,
-          claim,
-          leaseDurationSeconds: input.leaseDurationSeconds,
-          sourceBranch: input.sourceBranch,
-          workerEnv: input.workerEnv,
-          preserveRuntimeOnFailure: input.preserveRuntimeOnComplete ?? false,
-        },
-        streamingDeps,
-        deps.workerClient,
-        tracker,
-        logStream,
-      );
+  const job = runs.start(
+    { taskRunId: claim.task.id, projectId: input.projectId },
+    async (run) => {
+      // Capture any thrown error so the finally block can report the step as
+      // failed *after* flushing buffered logs. Flushing first is critical:
+      // appendTaskLogs rejects once the step leaves "running", so any
+      // lines still in the shipper buffer at the moment failTaskRun is
+      // called would be permanently lost.
+      let executionError: unknown = undefined;
+      try {
+        // Path A: the run's .scarn/.env values are masked in the shipped feed.
+        // Provider token(s) (Path B) are registered later, from the launch.
+        const localEnvVars = (await input.readLocalEnv?.()) ?? {};
+        logStream.registerSecretValues(Object.values(localEnvVars));
+        const startedTask = await startProcessClaimedTaskRun(
+          {
+            projectId: input.projectId,
+            requestedByUserId: deps.workerClient.userId,
+            claim,
+            leaseDurationSeconds: input.leaseDurationSeconds,
+            sourceBranch: input.sourceBranch,
+            localEnvVars,
+            preserveRuntimeOnFailure: input.preserveRuntimeOnComplete ?? false,
+            run,
+          },
+          streamingDeps,
+          deps.workerClient,
+          tracker,
+          logStream,
+        );
 
-      await monitorStartedClaimedTaskRun(
-        input,
-        streamingDeps,
-        tracker,
-        { ...startedTask, isCancelled: () => heartbeat.isCancelled() },
-        heartbeat,
-        logStream,
-      );
-    } catch (error: unknown) {
-      executionError = error;
-      throw error;
-    } finally {
-      // Flush buffered log lines to the platform BEFORE marking the step as
-      // failed. This guarantees the error output (postCreateCommand failure,
-      // AWS errors, etc.) reaches the API while the step is still "running"
-      // and assertClaimOwnership will accept the appends.
-      await logStream.stop();
-      if (executionError instanceof TaskRunCancelledError) {
-        await heartbeat.stop();
-      } else if (executionError !== undefined) {
-        // The heartbeat runs until the failure is reported: runtime cleanup
-        // can outlast the lease, and a lapsed lease would replace the real
-        // error with "abandoned".
-        try {
-          await failClaimedTaskRunIfStillRunning(deps.workerClient, logger, {
-            taskRunId: claim.task.id,
-            claimToken: claim.claimToken,
-            error: executionError,
-          });
-        } catch (failError: unknown) {
-          // Best-effort: if the fail call itself errors (e.g. already failed
-          // via the heartbeat expiry), don't mask the original execution error
-          // — but log it explicitly. A silent swallow previously hid a
-          // server-side rollback that left the step stuck "running" until its
-          // lease lapsed (surfacing as "abandoned").
-          logger.error("step", "Failed to report claimed step failure", {
-            taskRunId: claim.task.id,
-            errorMessage:
-              failError instanceof Error
-                ? failError.message
-                : String(failError),
-          });
-        } finally {
+        await monitorStartedClaimedTaskRun(
+          input,
+          streamingDeps,
+          tracker,
+          {
+            ...startedTask,
+            isCancelled: () =>
+              heartbeat.isCancelled() || run.abortReason() === "cancelled",
+            run,
+          },
+          heartbeat,
+          logStream,
+        );
+      } catch (error: unknown) {
+        executionError = run.abortError() ?? error;
+        throw executionError;
+      } finally {
+        run.setPhase("tearing_down");
+        // Flush buffered log lines to the platform BEFORE marking the step as
+        // failed. This guarantees the error output (postCreateCommand failure,
+        // AWS errors, etc.) reaches the API while the step is still "running"
+        // and assertClaimOwnership will accept the appends.
+        await logStream.stop();
+        if (executionError instanceof TaskRunCancelledError) {
           await heartbeat.stop();
+        } else if (executionError !== undefined) {
+          // The heartbeat runs until the failure is reported: runtime cleanup
+          // can outlast the lease, and a lapsed lease would replace the real
+          // error with "abandoned".
+          try {
+            await failClaimedTaskRunIfStillRunning(deps.workerClient, logger, {
+              taskRunId: claim.task.id,
+              claimToken: claim.claimToken,
+              error: executionError,
+            });
+          } catch (failError: unknown) {
+            // Best-effort: if the fail call itself errors (e.g. already failed
+            // via the heartbeat expiry), don't mask the original execution error
+            // — but log it explicitly. A silent swallow previously hid a
+            // server-side rollback that left the step stuck "running" until its
+            // lease lapsed (surfacing as "abandoned").
+            logger.error("step", "Failed to report claimed step failure", {
+              taskRunId: claim.task.id,
+              errorMessage:
+                failError instanceof Error
+                  ? failError.message
+                  : String(failError),
+            });
+          } finally {
+            await heartbeat.stop();
+          }
         }
       }
-    }
-  })();
+    },
+  );
 
-  activeJobs.add(job);
   logger.log("worker", "Claimed task added to active jobs", {
     projectId: input.projectId,
     workerId: input.workerId,
     taskRunId: claim.task.id,
-    activeJobs: activeJobs.size,
+    activeJobs: runs.count({ projectId: input.projectId }),
   });
 
   void (async () => {
     try {
       await job;
-      trackCompletedJob(totals, activeJobs, job);
+      totals.processedCount += 1;
       logger.log("worker", "Claimed task finished successfully", {
         projectId: input.projectId,
         workerId: input.workerId,
         taskRunId: claim.task.id,
         processedCount: totals.processedCount,
-        activeJobsRemaining: activeJobs.size,
+        activeJobsRemaining: runs.count({ projectId: input.projectId }),
       });
     } catch (error: unknown) {
-      trackRejectedJob(totals, activeJobs, job);
+      totals.skippedCount += 1;
       logger.error("worker", "Claimed task promise rejected", {
         projectId: input.projectId,
         workerId: input.workerId,
         taskRunId: claim.task.id,
         skippedCount: totals.skippedCount,
-        activeJobsRemaining: activeJobs.size,
+        activeJobsRemaining: runs.count({ projectId: input.projectId }),
         error,
       });
     }
   })();
-}
 
-export function scheduleClaimedTaskRuns(
-  input: ProcessProjectWorkInput,
-  deps: ProcessProjectWorkDeps,
-  claims: TaskRunWorkerClaim[],
-  tracker: ReturnType<ProcessProjectWorkDeps["createRunTracker"]>,
-  totals: WorkTotals,
-  activeJobs: Set<Promise<void>>,
-): void {
-  for (const claim of claims) {
-    scheduleClaimedTaskRunJob(input, deps, claim, tracker, totals, activeJobs);
-  }
+  return job;
 }

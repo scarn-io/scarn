@@ -46,7 +46,6 @@ describe("branch-per-step launch", () => {
   function orchestratorFor(deps: ReturnType<typeof buildDeps>) {
     return new DefaultLocalProjectRuntimeEnvironmentOrchestrator(
       undefined,
-      {},
       deps,
     );
   }

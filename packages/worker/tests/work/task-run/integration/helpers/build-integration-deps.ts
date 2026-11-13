@@ -237,7 +237,6 @@ export function buildIntegrationDeps(input: {
   };
   const orchestrator = new DefaultLocalProjectRuntimeEnvironmentOrchestrator(
     logger.child({ scope: "runtime-environment-orchestrator" }),
-    {},
     {
       workspaceManager: new LocalWorkspaceManager(),
       gitCloneService,

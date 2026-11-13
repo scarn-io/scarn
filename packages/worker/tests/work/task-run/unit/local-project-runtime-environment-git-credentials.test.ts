@@ -50,7 +50,6 @@ describe("launch with gitCredentials", () => {
     });
     const orchestrator = new DefaultLocalProjectRuntimeEnvironmentOrchestrator(
       undefined,
-      {},
       deps,
     );
     return { log, deps, orchestrator };

@@ -6,14 +6,18 @@
  * `undefined` instead of throwing a ReferenceError.
  *
  * The identifier names are part of the contract with `script/build.ts`
- * ({@link BAKED_POSTHOG_CLI_KEY_DEFINE}, {@link BAKED_POSTHOG_CLI_HOST_DEFINE}).
+ * ({@link BAKED_POSTHOG_CLI_KEY_DEFINE}, {@link BAKED_POSTHOG_CLI_HOST_DEFINE},
+ * {@link BAKED_CLI_BUILD_ID_DEFINE}).
  */
 
 declare const __SCARN_POSTHOG_CLI_KEY__: string | undefined;
 declare const __SCARN_POSTHOG_CLI_HOST__: string | undefined;
+declare const __SCARN_CLI_BUILD_ID__: string | undefined;
 
 export const BAKED_POSTHOG_CLI_KEY_DEFINE = "__SCARN_POSTHOG_CLI_KEY__";
 export const BAKED_POSTHOG_CLI_HOST_DEFINE = "__SCARN_POSTHOG_CLI_HOST__";
+/** Set only by dev builds (`build.ts --dev`). */
+export const BAKED_CLI_BUILD_ID_DEFINE = "__SCARN_CLI_BUILD_ID__";
 
 export type BakedTelemetryConfig = { key?: string; host?: string };
 
@@ -28,4 +32,11 @@ export function bakedTelemetryConfig(): BakedTelemetryConfig {
         ? __SCARN_POSTHOG_CLI_HOST__
         : undefined,
   };
+}
+
+/** The dev build's ID, or `undefined` for release builds and `bun run`. */
+export function bakedCliBuildId(): string | undefined {
+  return typeof __SCARN_CLI_BUILD_ID__ === "string"
+    ? __SCARN_CLI_BUILD_ID__
+    : undefined;
 }

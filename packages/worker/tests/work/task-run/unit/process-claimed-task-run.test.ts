@@ -128,6 +128,7 @@ describe("startProcessClaimedTaskRun", () => {
           },
         ),
         getSessionStatus: vi.fn(),
+        abort: vi.fn(() => Promise.resolve(undefined)),
         sendRetryPrompt: vi.fn(),
       },
     } satisfies ProcessProjectWorkDeps;
@@ -379,7 +380,7 @@ describe("startProcessClaimedTaskRun step env", () => {
     try {
       await runClaim(deps, {
         tracker,
-        workerEnv: { UNRELATED: "should-not-appear-anywhere" },
+        localEnvVars: { UNRELATED: "should-not-appear-anywhere" },
       });
     } catch (error) {
       caught = error;

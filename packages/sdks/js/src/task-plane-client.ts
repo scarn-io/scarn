@@ -20,6 +20,15 @@ type CompletionBody = PostApiTaskRunsByTaskRunIdCompletionsData["body"];
 
 export type TaskPlaneClientOptions = {
   headers?: Record<string, string> | undefined;
+  /**
+   * Headers resolved per request and set over {@link headers}, for values
+   * that can change during the client's lifetime (e.g. a rotated token).
+   */
+  requestHeaders?:
+    | (() => Promise<Record<string, string>> | Record<string, string>)
+    | undefined;
+  /** Sees every response before it is parsed; throwing fails the call. */
+  onResponse?: ((response: Response) => Promise<void> | void) | undefined;
 };
 
 function unwrap<T>(result: { data?: T; error?: unknown }): T {
@@ -38,6 +47,22 @@ export function createTaskPlaneClient(
   options?: TaskPlaneClientOptions,
 ): ReturnType<typeof buildTaskPlaneClient> {
   const client = createClient({ baseUrl, headers: options?.headers });
+  const requestHeaders = options?.requestHeaders;
+  if (requestHeaders) {
+    client.interceptors.request.use(async (request) => {
+      for (const [name, value] of Object.entries(await requestHeaders())) {
+        request.headers.set(name, value);
+      }
+      return request;
+    });
+  }
+  const onResponse = options?.onResponse;
+  if (onResponse) {
+    client.interceptors.response.use(async (response) => {
+      await onResponse(response);
+      return response;
+    });
+  }
   return buildTaskPlaneClient(new TaskRuns({ client }));
 }
 

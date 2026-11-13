@@ -80,7 +80,7 @@ describe("runDesignRunOffer health-check gate", () => {
     // Blocking: nothing is queued and the user is never even asked.
     expect(calls.confirmRun).toBe(0);
     expect(calls.queueRun).toBe(0);
-    expect(calls.runWorker).toBe(0);
+    expect(calls.handOffToWorker).toBe(0);
     expect(reported).toContainEqual({
       method: "warn",
       message: HEALTH_DRY_RUN_FAILED_MESSAGE,

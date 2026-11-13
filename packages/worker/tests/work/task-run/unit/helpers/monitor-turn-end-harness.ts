@@ -171,6 +171,7 @@ export function createHarness(
         statusCall += 1;
         return Promise.resolve({ running: statusCall === 1 });
       }),
+      abort: vi.fn(() => Promise.resolve(undefined)),
       sendRetryPrompt,
       readLastTurn: vi.fn(() =>
         Promise.resolve({

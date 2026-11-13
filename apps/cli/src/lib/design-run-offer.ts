@@ -36,11 +36,12 @@ import { captureMilestone } from "./telemetry";
  *   `pipelines design` session — see
  *   {@link DesignRunOfferPorts.runPipelineHealthDryRun}.
  *
- * When the run does happen, every failure routes back into the design command —
- * the edit loop is the repair loop, and the agent can read the failure with the
- * user and change the pipeline. Note where that is *said*: a failing step or a
- * devcontainer that will not build is absorbed by the worker's polling loop, so
- * the offer never gets a chance to react to it. See
+ * When the user accepts, the run is queued and handed to the instance's
+ * background worker, and the command returns. Every failure routes back into
+ * the design command — the edit loop is the repair loop, and the agent can read
+ * the failure with the user and change the pipeline. Note where that is *said*:
+ * a failing step or a devcontainer that will not build happens later, in the
+ * background worker, so the offer never gets a chance to react to it. See
  * {@link RUN_REPAIR_GUIDANCE}.
  *
  * All I/O is behind {@link DesignRunOfferPorts} so the branching is unit-testable
@@ -109,10 +110,12 @@ export interface DesignRunOfferPorts {
    */
   queueRun(pipelineDefinitionId: string): Promise<void>;
   /**
-   * Run the host worker against the target work item, in this terminal. Owns the
-   * terminal once called, and throws when the run fails.
+   * Hand the queued run to the instance's background worker: start it and add
+   * the project when needed, warn when the project's saved work-item filter
+   * excludes the target, and say where to follow the run. Returns once handed
+   * off; throws when the worker cannot be started or reached.
    */
-  runWorker(): Promise<void>;
+  handOffToWorker(): Promise<void>;
 }
 
 /** The one work item this session was about, and where it lives. */
@@ -138,8 +141,8 @@ export type DesignRunOfferInput = {
 /** Heading for the closing block, opened after the TUI hands back the tty. */
 export const RUN_OFFER_TITLE = "Run it";
 
-/** Shown just before the worker takes over the terminal. */
-export const RUN_LAUNCH_MESSAGE = "Starting the worker…";
+/** Closes the block once the run is with the background worker. */
+export const RUN_HANDED_OFF_MESSAGE = "Handed off to your worker";
 
 /** The single closing line, worded identically wherever the offer can end. */
 export const REFINE_MESSAGE =
@@ -196,9 +199,9 @@ export function formatRunCommand(target: DesignRunTarget): string {
  * Offer to run the pipeline the session just built on the item it was about,
  * and run it when the user says yes.
  *
- * {@link RUN_REPAIR_GUIDANCE} is always reachable from a failure: stated ahead of
- * the run for the failures the worker absorbs, and thrown for the ones that stop
- * it outright — so those exit non-zero.
+ * {@link RUN_REPAIR_GUIDANCE} is always reachable from a failure: stated once
+ * the run is handed off, for the failures the background worker meets later,
+ * and attached to a failure to queue it — which exits non-zero.
  */
 export async function runDesignRunOffer(
   input: DesignRunOfferInput,
@@ -257,24 +260,13 @@ export async function runDesignRunOffer(
 
   await queueRunWithProgress(reporter, ports, pipelineDefinitionId);
 
-  // Said before the run, not after it: the worker absorbs step failures into its
-  // own polling loop and never returns, so `runWorker` cannot reject on a failed
-  // step or a devcontainer that will not build. Ahead of the run is the only
-  // place the repair route is guaranteed to be on screen when one lands.
+  await ports.handOffToWorker();
+
+  // The background worker runs the steps after this command returns, so a
+  // failed step or devcontainer build can never reach the offer. Here is the
+  // only place the repair route can be stated.
   reporter.info(RUN_REPAIR_GUIDANCE);
-
-  // Close the block before the worker opens its own; a live spinner and a
-  // second reporter cannot share a tty.
-  reporter.finish(RUN_LAUNCH_MESSAGE);
-
-  try {
-    await ports.runWorker();
-  } catch (error) {
-    // Reached only for failures that stop the worker outright — a bad id, a
-    // rejected claim. It reports those through its own reporter before it
-    // throws, so restating the cause would print the same paragraph twice.
-    throw new Error(RUN_REPAIR_GUIDANCE, { cause: error });
-  }
+  reporter.finish(RUN_HANDED_OFF_MESSAGE);
 
   return { ran: true };
 }

@@ -70,7 +70,7 @@ async function renderPreviousRunTranscript(
     if ("unavailable" in loaded) return { skipped: loaded.unavailable };
     return {
       text: renderConversationTranscript({
-        stepKey: input.stepKey,
+        subject: `step ${input.stepKey}`,
         lines: loaded.lines,
         source: loaded.source,
       }),

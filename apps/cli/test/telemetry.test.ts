@@ -81,6 +81,7 @@ void mock.module("@scarn/worker", () => ({
 let fakeBaked: { key?: string; host?: string } = {};
 void mock.module("../src/lib/build-constants", () => ({
   bakedTelemetryConfig: () => fakeBaked,
+  bakedCliBuildId: () => undefined,
 }));
 
 const telemetry = await import("../src/lib/telemetry");

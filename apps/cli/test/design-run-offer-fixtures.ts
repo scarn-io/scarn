@@ -46,7 +46,7 @@ export type Calls = {
   runPipelineHealthDryRun: number;
   confirmRun: number;
   queueRun: number;
-  runWorker: number;
+  handOffToWorker: number;
 };
 
 /**
@@ -65,7 +65,7 @@ export function createPorts(overrides: Partial<DesignRunOfferPorts> = {}): {
     runPipelineHealthDryRun: 0,
     confirmRun: 0,
     queueRun: 0,
-    runWorker: 0,
+    handOffToWorker: 0,
   };
   const order: string[] = [];
 
@@ -96,9 +96,9 @@ export function createPorts(overrides: Partial<DesignRunOfferPorts> = {}): {
       order.push("queueRun");
       return Promise.resolve();
     },
-    runWorker: () => {
-      calls.runWorker += 1;
-      order.push("runWorker");
+    handOffToWorker: () => {
+      calls.handOffToWorker += 1;
+      order.push("handOffToWorker");
       return Promise.resolve();
     },
   };

@@ -31,6 +31,7 @@ import type {
   TaskRunWorkerClient,
 } from "../contracts/process-project-work-types";
 import type { FakeAiServer } from "../infra/fake-ai";
+import type { RunHandle } from "./run-registry";
 import {
   runDeclaredHealthChecksOrThrow,
   startHealthCheckHarnessIfDeclared,
@@ -63,8 +64,11 @@ export async function startProcessClaimedTaskRun(
     leaseDurationSeconds: number;
     /** See `ProcessProjectWorkInput.sourceBranch`. */
     sourceBranch?: string | null | undefined;
-    /** See `ProcessProjectWorkInput.workerEnv`. */
-    workerEnv?: Readonly<Record<string, string | undefined>> | undefined;
+    /**
+     * This run's `.scarn/.env` values (see `ProcessProjectWorkInput.readLocalEnv`).
+     * Laid over `process.env` to form the worker env, and handed to the launch.
+     */
+    localEnvVars?: Readonly<Record<string, string>> | undefined;
     /**
      * `scarn work -k`: keep the runtime (container, workspace, on-disk
      * artifacts) when startup fails — during the launch itself or afterwards
@@ -72,6 +76,11 @@ export async function startProcessClaimedTaskRun(
      * monitor's `cleanupRuntime` covers failures after a successful start.
      */
     preserveRuntimeOnFailure?: boolean | undefined;
+    /**
+     * The run's registry handle. Checked between launch stages so an abort
+     * stops the launch at the next stage boundary.
+     */
+    run?: RunHandle | undefined;
   },
   deps: ProcessProjectWorkDeps,
   client: TaskRunWorkerClient,
@@ -113,11 +122,18 @@ export async function startProcessClaimedTaskRun(
     taskRunId: input.claim.task.id,
   });
 
+  const throwIfAborted = () => {
+    input.run?.throwIfAborted();
+  };
+
   try {
+    input.run?.setPhase("launching");
+    throwIfAborted();
     logger.log("step", "Fetching worker context", {
       taskRunId: input.claim.task.id,
     });
     const workerContext = await fetchWorkerContext(client, input.claim);
+    input.run?.setTaskName(workerContext.task.name);
     logger.log("step", "Fetched worker context", {
       taskRunId: input.claim.task.id,
       workerContextProjectId: workerContext.projectId,
@@ -133,7 +149,7 @@ export async function startProcessClaimedTaskRun(
     // fast, and its secrets are masked before any runtime log can echo them.
     // Variables inferred from MCP server refs are resolved by the launch once
     // it has discovered them (`resolveMcpEnv`), and masked via its secrets.
-    const workerEnv = input.workerEnv ?? process.env;
+    const workerEnv = { ...process.env, ...input.localEnvVars };
     const {
       resolved: { stepEnv, setupEnv, promptEnv, secretValues },
       resolveMcpEnv,
@@ -167,6 +183,7 @@ export async function startProcessClaimedTaskRun(
         })
       : { fakeAiServer: undefined, fakeAiProviderOverride: undefined };
     fakeAiServer = harness.fakeAiServer;
+    throwIfAborted();
 
     logger.log("step", "Launching runtime environment", {
       taskRunId: input.claim.task.id,
@@ -191,6 +208,7 @@ export async function startProcessClaimedTaskRun(
       reporter,
       taskRunId: input.claim.task.id,
       sourceBranch: input.sourceBranch,
+      localEnvVars: input.localEnvVars,
       onDevcontainerLogLine: logStream
         ? (line, level) => {
             logStream.shipDevcontainerLogLine(line, level);
@@ -218,6 +236,7 @@ export async function startProcessClaimedTaskRun(
     cleanup = async () => {
       await environment.cleanup();
     };
+    throwIfAborted();
     // Register the provider token(s) injected into the container (Path B) with
     // the log masker BEFORE attaching the in-container log tail below — that
     // tail mirrors the raw OpenCode log, which can echo those values. Path A
@@ -281,6 +300,7 @@ export async function startProcessClaimedTaskRun(
       }
     }
 
+    throwIfAborted();
     await markTrackedSessionRunning(tracker, {
       localRuntimeSessionId,
       workspacePath: environment.workspacePath,
@@ -304,6 +324,7 @@ export async function startProcessClaimedTaskRun(
       "step-artifacts",
     );
     await mkdir(stepArtifactsDir, { recursive: true });
+    throwIfAborted();
 
     switch (kind) {
       case "code": {

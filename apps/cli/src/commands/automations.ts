@@ -15,7 +15,7 @@ import {
   connectProject,
   withProjectOptions,
   type ProjectArguments,
-} from "./pipelines-documents";
+} from "../lib/connect-project";
 
 /**
  * `scarn automations`: turn project automations on and off, and attach or

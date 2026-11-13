@@ -28,6 +28,12 @@ import {
 import { runTurnEnd, type TurnEndState } from "./process-project-work-turn-end";
 import { collectStepArtifactsOnFailure } from "./collect-step-artifacts-on-failure";
 import { TaskRunCancelledError } from "./task-run-cancelled-error";
+import { sleepUnlessAborted } from "./run-registry";
+import { abortAgentSessionIfRunAborted } from "./abort-agent-session";
+import {
+  markMonitorFailed,
+  markMonitorSucceeded,
+} from "./process-project-work-monitor-tracker";
 import type { AnyJsonValue } from "../../../common/contracts/json";
 import type { TaskRunStatus } from "../contracts/task-run-contracts";
 
@@ -39,32 +45,6 @@ export function isExpectedStepOutputFailure(error: unknown): boolean {
       "without findings submission via scarn-submit-step-findings",
     )
   );
-}
-
-async function markMonitorSucceeded(
-  tracker: TaskRunTracker,
-  localRuntimeSessionId: string,
-  agentSessionId: string | null,
-): Promise<void> {
-  await tracker.markSucceeded({
-    id: localRuntimeSessionId,
-    metadataJson: JSON.stringify({
-      agentSessionId,
-    }),
-  });
-}
-
-async function markMonitorFailed(
-  tracker: TaskRunTracker,
-  localRuntimeSessionId: string,
-  failureReason: string,
-  metadata?: Record<string, unknown>,
-): Promise<void> {
-  await tracker.markFailed({
-    id: localRuntimeSessionId,
-    failureReason,
-    metadataJson: metadata ? JSON.stringify(metadata) : undefined,
-  });
 }
 
 export async function monitorStartedClaimedTaskRun(
@@ -108,6 +88,9 @@ export async function monitorStartedClaimedTaskRun(
   let sessionStartWaitPolls = 0;
   const sessionStartTimeoutMs =
     input.sessionStartTimeoutMs ?? DEFAULT_SESSION_START_TIMEOUT_MS;
+  const runSignal = startedTask.run?.signal;
+  const sleepUntilNextPoll = () =>
+    sleepUnlessAborted(deps, input.pollIntervalMs, runSignal);
   const maxSessionStartWaitPolls =
     input.pollIntervalMs > 0
       ? Math.ceil(sessionStartTimeoutMs / input.pollIntervalMs)
@@ -167,6 +150,7 @@ export async function monitorStartedClaimedTaskRun(
   };
 
   try {
+    startedTask.run?.setPhase("running");
     const agentContext = resolveMonitorAgentContext(startedTask);
 
     for (;;) {
@@ -209,6 +193,7 @@ export async function monitorStartedClaimedTaskRun(
       if (startedTask.isCancelled?.()) {
         throw new TaskRunCancelledError(startedTask.taskRunId);
       }
+      startedTask.run?.throwIfAborted();
       const healthSnapshot =
         await startedTask.environment.checkContainerHealth?.();
       if (healthSnapshot) {
@@ -254,7 +239,7 @@ export async function monitorStartedClaimedTaskRun(
 
       if (sessionStatus.running) {
         hasObservedSessionRunning = true;
-        await deps.sleep(input.pollIntervalMs);
+        await sleepUntilNextPoll();
         continue;
       }
 
@@ -331,7 +316,7 @@ export async function monitorStartedClaimedTaskRun(
           waitedMs: sessionStartWaitMs,
           sessionStartTimeoutMs,
         });
-        await deps.sleep(input.pollIntervalMs);
+        await sleepUntilNextPoll();
         sessionStartWaitMs += input.pollIntervalMs;
         sessionStartWaitPolls += 1;
         continue;
@@ -385,7 +370,7 @@ export async function monitorStartedClaimedTaskRun(
           continue;
         }
         if (turnEnd === "continue") {
-          await deps.sleep(input.pollIntervalMs);
+          await sleepUntilNextPoll();
           turnEndState.graceWaitedMs += input.pollIntervalMs;
           continue;
         }
@@ -399,7 +384,7 @@ export async function monitorStartedClaimedTaskRun(
           missingFindingsGraceMs,
         );
         if (action === "continue") {
-          await deps.sleep(input.pollIntervalMs);
+          await sleepUntilNextPoll();
           missingFindingsState.graceWaitedMs += input.pollIntervalMs;
           continue;
         }
@@ -470,9 +455,11 @@ export async function monitorStartedClaimedTaskRun(
     // after this cleanup. The heartbeat keeps its lease alive meanwhile, or a
     // slow cleanup lets the lease lapse and the run ends "abandoned" instead
     // of with its real error; the caller stops it after reporting.
+    startedTask.run?.setPhase("tearing_down");
     if (!failed) {
       await heartbeat.stop();
     }
+    await abortAgentSessionIfRunAborted(deps, startedTask, logger);
     await cleanupRuntime();
   }
 }

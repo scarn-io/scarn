@@ -81,6 +81,8 @@ export async function launchRuntimeEnvironment(
     reporter: WorkReporter;
     taskRunId: string;
     sourceBranch?: string | null | undefined;
+    /** See `TaskRuntimeEnvironmentOrchestrator.launch`'s field of the same name. */
+    localEnvVars?: Readonly<Record<string, string>> | undefined;
     onDevcontainerLogLine?:
       ((line: string, level: "info" | "warn" | "error") => void) | undefined;
     /** See `TaskRuntimeEnvironmentOrchestrator.launch`'s field of the same name. */
@@ -132,6 +134,7 @@ export async function launchRuntimeEnvironment(
       ? null
       : resolveBaseWorkBranch(input.workerContext.baseWorkBranch),
     sourceBranch: repoContext ? null : input.sourceBranch,
+    localEnvVars: input.localEnvVars,
     repoContext,
     stepKey: input.workerContext.task.key,
     opencodeMcpJson: input.workerContext.runtime.opencodeMcpJson,

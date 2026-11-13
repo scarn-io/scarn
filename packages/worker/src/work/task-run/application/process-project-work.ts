@@ -1,4 +1,5 @@
-import { scheduleClaimedTaskRuns } from "./schedule-claimed-task-runs";
+import { scheduleClaimedTaskRunJob } from "./schedule-claimed-task-runs";
+import { ProjectSlots } from "./process-project-work-slots";
 import {
   resolveProjectWorkLogger,
   resolveProjectWorkReporter,
@@ -7,9 +8,14 @@ import type {
   ProcessProjectWorkDeps,
   ProcessProjectWorkInput,
   ProcessProjectWorkResult,
-  WorkSignalConnection,
 } from "../contracts/process-project-work-types";
 import { validateProcessProjectWorkInput } from "./validate-process-project-work-input";
+import { RunRegistry } from "./run-registry";
+import {
+  nextPollIntervalMs,
+  resolveMaxPollIntervalMs,
+  sleepBeforeNextPoll,
+} from "./process-project-work-idle";
 
 function createWorkTotals() {
   return {
@@ -19,113 +25,38 @@ function createWorkTotals() {
   };
 }
 
-const POLL_BACKOFF_MULTIPLIER = 2;
+type PollingContext = {
+  tracker: ReturnType<ProcessProjectWorkDeps["createRunTracker"]>;
+  totals: ReturnType<typeof createWorkTotals>;
+  runs: RunRegistry;
+  slots: ProjectSlots;
+};
 
-function resolveMaxPollIntervalMs(input: ProcessProjectWorkInput) {
-  return Math.max(
-    input.pollIntervalMs,
-    input.maxPollIntervalMs ?? input.pollIntervalMs,
-  );
+function countActiveJobs(input: ProcessProjectWorkInput, runs: RunRegistry) {
+  return runs.count({ projectId: input.projectId });
 }
 
-function resolveEffectiveMaxPollIntervalMs(
-  input: ProcessProjectWorkInput,
-  deps: ProcessProjectWorkDeps,
-) {
-  const maxPollIntervalMs = resolveMaxPollIntervalMs(input);
-
-  if (!deps.signalConnection?.isConnected()) {
-    return maxPollIntervalMs;
-  }
-
-  return Math.max(
-    maxPollIntervalMs,
-    input.connectedMaxPollIntervalMs ?? maxPollIntervalMs,
-  );
-}
-
-function nextPollIntervalMs(
-  input: ProcessProjectWorkInput,
-  deps: ProcessProjectWorkDeps,
-  currentPollIntervalMs: number,
-  claimedCount: number,
-) {
-  if (claimedCount > 0) {
-    return input.pollIntervalMs;
-  }
-
-  if (deps.signalConnection?.isConnected()) {
-    return resolveEffectiveMaxPollIntervalMs(input, deps);
-  }
-
-  return Math.min(
-    resolveEffectiveMaxPollIntervalMs(input, deps),
-    currentPollIntervalMs * POLL_BACKOFF_MULTIPLIER,
-  );
-}
-
-function getAvailableSlots(
-  input: ProcessProjectWorkInput,
-  activeJobCount: number,
-) {
-  return Math.max(0, input.concurrency - activeJobCount);
-}
-
-function getClaimBatchSize(
-  input: ProcessProjectWorkInput,
-  availableSlots: number,
-) {
-  return Math.min(input.batchSize, availableSlots);
-}
-
-async function claimAvailableTaskRuns(
-  input: ProcessProjectWorkInput,
-  deps: ProcessProjectWorkDeps,
-  availableSlots: number,
-) {
-  return await deps.workerClient.claimTaskRuns({
-    projectId: input.projectId,
-    workerId: input.workerId,
-    batchSize: getClaimBatchSize(input, availableSlots),
-    leaseDurationSeconds: input.leaseDurationSeconds,
-    workItemId: input.workItemId,
-  });
-}
-
-async function pollForTaskRunClaims(
+async function claimTaskRuns(
   input: ProcessProjectWorkInput,
   deps: ProcessProjectWorkDeps,
   totals: ReturnType<typeof createWorkTotals>,
-  activeJobs: Set<Promise<void>>,
+  batchSize: number,
 ) {
   const logger = resolveProjectWorkLogger(deps);
-  const availableSlots = getAvailableSlots(input, activeJobs.size);
-
-  logger.log("worker", "Polling for work", {
-    projectId: input.projectId,
-    workerId: input.workerId,
-    activeJobs: activeJobs.size,
-    availableSlots,
-  });
-  resolveProjectWorkReporter(deps).event({ type: "worker:polling" });
-
-  if (availableSlots === 0) {
-    logger.log("worker", "No capacity available for new claims", {
-      projectId: input.projectId,
-      workerId: input.workerId,
-      activeJobs: activeJobs.size,
-      concurrency: input.concurrency,
-    });
-    return [];
-  }
 
   logger.log("worker", "Claiming tasks", {
     projectId: input.projectId,
     workerId: input.workerId,
-    batchSize: getClaimBatchSize(input, availableSlots),
+    batchSize,
     leaseDurationSeconds: input.leaseDurationSeconds,
   });
-  const claims = await claimAvailableTaskRuns(input, deps, availableSlots);
+  const claims = await deps.workerClient.claimTaskRuns({
+    projectId: input.projectId,
+    workerId: input.workerId,
+    batchSize,
+    leaseDurationSeconds: input.leaseDurationSeconds,
+    workItemId: input.readWorkItemId?.(),
+  });
   totals.claimedCount += claims.length;
 
   logger.log("worker", "Claim tasks response received", {
@@ -143,6 +74,55 @@ async function pollForTaskRunClaims(
     });
   }
 
+  return claims;
+}
+
+/**
+ * Claims at most `reserved` runs, hands back the slots it did not use, and
+ * schedules each claim so its slot is released when the run settles.
+ */
+async function pollForTaskRunClaims(
+  input: ProcessProjectWorkInput,
+  deps: ProcessProjectWorkDeps,
+  context: PollingContext,
+  reserved: number,
+) {
+  const { totals, runs, slots, tracker } = context;
+
+  resolveProjectWorkLogger(deps).log("worker", "Polling for work", {
+    projectId: input.projectId,
+    workerId: input.workerId,
+    activeJobs: countActiveJobs(input, runs),
+    reservedSlots: reserved,
+  });
+  resolveProjectWorkReporter(deps).event({ type: "worker:polling" });
+
+  let claims: Awaited<ReturnType<typeof claimTaskRuns>>;
+  try {
+    claims = await claimTaskRuns(input, deps, totals, reserved);
+  } catch (error: unknown) {
+    await slots.release(reserved);
+    throw error;
+  }
+  await slots.release(reserved - claims.length);
+
+  let scheduled = 0;
+  try {
+    for (const claim of claims) {
+      const job = scheduleClaimedTaskRunJob(
+        input,
+        deps,
+        claim,
+        tracker,
+        totals,
+        runs,
+      );
+      scheduled += 1;
+      slots.releaseWhenSettled(job, claim.task.id);
+    }
+  } finally {
+    await slots.release(claims.length - scheduled);
+  }
   return claims;
 }
 
@@ -169,7 +149,7 @@ function logWorkerStart(
     maxPollIntervalMs: resolveMaxPollIntervalMs(input),
     connectedMaxPollIntervalMs: input.connectedMaxPollIntervalMs,
     leaseDurationSeconds: input.leaseDurationSeconds,
-    workItemId: input.workItemId,
+    workItemId: input.readWorkItemId?.(),
     preserveRuntimeOnComplete: input.preserveRuntimeOnComplete ?? false,
     once: input.once ?? false,
   });
@@ -178,16 +158,16 @@ function logWorkerStart(
 async function waitForActiveJobs(
   input: ProcessProjectWorkInput,
   deps: ProcessProjectWorkDeps,
-  activeJobs: Set<Promise<void>>,
+  runs: RunRegistry,
 ) {
   const logger = resolveProjectWorkLogger(deps);
 
   logger.log("worker", "Waiting for active jobs to settle", {
     projectId: input.projectId,
     workerId: input.workerId,
-    activeJobs: activeJobs.size,
+    activeJobs: countActiveJobs(input, runs),
   });
-  await Promise.allSettled(activeJobs);
+  await Promise.allSettled(runs.jobs({ projectId: input.projectId }));
 }
 
 function buildResult(
@@ -239,137 +219,53 @@ async function closeRunTracker(
   });
 }
 
-type IdleOutcome = "slept" | "woken" | "disconnected";
-
-async function idleFor(
-  deps: ProcessProjectWorkDeps,
-  milliseconds: number,
-  connection?: WorkSignalConnection,
-): Promise<IdleOutcome> {
-  if (!deps.wake && !connection) {
-    await deps.sleep(milliseconds);
-    return "slept";
-  }
-
-  const loser = new AbortController();
-  const racers: Promise<IdleOutcome>[] = [
-    deps.sleep(milliseconds, loser.signal).then(() => "slept" as const),
-  ];
-  if (deps.wake) {
-    racers.push(deps.wake(loser.signal).then(() => "woken" as const));
-  }
-  if (connection) {
-    racers.push(
-      connection.disconnected(loser.signal).then(() => "disconnected" as const),
-    );
-  }
-
-  try {
-    return await Promise.race(racers);
-  } finally {
-    loser.abort();
-  }
+function isDraining(input: ProcessProjectWorkInput) {
+  return input.drainSignal?.aborted === true;
 }
 
-async function sleepBeforeNextPoll(
+async function waitForFreeSlots(
   input: ProcessProjectWorkInput,
   deps: ProcessProjectWorkDeps,
-  pollIntervalMs: number,
+  context: PollingContext,
 ) {
-  const logger = resolveProjectWorkLogger(deps);
-
-  logger.log("worker", "Sleeping before next poll", {
-    projectId: input.projectId,
-    workerId: input.workerId,
-    pollIntervalMs,
-  });
-  resolveProjectWorkReporter(deps).event({
-    type: "worker:idle",
-    pollIntervalMs,
-  });
-
-  const maxPollIntervalMs = resolveMaxPollIntervalMs(input);
-  const now = deps.now ?? Date.now;
-  const startedAt = now();
-  let outcome = await idleFor(
-    deps,
-    pollIntervalMs,
-    pollIntervalMs > maxPollIntervalMs ? deps.signalConnection : undefined,
-  );
-
-  if (outcome === "disconnected") {
-    const remainingMs = Math.max(0, maxPollIntervalMs - (now() - startedAt));
-    logger.log("worker", "Work signal disconnected; shortening idle sleep", {
-      projectId: input.projectId,
-      workerId: input.workerId,
-      remainingMs,
-    });
-    outcome = remainingMs > 0 ? await idleFor(deps, remainingMs) : "slept";
-  }
-
-  const woken = outcome === "woken";
-
-  if (woken) {
-    logger.log("worker", "Woken by work signal; polling now", {
-      projectId: input.projectId,
-      workerId: input.workerId,
-    });
-  }
-
-  return woken;
-}
-
-function shouldStopPolling(input: ProcessProjectWorkInput) {
-  return input.once === true;
-}
-
-async function waitForAnyActiveJobToFinish(
-  input: ProcessProjectWorkInput,
-  deps: ProcessProjectWorkDeps,
-  activeJobs: Set<Promise<void>>,
-) {
-  const logger = resolveProjectWorkLogger(deps);
-
-  if (activeJobs.size === 0) {
-    return;
-  }
-
-  logger.log(
+  resolveProjectWorkLogger(deps).log(
     "worker",
-    `Skipping polling for work because execution limit of ${String(input.concurrency)} has been reached. Waiting for execution to finish.`,
+    "Skipping polling for work because no run slots are free. Waiting for slots to be released.",
     {
       projectId: input.projectId,
       workerId: input.workerId,
-      concurrency: input.concurrency,
-      activeJobs: activeJobs.size,
+      activeJobs: countActiveJobs(input, context.runs),
     },
   );
-  await Promise.race(
-    [...activeJobs].map(async (job) => {
-      await Promise.allSettled([job]);
-    }),
-  );
+  await context.slots.waitForChange();
 }
 
 async function runPollingLoop(
   input: ProcessProjectWorkInput,
   deps: ProcessProjectWorkDeps,
-  tracker: ReturnType<ProcessProjectWorkDeps["createRunTracker"]>,
-  totals: ReturnType<typeof createWorkTotals>,
-  activeJobs: Set<Promise<void>>,
+  context: PollingContext,
 ) {
+  const { runs } = context;
   const logger = resolveProjectWorkLogger(deps);
   let currentPollIntervalMs = input.pollIntervalMs;
 
   for (;;) {
-    if (getAvailableSlots(input, activeJobs.size) === 0) {
-      await waitForAnyActiveJobToFinish(input, deps, activeJobs);
+    if (isDraining(input)) {
+      logger.log("worker", "Draining; no longer taking new work", {
+        projectId: input.projectId,
+        workerId: input.workerId,
+        activeJobs: countActiveJobs(input, runs),
+      });
+      return;
+    }
+
+    const reserved = await context.slots.acquireBatch();
+    if (reserved === 0) {
+      await waitForFreeSlots(input, deps, context);
       continue;
     }
 
-    const claims = await pollForTaskRunClaims(input, deps, totals, activeJobs);
-
-    scheduleClaimedTaskRuns(input, deps, claims, tracker, totals, activeJobs);
+    const claims = await pollForTaskRunClaims(input, deps, context, reserved);
 
     currentPollIntervalMs = nextPollIntervalMs(
       input,
@@ -378,7 +274,7 @@ async function runPollingLoop(
       claims.length,
     );
 
-    if (shouldStopPolling(input)) {
+    if (input.once === true) {
       logger.log("worker", "Single-pass mode enabled; exiting poll loop", {
         projectId: input.projectId,
         workerId: input.workerId,
@@ -411,13 +307,23 @@ export async function processProjectWork(
 
   const tracker = deps.createRunTracker();
   const totals = createWorkTotals();
-  const activeJobs = new Set<Promise<void>>();
+  const runs = input.runRegistry ?? new RunRegistry();
+  const slots = new ProjectSlots(input, deps);
 
   logWorkerStart(input, deps);
 
+  let loopError: { error: unknown } | null = null;
   try {
-    await runPollingLoop(input, deps, tracker, totals, activeJobs);
-    await waitForActiveJobs(input, deps, activeJobs);
+    await runPollingLoop(input, deps, { tracker, totals, runs, slots });
+  } catch (error: unknown) {
+    loopError = { error };
+    input.onLoopError?.(error);
+  }
+
+  try {
+    await waitForActiveJobs(input, deps, runs);
+    await slots.settled();
+    if (loopError) throw loopError.error;
     logWorkerComplete(input, deps, totals);
     return buildResult(totals);
   } finally {

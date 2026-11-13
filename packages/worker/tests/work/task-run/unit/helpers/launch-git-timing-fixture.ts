@@ -85,7 +85,6 @@ export async function shipLaunchGitTimingLines() {
     });
     const orchestrator = new DefaultLocalProjectRuntimeEnvironmentOrchestrator(
       undefined,
-      {},
       { ...fakeDeps, gitCloneService: fx.service },
     );
     const deps = {
@@ -95,6 +94,7 @@ export async function shipLaunchGitTimingLines() {
       agentRunner: {
         promptAsync: vi.fn(),
         getSessionStatus: vi.fn(),
+        abort: vi.fn(() => Promise.resolve(undefined)),
         sendRetryPrompt: vi.fn(),
       },
       artifactStore: { saveArtifact: vi.fn() },

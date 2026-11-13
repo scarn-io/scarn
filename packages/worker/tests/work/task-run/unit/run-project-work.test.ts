@@ -151,6 +151,7 @@ describe("CLI processProjectWork", () => {
           agentRunner: {
             promptAsync: vi.fn(() => Promise.reject(new Error("Not used"))),
             getSessionStatus: vi.fn(() => Promise.resolve({ running: false })),
+            abort: vi.fn(() => Promise.resolve(undefined)),
             sendRetryPrompt: vi.fn(() => Promise.resolve(undefined)),
           } satisfies TaskAgentRunner,
           sleep: () => Promise.resolve(undefined),
@@ -164,6 +165,7 @@ describe("CLI processProjectWork", () => {
 
       expect(createWorkerClientForBaseUrl).toHaveBeenCalledWith(
         "https://example.com",
+        { expectedUserId: undefined },
       );
       expect(claimTaskRuns).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -204,6 +206,7 @@ describe("CLI processProjectWork", () => {
           agentRunner: {
             promptAsync: vi.fn(() => Promise.reject(new Error("Not used"))),
             getSessionStatus: vi.fn(() => Promise.resolve({ running: false })),
+            abort: vi.fn(() => Promise.resolve(undefined)),
             sendRetryPrompt: vi.fn(() => Promise.resolve(undefined)),
           } satisfies TaskAgentRunner,
           sleep: () => Promise.resolve(undefined),
@@ -252,6 +255,7 @@ describe("CLI processProjectWork", () => {
               getSessionStatus: vi.fn(() =>
                 Promise.resolve({ running: false }),
               ),
+              abort: vi.fn(() => Promise.resolve(undefined)),
               sendRetryPrompt: vi.fn(() => Promise.resolve(undefined)),
             } satisfies TaskAgentRunner,
             sleep: () => Promise.resolve(undefined),
@@ -272,6 +276,7 @@ describe("CLI processProjectWork", () => {
 
       expect(createWorkerClientForBaseUrl).toHaveBeenCalledWith(
         "https://app.scarn.io",
+        { expectedUserId: undefined },
       );
     },
   );
@@ -310,6 +315,7 @@ describe("CLI processProjectWork", () => {
               getSessionStatus: vi.fn(() =>
                 Promise.resolve({ running: false }),
               ),
+              abort: vi.fn(() => Promise.resolve(undefined)),
               sendRetryPrompt: vi.fn(() => Promise.resolve(undefined)),
             } satisfies TaskAgentRunner,
             sleep: (milliseconds) => {

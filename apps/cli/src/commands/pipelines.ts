@@ -25,6 +25,7 @@ import {
   runPullDocument,
   validateCommand,
 } from "./pipelines-documents";
+import { showCommand } from "./pipelines-show";
 import { studioCommand } from "./pipelines-studio";
 import { withReporter } from "../lib/command-output";
 import {
@@ -369,6 +370,7 @@ export const pipelinesCommand: CommandModule<object, object> = {
       .command(publishCommand)
       .command(activateCommand)
       .command(runCommand)
+      .command(showCommand)
       .demandCommand(1, "A pipelines command is required."),
   handler: () => undefined,
 };

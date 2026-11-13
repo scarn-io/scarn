@@ -1,5 +1,6 @@
 import { describe, expect, test, vi } from "bun:test";
 import { parseUuidV7 } from "../../../../src/common/contracts/uuid-v7";
+import { RunRegistry } from "../../../../src/work/task-run/application/run-registry";
 import { scheduleClaimedTaskRunJob } from "../../../../src/work/task-run/application/schedule-claimed-task-runs";
 import type {
   ProcessProjectWorkDeps,
@@ -62,6 +63,7 @@ describe("scheduleClaimedTaskRunJob", () => {
         agentRunner: {
           promptAsync: vi.fn(),
           getSessionStatus: vi.fn(),
+          abort: vi.fn(() => Promise.resolve(undefined)),
           sendRetryPrompt: vi.fn(),
         },
         artifactStore: { saveArtifact: vi.fn() },
@@ -76,9 +78,7 @@ describe("scheduleClaimedTaskRunJob", () => {
           error: vi.fn(),
         },
       };
-      const activeJobs = new Set<Promise<void>>();
-
-      scheduleClaimedTaskRunJob(
+      const job = scheduleClaimedTaskRunJob(
         {
           projectId,
           batchSize: 1,
@@ -92,11 +92,10 @@ describe("scheduleClaimedTaskRunJob", () => {
         claim,
         createTracker(),
         { claimedCount: 1, processedCount: 0, skippedCount: 0 },
-        activeJobs,
+        new RunRegistry(),
       );
-      const [job] = [...activeJobs];
 
-      const failure = await captureRejection(job ?? Promise.resolve());
+      const failure = await captureRejection(job);
       expect(failure.message).toBe("context unavailable");
       expect(order).toEqual(["failTaskRun", "heartbeat.stop"]);
     },

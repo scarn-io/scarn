@@ -1,316 +1,33 @@
-import { hostname } from "node:os";
-import type { DestinationStream } from "pino";
-import { parseUuidV7 } from "../../../common/contracts/uuid-v7";
-import type { ArtifactStore } from "../../../artifacts/artifact-store/domain/artifact-store";
-import { resolveArtifactStores } from "../../../artifacts/artifact-store/infra/resolve-artifact-stores";
 import { processProjectWork as processProjectWorkInCore } from "./process-project-work";
-import type {
-  ProcessProjectWorkResult,
-  ProjectWorkLogger,
-  TaskAgentRunner,
-  TaskRunTracker,
-  TaskRuntimeEnvironmentOrchestrator,
-  TaskRunWorkerClient,
-  WorkReporter,
-} from "../contracts/process-project-work-types";
-import { resolveScarnBaseUrl } from "../../../auth/session/infra/auth-config";
-import { createLogger } from "@scarn/observability/logging/host";
+import type { ProcessProjectWorkResult } from "../contracts/process-project-work-types";
+import type { LocalRuntimeSessionStore } from "../infra/sqlite-local-runtime-session-store";
+import { createDefaultProjectWorkDeps } from "./default-project-work-deps";
 import {
-  type LocalRuntimeSessionStore,
-  SqliteLocalRuntimeSessionStore,
-} from "../infra/sqlite-local-runtime-session-store";
-import { DefaultLocalProjectRuntimeEnvironmentOrchestrator } from "../infra/local-project-runtime-environment";
-import { DefaultLocalNoWorkspaceRuntimeEnvironmentOrchestrator } from "../infra/local-noworkspace-runtime-environment";
-import { DefaultOpencodeStepRunner } from "../infra/opencode-step-runner";
-import { createTaskPlaneWorkerClient } from "../infra/worker-api-client";
-import {
-  createWorkSignalClient,
-  type WorkSignalClient,
-  type WorkSignalClientOptions,
-} from "../infra/work-signal-client";
-import type { UuidV7 } from "../../../common/contracts/uuid-v7";
+  buildProjectWorkSetup,
+  type ProjectWorkHostDeps,
+  type ProjectWorkOptions,
+} from "./project-work-setup";
 
-const DEFAULT_WORK_CONCURRENCY = 1;
-const DEFAULT_POLL_INTERVAL_MS = 5_000;
-const DEFAULT_MAX_POLL_INTERVAL_MS = 600_000;
-const DEFAULT_CONNECTED_MAX_POLL_INTERVAL_MS = 3_600_000;
-const DEFAULT_LEASE_DURATION_SECONDS = 30;
+export type ProcessProjectWorkOptions = ProjectWorkOptions;
+export type ProcessProjectWorkDeps = ProjectWorkHostDeps;
 
-export type ProcessProjectWorkOptions = {
-  projectId: string;
-  baseUrl?: string | undefined;
-  batchSize?: number | undefined;
-  concurrency?: number | undefined;
-  pollIntervalMs?: number | undefined;
-  maxPollIntervalMs?: number | undefined;
-  /** Idle backoff ceiling while the push wake-up socket is connected (ms). */
-  connectedMaxPollIntervalMs?: number | undefined;
-  leaseDurationSeconds?: number | undefined;
-  workerId?: string | undefined;
-  workItemId?: string | undefined;
-  preserveRuntimeOnComplete?: boolean | undefined;
-  once?: boolean | undefined;
-  /** Fail-fast cap on waiting for the agent session to start (ms). */
-  sessionStartTimeoutMs?: number | undefined;
-  /** Missing-findings grace window (ms); defaults to the poll interval. */
-  missingFindingsGraceMs?: number | undefined;
-  dest?: DestinationStream | undefined;
-  /** Env vars read from .scarn/.env in the user's local project directory. */
-  localEnvVars?: Record<string, string> | undefined;
-  reporter?: WorkReporter | undefined;
-  sourceBranch?: string | null | undefined;
-};
-
-export type ProcessProjectWorkDeps = {
-  createWorkerClient(baseUrl: string): Promise<TaskRunWorkerClient>;
-  createRunTracker(): TaskRunTracker;
-  runtimeEnvironmentOrchestrator: TaskRuntimeEnvironmentOrchestrator;
-  /** Orchestrator for `no_workspace` steps (host OpenCode, no clone/container). */
-  noWorkspaceRuntimeEnvironmentOrchestrator?:
-    TaskRuntimeEnvironmentOrchestrator | undefined;
-  agentRunner: TaskAgentRunner;
-  /**
-   * Override the artifact store. When omitted the store is resolved from the
-   * environment via `resolveArtifactStores` (local + remote by default; local
-   * copies land under ~/.scarn/artifacts, remote uploads go through the API).
-   */
-  artifactStore?: ArtifactStore | undefined;
-  sleep(milliseconds: number, signal?: AbortSignal): Promise<void>;
-  logger: ProjectWorkLogger;
-  reporter?: WorkReporter | undefined;
-  /** Override the push wake-up client (tests); defaults to the WebSocket one. */
-  createWorkSignalClient?:
-    ((options: WorkSignalClientOptions) => WorkSignalClient) | undefined;
-};
-
-async function startWorkSignal(
-  workerClient: TaskRunWorkerClient,
-  projectId: UuidV7,
-  workerId: string,
-  deps: ProcessProjectWorkDeps,
-): Promise<WorkSignalClient | null> {
-  const issueToken = workerClient.issueWorkSignalToken;
-  if (!issueToken) {
-    return null;
-  }
-  const client = (deps.createWorkSignalClient ?? createWorkSignalClient)({
-    projectId,
-    fetchToken: () => issueToken({ projectId, workerId }),
-    reporter: deps.reporter,
-    logger: deps.logger,
-  });
-  return (await client.start()) ? client : null;
-}
-
-function loadDefaultDeps(
-  dest?: DestinationStream,
-  localEnvVars?: Record<string, string>,
-  reporter?: WorkReporter,
-): ProcessProjectWorkDeps {
-  const logger = createLogger(
-    {
-      name: "@scarn/worker",
-      level: process.env["SCARN_LOG_LEVEL"] ?? "info",
-    },
-    dest,
-  );
-  const workLogger = logger.child({ scope: "work" });
-  return {
-    createWorkerClient: createTaskPlaneWorkerClient,
-    createRunTracker: () => new SqliteLocalRuntimeSessionStore(),
-    runtimeEnvironmentOrchestrator:
-      new DefaultLocalProjectRuntimeEnvironmentOrchestrator(
-        logger.child({ scope: "runtime-environment-orchestrator" }),
-        localEnvVars,
-      ),
-    noWorkspaceRuntimeEnvironmentOrchestrator:
-      new DefaultLocalNoWorkspaceRuntimeEnvironmentOrchestrator(
-        logger.child({ scope: "noworkspace-runtime-environment-orchestrator" }),
-      ),
-    agentRunner: new DefaultOpencodeStepRunner(),
-    sleep: (milliseconds, signal) =>
-      new Promise((resolve) => {
-        const timer = setTimeout(resolve, milliseconds);
-        signal?.addEventListener(
-          "abort",
-          () => {
-            clearTimeout(timer);
-          },
-          { once: true },
-        );
-      }),
-    logger: {
-      debug: (scope, message, details) => {
-        workLogger.debug({ ...details, workScope: scope }, message);
-      },
-      log: (scope, message, details) => {
-        workLogger.info({ ...details, workScope: scope }, message);
-      },
-      error: (scope, message, details) => {
-        workLogger.error({ ...details, workScope: scope }, message);
-      },
-    },
-    reporter,
-  };
-}
-
-function parsePositiveInt(
-  value: string | number | undefined,
-  fallback: number,
-): number {
-  const parsedValue =
-    typeof value === "number"
-      ? value
-      : typeof value === "string" && value.trim()
-        ? Number(value)
-        : Number.NaN;
-
-  if (!Number.isInteger(parsedValue) || parsedValue <= 0) {
-    return fallback;
-  }
-
-  return parsedValue;
-}
-
-function resolveConcurrency(value?: number): number {
-  return parsePositiveInt(
-    value ?? process.env["SCARN_WORK_CONCURRENCY"],
-    DEFAULT_WORK_CONCURRENCY,
-  );
-}
-
-function resolvePollIntervalMs(value?: number): number {
-  return parsePositiveInt(
-    value ?? process.env["SCARN_WORK_POLL_INTERVAL_MS"],
-    DEFAULT_POLL_INTERVAL_MS,
-  );
-}
-
-function resolveMaxPollIntervalMs(
-  value: number | undefined,
-  pollIntervalMs: number,
-): number {
-  const resolved = parsePositiveInt(
-    value ?? process.env["SCARN_WORK_MAX_POLL_INTERVAL_MS"],
-    DEFAULT_MAX_POLL_INTERVAL_MS,
-  );
-
-  // A caller-supplied cap smaller than the base interval would be a no-op
-  // backoff (or worse, invalid) rather than a way to disable it — clamp up to
-  // pollIntervalMs so "equal" is the documented way to opt out.
-  return Math.max(resolved, pollIntervalMs);
-}
-
-function resolveConnectedMaxPollIntervalMs(value?: number): number {
-  return parsePositiveInt(
-    value ?? process.env["SCARN_WORK_CONNECTED_MAX_POLL_INTERVAL_MS"],
-    DEFAULT_CONNECTED_MAX_POLL_INTERVAL_MS,
-  );
-}
-
-function resolveLeaseDurationSeconds(value?: number): number {
-  return parsePositiveInt(
-    value ?? process.env["SCARN_WORK_LEASE_DURATION_SECONDS"],
-    DEFAULT_LEASE_DURATION_SECONDS,
-  );
-}
-
-function resolveWorkerId(projectId: string, workerId?: string) {
-  const normalizedWorkerId = workerId?.trim();
-
-  if (normalizedWorkerId) {
-    return normalizedWorkerId;
-  }
-
-  return `scarn-work-${hostname()}-${String(process.pid)}-${projectId}`;
-}
-
+/**
+ * Runs one project loop in the foreground: builds the setup (production
+ * dependencies unless `deps` is given), runs the loop until it returns, and
+ * closes what the setup opened.
+ */
 export async function runProjectWork(
   options: ProcessProjectWorkOptions,
   deps?: ProcessProjectWorkDeps,
 ): Promise<ProcessProjectWorkResult> {
-  const resolvedDeps =
-    deps ??
-    loadDefaultDeps(options.dest, options.localEnvVars, options.reporter);
-  const projectId = parseUuidV7(options.projectId);
-  const baseUrl = resolveScarnBaseUrl(options.baseUrl);
-  const workerClient = await resolvedDeps.createWorkerClient(baseUrl);
-  const concurrency = resolveConcurrency(options.concurrency);
-  const pollIntervalMs = resolvePollIntervalMs(options.pollIntervalMs);
-  const maxPollIntervalMs = resolveMaxPollIntervalMs(
-    options.maxPollIntervalMs,
-    pollIntervalMs,
+  const setup = await buildProjectWorkSetup(
+    options,
+    deps ?? createDefaultProjectWorkDeps(options.dest, options.reporter),
   );
-  const connectedMaxPollIntervalMs = resolveConnectedMaxPollIntervalMs(
-    options.connectedMaxPollIntervalMs,
-  );
-  const leaseDurationSeconds = resolveLeaseDurationSeconds(
-    options.leaseDurationSeconds,
-  );
-  const batchSize = parsePositiveInt(options.batchSize, concurrency);
-  const workerId = resolveWorkerId(projectId, options.workerId);
-
-  // .scarn/.env (localEnvVars) overrides the ambient .env / process env.
-  const workerEnv = { ...process.env, ...(options.localEnvVars ?? {}) };
-  const artifactStore =
-    resolvedDeps.artifactStore ??
-    resolveArtifactStores(workerEnv, { remoteUploader: workerClient });
-
-  const workSignal = options.once
-    ? null
-    : await startWorkSignal(workerClient, projectId, workerId, resolvedDeps);
-
   try {
-    return await processProjectWorkInCore(
-      {
-        projectId,
-        workerId,
-        batchSize,
-        concurrency,
-        pollIntervalMs,
-        maxPollIntervalMs,
-        connectedMaxPollIntervalMs,
-        leaseDurationSeconds,
-        workItemId: options.workItemId,
-        preserveRuntimeOnComplete: options.preserveRuntimeOnComplete,
-        once: options.once,
-        sessionStartTimeoutMs: options.sessionStartTimeoutMs,
-        missingFindingsGraceMs: options.missingFindingsGraceMs,
-        // Seed each claimed step's log masker with the .scarn/.env values
-        // (Path A) so injected secrets are redacted from the shipped feed.
-        secretValues: Object.values(options.localEnvVars ?? {}),
-        sourceBranch: options.sourceBranch,
-        workerEnv,
-      },
-      {
-        workerClient,
-        createRunTracker: () => resolvedDeps.createRunTracker(),
-        runtimeEnvironmentOrchestrator:
-          resolvedDeps.runtimeEnvironmentOrchestrator,
-        noWorkspaceRuntimeEnvironmentOrchestrator:
-          resolvedDeps.noWorkspaceRuntimeEnvironmentOrchestrator,
-        agentRunner: resolvedDeps.agentRunner,
-        artifactStore,
-        sleep: (milliseconds, signal) =>
-          resolvedDeps.sleep(milliseconds, signal),
-        wake: workSignal ? (signal) => workSignal.wake(signal) : undefined,
-        signalConnection: workSignal ?? undefined,
-        logger: {
-          debug: (scope, message, details) => {
-            resolvedDeps.logger.debug(scope, message, details);
-          },
-          log: (scope, message, details) => {
-            resolvedDeps.logger.log(scope, message, details);
-          },
-          error: (scope, message, details) => {
-            resolvedDeps.logger.error(scope, message, details);
-          },
-        },
-        reporter: resolvedDeps.reporter,
-      },
-    );
+    return await processProjectWorkInCore(setup.input, setup.deps);
   } finally {
-    workSignal?.stop();
+    setup.close();
   }
 }
 

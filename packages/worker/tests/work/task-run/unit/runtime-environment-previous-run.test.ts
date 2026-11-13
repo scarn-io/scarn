@@ -96,7 +96,6 @@ describe("launch with a previousRun", () => {
     const log: CallLog = [];
     return new DefaultLocalProjectRuntimeEnvironmentOrchestrator(
       undefined,
-      {},
       buildOrchestratorFakeDeps({ workspacePath, providerOutputDir, log }),
     );
   }
@@ -138,9 +137,9 @@ describe("launch with a previousRun", () => {
       startAgent: false,
     });
 
-    expect(
-      await exists(path.join(workspacePath, ".scarn/previous-run")),
-    ).toBe(false);
+    expect(await exists(path.join(workspacePath, ".scarn/previous-run"))).toBe(
+      false,
+    );
   });
 
   test("the no-workspace launch writes the files into its temp working dir", async () => {

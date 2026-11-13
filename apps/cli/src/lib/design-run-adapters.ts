@@ -5,6 +5,7 @@ import { automationDocumentSchema } from "@scarn/sdk/contracts/automation-docume
 import {
   listPinnedStepDefinitionIds,
   readActivePipelineVersion,
+  readLocalEnvVars,
   resolveSourceBranch,
   runPipelineHealthChecksDryRun,
 } from "@scarn/worker";
@@ -15,7 +16,6 @@ import {
   writeRunOfferGateFailure,
 } from "./design-run-offer-gate-marker";
 import { toDryRunGateResult } from "./dry-run-report";
-import { readLocalEnvVars } from "./local-env-vars";
 import { createTransport } from "./logger";
 import type { BaseReporter } from "./reporter-types";
 import { captureMilestone } from "./telemetry";
@@ -229,7 +229,7 @@ export async function runPipelineHealthDryRun(input: {
   reporter: BaseReporter;
 }): Promise<DryRunGateResult> {
   const [localEnvVars, sourceBranchResult] = await Promise.all([
-    readLocalEnvVars(),
+    readLocalEnvVars(process.cwd()),
     resolveSourceBranch({ cwd: process.cwd(), override: undefined }),
   ]);
 
