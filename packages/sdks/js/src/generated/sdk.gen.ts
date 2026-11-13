@@ -47,35 +47,35 @@ class HeyApiRegistry<T> {
 }
 
 export class Api extends HeyApiClient {
-    public 'allApiAuth*'<ThrowOnError extends boolean = false>(options?: Options<DeleteApiAuth__Data, ThrowOnError>) {
+    public '*ApiAuth*'<ThrowOnError extends boolean = false>(options?: Options<DeleteApiAuth__Data, ThrowOnError>) {
         return (options?.client ?? this.client).delete<unknown, unknown, ThrowOnError>({ url: '/api/auth/*', ...options });
     }
     
-    public 'allApiAuth*2'<ThrowOnError extends boolean = false>(options?: Options<GetApiAuth__Data, ThrowOnError>) {
+    public '*ApiAuth*2'<ThrowOnError extends boolean = false>(options?: Options<GetApiAuth__Data, ThrowOnError>) {
         return (options?.client ?? this.client).get<unknown, unknown, ThrowOnError>({ url: '/api/auth/*', ...options });
     }
     
-    public 'allApiAuth*3'<ThrowOnError extends boolean = false>(options?: Options<HeadApiAuth__Data, ThrowOnError>) {
+    public '*ApiAuth*3'<ThrowOnError extends boolean = false>(options?: Options<HeadApiAuth__Data, ThrowOnError>) {
         return (options?.client ?? this.client).head<unknown, unknown, ThrowOnError>({ url: '/api/auth/*', ...options });
     }
     
-    public 'allApiAuth*4'<ThrowOnError extends boolean = false>(options?: Options<OptionsApiAuth__Data, ThrowOnError>) {
+    public '*ApiAuth*4'<ThrowOnError extends boolean = false>(options?: Options<OptionsApiAuth__Data, ThrowOnError>) {
         return (options?.client ?? this.client).options<unknown, unknown, ThrowOnError>({ url: '/api/auth/*', ...options });
     }
     
-    public 'allApiAuth*5'<ThrowOnError extends boolean = false>(options?: Options<PatchApiAuth__Data, ThrowOnError>) {
+    public '*ApiAuth*5'<ThrowOnError extends boolean = false>(options?: Options<PatchApiAuth__Data, ThrowOnError>) {
         return (options?.client ?? this.client).patch<unknown, unknown, ThrowOnError>({ url: '/api/auth/*', ...options });
     }
     
-    public 'allApiAuth*6'<ThrowOnError extends boolean = false>(options?: Options<PostApiAuth__Data, ThrowOnError>) {
+    public '*ApiAuth*6'<ThrowOnError extends boolean = false>(options?: Options<PostApiAuth__Data, ThrowOnError>) {
         return (options?.client ?? this.client).post<unknown, unknown, ThrowOnError>({ url: '/api/auth/*', ...options });
     }
     
-    public 'allApiAuth*7'<ThrowOnError extends boolean = false>(options?: Options<PutApiAuth__Data, ThrowOnError>) {
+    public '*ApiAuth*7'<ThrowOnError extends boolean = false>(options?: Options<PutApiAuth__Data, ThrowOnError>) {
         return (options?.client ?? this.client).put<unknown, unknown, ThrowOnError>({ url: '/api/auth/*', ...options });
     }
     
-    public 'allApiAuth*8'<ThrowOnError extends boolean = false>(options?: Options<TraceApiAuth__Data, ThrowOnError>) {
+    public '*ApiAuth*8'<ThrowOnError extends boolean = false>(options?: Options<TraceApiAuth__Data, ThrowOnError>) {
         return (options?.client ?? this.client).trace<unknown, unknown, ThrowOnError>({ url: '/api/auth/*', ...options });
     }
 }

@@ -13703,8 +13703,10 @@ export type DeleteApiConversationsByConversationIdResponses = {
     /**
      * Response for status 204
      */
-    204: unknown;
+    204: void;
 };
+
+export type DeleteApiConversationsByConversationIdResponse = DeleteApiConversationsByConversationIdResponses[keyof DeleteApiConversationsByConversationIdResponses];
 
 export type GetApiConversationsByConversationIdData = {
     body?: never;

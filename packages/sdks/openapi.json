@@ -8,28 +8,28 @@
   "paths": {
     "/api/auth/*": {
       "get": {
-        "operationId": "allApiAuth*"
+        "operationId": "*ApiAuth*"
       },
       "post": {
-        "operationId": "allApiAuth*"
+        "operationId": "*ApiAuth*"
       },
       "put": {
-        "operationId": "allApiAuth*"
+        "operationId": "*ApiAuth*"
       },
       "delete": {
-        "operationId": "allApiAuth*"
+        "operationId": "*ApiAuth*"
       },
       "patch": {
-        "operationId": "allApiAuth*"
+        "operationId": "*ApiAuth*"
       },
       "head": {
-        "operationId": "allApiAuth*"
+        "operationId": "*ApiAuth*"
       },
       "options": {
-        "operationId": "allApiAuth*"
+        "operationId": "*ApiAuth*"
       },
       "trace": {
-        "operationId": "allApiAuth*"
+        "operationId": "*ApiAuth*"
       }
     },
     "/api/projects/resolve": {
@@ -61254,10 +61254,7 @@
         ],
         "responses": {
           "204": {
-            "description": "Response for status 204",
-            "content": {
-              "type": "null"
-            }
+            "description": "Response for status 204"
           },
           "401": {
             "description": "Response for status 401",
@@ -86247,10 +86244,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Response for status 200",
-            "content": {
-              "type": "null"
-            }
+            "description": "Response for status 200"
           },
           "401": {
             "description": "Response for status 401",
@@ -92496,10 +92490,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Response for status 200",
-            "content": {
-              "type": "null"
-            }
+            "description": "Response for status 200"
           },
           "401": {
             "description": "Response for status 401",

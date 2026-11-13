@@ -3,7 +3,7 @@
  * `http://127.0.0.1:<port>` so the `Host` header matches what the server
  * accepts, and sends the bearer token from the discovery file.
  */
-import { treaty } from "@elysiajs/eden";
+import { treaty } from "@elysia/eden";
 import type { ControlApp } from "./control-app";
 import { CONTROL_SERVER_HOSTNAME } from "./control-server";
 

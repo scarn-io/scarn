@@ -4,7 +4,7 @@
  * reaches these routes. The CLI shares {@link ControlApp} through its Eden
  * treaty client.
  */
-import { Elysia, sse } from "elysia";
+import { Elysia, NotFound, ParseError, sse, ValidationError } from "elysia";
 import type { WorkerSupervisor } from "../application/worker-supervisor";
 import {
   SlotLeaseNotFoundError,
@@ -88,7 +88,7 @@ function controlError(
 }
 
 // eslint-disable-next-line local/no-unknown-parameter-type -- Elysia hands onError whatever was thrown
-function mapError(code: string | number, error: unknown): Response {
+function mapError(error: unknown): Response {
   if (error instanceof WorkerNotRunningError) {
     return controlError(409, "worker_not_running", error.message);
   }
@@ -100,12 +100,12 @@ function mapError(code: string | number, error: unknown): Response {
   }
   if (
     error instanceof RangeError ||
-    code === "VALIDATION" ||
-    code === "PARSE"
+    error instanceof ValidationError ||
+    error instanceof ParseError
   ) {
     return controlError(400, "bad_request", messageOf(error));
   }
-  if (code === "NOT_FOUND") {
+  if (error instanceof NotFound) {
     return controlError(404, "not_found", "No such route.");
   }
   return controlError(500, "internal", messageOf(error));
@@ -119,125 +119,125 @@ function messageOf(error: unknown): string {
 export function createControlApp(deps: ControlAppDeps) {
   const { supervisor, leases } = deps;
   return new Elysia()
-    .onError(({ code, error }) => mapError(code, error))
-    .get(
-      "/health",
-      () => ({
-        instance: supervisor.instance,
-        version: deps.version,
-        protocol: CONTROL_API_PROTOCOL,
-        pid: deps.pid,
-        startedAt: deps.startedAt,
-        state: supervisor.state,
-      }),
-      { response: { 200: workerHealthSchema } },
-    )
+    .onError(({ error }) => mapError(error))
+    .get("/health", { response: { 200: workerHealthSchema } }, () => ({
+      instance: supervisor.instance,
+      version: deps.version,
+      protocol: CONTROL_API_PROTOCOL,
+      pid: deps.pid,
+      startedAt: deps.startedAt,
+      state: supervisor.state,
+    }))
     .get(
       "/status",
-      ({ query }) =>
-        supervisor.status({
-          recentRuns: query.recentRuns ?? DEFAULT_STATUS_RECENT_RUNS,
-        }),
       {
         query: workerStatusQuerySchema,
         response: { 200: workerStatusSchema, ...errorResponses },
       },
+      ({ query }) =>
+        supervisor.status({
+          recentRuns: query.recentRuns ?? DEFAULT_STATUS_RECENT_RUNS,
+        }),
     )
     .put(
       "/projects/:projectId",
-      ({ params, body }) =>
-        supervisor.addOrUpdateProject({ ...body, projectId: params.projectId }),
       {
         params: projectParamsSchema,
         body: putProjectBodySchema,
         response: { 200: putProjectResponseSchema, ...errorResponses },
       },
+      ({ params, body }) =>
+        supervisor.addOrUpdateProject({ ...body, projectId: params.projectId }),
     )
     .delete(
       "/projects/:projectId",
-      ({ params }) => supervisor.removeProject(params.projectId),
       {
         params: projectParamsSchema,
         response: { 200: deleteProjectResponseSchema, ...errorResponses },
       },
+      ({ params }) => supervisor.removeProject(params.projectId),
     )
     .patch(
       "/config",
-      ({ body }) => supervisor.setMachineLimit(body.maxConcurrency),
       {
         body: patchConfigBodySchema,
         response: { 200: patchConfigResponseSchema, ...errorResponses },
       },
+      ({ body }) => supervisor.setMachineLimit(body.maxConcurrency),
     )
     .post(
       "/runs/:taskRunId/abort",
-      ({ params }) => supervisor.cancelRun(params.taskRunId),
       {
         params: runParamsSchema,
         response: { 200: abortRunResponseSchema, ...errorResponses },
       },
+      ({ params }) => supervisor.cancelRun(params.taskRunId),
     )
     .post(
       "/stop",
+      {
+        body: stopBodySchema,
+        response: { 200: stopResponseSchema, ...errorResponses },
+      },
       ({ body }) => {
         const done = supervisor.stop({ force: body.force });
         void done.catch(() => undefined);
         deps.onStopRequested?.({ force: body.force, done });
         return { state: supervisor.state };
       },
-      {
-        body: stopBodySchema,
-        response: { 200: stopResponseSchema, ...errorResponses },
-      },
     )
-    .post("/slots/acquire", ({ body }) => leases.acquire(body), {
-      body: acquireSlotsBodySchema,
-      response: { 200: acquireSlotsResponseSchema, ...errorResponses },
-    })
-    .post("/slots/release", ({ body }) => leases.release(body), {
-      body: releaseSlotsBodySchema,
-      response: { 200: releaseSlotsResponseSchema, ...errorResponses },
-    })
+    .post(
+      "/slots/acquire",
+      {
+        body: acquireSlotsBodySchema,
+        response: { 200: acquireSlotsResponseSchema, ...errorResponses },
+      },
+      ({ body }) => leases.acquire(body),
+    )
+    .post(
+      "/slots/release",
+      {
+        body: releaseSlotsBodySchema,
+        response: { 200: releaseSlotsResponseSchema, ...errorResponses },
+      },
+      ({ body }) => leases.release(body),
+    )
     .post(
       "/slots/:leaseId/heartbeat",
-      ({ params }) => leases.heartbeat(params.leaseId),
       {
         params: leaseParamsSchema,
         response: { 200: heartbeatResponseSchema, ...errorResponses },
       },
+      ({ params }) => leases.heartbeat(params.leaseId),
     )
     .post(
       "/slots/changed",
-      ({ body, request }) =>
-        leases.waitForChange(body.since, body.waitMs, request.signal),
       {
         body: slotsChangedBodySchema,
         response: { 200: slotsChangedResponseSchema, ...errorResponses },
       },
+      ({ body, request }) =>
+        leases.waitForChange(body.since, body.waitMs, request.signal),
     )
-    .get(
-      "/logs",
-      async ({ query, request }) => {
-        const filter = { projectId: query.project, taskRunId: query.run };
-        const { lines, offset } = await readWorkerLog({
+    .get("/logs", { query: logsQuerySchema }, async ({ query, request }) => {
+      const filter = { projectId: query.project, taskRunId: query.run };
+      const { lines, offset } = await readWorkerLog({
+        ...filter,
+        filePath: deps.logFilePath,
+        tail: query.tail ?? DEFAULT_LOG_TAIL,
+      });
+      if (!query.follow) return { lines };
+      return streamLogLines(
+        lines,
+        followWorkerLog({
           ...filter,
           filePath: deps.logFilePath,
-          tail: query.tail ?? DEFAULT_LOG_TAIL,
-        });
-        if (!query.follow) return { lines };
-        return streamLogLines(
-          lines,
-          followWorkerLog({
-            ...filter,
-            filePath: deps.logFilePath,
-            from: offset,
-            signal: request.signal,
-            pollMs: deps.logPollMs,
-          }),
-        );
-      },
-      { query: logsQuerySchema },
-    );
+          from: offset,
+          signal: request.signal,
+          pollMs: deps.logPollMs,
+        }),
+      );
+    });
 }
 
 /** Each log line is one `line` server-sent event whose data is the raw line. */
