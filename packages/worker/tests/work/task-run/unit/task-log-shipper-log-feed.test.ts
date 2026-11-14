@@ -1,12 +1,20 @@
 /**
  * `TaskLogShipper` with a log feed socket: batches go over the socket while it
  * is connected, fall back to `appendTaskLogs` when it drops mid-batch, and
- * `stop()` waits for the final ack. Also covers the batch byte cap.
+ * `stop()` waits for the final ack. A rate-limited batch waits for the next
+ * flush; a full feed stops shipping. Also covers the batch byte cap.
  */
 import { afterEach, describe, expect, it, vi } from "bun:test";
 import { createUuidV7 } from "../../../../src/common/contracts/uuid-v7";
 import { SecretMasker } from "../../../../src/work/task-run/application/secret-masker";
-import { TaskLogShipper } from "../../../../src/work/task-run/application/task-log-shipper";
+import {
+  TaskLogShipper,
+  type TaskLogShipperDeps,
+} from "../../../../src/work/task-run/application/task-log-shipper";
+import {
+  LogFeedFullError,
+  LogFeedRateLimitedError,
+} from "../../../../src/work/task-run/contracts/log-feed-errors";
 import type { TaskLogLine } from "../../../../src/work/task-run/contracts/process-project-work-types";
 import {
   createLogFeedSocket,
@@ -48,16 +56,27 @@ function setup() {
       return Promise.resolve({ nextOffset: input.lines.at(-1)?.seq ?? 0 });
     },
   );
+  const onError = vi.fn<NonNullable<TaskLogShipperDeps["onError"]>>();
+  const onFeedFull = vi.fn();
   const shipper = new TaskLogShipper({
     workerClient: { appendTaskLogs },
     taskRunId: createUuidV7(),
     claimToken: "claim-token",
     secretMasker: new SecretMasker(),
     logFeed: feed,
+    onError,
+    onFeedFull,
     maxBatchLines: 2,
     flushIntervalMs: 60_000,
   });
-  return { shipper, sockets: factory.sockets, appendTaskLogs, httpLines };
+  return {
+    shipper,
+    sockets: factory.sockets,
+    appendTaskLogs,
+    httpLines,
+    onError,
+    onFeedFull,
+  };
 }
 
 describe("TaskLogShipper over the log feed socket", () => {
@@ -119,6 +138,82 @@ describe("TaskLogShipper over the log feed socket", () => {
     await stopping;
     expect(stopped).toBe(true);
     expect(appendTaskLogs).not.toHaveBeenCalled();
+  });
+});
+
+describe("TaskLogShipper log feed limits", () => {
+  it("keeps a rate-limited batch for the next flush without an HTTP append", async () => {
+    const { shipper, sockets, appendTaskLogs, onError } = setup();
+    const socket = sockets[0];
+
+    shipper.enqueue("worker", "a");
+    const first = shipper.flush();
+    await waitFor(() => socket?.appends.length === 1);
+    socket?.receive({ t: "nack", id: 1, code: "rate-limited" });
+    await first;
+
+    expect(appendTaskLogs).not.toHaveBeenCalled();
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect(onError.mock.calls[0]?.[0]).toBeInstanceOf(LogFeedRateLimitedError);
+
+    const second = shipper.flush();
+    await waitFor(() => socket?.appends.length === 2);
+    socket?.receive({ t: "ack", id: 2, nextOffset: 1 });
+    await second;
+
+    expect(socket?.appends[1]?.lines.map((l) => l.content)).toEqual(["a"]);
+    expect(appendTaskLogs).not.toHaveBeenCalled();
+  });
+
+  it("stops shipping and empties the buffer on a feed-full nack", async () => {
+    const { shipper, sockets, appendTaskLogs, onError, onFeedFull } = setup();
+    const socket = sockets[0];
+
+    shipper.enqueue("worker", "a");
+    shipper.enqueue("worker", "b");
+    shipper.enqueue("worker", "c");
+    const flushed = shipper.flush();
+    await waitFor(() => socket?.appends.length === 1);
+    socket?.receive({ t: "nack", id: 1, code: "feed-full" });
+    await flushed;
+
+    shipper.enqueue("worker", "d");
+    await shipper.stop();
+
+    expect(socket?.appends).toHaveLength(1);
+    expect(appendTaskLogs).not.toHaveBeenCalled();
+    expect(onError).not.toHaveBeenCalled();
+    expect(onFeedFull).toHaveBeenCalledTimes(1);
+  });
+
+  it("stops shipping and empties the buffer when HTTP answers feed full", async () => {
+    const appendTaskLogs = vi.fn(() =>
+      Promise.reject(new LogFeedFullError("full")),
+    );
+    const onError = vi.fn();
+    const onFeedFull = vi.fn();
+    const shipper = new TaskLogShipper({
+      workerClient: { appendTaskLogs },
+      taskRunId: createUuidV7(),
+      claimToken: "claim-token",
+      secretMasker: new SecretMasker(),
+      onError,
+      onFeedFull,
+      maxBatchLines: 2,
+      flushIntervalMs: 60_000,
+    });
+
+    shipper.enqueue("worker", "a");
+    shipper.enqueue("worker", "b");
+    shipper.enqueue("worker", "c");
+    await shipper.flush();
+    shipper.enqueue("worker", "d");
+    await shipper.flush();
+    await shipper.stop();
+
+    expect(appendTaskLogs).toHaveBeenCalledTimes(1);
+    expect(onError).not.toHaveBeenCalled();
+    expect(onFeedFull).toHaveBeenCalledTimes(1);
   });
 });
 

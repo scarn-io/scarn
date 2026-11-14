@@ -1055,10 +1055,13 @@ For one run's own output (the agent's conversation and its devcontainer), use [`
 
 ### `scarn worker config`
 
-Change the running worker's settings. The worker saves them for the instance, so they also apply after a
+Show or change the worker's settings. Without flags it prints the instance's saved settings (instance,
+base URL, max concurrency), read from disk, so it works when the worker is stopped. With a flag it changes
+the running worker's settings. The worker saves them for the instance, so they also apply after a
 restart. Lowering the limit only affects new claims: runs already going finish.
 
 ```bash
+scarn worker config
 scarn worker config --max-concurrency 2
 ```
 

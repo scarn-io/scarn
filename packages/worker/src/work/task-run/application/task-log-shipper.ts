@@ -5,6 +5,10 @@ import type {
   TaskLogStream,
   TaskRunWorkerClient,
 } from "../contracts/process-project-work-types";
+import {
+  LogFeedFullError,
+  LogFeedRateLimitedError,
+} from "../contracts/log-feed-errors";
 import type { LogFeedSocket } from "../infra/log-feed-socket";
 import type { SecretMasker } from "./secret-masker";
 
@@ -116,6 +120,11 @@ export type TaskLogShipperDeps = {
   /** Diagnostic sink; shipping failures are logged here, never thrown. */
   // eslint-disable-next-line local/no-unknown-parameter-type
   onError?: (error: unknown) => void;
+  /**
+   * Called once when the run's live log feed refuses more lines because it hit
+   * its size cap. Shipping stops for the run; the log is truncated there.
+   */
+  onFeedFull?: () => void;
   /** Defaults to `SCARN_LOG_FLUSH_INTERVAL_MS` or 5s. */
   flushIntervalMs?: number;
   maxBatchLines?: number;
@@ -159,6 +168,7 @@ export class TaskLogShipper {
   private timer: ReturnType<typeof setInterval> | null = null;
   private inFlight: Promise<void> | null = null;
   private stopped = false;
+  private feedFull = false;
 
   constructor(deps: TaskLogShipperDeps) {
     this.deps = {
@@ -279,15 +289,24 @@ export class TaskLogShipper {
     return this.buffer.slice(0, count);
   }
 
-  /** Over the log feed socket when it's up; over HTTP otherwise or when it fails. */
+  /**
+   * Over the log feed socket when it's up; over HTTP otherwise or when it
+   * fails. A feed limit (full or rate limited) applies to HTTP too, so it is
+   * rethrown instead.
+   */
   private async send(batch: TaskLogLine[]): Promise<void> {
     const logFeed = this.deps.logFeed;
     if (logFeed?.isConnected()) {
       try {
         await logFeed.append(batch);
         return;
-      } catch {
-        // Fall back to HTTP for this batch (Decision 11); the feed dedups by seq.
+      } catch (error) {
+        if (
+          error instanceof LogFeedFullError ||
+          error instanceof LogFeedRateLimitedError
+        ) {
+          throw error;
+        }
       }
     }
     await this.deps.workerClient.appendTaskLogs({
@@ -303,11 +322,34 @@ export class TaskLogShipper {
       try {
         await this.send(batch);
       } catch (error) {
+        if (error instanceof LogFeedFullError) {
+          this.stopShippingFeedFull();
+          return;
+        }
         // Retain the unsent batch for the next flush; report and stop draining.
         this.deps.onError?.(error);
         return;
       }
       this.buffer.splice(0, batch.length);
+    }
+  }
+
+  /** The run's feed hit its size cap: drop what is buffered and ship nothing more. */
+  private stopShippingFeedFull(): void {
+    this.buffer = [];
+    if (this.feedFull) {
+      return;
+    }
+    this.feedFull = true;
+    this.stopped = true;
+    this.clearTimer();
+    this.deps.onFeedFull?.();
+  }
+
+  private clearTimer(): void {
+    if (this.timer !== null) {
+      clearInterval(this.timer);
+      this.timer = null;
     }
   }
 
@@ -317,10 +359,7 @@ export class TaskLogShipper {
    */
   async stop(): Promise<void> {
     this.stopped = true;
-    if (this.timer !== null) {
-      clearInterval(this.timer);
-      this.timer = null;
-    }
+    this.clearTimer();
     if (this.inFlight !== null) {
       await this.inFlight;
     }

@@ -441,7 +441,7 @@ export class TaskRuns extends HeyApiClient {
     }
     
     /**
-     * Issues a short-lived token for subscribing to push wake-ups for the project's queued work. 404 when push is not configured; workers then keep polling.
+     * Issues a short-lived token for subscribing to push wake-ups for the project's queued work. Each token counts as one push session against the org's monthly limit; 402 (USAGE_LIMIT_EXCEEDED_SIGNAL) once the limit is reached. 404 when push is not configured. On either, workers keep polling.
      */
     public issueWorkSignalToken<ThrowOnError extends boolean = false>(options: Options<PostApiProjectsByProjectIdWorkSignalTokenData, ThrowOnError>) {
         return (options.client ?? this.client).post<PostApiProjectsByProjectIdWorkSignalTokenResponses, PostApiProjectsByProjectIdWorkSignalTokenErrors, ThrowOnError>({

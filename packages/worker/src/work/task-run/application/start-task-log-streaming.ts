@@ -12,6 +12,7 @@ import {
 } from "../infra/log-feed-socket";
 import { SecretMasker } from "./secret-masker";
 import { TaskLogShipper } from "./task-log-shipper";
+import { logWorkWarn } from "./work-logger";
 import { OpencodeLogTail } from "./opencode-log-tail";
 import { OpencodeConversationStreamer } from "./opencode-conversation-streamer";
 import { AGENT_SERVE_LOG_FILENAME } from "../../../runtime/runtime-service/infra/devcontainer-opencode-bootstrap";
@@ -180,6 +181,14 @@ export class TaskLogStreaming {
           errorMessage: error instanceof Error ? error.message : String(error),
           errorStack: error instanceof Error ? error.stack : undefined,
         });
+      },
+      onFeedFull: () => {
+        this.logFeed?.stop();
+        logWorkWarn(
+          "worker",
+          "Task run's live log hit its size cap; later lines are not shipped",
+          { taskRunId: this.taskRunId },
+        );
       },
     });
     this.logFeed?.start();

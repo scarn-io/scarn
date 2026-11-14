@@ -209,6 +209,35 @@ describe("work signal client", () => {
     await waitFor(() => connectedClient.isConnected());
   });
 
+  test("schedules the token refresh 2 minutes before expiry by default", async () => {
+    fake = startFakeSignalServer();
+    const server = fake;
+    const nowMs = Date.parse("2026-01-01T00:00:00.000Z");
+    const setTimeoutSpy = vi.spyOn(globalThis, "setTimeout");
+    try {
+      client = createWorkSignalClient({
+        projectId,
+        fetchToken: () =>
+          Promise.resolve({
+            url: server.url,
+            token: "token",
+            expiresAt: new Date(nowMs + 15 * 60_000).toISOString(),
+          }),
+        now: () => nowMs,
+        maxWakeJitterMs: 0,
+      });
+      const connectedClient = client;
+
+      await connectedClient.start();
+      await waitFor(() => connectedClient.isConnected());
+
+      const delays = setTimeoutSpy.mock.calls.map((call) => call[1]);
+      expect(delays).toContain(13 * 60_000);
+    } finally {
+      setTimeoutSpy.mockRestore();
+    }
+  });
+
   test("a 404 from the token route leaves the client inert", async () => {
     const events: WorkEvent["type"][] = [];
     const createSocket = vi.fn();

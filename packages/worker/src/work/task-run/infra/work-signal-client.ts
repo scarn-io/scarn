@@ -96,7 +96,7 @@ export function createWorkSignalClient(
   const maxBackoffMs = options.maxBackoffMs ?? 60_000;
   const pingIntervalMs = options.pingIntervalMs ?? 30_000;
   const maxWakeJitterMs = options.maxWakeJitterMs ?? 500;
-  const refreshLeadMs = options.refreshLeadMs ?? 5 * 60_000;
+  const refreshLeadMs = options.refreshLeadMs ?? 2 * 60_000;
   const minRefreshDelayMs = options.minRefreshDelayMs ?? 30_000;
 
   let stopped = false;

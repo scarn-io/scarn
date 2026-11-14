@@ -5,6 +5,10 @@
  * route says the feed is unavailable.
  */
 import { afterEach, describe, expect, test, vi } from "bun:test";
+import {
+  LogFeedFullError,
+  LogFeedRateLimitedError,
+} from "../../../../src/work/task-run/contracts/log-feed-errors";
 import type { LogFeedToken } from "../../../../src/work/task-run/contracts/socket-token-types";
 import {
   createLogFeedSocket,
@@ -105,6 +109,29 @@ describe("log feed socket", () => {
     expect(await rejection(feed.append([line(1)]))).toContain("timed out");
     expect(feed.isConnected()).toBe(true);
   });
+
+  test.each([
+    ["feed-full", LogFeedFullError],
+    ["rate-limited", LogFeedRateLimitedError],
+  ] as const)(
+    "rejects a %s nack with its typed error",
+    async (code, errorClass) => {
+      const { feed, sockets } = startFeed();
+      sockets[0]?.open();
+
+      const nacked = feed.append([line(1)]);
+      sockets[0]?.receive({ t: "nack", id: 1, code });
+
+      let rejected: Error | null = null;
+      try {
+        await nacked;
+      } catch (error) {
+        rejected = error as Error;
+      }
+      expect(rejected).toBeInstanceOf(errorClass);
+      expect(feed.isConnected()).toBe(true);
+    },
+  );
 
   test("rejects in-flight appends when the socket drops, then reconnects", async () => {
     const { feed, sockets, refreshToken } = startFeed();

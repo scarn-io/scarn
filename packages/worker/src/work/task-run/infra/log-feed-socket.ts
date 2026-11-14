@@ -5,7 +5,9 @@
  * Holds one WebSocket per claimed task, authenticated with a short-lived write
  * token. {@link LogFeedSocket.append} sends `{"t":"append","id","lines"}` and
  * resolves on the matching `{"t":"ack"}`; a nack, an ack timeout or the socket
- * closing rejects it, and the caller ships that batch over HTTP instead. The
+ * closing rejects it, and the caller ships that batch over HTTP instead. A
+ * `feed-full` or `rate-limited` nack rejects with `LogFeedFullError` or
+ * `LogFeedRateLimitedError`, which the caller does not retry over HTTP. The
  * DO drops lines at or below its highest stored `seq`, so a batch that lands
  * twice is harmless.
  *
@@ -15,6 +17,7 @@
  * the feed is sealed (the run is archived) or the token route answers that
  * the feed is unavailable, leaving every send to HTTP.
  */
+import { logFeedLimitErrorFromNack } from "../contracts/log-feed-errors";
 import type { LogFeedToken } from "../contracts/socket-token-types";
 import type {
   ProjectWorkLogger,
@@ -266,7 +269,8 @@ export function createLogFeedSocket(
     if (message.t === "nack") {
       if (message.id !== null) {
         settle(message.id)?.reject(
-          new LogFeedSocketError(`Log feed rejected batch: ${message.code}`),
+          logFeedLimitErrorFromNack(message.code) ??
+            new LogFeedSocketError(`Log feed rejected batch: ${message.code}`),
         );
       }
       if (message.code === "sealed") {

@@ -2,7 +2,8 @@
  * `scarn worker stop|status|logs|config` against a real control server
  * backed by a fake supervisor: the not-running exit code, the version check
  * (and `stop` working across a mismatch), stop waiting for the worker to go
- * away, logs read from disk with filters, and config's `PATCH /config`.
+ * away, logs read from disk with filters, and config's `PATCH /config` and
+ * its read-only view of the saved settings.
  */
 import {
   afterEach,
@@ -409,5 +410,29 @@ describe("worker config", () => {
     startWorker("0.0.1-old");
     const error = await rejection(runWorkerConfig({ maxConcurrency: 3 }));
     expect(error).toBeInstanceOf(WorkerVersionMismatchError);
+  });
+
+  test("without flags, prints the saved settings, or the defaults, without a running worker", async () => {
+    const openStore = () => new SqliteWorkerSettingsStore({ databasePath });
+    const show = () =>
+      captureStdout(() =>
+        runWorkerConfig(
+          { maxConcurrency: undefined },
+          { openStore, env: { SCARN_WORK_CONCURRENCY: "3" } },
+        ),
+      );
+    expect(await show()).toBe(
+      `instance: ${INSTANCE}\nbase-url: (not bound)\nmax-concurrency: 3 (default)\n`,
+    );
+    const store = openStore();
+    store.saveInstance({
+      instance: INSTANCE,
+      baseUrl: "https://scarn.test",
+      maxConcurrency: 5,
+    });
+    store.close();
+    expect(await show()).toBe(
+      `instance: ${INSTANCE}\nbase-url: https://scarn.test\nmax-concurrency: 5\n`,
+    );
   });
 });

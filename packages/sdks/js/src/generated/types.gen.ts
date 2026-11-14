@@ -5839,9 +5839,47 @@ export type PostApiTaskRunsByTaskRunIdLogsErrors = {
         };
     };
     /**
+     * Response for status 413
+     */
+    413: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
      * Response for status 422
      */
     422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 429
+     */
+    429: {
         type: string;
         title: string;
         status: number;
@@ -12036,6 +12074,25 @@ export type PostApiProjectsByProjectIdWorkSignalTokenErrors = {
      * Response for status 401
      */
     401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 402
+     */
+    402: {
         type: string;
         title: string;
         status: number;
@@ -23506,6 +23563,7 @@ export type GetApiOrgsByOrgIdUsageResponses = {
         planId: 'free';
         writes: number;
         reads: number;
+        signalTokens: number;
         storageBytes: number;
         storageBreakdown: {
             artifactBytes: number;
@@ -23516,6 +23574,7 @@ export type GetApiOrgsByOrgIdUsageResponses = {
             maxWritesPerMonth: number;
             maxReadsPerMonth: number;
             maxStorageBytes: number;
+            maxSignalTokensPerMonth: number;
         };
         resetsAt: string;
         createdAt: string;

@@ -7,6 +7,8 @@ import {
   ProjectUnavailableError,
   projectUnavailableStatus,
 } from "../contracts/project-unavailable-error";
+import { logFeedLimitErrorFromHttp } from "../contracts/log-feed-errors";
+import { logWorkWarn } from "../application/work-logger";
 import { fetchAuthenticatedSession } from "../../../auth/session/application/fetch-authenticated-session";
 import { WorkerAuthError } from "../../../auth/session/domain/worker-auth-error";
 import {
@@ -120,6 +122,15 @@ async function readErrorCode(response: Response): Promise<string | undefined> {
   }
 }
 
+async function throwIfLogFeedLimited(response: Response) {
+  if (response.status !== 413 && response.status !== 429) return;
+  const error = logFeedLimitErrorFromHttp(
+    response.status,
+    await readErrorCode(response),
+  );
+  if (error !== null) throw error;
+}
+
 async function throwIfProjectUnavailable(response: Response, baseUrl: string) {
   if (response.status !== 403 && response.status !== 404) return;
   const status = projectUnavailableStatus(
@@ -172,6 +183,7 @@ export async function createTaskPlaneWorkerClient(
     }),
     onResponse: async (response) => {
       await throwIfProjectUnavailable(response, baseUrl);
+      await throwIfLogFeedLimited(response);
       if (response.status === 401 || response.status === 403) {
         throw new WorkerAuthError(
           "auth_rejected",
@@ -202,6 +214,14 @@ export async function createTaskPlaneWorkerClient(
     issueWorkSignalToken: async (input) => {
       const result = await planeClient.issueWorkSignalToken(input);
       if (result.response.status === 404) {
+        return null;
+      }
+      if (result.response.status === 402) {
+        logWorkWarn(
+          "work-signal",
+          "Push is off: the monthly push-session limit is reached. The worker keeps polling for work until it restarts.",
+          { code: await readErrorCode(result.response) },
+        );
         return null;
       }
       if (result.error !== undefined) {
