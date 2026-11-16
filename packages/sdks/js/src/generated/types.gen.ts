@@ -3565,6 +3565,17 @@ export type PostApiTasksData = {
         workItemId: string;
         inputJson?: unknown | null;
         executionTimeoutSeconds?: number | null;
+        environment?: {
+            name?: string;
+            extraConnectors?: Array<{
+                connectorId: string;
+                vars?: {
+                    [key: string]: {
+                        secret: string;
+                    };
+                };
+            }>;
+        };
         stepDefinitionId: string;
         stepDefinitionVersion: number;
     } | {
@@ -3572,7 +3583,19 @@ export type PostApiTasksData = {
         workItemId: string;
         inputJson?: unknown | null;
         executionTimeoutSeconds?: number | null;
+        environment?: {
+            name?: string;
+            extraConnectors?: Array<{
+                connectorId: string;
+                vars?: {
+                    [key: string]: {
+                        secret: string;
+                    };
+                };
+            }>;
+        };
         prompt: string;
+        repoWrite?: boolean;
     };
     path?: never;
     query?: never;
@@ -3730,6 +3753,16 @@ export type PostApiTasksResponses = {
             kind: 'agent' | 'code';
             name: string | null;
             taskExecutionConfigId: string | null;
+            environmentSelection: {
+                extraConnectors: Array<{
+                    connectorId: string;
+                    vars: {
+                        [key: string]: {
+                            secret: string;
+                        };
+                    };
+                }>;
+            } | null;
             inputJson: unknown | null;
             retryJson: unknown | null;
             grants: Array<{
@@ -4194,6 +4227,16 @@ export type GetApiTasksByTaskIdResponses = {
         kind: 'agent' | 'code';
         name: string | null;
         taskExecutionConfigId: string | null;
+        environmentSelection: {
+            extraConnectors: Array<{
+                connectorId: string;
+                vars: {
+                    [key: string]: {
+                        secret: string;
+                    };
+                };
+            }>;
+        } | null;
         inputJson: unknown | null;
         retryJson: unknown | null;
         grants: Array<{
@@ -5527,6 +5570,14 @@ export type PostApiTaskRunsByTaskRunIdWorkerContextResponses = {
                     protocol?: 'legacy' | 'auto' | '2026-07-28';
                 };
             } | null;
+            extraConnectors: Array<{
+                connectorId: string;
+                vars: {
+                    [key: string]: {
+                        secret: string;
+                    };
+                };
+            }>;
         };
         agentPrompt: {
             sessionTitle: string;

@@ -205,7 +205,7 @@ export class StepDefinitions extends HeyApiClient {
 
 export class Tasks extends HeyApiClient {
     /**
-     * Starts a standalone Task from a step-definition version or a prompt. Responds 409 `Scarn.ConcurrencyGroupFull` when the step's concurrency group on the work item is full: no Task is created, and `meta.heldBy` names the Tasks that hold the group.
+     * Starts a standalone Task from a step-definition version or a prompt. `environment.name` runs it in that named environment instead of the step's own or the repo default, and `environment.extraConnectors` adds catalog connectors for this Task only. Responds 422 `ENVIRONMENT_OVERRIDE_INLINE` when the step has an inline environment, `ENVIRONMENT_NOT_FOUND`, `ENVIRONMENT_OVERRIDE_INCOMPATIBLE` when the environment doesn't fit the step, and `CONNECTOR_NOT_FOUND`, `CONNECTOR_ALREADY_PRESENT` or `CONNECTOR_VAR_MISSING` for an extra connector. Responds 409 `Scarn.ConcurrencyGroupFull` when the step's concurrency group on the work item is full: no Task is created, and `meta.heldBy` names the Tasks that hold the group.
      */
     public createTask<ThrowOnError extends boolean = false>(options: Options<PostApiTasksData, ThrowOnError>) {
         return (options.client ?? this.client).post<PostApiTasksResponses, PostApiTasksErrors, ThrowOnError>({
@@ -476,7 +476,7 @@ export class TaskRuns extends HeyApiClient {
     }
     
     /**
-     * Returns the values of the named project secrets for the task run's project, and lists the names the project has no secret for. Marks each returned secret used. Requires the claim token and `executions:write`. Only secrets referenced by the run's environment (its inline vars, or its pinned named environment version) may be asked for; any other name returns 403 `SECRET_NOT_REFERENCED`.
+     * Returns the values of the named project secrets for the task run's project, and lists the names the project has no secret for. Marks each returned secret used. Requires the claim token and `executions:write`. Only secrets referenced by the run's environment (its inline vars, or its pinned named environment version) or by its Task's extra connectors may be asked for; any other name returns 403 `SECRET_NOT_REFERENCED`.
      */
     public resolveTaskRunEnvironment<ThrowOnError extends boolean = false>(options: Options<PostApiTaskRunsByTaskRunIdEnvironmentData, ThrowOnError>) {
         return (options.client ?? this.client).post<PostApiTaskRunsByTaskRunIdEnvironmentResponses, PostApiTaskRunsByTaskRunIdEnvironmentErrors, ThrowOnError>({

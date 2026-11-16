@@ -4,6 +4,15 @@ import type { HealthCheck } from "@scarn/sdk/health-checks";
 import type { RepoConfig } from "@scarn/sdk/repo-config";
 import type { OpenCodeMcpServers } from "../../../common/contracts/opencode-mcp";
 
+/**
+ * A catalog connector one Task adds: each var `NAME` takes its value from the
+ * project secret `secret`, looked up like an environment's `secret` var.
+ */
+export type ExtraConnector = {
+  connectorId: string;
+  vars: Record<string, { secret: string }>;
+};
+
 export type TaskRunStatus =
   | "pending"
   | "queued"
@@ -114,6 +123,12 @@ export type TaskRunWorkerContextContract = {
      */
     healthChecksJson: HealthCheck[] | null;
     opencodeMcpJson: OpenCodeMcpServers | null;
+    /**
+     * Catalog connectors the Task adds on top of its environment's. The
+     * server guarantees their ids collide with neither the environment's
+     * connectors nor the step's `mcps`.
+     */
+    extraConnectors: ExtraConnector[];
   };
   agentPrompt: {
     sessionTitle: string;

@@ -140,6 +140,108 @@ failure lists each server, its status and OpenCode's error. This runs whether
 or not the step declares health checks; declared checks run after it. Servers
 that only appear in the repository's own OpenCode config are not checked.
 
+## Choose an environment when a Task starts
+
+A standalone Task can run in a different named environment, or add
+connectors, without changing the step. Pick them in the dashboard's start
+dialog (see [Start one Task](/scarn/how-to/run-on-a-work-item/#start-one-task))
+or send `environment` to `POST /api/tasks`:
+
+```jsonc
+{
+  "projectId": "…",
+  "workItemId": "…",
+  "stepDefinitionId": "…",
+  "stepDefinitionVersion": 3,
+  "environment": {
+    "name": "staging",
+    "extraConnectors": [
+      {
+        "connectorId": "datadog",
+        "vars": { "DD_API_KEY": { "secret": "DD_API_KEY" } },
+      },
+    ],
+  },
+}
+```
+
+Both fields are optional. Leave `environment` out and the Task runs as the
+step defines it. The response's `environmentSelection` records what was
+chosen. Retries and replies keep the Task's selection.
+
+### Run in another named environment
+
+`environment.name` replaces the step's named environment, or the repo default
+for a prompt Task. It can't replace an inline step environment: inline settings
+can read the step's input, and the author set them on purpose. The step's own
+`mcps`, `healthChecks` and `repo` always apply.
+
+The environment must fit the step:
+
+- it exists and isn't deleted
+- a code step can't get a host runtime
+- no step `mcps` key equals one of its connector ids
+- every `{{env.X}}` in the step's `repo.baseBranch` is a non-secret variable
+  it declares
+
+Scarn checks this when the Task is created, and again against the version the
+run uses when the run starts, because the environment can change in between.
+At start, a misfit fails the run with
+`Environment "staging" doesn't fit this step: …`.
+
+### Add connectors for one Task
+
+`environment.extraConnectors` adds [catalog](/scarn/reference/connectors/)
+connectors on top of the environment's. You can only add: a connector the
+environment or the step's `mcps` already has can't be added again, and none
+can be removed.
+
+For each variable the connector needs that the environment doesn't declare,
+`vars` names a [project secret](/scarn/guides/secrets/). The secret doesn't
+have to be saved in Scarn: the worker looks in `.scarn/.env` first, then in
+Scarn (see [Where the value comes from](/scarn/guides/secrets/#where-the-value-comes-from)).
+If the environment already declares a variable with the same name, the
+environment's value is used.
+
+Extra connectors go through the same startup check as every other connector.
+Run diagnostics and logs mark them with `source: "extra"`.
+
+### Per-run and per-target values
+
+You can't pass values into an environment when work starts. Put values that
+change on every run in the step's input, and read them from an inline
+environment or the prompt. Values that differ by target, such as staging and
+production, belong in separate named environments; pick one at start. They
+can share a base object in TypeScript:
+
+```typescript
+const base = { runtime: Runtime.managed.bun1(), connectors: ["playwright"] };
+
+export const staging = defineEnvironment({
+  ...base,
+  name: "staging",
+  vars: { BASE_URL: "https://staging.example.com" },
+});
+export const production = defineEnvironment({
+  ...base,
+  name: "production",
+  vars: { BASE_URL: "https://example.com" },
+});
+```
+
+### Errors when starting a Task
+
+`POST /api/tasks` refuses a selection with a `422`. No Task is created.
+
+| Code                                | When                                                                                                                       | `meta`                |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | --------------------- |
+| `ENVIRONMENT_OVERRIDE_INLINE`       | The step has an inline environment, which can't be replaced                                                                | `name`                |
+| `ENVIRONMENT_NOT_FOUND`             | The named environment, or the step's own named environment when you add connectors, doesn't exist                          | `name`                |
+| `ENVIRONMENT_OVERRIDE_INCOMPATIBLE` | The environment doesn't fit the step. `reason` is `code_step_host_runtime`, `connector_mcp_collision` or `base_branch_env` | `name`, `reason`      |
+| `CONNECTOR_NOT_FOUND`               | The connector id isn't in the catalog                                                                                      | `connectorId`         |
+| `CONNECTOR_ALREADY_PRESENT`         | The environment or the step's `mcps` already has this connector, or it's listed twice                                      | `connectorId`         |
+| `CONNECTOR_VAR_MISSING`             | A variable the connector needs is neither declared by the environment nor named in `vars`                                  | `connectorId`, `vars` |
+
 ## Defaults
 
 | Step configuration                                                    | Runtime selection    |

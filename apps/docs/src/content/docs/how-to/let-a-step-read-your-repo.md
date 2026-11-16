@@ -43,7 +43,9 @@ export const triage = defineStep({
 
 Add `repo: Repo.readOnly()`, as here, when the step only reads code; leave
 `repo` off when it changes code, and its work is committed to a work branch.
-See [Repo access](/scarn/guides/steps/#repo-access).
+See [Repo access](/scarn/guides/steps/#repo-access). A prompt Task started
+from the dashboard reads the repo unless you turn on
+[Allow commits](/scarn/how-to/run-on-a-work-item/#start-one-task).
 
 For the designer's devcontainer setup behavior, see
 [Runtime](/scarn/getting-started/concepts/#runtime). To write or adjust one yourself, see

@@ -113,6 +113,7 @@ export function buildSingleStepScenario(input: {
       repo: resolveRepoConfig(input.repo),
       healthChecksJson: null,
       opencodeMcpJson: null,
+      extraConnectors: [],
     },
     agentPrompt: {
       sessionTitle: "Integration Step",

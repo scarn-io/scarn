@@ -27,6 +27,22 @@ queued, the worker just polls. Queue the run first.
 queued, start a worker with the command above, or plain `scarn work` to
 take any queued work in the project.
 
+## Start one Task
+
+To run one step or a prompt, open the work item and select **Start task**.
+Pick a **Step definition** or write a **Prompt**, then:
+
+- **Environment.** _Step default_ (_Repo default_ for a prompt) keeps the
+  step's own. Pick a named environment to run in it instead. It's disabled
+  for a step with an inline environment.
+- **Connectors.** Check catalog connectors to add for this Task only. For
+  each variable one needs, name a project secret or save one with **+**; an
+  unsaved name must be in the worker's `.scarn/.env`.
+- **Allow commits** (prompt only). Off, the repo is read-only. On, the agent
+  can push a new `scarn/…` branch.
+
+See [Choose an environment when a Task starts](/scarn/guides/environments/#choose-an-environment-when-a-task-starts).
+
 ## Queue it from the CLI
 
 There is no standalone command that queues a run. The closest is the run

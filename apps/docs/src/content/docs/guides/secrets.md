@@ -59,9 +59,10 @@ For each `secret` variable, the worker looks up the **secret name**:
    developer can use their own key without touching the shared one.
 2. Otherwise in Scarn. The worker makes one request per run, for the names
    `.scarn/.env` didn't have. Scarn returns only secrets that the run's
-   environment names in a `secret` variable: the named environment version the
-   run uses, or the step's inline environment. A request for any other secret
-   is refused.
+   environment names in a `secret` variable (the named environment version the
+   run uses, or the step's inline environment) or that the Task's
+   [extra connectors](/scarn/guides/environments/#add-connectors-for-one-task)
+   name. A request for any other secret is refused.
 
 The worker's `process.env` is not read for `secret` variables. It still is for
 `worker` variables.

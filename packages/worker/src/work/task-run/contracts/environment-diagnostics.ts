@@ -13,8 +13,11 @@ export type EnvironmentDiagnostics = {
   /** Null for a chat run, which is parked on a pinned commit. */
   branches: LaunchBranchDiagnostics | null;
   vars: { name: string; source: EnvironmentVarSource }[];
-  connectors: string[];
+  connectors: { id: string; source: ConnectorSource }[];
 };
+
+/** `extra` marks a connector the Task added on top of its environment's (decision 5). */
+export type ConnectorSource = "environment" | "extra";
 
 /**
  * Which rule picked the base branch (ADR 0010). `server` is the server's
@@ -63,7 +66,9 @@ export function buildEnvironmentDiagnostics(
   },
   effectiveVars: readonly EnvVarSpec[] = environment.envVars,
   localEnvVars: Readonly<Record<string, string>> = {},
+  extraConnectorIds: readonly string[] = [],
 ): EnvironmentDiagnostics {
+  const extras = new Set(extraConnectorIds);
   return {
     source: environment.source,
     name: environment.name ?? null,
@@ -73,6 +78,9 @@ export function buildEnvironmentDiagnostics(
       name: entry.name,
       source: varSource(entry, localEnvVars),
     })),
-    connectors: [...environment.connectors],
+    connectors: environment.connectors.map((id) => ({
+      id,
+      source: extras.has(id) ? "extra" : "environment",
+    })),
   };
 }

@@ -523,6 +523,9 @@ export type LaunchedRuntimeOrchestrator = {
     /** Step key used (sanitized) in the work branch name `scarn/<key>-<id>`. */
     stepKey?: string | undefined;
     opencodeMcpJson?: TaskRunWorkerContextContract["runtime"]["opencodeMcpJson"];
+    /** The Task's extra connectors, merged into the environment before its vars resolve. */
+    extraConnectors?:
+      TaskRunWorkerContextContract["runtime"]["extraConnectors"] | undefined;
     currentExecutionInfo: CurrentExecutionInfo;
     /** Optional reporter to emit granular sub-step progress events during launch. */
     reporter?: WorkReporter | undefined;

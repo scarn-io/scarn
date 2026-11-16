@@ -6,6 +6,7 @@ import { resolveLaunchEnvironment } from "./resolve-launch-environment";
 import { buildEnvironmentDiagnostics } from "../contracts/environment-diagnostics";
 import { withInferredMcpEnv } from "../application/resolve-step-env";
 import { renderBaseBranch } from "../application/render-base-branch";
+import { mergeExtraConnectors } from "../application/merge-extra-connectors";
 
 /** Validates the run's environment before branch selection and inspects runtime files after checkout. */
 export async function prepareLaunchEnvironment(
@@ -27,15 +28,21 @@ export async function prepareLaunchEnvironment(
     repoContext: input.repoContext,
     logger: input.logger,
   };
-  const definition = readEnvironmentDefinition(input.environment);
-  if (definition instanceof Error) throw definition;
+  const environmentDefinition = readEnvironmentDefinition(input.environment);
+  if (environmentDefinition instanceof Error) throw environmentDefinition;
+  const extraConnectors = input.extraConnectors ?? [];
+  const extraConnectorIds = extraConnectors.map((extra) => extra.connectorId);
+  const definition = mergeExtraConnectors(
+    environmentDefinition,
+    extraConnectors,
+  );
   const stepBaseBranch = input.repoContext
     ? null
     : input.stepBaseBranch !== undefined
       ? input.stepBaseBranch
       : await renderBaseBranch(input.repo.baseBranch, {
           inputJson: input.stepInputJson,
-          envVars: definition.envVars,
+          envVars: environmentDefinition.envVars,
           workerEnv: { ...process.env, ...input.localEnvVars },
           loadWorkItem: input.loadCommitWorkItem,
           environmentLabel:
@@ -71,6 +78,7 @@ export async function prepareLaunchEnvironment(
       input.opencodeMcpJson,
     ),
     input.localEnvVars,
+    extraConnectorIds,
   );
   const logDiagnostics = () =>
     input.logger?.log(
@@ -90,6 +98,7 @@ export async function prepareLaunchEnvironment(
             input.opencodeMcpJson,
           ),
           input.localEnvVars,
+          extraConnectorIds,
         ).vars;
         logDiagnostics();
         return env;

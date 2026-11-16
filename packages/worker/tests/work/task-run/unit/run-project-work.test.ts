@@ -79,6 +79,7 @@ function createWorkerClient(
           },
           healthChecksJson: null,
           opencodeMcpJson: null,
+          extraConnectors: [],
         },
         agentPrompt: {
           sessionTitle: "Demo Step",

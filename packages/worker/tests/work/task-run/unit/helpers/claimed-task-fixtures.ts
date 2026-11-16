@@ -7,7 +7,11 @@ import path from "node:path";
 import { vi } from "bun:test";
 import type { ResolvedEnvironmentRef } from "@scarn/sdk/environment";
 import type { EnvVarSpec } from "@scarn/sdk/env-vars";
-import { resolveEnvironment } from "@scarn/sdk/resolve-environment";
+import {
+  readEnvironmentDefinition,
+  resolveEnvironmentDefinition,
+} from "@scarn/sdk/resolve-environment";
+import { mergeExtraConnectors } from "../../../../../src/work/task-run/application/merge-extra-connectors";
 import { parseUuidV7 } from "../../../../../src/common/contracts/uuid-v7";
 import type { pollMcpStatus } from "../../../../../src/work/task-run/application/poll-mcp-status";
 import { startProcessClaimedTaskRun } from "../../../../../src/work/task-run/application/process-claimed-task-run";
@@ -91,6 +95,7 @@ export function createWorkerContext(
           },
     healthChecksJson: healthChecksJson ?? null,
     opencodeMcpJson: null,
+    extraConnectors: [],
   };
   for (const [key, value] of Object.entries(overrides)) {
     if (key in task) Object.assign(task, { [key]: value });
@@ -209,11 +214,11 @@ export function createRecordingOrchestrator(
   const lifecycle = vi.fn<(phase: "cloned" | "resolved" | "startup") => void>();
   const launch = vi.fn<LaunchedRuntimeOrchestrator["launch"]>(async (input) => {
     lifecycle("cloned");
-    const resolvedEnvironment = await resolveEnvironment(
-      {
-        devcontainerExists: () => Promise.resolve(true),
-      },
-      input.environment,
+    const definition = readEnvironmentDefinition(input.environment);
+    if (definition instanceof Error) throw definition;
+    const resolvedEnvironment = await resolveEnvironmentDefinition(
+      { devcontainerExists: () => Promise.resolve(true) },
+      mergeExtraConnectors(definition, input.extraConnectors ?? []),
     );
     if (resolvedEnvironment instanceof Error) throw resolvedEnvironment;
     lifecycle("resolved");

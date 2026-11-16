@@ -130,6 +130,7 @@ export async function launchRuntimeEnvironment(
     repoContext,
     stepKey: input.workerContext.task.key,
     opencodeMcpJson: input.workerContext.runtime.opencodeMcpJson,
+    extraConnectors: input.workerContext.runtime.extraConnectors,
     // The step prompt is delivered solely as the user message via promptAsync
     // below. We deliberately do NOT also set it as the build agent's system
     // prompt: doing so duplicated the entire prompt in every request (system +
