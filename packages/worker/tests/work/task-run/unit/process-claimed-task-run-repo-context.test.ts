@@ -67,7 +67,6 @@ async function launchClaim(input: {
       requestedByUserId,
       claim: { task: { id: taskRunId }, claimToken: "claim-token" },
       leaseDurationSeconds: 30,
-      sourceBranch: "worker-local-branch",
     },
     deps,
     deps.workerClient,
@@ -75,7 +74,6 @@ async function launchClaim(input: {
   );
 
   const launchInput = (launch.mock.calls as unknown[][])[0]?.[0] as {
-    sourceBranch?: string | null;
     baseWorkBranch?: string | null;
     repoContext?: RepoContextLaunchInput;
   };
@@ -89,7 +87,6 @@ describe("startProcessClaimedTaskRun repo context", () => {
       baseCommit: null,
     });
 
-    expect(launchInput.sourceBranch).toBeNull();
     expect(launchInput.baseWorkBranch).toBeNull();
     expect(launchInput.repoContext?.baseCommit).toBeNull();
     const stored = await launchInput.repoContext?.pinBaseCommit({
@@ -125,7 +122,6 @@ describe("startProcessClaimedTaskRun repo context", () => {
     });
 
     expect(launchInput.repoContext).toBeUndefined();
-    expect(launchInput.sourceBranch).toBe("worker-local-branch");
     expect(launchInput.baseWorkBranch).toBe("scarn/prev-step");
   });
 });

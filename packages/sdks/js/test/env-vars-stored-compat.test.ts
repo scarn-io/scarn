@@ -178,6 +178,31 @@ describe("storedEnvVarsSchema v1 compatibility", () => {
     },
   );
 
+  test.concurrent("reads a project secret entry", () => {
+    const result = storedEnvVarsSchema.safeParse(
+      JSON.parse(
+        '[{"name":"GITHUB_TOKEN","source":"secret","secretName":"GH_BOT_TOKEN"},' +
+          '{"name":"NPM_TOKEN","source":"secret","secretName":"NPM_TOKEN","applies":"setup"}]',
+      ),
+    );
+
+    expect(result.success).toBe(true);
+    expect(result.data).toEqual([
+      {
+        name: "GITHUB_TOKEN",
+        source: "secret",
+        secretName: "GH_BOT_TOKEN",
+        applies: "agent",
+      },
+      {
+        name: "NPM_TOKEN",
+        source: "secret",
+        secretName: "NPM_TOKEN",
+        applies: "setup",
+      },
+    ]);
+  });
+
   test.concurrent(
     "does not re-apply write-time rules, so stricter rules never orphan old rows",
     () => {

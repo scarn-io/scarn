@@ -1,5 +1,5 @@
 import type { Grant } from "@scarn/sdk";
-import type { EnvVarSpec } from "@scarn/sdk/env-vars";
+import type { ResolvedEnvironmentRef } from "@scarn/sdk/environment";
 import type { HealthCheck } from "@scarn/sdk/health-checks";
 import type { RepoConfig } from "@scarn/sdk/repo-config";
 import type { OpenCodeMcpServers } from "../../../common/contracts/opencode-mcp";
@@ -94,42 +94,18 @@ export type TaskRunWorkerContextContract = {
   };
   runtime: {
     /**
-     * How the task runs. `workspace` (default) clones the repo and launches a
-     * devcontainer with OpenCode inside it; `no_workspace` runs OpenCode
-     * directly on the host with only the rendered prompt + context, no clone
-     * and no container.
+     * Where the task runs. Null uses the repository's default runtime.
+     * Every runtime has a repository checkout; host has no container.
      */
-    executionMode: "workspace" | "no_workspace";
-    /**
-     * Repo-relative path of the devcontainer config this `workspace` task
-     * launches (see `Runtime.devcontainer({ config })`). `null` auto-detects the
-     * canonical config. Never set for `no_workspace` tasks.
-     */
-    devcontainerConfigPath: string | null;
-    /**
-     * Identifier of the worker-supplied managed runtime this `code` task runs
-     * in instead of a repo devcontainer (see `Runtime.managed`), or `null`.
-     * Typed `string` rather than the SDK union because a server newer than
-     * this worker can send an identifier it does not know; the launch then
-     * fails naming it. Never set together with `devcontainerConfigPath`.
-     */
-    managedRuntime: string | null;
+    environment: ResolvedEnvironmentRef;
     /**
      * The resolved repository access (see `Repo` in the SDK). Never null: the
      * server resolves the runtime's default when a definition is written.
-     * `no_workspace` tasks are always `none`; `workspace` tasks are
-     * `readOnly` or `readWrite`. Those two also carry `gitCredentials`:
+     * Every runtime supports `readOnly` or `readWrite` and `gitCredentials`:
      * `"auto"` (the default) opens the git credential relay when this worker
      * offers git credentials; `"none"` leaves the container without them.
      */
     repo: RepoConfig;
-    /**
-     * The declared environment variables (see `defineStep`'s `env` field).
-     * `null` means none declared. Resolved once per run by `resolveStepEnv`,
-     * split by each entry's `applies`: the variables injected into the agent
-     * (or code step) process, and those passed to `devcontainer up`.
-     */
-    envJson: EnvVarSpec[] | null;
     /**
      * The declared health checks (see `defineStep`'s `healthChecks` field).
      * `null`/empty means none — a real task run then skips the health-check

@@ -9,8 +9,8 @@ const OPENCODE_HEALTH_CHECK_TIMEOUT_MS = 5_000;
 
 // Re-exported so existing imports from this dry-run-named module keep
 // working. `pollMcpStatus` itself is a shared utility, not dry-run-specific
-// — a real task run calls it too, as a warm-up inside `runHealthChecks()`
-// (see `run-health-checks.ts`).
+// — a real task run calls it too, through the MCP startup gate
+// (`mcp-startup-gate.ts`).
 export { pollMcpStatus, type McpHandshakeReport } from "./poll-mcp-status";
 
 /**

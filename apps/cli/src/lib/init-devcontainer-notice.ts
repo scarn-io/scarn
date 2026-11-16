@@ -3,15 +3,8 @@ import type { BaseReporter } from "./reporter-types";
 /**
  * The devcontainer step of `scarn init`.
  *
- * Scarn runs every step inside the project's devcontainer, so `init` used to
- * require one and throw when it was absent. That inverted the onboarding order:
- * the abort landed before the designer handoff, and the design session is the one
- * thing that can author a devcontainer. A repo without one was told to go and
- * write it by hand before it was allowed to continue.
- *
- * So the requirement is now a notice. `init` still looks, still says what it
- * found, and hands over — the design session writes the config, and the first
- * pipeline run is what verifies it builds.
+ * Devcontainer configuration is optional. Repositories without one use the
+ * managed `bun1` runtime by default, so its absence is a notice, not a gate.
  *
  * The check sits behind {@link DevcontainerNoticePorts} so both branches are
  * unit-testable without a repository on disk.
@@ -36,15 +29,12 @@ export const DEVCONTAINER_PRESENT_LABEL = "Devcontainer ready";
 export const DEVCONTAINER_MISSING_LABEL = "No devcontainer yet";
 
 /**
- * The notice itself. It names what will create the file and when, so the user
- * has nothing to do — the opposite of the old error, which asked them to author
- * a devcontainer by hand and re-run `init`.
+ * Explain the default runtime and the optional repository configuration.
  */
 export const DEVCONTAINER_NOTICE_MESSAGE =
-  "Scarn runs every step inside your project's devcontainer, and this " +
-  "repository does not have one yet. Nothing to do: `scarn pipelines design` " +
-  "will write a `.devcontainer/devcontainer.json` during the session, and your " +
-  "first pipeline run is what verifies it builds.";
+  "This repository has no devcontainer configuration. Scarn uses the managed " +
+  "`bun1` runtime by default. No action is required: optionally add " +
+  "`.devcontainer/devcontainer.json` to use a project-specific devcontainer.";
 
 /**
  * Report whether the repository has a devcontainer, as a notice rather than a

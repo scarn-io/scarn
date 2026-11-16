@@ -19,7 +19,6 @@ import { FakeControlSupervisor } from "./helpers/fake-control-supervisor";
 const projectBody = {
   projectRef: "acme/app",
   repoDir: "/repos/app",
-  sourceBranch: "main",
   baseUrl: "https://scarn.test",
   addedByUserId: "user-1",
   concurrency: 2,

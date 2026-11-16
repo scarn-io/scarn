@@ -1,19 +1,21 @@
 import { describe, expect, test } from "bun:test";
 import {
   MAX_REPO_COMMIT_MESSAGE_LENGTH,
-  REPO_RUNTIME_SUPPORT,
   findDisallowedCommitMessageTokenRoots,
   repoConfigInputSchema,
   repoConfigSchema,
-  repoRuntimeMismatch,
   resolveRepoConfig,
   type RepoConfig,
-  type RepoMode,
 } from "../src/repo-config";
+
+const READ_ONLY_DEFAULTS = { baseBranch: null } as const;
+const READ_WRITE_DEFAULTS = {
+  ...READ_ONLY_DEFAULTS,
+  workBranch: { kind: "create" },
+} as const;
 
 describe("repoConfigInputSchema", () => {
   test.each([
-    [{ mode: "none" }],
     [{ mode: "readOnly" }],
     [{ mode: "readWrite" }],
     [{ mode: "readWrite", message: "fix: {{result.summary}}" }],
@@ -28,6 +30,7 @@ describe("repoConfigInputSchema", () => {
 
   test.each([
     [{}, "no mode"],
+    [{ mode: "none" }, "removed mode"],
     [{ mode: "write" }, "unknown mode"],
     [{ mode: "read_write" }, "snake_case mode"],
     [{ mode: "none", message: "x" }, "message on none"],
@@ -45,20 +48,22 @@ describe("repoConfigInputSchema", () => {
 
   test("a resolved RepoConfig is a valid input", () => {
     const resolved: RepoConfig[] = [
-      { mode: "none" },
-      { mode: "readOnly", gitCredentials: "auto" },
-      { mode: "readOnly", gitCredentials: "none" },
+      { mode: "readOnly", gitCredentials: "auto", ...READ_ONLY_DEFAULTS },
+      { mode: "readOnly", gitCredentials: "none", ...READ_ONLY_DEFAULTS },
       {
         mode: "readWrite",
         message: null,
         onPushFailure: "fail",
         gitCredentials: "auto",
+        ...READ_WRITE_DEFAULTS,
       },
       {
         mode: "readWrite",
         message: "x {{input.a}}",
         onPushFailure: "warn",
         gitCredentials: "none",
+        baseBranch: "ephemeral-{{env.TICKET}}",
+        workBranch: { kind: "base" },
       },
     ];
     for (const config of resolved) {
@@ -70,19 +75,20 @@ describe("repoConfigInputSchema", () => {
 describe("repoConfigSchema", () => {
   test("accepts every resolved shape", () => {
     for (const config of [
-      { mode: "none" },
-      { mode: "readOnly", gitCredentials: "auto" },
+      { mode: "readOnly", gitCredentials: "auto", ...READ_ONLY_DEFAULTS },
       {
         mode: "readWrite",
         message: null,
         onPushFailure: "fail",
         gitCredentials: "auto",
+        ...READ_WRITE_DEFAULTS,
       },
       {
         mode: "readWrite",
         message: "m",
         onPushFailure: "warn",
         gitCredentials: "none",
+        ...READ_WRITE_DEFAULTS,
       },
     ]) {
       expect(repoConfigSchema.safeParse(config).success).toBe(true);
@@ -98,6 +104,7 @@ describe("repoConfigSchema", () => {
         mode: "readWrite",
         onPushFailure: "fail",
         gitCredentials: "auto",
+        ...READ_WRITE_DEFAULTS,
       }).success,
     ).toBe(false);
     expect(
@@ -105,6 +112,7 @@ describe("repoConfigSchema", () => {
         mode: "readWrite",
         message: null,
         gitCredentials: "auto",
+        ...READ_WRITE_DEFAULTS,
       }).success,
     ).toBe(false);
     expect(
@@ -210,79 +218,83 @@ describe("commit message rule", () => {
   });
 });
 
-describe("compatibility table", () => {
-  const cells: Array<[RepoMode, "workspace" | "no_workspace", boolean]> = [
-    ["readWrite", "workspace", true],
-    ["readOnly", "workspace", true],
-    ["none", "workspace", false],
-    ["readWrite", "no_workspace", false],
-    ["readOnly", "no_workspace", false],
-    ["none", "no_workspace", true],
-  ];
-
-  test.each(cells)("%s on %s: supported=%p", (mode, executionMode, ok) => {
-    const mismatch = repoRuntimeMismatch(executionMode, mode);
-    expect(mismatch === null).toBe(ok);
-  });
-
-  test("states why each runtime rejects", () => {
-    expect(repoRuntimeMismatch("no_workspace", "readWrite")).toBe(
-      "a host step has no clone",
-    );
-    expect(repoRuntimeMismatch("workspace", "none")).toBe(
-      "a devcontainer step reads its config from the clone",
-    );
-  });
-
-  test("each default is one of the runtime's own modes", () => {
-    for (const support of Object.values(REPO_RUNTIME_SUPPORT)) {
-      expect(support.modes).toContain(support.default);
-    }
-  });
-});
-
 describe("resolveRepoConfig", () => {
-  test("an omitted repo becomes readWrite for a workspace step", () => {
-    expect(resolveRepoConfig("workspace", undefined)).toEqual({
+  test("an omitted repo becomes readWrite", () => {
+    expect(resolveRepoConfig()).toEqual({
       mode: "readWrite",
       message: null,
       onPushFailure: "fail",
       gitCredentials: "auto",
+      ...READ_WRITE_DEFAULTS,
     });
   });
 
-  test("an omitted repo becomes none for a no_workspace step", () => {
-    expect(resolveRepoConfig("no_workspace", undefined)).toEqual({
-      mode: "none",
+  test("an explicitly undefined repo becomes readWrite", () => {
+    expect(resolveRepoConfig(undefined)).toEqual({
+      mode: "readWrite",
+      message: null,
+      onPushFailure: "fail",
+      gitCredentials: "auto",
+      ...READ_WRITE_DEFAULTS,
     });
   });
 
   test("null is treated as omitted", () => {
-    expect(resolveRepoConfig("workspace", null)).toEqual(
-      resolveRepoConfig("workspace", undefined),
-    );
+    expect(resolveRepoConfig(null)).toEqual(resolveRepoConfig());
+  });
+
+  test("host read policies retain explicit options", () => {
+    expect(
+      resolveRepoConfig({
+        mode: "readOnly",
+        gitCredentials: "none",
+      }),
+    ).toEqual({
+      mode: "readOnly",
+      gitCredentials: "none",
+      ...READ_ONLY_DEFAULTS,
+    });
+    expect(
+      resolveRepoConfig({
+        mode: "readWrite",
+        message: "fix: {{result.summary}}",
+        onPushFailure: "warn",
+        gitCredentials: "none",
+      }),
+    ).toEqual({
+      mode: "readWrite",
+      message: "fix: {{result.summary}}",
+      onPushFailure: "warn",
+      gitCredentials: "none",
+      ...READ_WRITE_DEFAULTS,
+    });
+    expect(resolveRepoConfig({ mode: "readOnly" })).toEqual({
+      mode: "readOnly",
+      gitCredentials: "auto",
+      ...READ_ONLY_DEFAULTS,
+    });
   });
 
   test("readWrite fills an omitted message, onPushFailure and gitCredentials", () => {
-    expect(resolveRepoConfig("workspace", { mode: "readWrite" })).toEqual({
+    expect(resolveRepoConfig({ mode: "readWrite" })).toEqual({
       mode: "readWrite",
       message: null,
       onPushFailure: "fail",
       gitCredentials: "auto",
+      ...READ_WRITE_DEFAULTS,
     });
   });
 
   test("readWrite fills only the omitted field", () => {
-    expect(
-      resolveRepoConfig("workspace", { mode: "readWrite", message: "m" }),
-    ).toEqual({
+    expect(resolveRepoConfig({ mode: "readWrite", message: "m" })).toEqual({
       mode: "readWrite",
       message: "m",
       onPushFailure: "fail",
       gitCredentials: "auto",
+      ...READ_WRITE_DEFAULTS,
     });
     expect(
-      resolveRepoConfig("workspace", {
+      resolveRepoConfig({
         mode: "readWrite",
         onPushFailure: "warn",
       }),
@@ -291,9 +303,10 @@ describe("resolveRepoConfig", () => {
       message: null,
       onPushFailure: "warn",
       gitCredentials: "auto",
+      ...READ_WRITE_DEFAULTS,
     });
     expect(
-      resolveRepoConfig("workspace", {
+      resolveRepoConfig({
         mode: "readWrite",
         gitCredentials: "none",
       }),
@@ -302,49 +315,56 @@ describe("resolveRepoConfig", () => {
       message: null,
       onPushFailure: "fail",
       gitCredentials: "none",
+      ...READ_WRITE_DEFAULTS,
     });
   });
 
-  test("readOnly fills gitCredentials and none passes through", () => {
-    expect(resolveRepoConfig("workspace", { mode: "readOnly" })).toEqual({
+  test("readOnly fills gitCredentials and preserves explicit none credentials", () => {
+    expect(resolveRepoConfig({ mode: "readOnly" })).toEqual({
       mode: "readOnly",
       gitCredentials: "auto",
+      ...READ_ONLY_DEFAULTS,
     });
     expect(
-      resolveRepoConfig("workspace", {
+      resolveRepoConfig({
         mode: "readOnly",
         gitCredentials: "none",
       }),
-    ).toEqual({ mode: "readOnly", gitCredentials: "none" });
-    expect(resolveRepoConfig("no_workspace", { mode: "none" })).toEqual({
-      mode: "none",
+    ).toEqual({
+      mode: "readOnly",
+      gitCredentials: "none",
+      ...READ_ONLY_DEFAULTS,
     });
   });
 
   test("is idempotent on a resolved config", () => {
-    const resolved = resolveRepoConfig("workspace", {
+    const resolved = resolveRepoConfig({
       mode: "readWrite",
       message: "{{result.summary}}",
       onPushFailure: "warn",
       gitCredentials: "none",
     });
-    expect(resolveRepoConfig("workspace", resolved)).toEqual(resolved);
+    expect(resolveRepoConfig(resolved)).toEqual(resolved);
   });
 
   test("output satisfies repoConfigSchema", () => {
-    for (const [executionMode, input] of [
-      ["workspace", undefined],
-      ["workspace", { mode: "readOnly" }],
-      ["workspace", { mode: "readOnly", gitCredentials: "none" }],
-      ["workspace", { mode: "readWrite", message: "m" }],
-      ["workspace", { mode: "readWrite", gitCredentials: "none" }],
-      ["no_workspace", undefined],
-      ["no_workspace", { mode: "none" }],
+    for (const input of [
+      undefined,
+      { mode: "readOnly" },
+      { mode: "readOnly", gitCredentials: "none" },
+      { mode: "readWrite", message: "m" },
+      { mode: "readWrite", gitCredentials: "none" },
+      {
+        mode: "readWrite",
+        message: "m",
+        onPushFailure: "warn",
+        gitCredentials: "none",
+        ...READ_WRITE_DEFAULTS,
+      },
     ] as const) {
-      expect(
-        repoConfigSchema.safeParse(resolveRepoConfig(executionMode, input))
-          .success,
-      ).toBe(true);
+      expect(repoConfigSchema.safeParse(resolveRepoConfig(input)).success).toBe(
+        true,
+      );
     }
   });
 });

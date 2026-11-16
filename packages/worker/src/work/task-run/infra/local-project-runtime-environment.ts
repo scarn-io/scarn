@@ -1,46 +1,34 @@
 import path from "node:path";
-import type { RepoConfig } from "@scarn/sdk/repo-config";
+import { prepareLaunchEnvironment } from "./prepare-launch-environment";
+import {
+  cleanupSessionHome,
+  resolveSessionAgentHomeDir,
+} from "../../../runtime/runtime-service/infra/opencode-agent-home";
+import { startHostAgent } from "./local-host-agent-launch";
 import { removeWorkItemChanges } from "@scarn/sdk/contracts/work-item-changes";
 import {
   removeFindingsSubmissionFile,
-  type CurrentExecutionInfo,
   writeCurrentExecutionInfoFile,
 } from "../application/process-project-work-findings";
-import type { OpenCodeMcpServers } from "../../../common/contracts/opencode-mcp";
-import type { UuidV7 } from "../../../common/contracts/uuid-v7";
 import type {
   AgentRuntime,
-  ProjectWorkLogger,
-  RepoContextLaunchInput,
-  TaskRuntimeEnvironment,
-  TaskRuntimeEnvironmentOrchestrator,
+  LaunchedRuntime,
+  LaunchedRuntimeOrchestrator,
 } from "../contracts/process-project-work-types";
 import { startStopwatch } from "../../../lib/elapsed";
-import type {
-  McpEnvRef,
-  ResolvedStepEnv,
-} from "../application/resolve-step-env";
 import { logWork } from "../application/work-logger";
-import {
-  writePreviousRunFiles,
-  type PreviousRunFilesInput,
-} from "../application/write-previous-run-files";
+import { writePreviousRunFiles } from "../application/write-previous-run-files";
 import { noopLogger, type Logger } from "@scarn/observability/logging/host";
-import { noopReporter, type WorkReporter } from "../contracts/work-reporter";
+import { noopReporter } from "../contracts/work-reporter";
 import {
   cleanupEnvironment,
   devcontainerHostEnv,
   inspectContainerHealthStatus,
-  patchDevcontainerEnv,
-  resolveDevcontainerConfig,
+  selectLaunchRuntimeConfig,
   resolveDevcontainerWorkspaceFolder,
 } from "./local-project-runtime-environment-helpers";
-import {
-  MANAGED_RUNTIME_INSTALL_ARTIFACT_PATHS,
-  resolveManagedRuntime,
-} from "../../../runtime/runtime-service/domain/managed-runtimes";
-import { writeManagedRuntimeConfig } from "../../../runtime/runtime-service/infra/managed-runtime-config";
-import { setUpLaunchBranches } from "./launch-branch-setup";
+import { MANAGED_RUNTIME_INSTALL_ARTIFACT_PATHS } from "../../../runtime/runtime-service/domain/managed-runtimes";
+import type { ResolvedManagedRuntime } from "../../../runtime/runtime-service/domain/managed-runtimes";
 import { buildCommitAndPushWorkBranch } from "./work-branch-manager";
 import {
   agentLaunchSecretValues,
@@ -53,19 +41,13 @@ import {
 } from "./local-project-runtime-environment-deps";
 import { prepareGitCredentialRelay } from "./local-project-git-credentials";
 
-export type LocalProjectRuntimeEnvironment = TaskRuntimeEnvironment;
+export type LocalProjectRuntimeEnvironment = LaunchedRuntime;
 
 export type LocalProjectRuntimeEnvironmentOrchestrator =
-  TaskRuntimeEnvironmentOrchestrator;
+  LaunchedRuntimeOrchestrator;
 
 /**
- * Single-container launch orchestrator.
- *
- * The runtime is exactly one container: the user's devcontainer. OpenCode runs
- * INSIDE it (Phase 3 bootstrap), so there is no separate AI container, session
- * network, cross-container port-forward, or env read-back/inject step. User
- * `.opencode/tools` files and `plugin[]` entries are trusted and loaded directly
- * by the in-container OpenCode, so there is no MCP-host indirection.
+ * Checkout lifecycle shared by host and container launches.
  */
 export class DefaultLocalProjectRuntimeEnvironmentOrchestrator implements LocalProjectRuntimeEnvironmentOrchestrator {
   /**
@@ -77,95 +59,11 @@ export class DefaultLocalProjectRuntimeEnvironmentOrchestrator implements LocalP
     private readonly fixedDeps?: LocalProjectRuntimeEnvironmentDeps,
   ) {}
 
-  async launch(input: {
-    /** See `TaskRuntimeEnvironmentOrchestrator.launch`'s `startAgent`. */
-    startAgent: boolean;
-    sessionId: UuidV7;
-    projectId: UuidV7;
-    requestedByUserId: UuidV7;
-    gitUrl: string;
-    claimToken: string;
-    onSecretValues?: ((values: readonly string[]) => void) | undefined;
-    /**
-     * The branch a later step must be created off of, handed down by the server
-     * (the predecessor step's work branch). Takes precedence over any repo-local
-     * configured base branch. Null for the first step.
-     */
-    baseWorkBranch?: string | null | undefined;
-    /**
-     * The CLI's resolved (or explicitly overridden) current local branch at
-     * `scarn work` invocation. Checked out immediately after clone for the
-     * FIRST step of a pipeline attempt only (when `baseWorkBranch` above is
-     * absent) — takes precedence over the repo-local configured base branch,
-     * which in turn falls back to the cloned default branch. Ignored entirely
-     * when `baseWorkBranch` is present (a later step).
-     */
-    sourceBranch?: string | null | undefined;
-    /** See `TaskRuntimeEnvironmentOrchestrator.launch`'s `localEnvVars`. */
-    localEnvVars?: Readonly<Record<string, string>> | undefined;
-    stepKey?: string | undefined;
-    opencodeMcpJson?: OpenCodeMcpServers | null | undefined;
-    currentExecutionInfo: CurrentExecutionInfo;
-    reporter?: WorkReporter | undefined;
-    taskRunId?: string | undefined;
-    /**
-     * Optional sink for individual devcontainer launch log lines. Wired to the
-     * step's log shipper so the CLI's real subprocess output (npm/pip/`init.sh`
-     * stderr, submodule clones, etc.) is streamed to the durable feed as it
-     * appears, at the CLI's own severity. Separate from `reporter`, which is
-     * presentation-only.
-     */
-    onDevcontainerLogLine?:
-      ((line: string, level: "info" | "warn" | "error") => void) | undefined;
-    /**
-     * Opt-in hook that bakes a fake AI provider into the launch-time inline
-     * config, pointed at `baseUrl`, instead of PATCHing `/config` on an
-     * already-running agent (proven to have zero live effect — see #109).
-     * Set by `run --dry-run` (#109/#110) and, since #120, by real step
-     * execution for steps that declare `healthChecks` — a step declaring none
-     * never sets this field, so it launches unaffected exactly as before.
-     */
-    fakeAiProviderOverride?: { baseUrl: string } | undefined;
-    /** See `TaskRuntimeEnvironmentOrchestrator.launch`'s `stepEnv`. */
-    stepEnv?: Readonly<Record<string, string>> | undefined;
-    /** See `TaskRuntimeEnvironmentOrchestrator.launch`'s `setupEnv`. */
-    setupEnv?: Readonly<Record<string, string>> | undefined;
-    /** See `TaskRuntimeEnvironmentOrchestrator.launch`'s `resolveMcpEnv`. */
-    resolveMcpEnv?:
-      ((refs: readonly McpEnvRef[]) => ResolvedStepEnv) | undefined;
-    /** See `TaskRuntimeEnvironmentOrchestrator.launch`'s `preserveRuntimeOnFailure`. */
-    preserveRuntimeOnFailure?: boolean | undefined;
-    /** See `TaskRuntimeEnvironmentOrchestrator.launch`'s `devcontainerConfigPath`. */
-    devcontainerConfigPath?: string | null | undefined;
-    /** See `TaskRuntimeEnvironmentOrchestrator.launch`'s `managedRuntime`. */
-    managedRuntime?: string | null | undefined;
-    /** See `TaskRuntimeEnvironmentOrchestrator.launch`'s `repo`. */
-    repo: RepoConfig;
-    /** See `TaskRuntimeEnvironmentOrchestrator.launch`'s `stepInputJson`. */
-    stepInputJson?: unknown;
-    /** See `TaskRuntimeEnvironmentOrchestrator.launch`'s `loadCommitWorkItem`. */
-    loadCommitWorkItem?:
-      | (() => Promise<{ title: string; platformKey: string } | null>)
-      | undefined;
-    /** See `TaskRuntimeEnvironmentOrchestrator.launch`'s `previousRun`. */
-    previousRun?: PreviousRunFilesInput | undefined;
-    /** See `TaskRuntimeEnvironmentOrchestrator.launch`'s `repoContext`. */
-    repoContext?: RepoContextLaunchInput | undefined;
-    /**
-     * Receives the clone and work-branch timing lines at info level. Wired to
-     * the step's tee logger so they ship in the durable log feed.
-     */
-    logger?: ProjectWorkLogger | undefined;
-  }): Promise<LocalProjectRuntimeEnvironment> {
-    if (input.repo.mode === "none") {
-      throw new Error(
-        'A workspace step cannot use repo mode "none": it clones the repository ' +
-          "to read its devcontainer config. Use readOnly or readWrite.",
-      );
-    }
-    const managedRuntime = input.managedRuntime
-      ? resolveManagedRuntime(input.managedRuntime)
-      : null;
+  async launch(
+    input: Parameters<LaunchedRuntimeOrchestrator["launch"]>[0],
+  ): Promise<LocalProjectRuntimeEnvironment> {
+    const { repo } = input;
+    let managedRuntime: ResolvedManagedRuntime | null = null;
     const reporter = input.reporter ?? noopReporter;
     const taskRunId = input.taskRunId ?? input.currentExecutionInfo.taskRunId;
     const localEnvVars = input.localEnvVars ?? {};
@@ -174,6 +72,10 @@ export class DefaultLocalProjectRuntimeEnvironmentOrchestrator implements LocalP
     let workspacePath: string | null = null;
     let devcontainerId: string | null = null;
     let agent: AgentRuntime | null = null;
+    let hostPid: number | null = null;
+    let sessionAgentHomeDir: string | null = null;
+    let payloadVersion: string | null = null;
+    let secretValues: readonly string[] = [];
     let gitCredentialRelay: { stop(): Promise<void> } | null = null;
 
     try {
@@ -183,7 +85,6 @@ export class DefaultLocalProjectRuntimeEnvironmentOrchestrator implements LocalP
         requestedByUserId: input.requestedByUserId,
         gitUrl: input.gitUrl,
         baseWorkBranch: input.baseWorkBranch ?? null,
-        sourceBranch: input.sourceBranch ?? null,
       });
 
       // Step 1: Create workspace + clone the repo into it.
@@ -191,10 +92,6 @@ export class DefaultLocalProjectRuntimeEnvironmentOrchestrator implements LocalP
         sessionId: input.sessionId,
       });
       workspacePath = workspace.workspacePath;
-      logWork("runtime", "Workspace created", {
-        sessionId: input.sessionId,
-        workspacePath,
-      });
 
       reporter.event({ type: "task:runtime-cloning", taskRunId });
       const elapsedClone = startStopwatch();
@@ -204,40 +101,30 @@ export class DefaultLocalProjectRuntimeEnvironmentOrchestrator implements LocalP
         logger: input.logger,
       });
       input.logger?.log("runtime", `repository cloned in ${elapsedClone()}`);
-      logWork("runtime", "Repository cloned into workspace", {
-        sessionId: input.sessionId,
-        workspacePath,
-        resolvedBranch: cloneResult.resolvedBranch,
-      });
 
-      // Step 1b: Check out the base and, for a readWrite step, create the work
-      // branch off it right after clone; a chat run is parked on its commit.
-      const { workBranch, createdFromBranch, devcontainerLookupBranch } =
-        await setUpLaunchBranches({
-          gitCommitPushService: deps.gitCommitPushService,
-          workspacePath,
-          resolvedBranch: cloneResult.resolvedBranch,
-          repo: input.repo,
-          stepKey: input.stepKey,
-          taskRunId: input.currentExecutionInfo.taskRunId,
-          baseWorkBranch: input.baseWorkBranch,
-          sourceBranch: input.sourceBranch,
-          localEnvVars: localEnvVars,
-          repoContextGit: deps.repoContextGit,
-          repoContext: input.repoContext,
-          logger: input.logger,
-        });
-
-      const currentExecutionInfoPath = await writeCurrentExecutionInfoFile(
+      const {
+        workBranch,
+        createdFromBranch,
+        submoduleWorkBranch,
+        devcontainerLookupBranch,
+        resolvedEnvironment,
+        environmentDiagnostics,
+        stepEnv,
+        setupEnv,
+        resolveMcpEnv,
+        fakeAiProviderOverride,
+        currentExecutionInfo,
+      } = await prepareLaunchEnvironment(
+        input,
+        deps,
         workspacePath,
-        input.currentExecutionInfo,
+        cloneResult.resolvedBranch,
       );
-      logWork("runtime", "Current execution metadata written", {
-        sessionId: input.sessionId,
-        workspacePath,
-        currentExecutionInfoPath,
-        taskRunId: input.currentExecutionInfo.taskRunId,
-      });
+      const isHost = resolvedEnvironment.runtime.kind === "host";
+      sessionAgentHomeDir = isHost
+        ? resolveSessionAgentHomeDir(input.sessionId)
+        : null;
+      await writeCurrentExecutionInfoFile(workspacePath, currentExecutionInfo);
       if (input.previousRun) {
         await writePreviousRunFiles(
           workspacePath,
@@ -253,162 +140,165 @@ export class DefaultLocalProjectRuntimeEnvironmentOrchestrator implements LocalP
       await removeFindingsSubmissionFile(workspacePath);
       await removeWorkItemChanges(workspacePath);
 
-      // Step 2: Resolve the devcontainer config + its workspace folder: the
-      // cloned repo's, or for a managed runtime one synthesized into the clone.
-      // Only a code step (no agent) runs pipeline-builder code, so only it
-      // installs the pipeline-builder dependencies.
-      const devcontainerConfigPath = managedRuntime
-        ? await writeManagedRuntimeConfig({
-            workspacePath,
-            id: managedRuntime.id,
-            installPipelineBuilder: !input.startAgent,
-          })
-        : await resolveDevcontainerConfig({
-            devcontainerLauncher: deps.devcontainerLauncher,
-            workspacePath,
-            requestedConfigPath: input.devcontainerConfigPath,
-            lookupBranch: devcontainerLookupBranch,
-          });
-      if (managedRuntime) {
-        input.logger?.log(
-          "runtime",
-          `managed runtime ${managedRuntime.id} (${managedRuntime.definition.image})`,
-        );
-      }
-      const devcontainerWorkspaceFolder =
-        await resolveDevcontainerWorkspaceFolder({
-          workspacePath,
-          devcontainerConfigPath,
-        });
-      // The agent-facing workspace folder inside the devcontainer: the declared
-      // workspaceFolder, or the CLI convention /workspaces/<basename>.
-      const agentWorkspaceFolder =
-        devcontainerWorkspaceFolder ??
-        `/workspaces/${path.basename(workspacePath)}`;
-      logWork("runtime", "Resolved devcontainer config", {
-        sessionId: input.sessionId,
-        devcontainerConfigPath,
-        devcontainerWorkspaceFolder,
-        agentWorkspaceFolder,
-      });
-
-      // Step 3a: Patch the cloned devcontainer.json before `up` with the
-      // containerEnv from .scarn/.env (baked in as `-e KEY=VALUE`).
-      if (Object.keys(localEnvVars).length > 0) {
-        await patchDevcontainerEnv(
-          workspacePath,
-          devcontainerConfigPath,
-          localEnvVars,
-        );
-        logWork("runtime", "Patched devcontainer.json with .scarn/.env vars", {
+      let devcontainerConfigPath = "";
+      let agentWorkspaceFolder = workspacePath;
+      if (isHost && sessionAgentHomeDir && input.startAgent) {
+        const started = await startHostAgent({
+          deps,
           sessionId: input.sessionId,
-          devcontainerConfigPath,
-          varCount: Object.keys(localEnvVars).length,
-          varNames: Object.keys(localEnvVars),
-        });
-      } else {
-        logWork("runtime", "No .scarn/.env vars to inject into devcontainer", {
-          sessionId: input.sessionId,
-        });
-      }
-
-      gitCredentialRelay = await prepareGitCredentialRelay({
-        deps: deps,
-        repo: input.repo,
-        sessionId: input.sessionId,
-        runContext: {
+          projectId: input.projectId,
+          requestedByUserId: input.requestedByUserId,
+          workspacePath,
+          sessionAgentHomeDir,
+          opencodeMcpJson: input.opencodeMcpJson,
+          connectors: resolvedEnvironment.connectors,
+          fakeAiProviderOverride,
+          stepEnv,
+          resolveMcpEnv,
+          reporter,
           taskRunId,
-          claimToken: input.claimToken,
-          repoGitUrl: input.gitUrl,
-        },
-        workspacePath,
-        devcontainerConfigPath,
-        logger: input.logger,
-        onSecretValues: input.onSecretValues,
-      });
-
-      // Step 3b: For steps that start an agent, resolve the step's MCP server
-      // refs and the env they need (a missing ref, or a required MCP's missing
-      // variable, fails here, before the container starts), ensure
-      // the OpenCode runtime payload, materialize provider access, and patch
-      // the devcontainer
-      // config with the payload mounts, published port and host-gateway
-      // runArgs. A step without an agent launches an unmodified devcontainer.
-      const plan = input.startAgent
-        ? await prepareAgentLaunch({
-            deps: deps,
-            sessionId: input.sessionId,
-            projectId: input.projectId,
-            requestedByUserId: input.requestedByUserId,
+          onAgentLogReady: input.onAgentLogReady,
+          onSecretValues: input.onSecretValues,
+        });
+        hostPid = started.pid;
+        agent = started.agent;
+        payloadVersion = started.payloadVersion;
+        secretValues = started.secretValues;
+      } else if (!isHost) {
+        // Step 2: Resolve the devcontainer config + its workspace folder: the
+        // cloned repo's, or for a managed runtime one synthesized into the clone.
+        // Only a code step (no agent) runs pipeline-builder code, so only it
+        // installs the pipeline-builder dependencies.
+        const selected = await selectLaunchRuntimeConfig({
+          devcontainerLauncher: deps.devcontainerLauncher,
+          workspacePath,
+          lookupBranch: devcontainerLookupBranch,
+          runtime: resolvedEnvironment.runtime,
+          startAgent: input.startAgent,
+        });
+        devcontainerConfigPath = selected.devcontainerConfigPath;
+        managedRuntime = selected.managedRuntime;
+        if (managedRuntime) {
+          input.logger?.log(
+            "runtime",
+            `managed runtime ${managedRuntime.id} (${managedRuntime.definition.image})`,
+          );
+        }
+        const devcontainerWorkspaceFolder =
+          await resolveDevcontainerWorkspaceFolder({
             workspacePath,
             devcontainerConfigPath,
-            agentWorkspaceFolder,
-            opencodeMcpJson: input.opencodeMcpJson,
-            stepEnv: input.stepEnv,
-            resolveMcpEnv: input.resolveMcpEnv,
-          })
-        : null;
-
-      // Step 4: Launch the devcontainer. Stream the CLI's lifecycle progress
-      // (notably the long-running postCreateCommand) to the reporter so the
-      // user sees real activity instead of a seemingly-frozen spinner.
-      reporter.event({
-        type: "task:runtime-container-starting",
-        taskRunId,
-      });
-      const devcontainerResult = await deps.devcontainerLauncher.launch({
-        sessionId: input.sessionId,
-        projectId: input.projectId,
-        requestedByUserId: input.requestedByUserId,
-        workspacePath,
-        devcontainerConfigPath,
-        ...devcontainerHostEnv(input.setupEnv, deps.gitCacheDir),
-        onProgress: ({ kind, phase, level }) => {
-          // Presentation: rolling live window in the terminal.
-          reporter.event({
-            type: "task:runtime-container-progress",
-            taskRunId,
-            kind,
-            phase,
-            level,
           });
-          // Durable feed: ship each line to the server as it appears, at the
-          // CLI's own severity so errors survive the ship-level filter.
-          input.onDevcontainerLogLine?.(phase, level);
-        },
-      });
-      devcontainerId = devcontainerResult.containerId;
-      logWork("runtime", "Devcontainer launched", {
-        sessionId: input.sessionId,
-        devcontainerId,
-      });
+        // The agent-facing workspace folder inside the devcontainer: the declared
+        // workspaceFolder, or the CLI convention /workspaces/<basename>.
+        agentWorkspaceFolder =
+          devcontainerWorkspaceFolder ??
+          `/workspaces/${path.basename(workspacePath)}`;
+        logWork("runtime", "Resolved devcontainer config", {
+          sessionId: input.sessionId,
+          devcontainerConfigPath,
+          devcontainerWorkspaceFolder,
+          agentWorkspaceFolder,
+        });
 
-      // Step 4b/5/6: With the container running, seed the agent HOME, build
-      // the OpenCode context, and start OpenCode inside the devcontainer.
-      // Skipped for steps that do not start an agent.
-      agent = plan
-        ? await startAgentInContainer({
-            deps: deps,
-            plan,
-            sessionId: input.sessionId,
-            containerId: devcontainerId,
-            workspacePath,
-            agentWorkspaceFolder,
-            fakeAiProviderOverride: input.fakeAiProviderOverride,
-            reporter,
+        gitCredentialRelay = await prepareGitCredentialRelay({
+          deps: deps,
+          repo,
+          sessionId: input.sessionId,
+          runContext: {
             taskRunId,
-          })
-        : null;
+            claimToken: input.claimToken,
+            repoGitUrl: input.gitUrl,
+          },
+          workspacePath,
+          devcontainerConfigPath,
+          logger: input.logger,
+          onSecretValues: input.onSecretValues,
+        });
 
-      logWork("runtime", "Local runtime environment ready", {
-        sessionId: input.sessionId,
-        workspacePath,
-        resolvedBranch: cloneResult.resolvedBranch,
-        devcontainerConfigPath,
-        devcontainerId,
-        agentBaseUrl: agent?.baseUrl ?? null,
-        opencodeRuntimeVersion: plan?.payload.version ?? null,
-      });
+        // Step 3b: For steps that start an agent, resolve the step's MCP server
+        // refs and the env they need (a missing ref, or a required MCP's missing
+        // variable, fails here, before the container starts), ensure
+        // the OpenCode runtime payload, materialize provider access, and patch
+        // the devcontainer
+        // config with the payload mounts, published port and host-gateway
+        // runArgs. A step without an agent launches an unmodified devcontainer.
+        const plan = input.startAgent
+          ? await prepareAgentLaunch({
+              deps: deps,
+              sessionId: input.sessionId,
+              projectId: input.projectId,
+              requestedByUserId: input.requestedByUserId,
+              workspacePath,
+              devcontainerConfigPath,
+              agentWorkspaceFolder,
+              opencodeMcpJson: input.opencodeMcpJson,
+              connectors: resolvedEnvironment.connectors,
+              stepEnv,
+              resolveMcpEnv,
+            })
+          : null;
+        payloadVersion = plan?.payload.version ?? null;
+        secretValues = plan ? agentLaunchSecretValues(plan) : [];
+        input.onSecretValues?.(secretValues);
+
+        // Step 4: Launch the devcontainer. Stream the CLI's lifecycle progress
+        // (notably the long-running postCreateCommand) to the reporter so the
+        // user sees real activity instead of a seemingly-frozen spinner.
+        reporter.event({
+          type: "task:runtime-container-starting",
+          taskRunId,
+        });
+        const devcontainerResult = await deps.devcontainerLauncher.launch({
+          sessionId: input.sessionId,
+          projectId: input.projectId,
+          requestedByUserId: input.requestedByUserId,
+          workspacePath,
+          devcontainerConfigPath,
+          ...devcontainerHostEnv(setupEnv, deps.gitCacheDir),
+          onProgress: ({ kind, phase, level }) => {
+            // Presentation: rolling live window in the terminal.
+            reporter.event({
+              type: "task:runtime-container-progress",
+              taskRunId,
+              kind,
+              phase,
+              level,
+            });
+            // Durable feed: ship each line to the server as it appears, at the
+            // CLI's own severity so errors survive the ship-level filter.
+            input.onDevcontainerLogLine?.(phase, level);
+          },
+        });
+        devcontainerId = devcontainerResult.containerId;
+
+        // Step 4b/5/6: With the container running, seed the agent HOME, build
+        // the OpenCode context, and start OpenCode inside the devcontainer.
+        // Skipped for steps that do not start an agent.
+        agent = plan
+          ? await startAgentInContainer({
+              deps: deps,
+              plan,
+              sessionId: input.sessionId,
+              containerId: devcontainerId,
+              workspacePath,
+              agentWorkspaceFolder,
+              fakeAiProviderOverride,
+              reporter,
+              taskRunId,
+            })
+          : null;
+
+        logWork("runtime", "Local runtime environment ready", {
+          sessionId: input.sessionId,
+          workspacePath,
+          resolvedBranch: cloneResult.resolvedBranch,
+          devcontainerConfigPath,
+          devcontainerId,
+          agentBaseUrl: agent?.baseUrl ?? null,
+          opencodeRuntimeVersion: payloadVersion,
+        });
+      }
 
       const checkableDevcontainerId = devcontainerId;
       const capturedDevcontainerId = devcontainerId;
@@ -416,27 +306,28 @@ export class DefaultLocalProjectRuntimeEnvironmentOrchestrator implements LocalP
       const capturedWorkBranch = workBranch;
 
       return {
+        resolvedEnvironment,
+        environmentDiagnostics,
         workspacePath,
-        // OpenCode runs inside the devcontainer, so the agent-facing workspace
-        // folder is the devcontainer's resolved workspace folder.
         workspaceFolder: agentWorkspaceFolder,
         resolvedBranch: cloneResult.resolvedBranch,
         workBranch,
         createdFromBranch,
         commitAndPushWorkBranch:
-          capturedWorkBranch && input.repo.mode === "readWrite"
+          capturedWorkBranch && repo.mode === "readWrite"
             ? buildCommitAndPushWorkBranch({
                 gitCommitPushService: deps.gitCommitPushService,
                 submoduleService: deps.submoduleService,
                 workspacePath: capturedWorkspacePath,
                 workBranch: capturedWorkBranch,
+                submoduleWorkBranch: submoduleWorkBranch ?? undefined,
                 taskRunId: input.currentExecutionInfo.taskRunId,
-                message: input.repo.message,
+                message: repo.message,
                 inputJson: input.stepInputJson,
                 loadWorkItem: input.loadCommitWorkItem,
-                onPushFailure: input.repo.onPushFailure,
+                onPushFailure: repo.onPushFailure,
                 extraExcludePaths: [
-                  devcontainerConfigPath,
+                  ...(devcontainerConfigPath ? [devcontainerConfigPath] : []),
                   ...(managedRuntime
                     ? MANAGED_RUNTIME_INSTALL_ARTIFACT_PATHS
                     : []),
@@ -450,28 +341,32 @@ export class DefaultLocalProjectRuntimeEnvironmentOrchestrator implements LocalP
         agent,
         // No AI image is used; surface the pinned OpenCode runtime version
         // (empty when no agent was started).
-        aiImage: plan ? `opencode-runtime@${plan.payload.version}` : "",
+        aiImage: payloadVersion ? `opencode-runtime@${payloadVersion}` : "",
         networkName: "",
         // Provider token(s) injected into the container (Path B). The caller
         // registers these with the log masker before the in-container tail is
         // attached so they can never surface in the shipped feed. Empty when
         // no agent was started: no provider env was materialized.
-        secretValues: plan ? agentLaunchSecretValues(plan) : [],
-        checkContainerHealth: async () => ({
-          runtimeContainerStatus: await inspectContainerHealthStatus(
-            checkableDevcontainerId,
-          ),
-        }),
+        secretValues,
+        ...(checkableDevcontainerId
+          ? {
+              checkContainerHealth: async () => ({
+                runtimeContainerStatus: await inspectContainerHealthStatus(
+                  checkableDevcontainerId,
+                ),
+              }),
+            }
+          : {}),
         cleanup: async () => {
-          // The agent HOME lives on the container's overlay fs and dies with
-          // the container, so no host-dir cleanup is needed — only stop the
-          // in-container OpenCode (when one was started) and tear down the
-          // container + workspace.
+          if (hostPid !== null) deps.hostOpencodeBootstrap.stop(hostPid);
           await Promise.allSettled([
-            agent
+            agent && capturedDevcontainerId
               ? deps.opencodeBootstrap.stop(capturedDevcontainerId)
               : Promise.resolve(),
             gitCredentialRelay?.stop(),
+            sessionAgentHomeDir
+              ? cleanupSessionHome(sessionAgentHomeDir)
+              : Promise.resolve(),
             cleanupEnvironment({
               workspacePath: capturedWorkspacePath,
               devcontainerId: capturedDevcontainerId,
@@ -482,6 +377,7 @@ export class DefaultLocalProjectRuntimeEnvironmentOrchestrator implements LocalP
       };
     } catch (error) {
       await gitCredentialRelay?.stop().catch(() => undefined);
+      if (hostPid !== null) deps.hostOpencodeBootstrap.stop(hostPid);
       if (input.preserveRuntimeOnFailure) {
         logWork(
           "runtime",
@@ -499,9 +395,10 @@ export class DefaultLocalProjectRuntimeEnvironmentOrchestrator implements LocalP
         sessionId: input.sessionId,
         error: error instanceof Error ? error.message : String(error),
       });
-      // No host agent-HOME cleanup: it lives on the container's overlay fs and
-      // dies with the container.
       await Promise.allSettled([
+        sessionAgentHomeDir
+          ? cleanupSessionHome(sessionAgentHomeDir)
+          : Promise.resolve(),
         agent && devcontainerId
           ? deps.opencodeBootstrap.stop(devcontainerId)
           : Promise.resolve(),

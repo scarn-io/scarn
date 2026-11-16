@@ -1,7 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import type { HealthCheck } from "@scarn/sdk/health-checks";
-import type { HealthCheckStep } from "../../../../src/work/task-run/application/plan-pipeline-health-check-launches";
 import {
+  planHealthCheckLaunches,
+  type HealthCheckStep,
+} from "../../../../src/work/task-run/application/plan-pipeline-health-check-launches";
+import {
+  buildPipelineHealthCheckRuntimeInput,
   runPipelineHealthCheckLaunches,
   type HealthCheckLaunchOutcome,
   type RunHealthCheckLaunch,
@@ -37,12 +41,9 @@ function step(
   return {
     stepDefinitionId: `id-${overrides.key}`,
     name: `Step ${overrides.key}`,
-    executionMode: "workspace",
-    devcontainerConfigPath: null,
-    managedRuntime: null,
+    environment: null,
     opencodeMcpJson: null,
     healthChecksJson: [cliCheck(`${overrides.key}-check`, "required")],
-    envJson: null,
     ...overrides,
   };
 }
@@ -85,6 +86,16 @@ function fakeLaunch(
     }
     const outcome: HealthCheckLaunchOutcome = {
       kind: "ran",
+      resolvedEnvironment: {
+        source: launch.runtime === null ? "repo-default" : launch.runtime.kind,
+        runtime:
+          launch.runtime?.kind === "inline" &&
+          launch.runtime.runtime?.kind === "host"
+            ? { kind: "host" }
+            : { kind: "managed", id: "bun1" },
+        envVars: [],
+        connectors: [],
+      },
       health: options.health ?? HEALTHY,
       healthChecksByStep: new Map(
         launch.steps.map((entry) => [
@@ -109,6 +120,69 @@ const failed = (detail: string): HealthCheckReport["outcome"] => ({
   detail,
 });
 
+describe("buildPipelineHealthCheckRuntimeInput", () => {
+  test("preserves repository-default and explicit environment references", () => {
+    const plan = planHealthCheckLaunches([
+      step({ key: "default" }),
+      step({
+        key: "host",
+        environment: { kind: "inline", runtime: { kind: "host" } },
+      }),
+      step({
+        key: "managed",
+        environment: {
+          kind: "inline",
+          runtime: { kind: "managed", id: "node24" },
+        },
+      }),
+      step({
+        key: "pathless-dev",
+        environment: { kind: "inline", runtime: { kind: "devcontainer" } },
+      }),
+      step({
+        key: "custom-dev",
+        environment: {
+          kind: "inline",
+          runtime: {
+            kind: "devcontainer",
+            config: ".devcontainer/custom.json",
+          },
+        },
+      }),
+    ]);
+    expect(
+      plan.launches.map((launch) =>
+        buildPipelineHealthCheckRuntimeInput(launch.runtime),
+      ),
+    ).toEqual([
+      {
+        environment: null,
+      },
+      {
+        environment: { kind: "inline", runtime: { kind: "host" } },
+      },
+      {
+        environment: {
+          kind: "inline",
+          runtime: { kind: "managed", id: "node24" },
+        },
+      },
+      {
+        environment: { kind: "inline", runtime: { kind: "devcontainer" } },
+      },
+      {
+        environment: {
+          kind: "inline",
+          runtime: {
+            kind: "devcontainer",
+            config: ".devcontainer/custom.json",
+          },
+        },
+      },
+    ]);
+  });
+});
+
 describe("runPipelineHealthCheckLaunches", () => {
   test("one launch per runtime, and every step with checks is reported in pipeline order", async () => {
     const { runLaunch, launches } = fakeLaunch();
@@ -117,12 +191,12 @@ describe("runPipelineHealthCheckLaunches", () => {
       steps: [
         step({
           key: "evaluate",
-          executionMode: "no_workspace",
+          environment: { kind: "inline", runtime: { kind: "host" } },
           healthChecksJson: null,
         }),
         step({
           key: "request-details",
-          executionMode: "no_workspace",
+          environment: { kind: "inline", runtime: { kind: "host" } },
           healthChecksJson: null,
         }),
         step({ key: "investigate" }),
@@ -144,7 +218,9 @@ describe("runPipelineHealthCheckLaunches", () => {
       "evaluate",
       "request-details",
     ]);
-    expect(result.steps[0]?.runtime).toBe("project devcontainer");
+    expect(result.steps[0]?.runtime).toBe(
+      "repository default (managed runtime bun1)",
+    );
   });
 
   test("a required failure blocks and is attributed to its own step only", async () => {
@@ -230,7 +306,10 @@ describe("runPipelineHealthCheckLaunches", () => {
     const result = await runPipelineHealthCheckLaunches({
       pipelineDefinitionId: "pipeline-1",
       steps: [
-        step({ key: "host", executionMode: "no_workspace" }),
+        step({
+          key: "host",
+          environment: { kind: "inline", runtime: { kind: "host" } },
+        }),
         step({ key: "dev" }),
         step({ key: "dev-2" }),
       ],
@@ -249,7 +328,7 @@ describe("runPipelineHealthCheckLaunches", () => {
       ["dev-2", "environment"],
     ]);
     expect(blocking[0]?.message).toBe(
-      "project devcontainer failed to launch: devcontainer build failed",
+      "repository default failed to launch: devcontainer build failed",
     );
   });
 
@@ -259,7 +338,10 @@ describe("runPipelineHealthCheckLaunches", () => {
       pipelineDefinitionId: "pipeline-1",
       steps: [
         step({ key: "dev" }),
-        step({ key: "host", executionMode: "no_workspace" }),
+        step({
+          key: "host",
+          environment: { kind: "inline", runtime: { kind: "host" } },
+        }),
       ],
       runLaunch: (launch) => {
         const keys = launch.steps.map((entry) => entry.key);
@@ -279,7 +361,7 @@ describe("runPipelineHealthCheckLaunches", () => {
     ]);
   });
 
-  test("an unhealthy OpenCode blocks; a failed MCP handshake is shown but does not", async () => {
+  test("an unhealthy OpenCode blocks; a step MCP server that is not connected blocks its step", async () => {
     const unhealthy = await runPipelineHealthCheckLaunches({
       pipelineDefinitionId: "pipeline-1",
       steps: [step({ key: "a" })],
@@ -293,7 +375,8 @@ describe("runPipelineHealthCheckLaunches", () => {
     expect(unhealthy.ok).toBe(false);
     expect(listStepHealthCheckFindings(unhealthy.steps)[0]).toMatchObject({
       checkName: "environment",
-      message: "project devcontainer: OpenCode unhealthy (timeout)",
+      message:
+        "repository default (managed runtime bun1): OpenCode unhealthy (timeout)",
       blocking: true,
     });
 
@@ -317,13 +400,17 @@ describe("runPipelineHealthCheckLaunches", () => {
         },
       }).runLaunch,
     });
-    expect(handshake.ok).toBe(true);
+    expect(handshake.ok).toBe(false);
     const findings = listStepHealthCheckFindings(handshake.steps).filter(
       (finding) => finding.checkName === "mcp db",
     );
-    // Only the step that declares the server is told about its handshake.
+    // Only the step that declares the server is gated on it.
     expect(
-      findings.map((finding) => [finding.stepKey, finding.blocking]),
-    ).toEqual([["a", false]]);
+      findings.map((finding) => [
+        finding.stepKey,
+        finding.blocking,
+        finding.message,
+      ]),
+    ).toEqual([["a", true, "not connected (failed): ECONNREFUSED"]]);
   });
 });

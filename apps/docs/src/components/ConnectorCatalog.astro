@@ -1,0 +1,70 @@
+---
+/*
+  Renders the connector catalog from `CONNECTOR_CATALOG` in `@scarn/sdk` at
+  build time, so the docs list exactly the connectors the SDK and worker
+  accept. Used by reference/connectors.mdx.
+*/
+import { CONNECTOR_CATALOG } from "@scarn/sdk/connectors";
+
+const connectors = Object.values(CONNECTOR_CATALOG).sort((a, b) =>
+  a.id.localeCompare(b.id),
+);
+
+const AUTH_LABELS = {
+  none: "None",
+  apiKey: "API key",
+} as const;
+
+function runsAs(mcp: (typeof connectors)[number]["mcp"]): string {
+  return mcp.type === "local"
+    ? `Local: ${mcp.command.join(" ")}`
+    : `Remote: ${mcp.url}`;
+}
+---
+
+{
+  connectors.map((connector) => (
+    <section>
+      <h2 id={connector.id}>
+        {connector.name} (<code>{connector.id}</code>)
+      </h2>
+      <p>{connector.description}</p>
+      <table>
+        <tbody>
+          <tr>
+            <th scope="row">Id</th>
+            <td>
+              <code>{connector.id}</code>
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">Auth</th>
+            <td>{AUTH_LABELS[connector.auth]}</td>
+          </tr>
+          <tr>
+            <th scope="row">Runs as</th>
+            <td>
+              <code>{runsAs(connector.mcp)}</code>
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">Required vars</th>
+            <td>
+              {connector.requiredVars.length === 0 ? (
+                "None"
+              ) : (
+                <ul>
+                  {connector.requiredVars.map((variable) => (
+                    <li>
+                      <code>{variable.name}</code>: {variable.description}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+  ))
+}

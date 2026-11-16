@@ -6,7 +6,6 @@ import {
   listPinnedStepDefinitionIds,
   readActivePipelineVersion,
   readLocalEnvVars,
-  resolveSourceBranch,
   runPipelineHealthChecksDryRun,
 } from "@scarn/worker";
 import { connectApi, describeApiError } from "./cli-api-client";
@@ -108,24 +107,39 @@ export async function resolveAssignedPipeline(input: {
 }
 
 /**
- * The two step-definition fields that decide where a step executes. Parsed for
- * the same reason as {@link firstPipelineKeyOf}: the generated type
- * collapses the nullable `managedRuntime` to `unknown`.
+ * The environment reference that decides where a step executes.
  */
 export const stepRuntimeTargetSchema = z.object({
-  executionMode: z.enum(["workspace", "no_workspace"]),
-  managedRuntime: z.string().nullable(),
+  environment: z.union([
+    z.null(),
+    z.object({
+      kind: z.literal("inline"),
+      runtime: z
+        .discriminatedUnion("kind", [
+          z.object({ kind: z.literal("host") }),
+          z.object({ kind: z.literal("managed"), id: z.string() }),
+          z.object({
+            kind: z.literal("devcontainer"),
+            config: z.string().optional(),
+          }),
+        ])
+        .optional(),
+    }),
+    z.object({ kind: z.literal("named"), name: z.string() }),
+  ]),
 });
 
 export type StepRuntimeTarget = z.infer<typeof stepRuntimeTargetSchema>;
 
 /**
- * A step runs inside the project's devcontainer only when it needs a workspace
- * and no managed runtime supplies the container. `no_workspace` steps run on
- * the host; managed-runtime steps run in a Scarn-provided image.
+ * Only explicit devcontainer selections are known to need a devcontainer.
+ * Repository defaults and named references are resolved by the worker.
  */
 export function stepNeedsProjectDevcontainer(step: StepRuntimeTarget): boolean {
-  return step.executionMode === "workspace" && step.managedRuntime === null;
+  return (
+    step.environment?.kind === "inline" &&
+    step.environment.runtime?.kind === "devcontainer"
+  );
 }
 
 /**
@@ -228,14 +242,7 @@ export async function runPipelineHealthDryRun(input: {
   builderDir: string;
   reporter: BaseReporter;
 }): Promise<DryRunGateResult> {
-  const [localEnvVars, sourceBranchResult] = await Promise.all([
-    readLocalEnvVars(process.cwd()),
-    resolveSourceBranch({ cwd: process.cwd(), override: undefined }),
-  ]);
-
-  if (sourceBranchResult.warning) {
-    input.reporter.warn(sourceBranchResult.warning);
-  }
+  const localEnvVars = await readLocalEnvVars(process.cwd());
 
   const result = toDryRunGateResult(
     await runPipelineHealthChecksDryRun({
@@ -244,7 +251,6 @@ export async function runPipelineHealthDryRun(input: {
       pipelineDefinitionId: input.pipelineDefinitionId,
       dest: createTransport(),
       localEnvVars,
-      sourceBranch: sourceBranchResult.branch,
     }),
   );
 

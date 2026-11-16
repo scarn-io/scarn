@@ -88,6 +88,7 @@ function makeSpec(overrides?: Partial<StepDefinitionSpec>): StepDefinitionSpec {
     version: 1,
     kind: "user_defined",
     status: "active",
+    environment: null,
     prompt: "Investigate the issue.",
     inputSchemaJson: null,
     resultSchemaJson: null,
@@ -177,7 +178,7 @@ describe("createStepDefinitionsClient.upsertFromSpec", () => {
     }
   });
 
-  test("sends managedRuntime in the request body", async () => {
+  test("sends an inline managed runtime in the request body", async () => {
     const { mockFetch, captured } = createMockFetch([
       { status: 200, body: { id: "step-id" } },
     ]);
@@ -187,10 +188,25 @@ describe("createStepDefinitionsClient.upsertFromSpec", () => {
       const client = createStepDefinitionsClient(BASE_URL);
       await client.upsertFromSpec(
         "proj-1",
-        makeSpec({ kind: "code", prompt: null, managedRuntime: "bun1" }),
+        makeSpec({
+          kind: "code",
+          prompt: null,
+          environment: {
+            kind: "inline",
+            runtime: { kind: "managed", id: "bun1" },
+            envJson: null,
+          },
+        }),
         { headers: AUTH_HEADER },
       );
-      expect(captured[0]?.body).toMatchObject({ managedRuntime: "bun1" });
+      expect(captured[0]?.body).toMatchObject({
+        environment: {
+          kind: "inline",
+          runtime: { kind: "managed", id: "bun1" },
+          envJson: null,
+        },
+      });
+      expect(captured[0]?.body).not.toHaveProperty("managedRuntime");
     } finally {
       globalThis.fetch = prev;
     }
@@ -274,7 +290,7 @@ describe("createStepDefinitionsClient.upsertFromSpec", () => {
     }
   });
 
-  test("serializes envJson into the request body", async () => {
+  test("serializes envJson inside the environment reference", async () => {
     const { mockFetch, captured } = createMockFetch([
       { status: 200, body: { id: "step-id" } },
     ]);
@@ -293,11 +309,14 @@ describe("createStepDefinitionsClient.upsertFromSpec", () => {
       ] as const;
       await client.upsertFromSpec(
         "proj-1",
-        makeSpec({ envJson: [...envJson] }),
+        makeSpec({ environment: { kind: "inline", envJson: [...envJson] } }),
         { headers: AUTH_HEADER },
       );
 
-      expect(captured[0]?.body).toMatchObject({ envJson });
+      expect(captured[0]?.body).toMatchObject({
+        environment: { kind: "inline", envJson },
+      });
+      expect(captured[0]?.body).not.toHaveProperty("envJson");
     } finally {
       globalThis.fetch = prev;
     }

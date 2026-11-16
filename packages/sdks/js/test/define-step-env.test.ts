@@ -1,3 +1,4 @@
+import { inlineEnvironment } from "./inline-environment";
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
 import { Env, Runtime, codeStep, defineStep } from "../src";
@@ -140,7 +141,7 @@ describe("defineStep — environment.vars type inference", () => {
       },
       fn: () => ({}),
     });
-    expect(spec.envJson).toEqual([
+    expect(inlineEnvironment(spec.environment)?.envJson).toEqual([
       {
         name: "ACCOUNT_ID",
         source: "value",
@@ -169,23 +170,25 @@ describe("defineStep — environment.vars type inference", () => {
 
   test("codeStep and defineStep differ only in the default runtime", () => {
     expect(
-      codeStep({ key: "code", name: "Code", fn: () => ({}) }).managedRuntime,
-    ).toBe("bun1");
+      inlineEnvironment(
+        codeStep({ key: "code", name: "Code", fn: () => ({}) }).environment,
+      )?.runtime,
+    ).toEqual({ kind: "managed", id: "bun1" });
     expect(
-      defineStep({ key: "s", name: "S", agentPrompt: "go" }).managedRuntime,
-    ).toBeUndefined();
+      defineStep({ key: "s", name: "S", agentPrompt: "go" }).environment,
+    ).toBeNull();
   });
 
   test("codeStep emits null envJson when vars is not declared", () => {
     const spec = codeStep({ key: "code", name: "Code", fn: () => ({}) });
-    expect(spec.envJson).toBeNull();
+    expect(inlineEnvironment(spec.environment)?.envJson).toBeNull();
   });
 });
 
 describe("defineStep — environment.vars normalization", () => {
   test("emits null envJson when vars is not declared", () => {
     const spec = defineStep({ key: "s", name: "S", agentPrompt: "go" });
-    expect(spec.envJson).toBeNull();
+    expect(spec.environment).toBeNull();
   });
 
   test("normalizes every authoring form", () => {
@@ -213,7 +216,7 @@ describe("defineStep — environment.vars normalization", () => {
       },
       agentPrompt: ({ env }) => `Query ${env.WAREHOUSE_URL}`,
     });
-    expect(spec.envJson).toEqual([
+    expect(inlineEnvironment(spec.environment)?.envJson).toEqual([
       {
         name: "WAREHOUSE_URL",
         source: "value",
@@ -314,11 +317,11 @@ describe("defineStep — environment.vars normalization", () => {
       },
       agentPrompt: "go",
     });
-    expect(spec.executionMode).toBe("workspace");
-    expect(spec.devcontainerConfigPath).toBe(
-      ".devcontainer/alt/devcontainer.json",
-    );
-    expect(spec.envJson).toEqual([
+    expect(inlineEnvironment(spec.environment)?.runtime).toEqual({
+      kind: "devcontainer",
+      config: ".devcontainer/alt/devcontainer.json",
+    });
+    expect(inlineEnvironment(spec.environment)?.envJson).toEqual([
       { name: "A", source: "value", value: "x", secret: false },
     ]);
   });
@@ -402,7 +405,7 @@ describe("defineStep — environment.vars definition-time guards", () => {
       },
       agentPrompt: "go",
     });
-    expect(spec.envJson).toEqual([
+    expect(inlineEnvironment(spec.environment)?.envJson).toEqual([
       {
         name: "TOKEN_ENDPOINT",
         source: "value",
@@ -422,6 +425,8 @@ describe("defineStep — environment.vars definition-time guards", () => {
       },
       agentPrompt: "go",
     });
-    expect(spec.envJson?.[0]?.name).toBe("TENANT_TOKEN");
+    expect(inlineEnvironment(spec.environment)?.envJson?.[0]?.name).toBe(
+      "TENANT_TOKEN",
+    );
   });
 });

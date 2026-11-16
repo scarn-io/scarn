@@ -16,11 +16,23 @@ import {
   type StepHealthChecksInput,
 } from "../../health-checks";
 import type { OpenCodeMcpServers } from "../../opencode-mcp";
-import type { EnvVarsInput } from "../../env-vars";
 import type { RepoConfigInput } from "../../repo-config";
 import type { EnvRecord, PromptEnvContext } from "./env";
-import { compileEnvironment, type StepEnvironment } from "./runtime";
-import { mergeStepMcps } from "./compile-mcps";
+import {
+  compileEnvironment,
+  knownEnvironmentVars,
+  type CompiledEnvironment,
+  type InlineStepEnvironment,
+  type NamedStepEnvironment,
+} from "./runtime";
+import {
+  assertBaseBranchFitsEnvironment,
+  compileRepo,
+  type RepoField,
+  type RepoSpec,
+} from "./repo";
+import { assertNoConnectorMcpCollisions, mergeStepMcps } from "./compile-mcps";
+import { isEnvironmentHandle } from "../../push/code-step-lookup";
 import type { McpHandle } from "./define-mcp";
 import type { BuiltInError, ConversationResult } from "../../pipelines/types";
 import {
@@ -44,24 +56,32 @@ export type DefineStepInput<
   TInput extends ZodType = ZodType,
   TResult extends ZodType = ZodType,
   TEnv extends EnvRecord = EnvRecord,
+  TNamed extends NamedStepEnvironment | undefined =
+    NamedStepEnvironment | undefined,
 > = {
   key: string;
   name: string;
   description?: string | null;
   version?: number;
   /**
-   * Where the step runs (`runtime`), its environment variables (`vars`) and what
-   * it may do to the repository (`repo`). Declare it before `agentPrompt` so
-   * `TEnv` is inferred from `vars` into the prompt's `env`, which is then
-   * strict: only declared, non-secret keys.
+   * A named environment, by name or by `defineEnvironment` handle, or an
+   * inline runtime, checkout branch and variables (`vars`). Declare it before
+   * `agentPrompt` and a `repo` function so their `env` is typed from the
+   * handle's or the inline `vars`: only declared, non-secret keys.
    */
-  environment?: StepEnvironment<TInput["_output"], TEnv, TResult["_output"]>;
+  environment?: InlineStepEnvironment<TInput["_output"], TEnv> | TNamed;
+  repo?: RepoField<
+    TInput["_output"],
+    TResult["_output"],
+    RepoSpec,
+    PromptEnvContext<TEnv, TNamed>
+  >;
   agentPrompt:
     | string
     | ((
         context: PromptTemplateContext<
           TInput["_output"],
-          PromptEnvContext<TEnv>
+          PromptEnvContext<TEnv, TNamed>
         >,
       ) => string);
   input?: TInput;
@@ -133,21 +153,10 @@ export type StepDefinitionSpec = {
   version: number;
   kind: "user_defined" | "code";
   status: "draft" | "active" | "archived";
-  executionMode?: "workspace" | "no_workspace";
+  environment: CompiledEnvironment;
   /**
-   * Repo-relative path of the devcontainer config to launch; `null` or omitted
-   * means auto-detect. Only valid with `executionMode: "workspace"`.
-   */
-  devcontainerConfigPath?: string | null;
-  /**
-   * Identifier of the worker-supplied managed runtime (`Runtime.managed.<id>()`);
-   * `null` or omitted means not managed. Only valid on a `code` step with
-   * `executionMode: "workspace"` and no `devcontainerConfigPath`.
-   */
-  managedRuntime?: string | null;
-  /**
-   * Repository access. Omitted means the runtime's default (`readWrite` for
-   * `workspace`, `none` for `no_workspace`), which the server resolves.
+   * Repository access. Omitted means the server resolves the default; shared
+   * repo resolution defaults to `readWrite` for every runtime.
    */
   repo?: RepoConfigInput;
   prompt: string | null;
@@ -155,7 +164,6 @@ export type StepDefinitionSpec = {
   resultSchemaJson: Record<string, unknown> | null;
   opencodeMcpJson: OpenCodeMcpServers | null;
   healthChecksJson: HealthChecksInput | null;
-  envJson?: EnvVarsInput | null;
   /** Error names the step declares besides the built-in ones. */
   errors?: readonly string[];
   /**
@@ -276,9 +284,10 @@ export function defineStep<
   const TFeatures extends ReadonlyArray<AnyStepFeature> = never[],
   TEnv extends EnvRecord = EnvRecord,
   const TErrors extends string = never,
+  TNamed extends NamedStepEnvironment | undefined = undefined,
 >(
   config: Omit<
-    DefineStepInput<TInput, TResult, TEnv>,
+    DefineStepInput<TInput, TResult, TEnv, TNamed>,
     "features" | "errors" | "retry"
   > & {
     features?: TFeatures;
@@ -312,7 +321,7 @@ export function defineStep<
       ? config.agentPrompt(
           createPromptTemplateContext<
             TInput["_output"],
-            PromptEnvContext<TEnv>
+            PromptEnvContext<TEnv, TNamed>
           >(),
         )
       : config.agentPrompt;
@@ -327,18 +336,21 @@ export function defineStep<
     }
   }
 
-  const {
-    executionMode,
-    devcontainerConfigPath,
-    managedRuntime,
-    envJson,
+  const environment = compileEnvironment(config.environment, {
+    stepKey: config.key,
+  });
+  const repo = compileRepo(config.repo, { stepKey: config.key });
+  assertBaseBranchFitsEnvironment(
     repo,
-  } = compileEnvironment(config.environment, { stepKey: config.key });
+    knownEnvironmentVars(config.environment, environment),
+    { stepKey: config.key },
+  );
   assertStepMcpInput(config);
+  assertNoConnectorMcpCollisions(config.key, config.environment, config.mcps);
   const mcpFields = mergeStepMcps(config.key, {
     mcps: config.mcps,
     healthChecks: config.healthChecks,
-    envJson,
+    envJson: environment?.kind === "inline" ? environment.envJson : null,
   });
 
   const resultSchemaJson = effectiveResult
@@ -352,9 +364,7 @@ export function defineStep<
     version: config.version ?? 1,
     kind: "user_defined",
     status: config.status ?? "active",
-    executionMode,
-    devcontainerConfigPath,
-    ...(managedRuntime !== null ? { managedRuntime } : {}),
+    environment,
     prompt: effectivePrompt,
     inputSchemaJson: config.input
       ? toJSONSchema(config.input as unknown as $ZodType)
@@ -362,7 +372,6 @@ export function defineStep<
     resultSchemaJson,
     opencodeMcpJson: mcpFields.opencodeMcpJson,
     healthChecksJson: mcpFields.healthChecksJson,
-    envJson: mcpFields.envJson,
     ...(repo !== undefined ? { repo } : {}),
     errors: compileStepErrors(config.key, config.errors),
     retryJson: compileStepRetry(config.key, config.retry, config.errors ?? []),
@@ -376,7 +385,10 @@ export function defineStep<
       : {}),
     ...(grants.length > 0 ? { grants } : {}),
   };
-  return toStepHandle(spec) as StepHandle<
+  return toStepHandle(
+    spec,
+    isEnvironmentHandle(config.environment) ? config.environment : undefined,
+  ) as StepHandle<
     TInput["_output"],
     DefineStepResult<TResult, TFeatures>,
     TErrors

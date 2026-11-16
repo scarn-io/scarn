@@ -19,14 +19,12 @@ function makeStep(overrides: Partial<StepDefContract> = {}): StepDefContract {
     prompt: "Open the app.",
     version: 1,
     status: "active",
-    executionMode: "workspace",
-    devcontainerConfigPath: null,
-    repo: resolveRepoConfig(overrides.executionMode ?? "workspace"),
+    environment: null,
+    repo: resolveRepoConfig(),
     inputSchemaJson: null,
     resultSchemaJson: null,
     opencodeMcpJson: null,
     healthChecksJson: null,
-    envJson: null,
     ...overrides,
   };
 }
@@ -36,7 +34,11 @@ describe("generateStepsFileContent repo", () => {
     const content = generateStepsFileContent([
       makeStep({
         key: "read-only",
-        repo: { mode: "readOnly", gitCredentials: "none" },
+        repo: {
+          mode: "readOnly",
+          gitCredentials: "none",
+          baseBranch: null,
+        },
       }),
       makeStep({
         key: "read-write",
@@ -45,15 +47,49 @@ describe("generateStepsFileContent repo", () => {
           message: null,
           onPushFailure: "fail",
           gitCredentials: "none",
+          baseBranch: null,
+          workBranch: { kind: "create" },
         },
       }),
     ]);
 
     expect(content).toContain(
-      '    repo: Repo.readOnly({ gitCredentials: "none" }),',
+      '  repo: Repo.readOnly({ gitCredentials: "none" }),',
     );
     expect(content).toContain(
-      '    repo: Repo.readWrite({ gitCredentials: "none" }),',
+      '  repo: Repo.readWrite({ gitCredentials: "none" }),',
+    );
+  });
+
+  test("emits baseBranch and workBranch only when not the default", () => {
+    const content = generateStepsFileContent([
+      makeStep({
+        key: "read-only",
+        repo: {
+          mode: "readOnly",
+          gitCredentials: "auto",
+          baseBranch: "main",
+        },
+      }),
+      makeStep({
+        key: "read-write",
+        repo: {
+          mode: "readWrite",
+          message: null,
+          onPushFailure: "fail",
+          gitCredentials: "auto",
+          baseBranch: "ephemeral-{{env.TICKET_NUMBER}}",
+          workBranch: { kind: "base" },
+        },
+      }),
+    ]);
+
+    expect(content).toContain('  repo: Repo.readOnly({ baseBranch: "main" }),');
+    expect(content).toContain(
+      "  repo: ({ env }) => Repo.readWrite({ baseBranch: `ephemeral-${env.TICKET_NUMBER}`, workBranch: WorkBranch.base() }),",
+    );
+    expect(content).toContain(
+      'import { defineStep, Repo, WorkBranch } from "@scarn/sdk/definitions/steps";',
     );
   });
 
@@ -61,62 +97,74 @@ describe("generateStepsFileContent repo", () => {
     const cases: Array<{
       key: string;
       varName: string;
-      executionMode: StepDefContract["executionMode"];
+      environment: StepDefContract["environment"];
       repo: RepoConfig;
       authored: RepoConfigInput | undefined;
     }> = [
       {
         key: "read-only",
         varName: "readOnly",
-        executionMode: "workspace",
-        repo: { mode: "readOnly", gitCredentials: "auto" },
+        environment: null,
+        repo: {
+          mode: "readOnly",
+          gitCredentials: "auto",
+          baseBranch: null,
+        },
         authored: { mode: "readOnly" },
       },
       {
         key: "read-write-default",
         varName: "readWriteDefault",
-        executionMode: "workspace",
+        environment: null,
         repo: {
           mode: "readWrite",
           message: null,
           onPushFailure: "fail",
           gitCredentials: "auto",
+          baseBranch: null,
+          workBranch: { kind: "create" },
         },
         authored: undefined,
       },
       {
         key: "static-message",
         varName: "staticMessage",
-        executionMode: "workspace",
+        environment: null,
         repo: {
           mode: "readWrite",
           message: "chore: tidy",
           onPushFailure: "fail",
           gitCredentials: "auto",
+          baseBranch: null,
+          workBranch: { kind: "create" },
         },
         authored: { mode: "readWrite", message: "chore: tidy" },
       },
       {
         key: "result-token",
         varName: "resultToken",
-        executionMode: "workspace",
+        environment: null,
         repo: {
           mode: "readWrite",
           message: "fix: {{result.summary}}",
           onPushFailure: "fail",
           gitCredentials: "auto",
+          baseBranch: null,
+          workBranch: { kind: "create" },
         },
         authored: { mode: "readWrite", message: "fix: {{result.summary}}" },
       },
       {
         key: "input-and-result-tokens",
         varName: "inputAndResultTokens",
-        executionMode: "workspace",
+        environment: null,
         repo: {
           mode: "readWrite",
           message: "{{input.ticket}}: {{result.summary}}",
           onPushFailure: "fail",
           gitCredentials: "auto",
+          baseBranch: null,
+          workBranch: { kind: "create" },
         },
         authored: {
           mode: "readWrite",
@@ -126,24 +174,28 @@ describe("generateStepsFileContent repo", () => {
       {
         key: "warn-only",
         varName: "warnOnly",
-        executionMode: "workspace",
+        environment: null,
         repo: {
           mode: "readWrite",
           message: null,
           onPushFailure: "warn",
           gitCredentials: "auto",
+          baseBranch: null,
+          workBranch: { kind: "create" },
         },
         authored: { mode: "readWrite", onPushFailure: "warn" },
       },
       {
         key: "message-and-warn",
         varName: "messageAndWarn",
-        executionMode: "workspace",
+        environment: null,
         repo: {
           mode: "readWrite",
           message: "wip: {{result.summary}}",
           onPushFailure: "warn",
           gitCredentials: "auto",
+          baseBranch: null,
+          workBranch: { kind: "create" },
         },
         authored: {
           mode: "readWrite",
@@ -154,19 +206,25 @@ describe("generateStepsFileContent repo", () => {
       {
         key: "read-only-credentials",
         varName: "readOnlyCredentials",
-        executionMode: "workspace",
-        repo: { mode: "readOnly", gitCredentials: "none" },
+        environment: null,
+        repo: {
+          mode: "readOnly",
+          gitCredentials: "none",
+          baseBranch: null,
+        },
         authored: { mode: "readOnly", gitCredentials: "none" },
       },
       {
         key: "read-write-credentials",
         varName: "readWriteCredentials",
-        executionMode: "workspace",
+        environment: null,
         repo: {
           mode: "readWrite",
           message: "fix: {{result.summary}}",
           onPushFailure: "warn",
           gitCredentials: "none",
+          baseBranch: null,
+          workBranch: { kind: "create" },
         },
         authored: {
           mode: "readWrite",
@@ -176,16 +234,67 @@ describe("generateStepsFileContent repo", () => {
         },
       },
       {
-        key: "host-none",
-        varName: "hostNone",
-        executionMode: "no_workspace",
-        repo: { mode: "none" },
-        authored: undefined,
+        key: "host-read-only",
+        varName: "hostReadOnly",
+        environment: { kind: "inline", runtime: { kind: "host" } },
+        repo: {
+          mode: "readOnly",
+          gitCredentials: "none",
+          baseBranch: null,
+        },
+        authored: { mode: "readOnly", gitCredentials: "none" },
+      },
+      {
+        key: "read-only-base",
+        varName: "readOnlyBase",
+        environment: null,
+        repo: {
+          mode: "readOnly",
+          gitCredentials: "auto",
+          baseBranch: "release/{{input.version}}",
+        },
+        authored: {
+          mode: "readOnly",
+          baseBranch: "release/{{input.version}}",
+        },
+      },
+      {
+        key: "commit-onto-base",
+        varName: "commitOntoBase",
+        environment: {
+          kind: "inline",
+          envJson: [
+            {
+              name: "TICKET_NUMBER",
+              source: "inherit",
+              from: "TICKET_NUMBER",
+              secret: false,
+              optional: false,
+              applies: "agent",
+            },
+          ],
+        },
+        repo: {
+          mode: "readWrite",
+          message: "fix: {{result.summary}}",
+          onPushFailure: "fail",
+          gitCredentials: "auto",
+          baseBranch:
+            "ephemeral-{{env.TICKET_NUMBER}}-{{workItem.platformKey}}",
+          workBranch: { kind: "base" },
+        },
+        authored: {
+          mode: "readWrite",
+          message: "fix: {{result.summary}}",
+          baseBranch:
+            "ephemeral-{{env.TICKET_NUMBER}}-{{workItem.platformKey}}",
+          workBranch: { kind: "base" },
+        },
       },
     ];
     const content = generateStepsFileContent(
-      cases.map(({ key, executionMode, repo }) =>
-        makeStep({ key, executionMode, repo }),
+      cases.map(({ key, environment, repo }) =>
+        makeStep({ key, environment, repo }),
       ),
     );
 
@@ -206,7 +315,7 @@ describe("generateStepsFileContent repo", () => {
         });
         expect({
           key: entry.key,
-          repo: resolveRepoConfig(entry.executionMode, spec?.repo),
+          repo: resolveRepoConfig(spec?.repo),
         }).toEqual({ key: entry.key, repo: entry.repo });
       }
     } finally {

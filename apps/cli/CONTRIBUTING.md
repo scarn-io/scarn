@@ -67,7 +67,7 @@ background worker per machine and **instance**. The commands live in
 | `worker status [--json] [--recent-runs n]` | The worker, its limits, each project, active and recent runs. Exits 3 when no worker runs.                 |
 | `worker logs [project] [--run id] [-f]`    | Reads `worker.log` from disk, so it works when the worker is stopped.                                      |
 | `worker config [--max-concurrency <n>]`    | Without flags, prints the saved settings from disk. With the flag, changes and saves the machine limit.    |
-| `worker add [project]`                     | Adds this checkout's project, or updates its settings (`-c`, `-k`, `--work-item-id`, `--source-branch`).   |
+| `worker add [project]`                     | Adds this checkout's project, or updates its settings (`-c`, `-k`, `--work-item-id`).                      |
 | `worker remove <project>`                  | Removes a project and its saved settings; its running runs finish.                                         |
 | `worker cancel <taskRunId> [--yes]`        | Cancels the run's Task on the server, then aborts the run on this machine at once.                         |
 | `work [project]`                           | `worker start` (if needed) then `worker add`. `--dry-run` rehearses a task's environment in this terminal. |

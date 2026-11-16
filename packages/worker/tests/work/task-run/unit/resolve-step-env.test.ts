@@ -28,8 +28,8 @@ const value = (name: string, template: string, secret = false): EnvVarSpec => ({
 
 describe("resolveStepEnv", () => {
   test.concurrent("returns empty results when no env is declared", () => {
-    for (const envJson of [null, undefined, []]) {
-      expect(resolveStepEnv({ envJson, inputJson: {}, workerEnv: {} })).toEqual(
+    for (const envVars of [null, undefined, []]) {
+      expect(resolveStepEnv({ envVars, inputJson: {}, workerEnv: {} })).toEqual(
         {
           stepEnv: {},
           setupEnv: {},
@@ -42,7 +42,7 @@ describe("resolveStepEnv", () => {
 
   test.concurrent("renders value entries against the run input", () => {
     const result = resolveStepEnv({
-      envJson: [
+      envVars: [
         value("WAREHOUSE_URL", "https://warehouse.internal"),
         value("ACCOUNT_ID", "{{input.accountId}}"),
         value("TENANT_URL", "https://{{input.tenant}}.example.com"),
@@ -61,7 +61,7 @@ describe("resolveStepEnv", () => {
 
   test.concurrent("renders a missing input token as an empty string", () => {
     const result = resolveStepEnv({
-      envJson: [value("ACCOUNT_ID", "{{input.accountId}}")],
+      envVars: [value("ACCOUNT_ID", "{{input.accountId}}")],
       inputJson: {},
       workerEnv: {},
     });
@@ -71,7 +71,7 @@ describe("resolveStepEnv", () => {
 
   test.concurrent("inherits from the worker env by name", () => {
     const result = resolveStepEnv({
-      envJson: [inherit("SENTRY_DSN")],
+      envVars: [inherit("SENTRY_DSN")],
       inputJson: {},
       workerEnv: { SENTRY_DSN: "https://sentry.example.com/1" },
     });
@@ -83,7 +83,7 @@ describe("resolveStepEnv", () => {
 
   test.concurrent("inherits from a renamed source variable", () => {
     const result = resolveStepEnv({
-      envJson: [
+      envVars: [
         inherit("DB_PASSWORD", { from: "STAGING_DB_PASSWORD", secret: true }),
       ],
       inputJson: {},
@@ -95,7 +95,7 @@ describe("resolveStepEnv", () => {
 
   test.concurrent("a step value is never overridden by the worker env", () => {
     const result = resolveStepEnv({
-      envJson: [value("LOG_LEVEL", "debug")],
+      envVars: [value("LOG_LEVEL", "debug")],
       inputJson: {},
       workerEnv: { LOG_LEVEL: "error" },
     });
@@ -108,20 +108,20 @@ describe("resolveStepEnv", () => {
 
     expect(
       resolveStepEnv({
-        envJson: [entry],
+        envVars: [entry],
         inputJson: {},
         workerEnv: { LOG_LEVEL: "warn" },
       }).stepEnv,
     ).toEqual({ LOG_LEVEL: "warn" });
     expect(
-      resolveStepEnv({ envJson: [entry], inputJson: {}, workerEnv: {} })
+      resolveStepEnv({ envVars: [entry], inputJson: {}, workerEnv: {} })
         .stepEnv,
     ).toEqual({ LOG_LEVEL: "info" });
   });
 
   test.concurrent("an empty worker value counts as set", () => {
     const result = resolveStepEnv({
-      envJson: [inherit("LOG_LEVEL", { default: "info" })],
+      envVars: [inherit("LOG_LEVEL", { default: "info" })],
       inputJson: {},
       workerEnv: { LOG_LEVEL: "" },
     });
@@ -131,7 +131,7 @@ describe("resolveStepEnv", () => {
 
   test.concurrent("omits a missing optional entry without a default", () => {
     const result = resolveStepEnv({
-      envJson: [inherit("SENTRY_DSN", { optional: true })],
+      envVars: [inherit("SENTRY_DSN", { optional: true })],
       inputJson: {},
       workerEnv: {},
     });
@@ -149,7 +149,7 @@ describe("resolveStepEnv", () => {
     () => {
       const run = () =>
         resolveStepEnv({
-          envJson: [
+          envVars: [
             inherit("WAREHOUSE_TOKEN", { secret: true }),
             inherit("DB_PASSWORD", { from: "STAGING_DB_PASSWORD" }),
             inherit("PRESENT"),
@@ -180,7 +180,7 @@ describe("resolveStepEnv", () => {
 
   test.concurrent("excludes secret entries from promptEnv", () => {
     const result = resolveStepEnv({
-      envJson: [
+      envVars: [
         value("PUBLIC_URL", "https://{{input.tenant}}.example.com"),
         value("TENANT_API_KEY", "{{input.tenant}}-key", true),
         inherit("WAREHOUSE_TOKEN", { secret: true }),
@@ -205,7 +205,7 @@ describe("resolveStepEnv", () => {
 
   test.concurrent("does not register empty secret values for masking", () => {
     const result = resolveStepEnv({
-      envJson: [value("TENANT_API_KEY", "{{input.key}}", true)],
+      envVars: [value("TENANT_API_KEY", "{{input.key}}", true)],
       inputJson: {},
       workerEnv: {},
     });
@@ -217,9 +217,7 @@ describe("resolveStepEnv", () => {
   test.concurrent("refuses to inherit a SCARN_* worker variable", () => {
     const run = () =>
       resolveStepEnv({
-        envJson: [
-          inherit("STOLEN", { from: "SCARN_API_TOKEN", secret: true }),
-        ],
+        envVars: [inherit("STOLEN", { from: "SCARN_API_TOKEN", secret: true })],
         inputJson: {},
         workerEnv: { SCARN_API_TOKEN: "worker-credential" },
       });
@@ -230,7 +228,7 @@ describe("resolveStepEnv", () => {
 
   test.concurrent("routes each variable by applies", () => {
     const result = resolveStepEnv({
-      envJson: [
+      envVars: [
         value("AGENT_ONLY", "a"),
         { ...value("SETUP_ONLY", "s"), applies: "setup" },
         { ...value("BOTH", "b"), applies: "both" },
@@ -246,7 +244,7 @@ describe("resolveStepEnv", () => {
 
   test.concurrent("registers a secret setup value for masking", () => {
     const result = resolveStepEnv({
-      envJson: [inherit("NPM_TOKEN", { secret: true, applies: "setup" })],
+      envVars: [inherit("NPM_TOKEN", { secret: true, applies: "setup" })],
       inputJson: {},
       workerEnv: { NPM_TOKEN: "npm-secret-token" },
     });
@@ -260,7 +258,7 @@ describe("resolveStepEnv", () => {
   test.concurrent("fails on a missing required setup variable", () => {
     expect(() =>
       resolveStepEnv({
-        envJson: [inherit("NPM_TOKEN", { applies: "setup" })],
+        envVars: [inherit("NPM_TOKEN", { applies: "setup" })],
         inputJson: {},
         workerEnv: {},
       }),

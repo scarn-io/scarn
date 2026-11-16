@@ -7,7 +7,9 @@
  */
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { HostOpencodeBootstrap } from "../../../../../src/runtime/runtime-service/infra/host-opencode-bootstrap";
 import type { RepoConfig } from "@scarn/sdk/repo-config";
+import type { ResolvedEnvironmentRef } from "@scarn/sdk/environment";
 import { createUuidV7 } from "../../../../../src/common/contracts/uuid-v7";
 import { DirectProviderAccessResolver } from "../../../../../src/work/task-run/infra/provider-access/direct-provider-access-resolver";
 import { SessionRuntimeConfigMaterializer } from "../../../../../src/work/task-run/infra/provider-access/session-runtime-config-materializer";
@@ -349,6 +351,7 @@ export class FakeGitCredentialRelayOpener {
 }
 
 export type OrchestratorFakeDeps = {
+  readGitCommit: (workspacePath: string, ref: string) => Promise<string>;
   workspaceManager: FakeWorkspaceManager;
   gitCloneService: FakeGitCloneService;
   gitCommitPushService: FakeGitCommitPushService;
@@ -357,6 +360,7 @@ export type OrchestratorFakeDeps = {
   devcontainerLauncher: FakeDevcontainerLauncher;
   payloadProvisioner: FakePayloadProvisioner;
   opencodeBootstrap: FakeOpencodeBootstrap;
+  hostOpencodeBootstrap: HostOpencodeBootstrap;
   providerAccessResolver: DirectProviderAccessResolver;
   runtimeConfigMaterializer: SessionRuntimeConfigMaterializer;
   loadCredentials: OpencodeCredentialLoader;
@@ -389,6 +393,7 @@ export function buildOrchestratorFakeDeps(input: {
   return {
     workspaceManager: new FakeWorkspaceManager(input.workspacePath, input.log),
     gitCloneService: new FakeGitCloneService(input.log),
+    readGitCommit: () => Promise.resolve("a".repeat(40)),
     gitCommitPushService:
       input.gitCommitPushService ?? new FakeGitCommitPushService(),
     repoContextGit: input.repoContextGit ?? new FakeRepoContextGit(input.log),
@@ -396,6 +401,7 @@ export function buildOrchestratorFakeDeps(input: {
     devcontainerLauncher: new FakeDevcontainerLauncher(input.log),
     payloadProvisioner: new FakePayloadProvisioner(input.log),
     opencodeBootstrap: new FakeOpencodeBootstrap(input.log),
+    hostOpencodeBootstrap: new HostOpencodeBootstrap(),
     providerAccessResolver: new DirectProviderAccessResolver({
       env: providerEnv,
       listProviders: () => Promise.resolve([]),
@@ -415,11 +421,14 @@ export const DEFAULT_WORKSPACE_REPO: RepoConfig = {
   message: null,
   onPushFailure: "fail",
   gitCredentials: "none",
+  baseBranch: null,
+  workBranch: { kind: "create" },
 };
 
 /** A representative `workspace`-mode launch input. */
 export function buildLaunchInput() {
   return {
+    environment: null as ResolvedEnvironmentRef,
     startAgent: true,
     repo: DEFAULT_WORKSPACE_REPO,
     sessionId: createUuidV7(),

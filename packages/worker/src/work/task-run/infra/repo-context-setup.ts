@@ -4,13 +4,14 @@ import type {
   RepoContextLaunchInput,
 } from "../contracts/process-project-work-types";
 import type { RepoContextGit } from "./git-cli-repo-context";
+import { rethrowBranchFailure } from "./classify-branch-failure";
 
 /**
  * Park a fresh clone on a chat run's pinned commit, pinning it first when the
  * run has none yet.
  *
  * The branch to pin is the `baseWorkBranch` of `.scarn/scarn.jsonc` as read
- * from the cloned default branch, else the cloned default branch itself. The
+ * from the cloned default branch, else the default. The
  * worker's source branch and `SCARN_BASE_WORK_BRANCH` are deliberately
  * ignored: a chat is about the project's repo, not this worker's checkout.
  * The server keeps the first reported commit, so the returned value wins over
@@ -48,10 +49,15 @@ async function pinBaseCommit(input: {
 }): Promise<string> {
   const projectConfig = await loadProjectConfig(input.workspacePath);
   const branch = projectConfig?.baseWorkBranch?.trim() || input.resolvedBranch;
-  const resolved = await input.repoContextGit.resolveRemoteBranchCommit({
-    workspacePath: input.workspacePath,
-    branch,
-  });
+  let resolved: string;
+  try {
+    resolved = await input.repoContextGit.resolveRemoteBranchCommit({
+      workspacePath: input.workspacePath,
+      branch,
+    });
+  } catch (error) {
+    rethrowBranchFailure(error, branch);
+  }
   return await input.repoContext.pinBaseCommit({
     baseCommit: resolved,
     baseBranch: branch,

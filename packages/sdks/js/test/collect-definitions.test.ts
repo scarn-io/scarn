@@ -249,3 +249,110 @@ export const goodStep = codeStep({ key: "good-step", name: "Good", fn: () => 1 }
     }
   });
 });
+
+const ENVIRONMENTS_ENTRY = JSON.stringify(
+  new URL("../src/definitions/environments/index.ts", import.meta.url).href,
+);
+const STEPS_ENTRY = JSON.stringify(
+  new URL("../src/definitions/steps/index.ts", import.meta.url).href,
+);
+
+describe("collectDefinitionsFromDirectory — environments", () => {
+  test("collects an environment a step uses without exporting it, credited to the exporting file", async () => {
+    const dir = makeTempDir();
+    try {
+      writeFileSync(
+        join(dir, "a-steps.js"),
+        `
+import { defineStep } from ${STEPS_ENTRY};
+import { shared } from "./b-environments.js";
+export const step = defineStep({ key: "s", name: "S", environment: shared, agentPrompt: "Go" });
+`,
+      );
+      writeFileSync(
+        join(dir, "b-environments.js"),
+        `
+import { defineEnvironment } from ${ENVIRONMENTS_ENTRY};
+export const shared = defineEnvironment({ name: "shared", description: "develop" });
+`,
+      );
+
+      const collected = await collectDefinitionsFromDirectory(dir);
+
+      expect(collected.environments).toEqual([
+        {
+          name: "shared",
+          content: { description: "develop" },
+          sourceFile: "b-environments.js",
+        },
+      ]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("accepts two handles with one name and equal content", async () => {
+    const dir = makeTempDir();
+    try {
+      for (const file of ["one.js", "two.js"]) {
+        writeFileSync(
+          join(dir, file),
+          `
+import { defineEnvironment } from ${ENVIRONMENTS_ENTRY};
+export const shared = defineEnvironment({ name: "shared", description: "develop" });
+`,
+        );
+      }
+      const collected = await collectDefinitionsFromDirectory(dir);
+      expect(collected.environments).toHaveLength(1);
+      expect(collected.environments[0]?.content).toEqual({
+        description: "develop",
+      });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("throws on two handles with one name and different content, naming both files", async () => {
+    const dir = makeTempDir();
+    try {
+      writeFileSync(
+        join(dir, "one.js"),
+        `
+import { defineEnvironment } from ${ENVIRONMENTS_ENTRY};
+export const shared = defineEnvironment({ name: "shared", description: "develop" });
+`,
+      );
+      writeFileSync(
+        join(dir, "two.js"),
+        `
+import { defineEnvironment } from ${ENVIRONMENTS_ENTRY};
+export const shared = defineEnvironment({ name: "shared", description: "main" });
+`,
+      );
+      const message = await collectionError(dir);
+      expect(message).toContain('Environment "shared" is defined twice');
+      expect(message).toContain("one.js");
+      expect(message).toContain("two.js");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("the tolerant collector gathers environments too", async () => {
+    const dir = makeTempDir();
+    try {
+      writeFileSync(
+        join(dir, "environments.js"),
+        `
+import { defineEnvironment } from ${ENVIRONMENTS_ENTRY};
+export const shared = defineEnvironment({ name: "shared" });
+`,
+      );
+      const collected = await collectDefinitionsFromDirectoryTolerant(dir);
+      expect(collected.environments.map((e) => e.name)).toEqual(["shared"]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});

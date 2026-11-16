@@ -15,10 +15,9 @@ import {
 /**
  * The devcontainer step of `scarn init`.
  *
- * This step used to throw, which aborted `init` before the designer handoff — so
- * the one thing that can now author a devcontainer was unreachable for exactly
- * the repositories that needed it. It is a notice, and the tests that matter are
- * the ones proving it cannot go back to being a hard stop.
+ * Missing optional configuration must remain a notice, not a hard stop, and
+ * explain the managed runtime default without promising a design-session
+ * configuration change.
  */
 
 describe("reportDevcontainerStatus", () => {
@@ -55,8 +54,6 @@ describe("reportDevcontainerStatus", () => {
   });
 
   test("never throws when the devcontainer is missing", async () => {
-    // The regression that matters. A throw here aborts `init` before the
-    // designer handoff, which is the only thing that can author a devcontainer.
     const { reporter } = createRecorder();
 
     let threw = false;
@@ -72,13 +69,17 @@ describe("reportDevcontainerStatus", () => {
     expect(threw).toBe(false);
   });
 
-  test("the notice sends the user to the design session, not to a text editor", () => {
-    // The point of softening the gate: the user is not being asked to go and
-    // hand-write a devcontainer before they may continue.
-    expect(DEVCONTAINER_NOTICE_MESSAGE).toContain("pipelines design");
+  test("the notice explains the managed default and optional devcontainer configuration", () => {
+    expect(DEVCONTAINER_NOTICE_MESSAGE).toContain(
+      "managed `bun1` runtime by default",
+    );
+    expect(DEVCONTAINER_NOTICE_MESSAGE).toContain("No action is required");
+    expect(DEVCONTAINER_NOTICE_MESSAGE).toContain("optionally add");
     expect(DEVCONTAINER_NOTICE_MESSAGE).toContain(
       ".devcontainer/devcontainer.json",
     );
+    expect(DEVCONTAINER_NOTICE_MESSAGE).not.toContain("pipelines design");
+    expect(DEVCONTAINER_NOTICE_MESSAGE).not.toContain("runs every step");
     expect(DEVCONTAINER_NOTICE_MESSAGE).not.toMatch(/re-run `scarn init`/u);
   });
 

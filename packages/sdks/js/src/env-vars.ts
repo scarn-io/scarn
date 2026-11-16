@@ -3,7 +3,7 @@ import { z } from "zod";
 /**
  * Wire schema for a step's declared environment variables (`envJson`).
  *
- * A step declares each variable one of two ways, discriminated on `source`:
+ * A step declares each variable one of three ways, discriminated on `source`:
  *
  * - `value`: a literal or `{{input.…}}` template, stored in the definition
  *   and rendered per run. `secret` only controls log masking.
@@ -11,6 +11,9 @@ import { z } from "zod";
  *   then `process.env`). Only the variable *name* is stored. `mcp`, when set,
  *   is the step's `opencodeMcpJson` key of the ref'd MCP server the variable
  *   belongs to; absent means a plain step variable.
+ * - `secret`: a project secret saved in Scarn, looked up by `secretName` at
+ *   run time (`.scarn/.env` on the worker, then Scarn; never `process.env`).
+ *   Only the secret's name is stored. Always masked; never has a default.
  *
  * `applies` says which process a variable reaches (default `agent`):
  *
@@ -107,7 +110,7 @@ const valueEnvVarSchema = z
       "a secret value must contain an {{input.…}} token; a static secret would be stored in plaintext. Use Env.inherit({ secret: true }) instead",
   });
 
-const inheritEnvVarSchema = z
+export const inheritEnvVarSchema = z
   .object({
     name: envVarNameSchema,
     source: z.literal("inherit"),
@@ -133,10 +136,25 @@ const inheritEnvVarSchema = z
     message: "a secret cannot carry a default; it would be stored in plaintext",
   });
 
+export const secretEnvVarSchema = z
+  .object({
+    name: envVarNameSchema,
+    source: z.literal("secret"),
+    secretName: envVarNameSchema,
+    applies: envVarAppliesSchema,
+  })
+  .strict();
+
 export const envVarSpecSchema = z.discriminatedUnion("source", [
   valueEnvVarSchema,
   inheritEnvVarSchema,
+  secretEnvVarSchema,
 ]);
+
+/** True when the variable's value must be masked in logs. */
+export function isMaskedEnvVar(entry: EnvVarSpec): boolean {
+  return entry.source === "secret" || entry.secret;
+}
 
 /**
  * The full value of a step's `envJson`: a bounded list of uniquely named
@@ -176,6 +194,12 @@ export const storedEnvVarsSchema = z.array(
       optional: z.boolean(),
       default: z.string().optional(),
       mcp: z.string().optional(),
+      applies: z.enum(envVarAppliesValues).default("agent"),
+    }),
+    z.object({
+      name: z.string(),
+      source: z.literal("secret"),
+      secretName: z.string(),
       applies: z.enum(envVarAppliesValues).default("agent"),
     }),
   ]),

@@ -2,31 +2,8 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { describe, expect, test } from "bun:test";
 import { envVarsSchema, type EnvVarSpec } from "@scarn/sdk/env-vars";
-import { resolveRepoConfig } from "@scarn/sdk/repo-config";
-import {
-  generateStepsFileContent,
-  type StepDefContract,
-} from "../../../../src/steps/step-definitions/infra/step-file-generator";
-
-function makeStep(overrides: Partial<StepDefContract> = {}): StepDefContract {
-  return {
-    key: "browser-repro",
-    name: "Browser Repro",
-    description: null,
-    prompt: "Open the app.",
-    version: 1,
-    status: "active",
-    executionMode: "workspace",
-    devcontainerConfigPath: null,
-    repo: resolveRepoConfig(overrides.executionMode ?? "workspace"),
-    inputSchemaJson: null,
-    resultSchemaJson: null,
-    opencodeMcpJson: null,
-    healthChecksJson: null,
-    envJson: null,
-    ...overrides,
-  };
-}
+import { generateStepsFileContent } from "../../../../src/steps/step-definitions/infra/step-file-generator";
+import { makeStep } from "./step-file-generator-fixtures";
 
 describe("generateStepsFileContent", () => {
   test("keeps plain prompts as string literals", () => {
@@ -49,9 +26,7 @@ describe("generateStepsFileContent", () => {
     expect(content).toContain("agentPrompt: ({ input, env, scarn }) => `");
     expect(content).toContain("Open ${env.BASE_URL}.");
     expect(content).toContain("Investigate ${input.title}.");
-    expect(content).toContain(
-      "Save files to ${scarn.artifactsDir}trace.zip.",
-    );
+    expect(content).toContain("Save files to ${scarn.artifactsDir}trace.zip.");
   });
 
   test("preserves unscoped prompt tokens alongside scoped variables", () => {
@@ -95,7 +70,11 @@ describe("generateStepsFileContent", () => {
     const content = generateStepsFileContent([
       makeStep({
         healthChecksJson: [
-          { tool: "browser_navigate", mcp: "browser", args: { url: "about:blank" } },
+          {
+            tool: "browser_navigate",
+            mcp: "browser",
+            args: { url: "about:blank" },
+          },
         ],
       }),
     ]);
@@ -117,11 +96,13 @@ describe("generateStepsFileContent", () => {
     expect(emptyContent).not.toContain("healthChecks:");
   });
 
-  test("omits env and the Env import when envJson is null or empty", () => {
+  test("omits vars and the Env import when envJson is null or empty", () => {
     for (const envJson of [null, []]) {
-      const content = generateStepsFileContent([makeStep({ envJson })]);
+      const content = generateStepsFileContent([
+        makeStep({ environment: { kind: "inline", envJson } }),
+      ]);
 
-      expect(content).not.toContain("environment:");
+      expect(content).not.toContain("vars:");
       expect(content).toContain(
         'import { defineStep } from "@scarn/sdk/definitions/steps";',
       );
@@ -131,15 +112,18 @@ describe("generateStepsFileContent", () => {
   test("emits plain values as bare strings and imports Env only when a helper is used", () => {
     const content = generateStepsFileContent([
       makeStep({
-        envJson: [
-          {
-            name: "WAREHOUSE_URL",
-            source: "value",
-            value: "https://warehouse.internal",
-            secret: false,
-            applies: "agent",
-          },
-        ],
+        environment: {
+          kind: "inline",
+          envJson: [
+            {
+              name: "WAREHOUSE_URL",
+              source: "value",
+              value: "https://warehouse.internal",
+              secret: false,
+              applies: "agent",
+            },
+          ],
+        },
       }),
     ]);
 
@@ -155,22 +139,25 @@ describe("generateStepsFileContent", () => {
   test("emits input templates as template literals and destructures input only then", () => {
     const content = generateStepsFileContent([
       makeStep({
-        envJson: [
-          {
-            name: "ACCOUNT_ID",
-            source: "value",
-            value: "{{input.accountId}}",
-            secret: false,
-            applies: "agent",
-          },
-          {
-            name: "TENANT_URL",
-            source: "value",
-            value: "https://{{input.tenant}}.example.com",
-            secret: false,
-            applies: "agent",
-          },
-        ],
+        environment: {
+          kind: "inline",
+          envJson: [
+            {
+              name: "ACCOUNT_ID",
+              source: "value",
+              value: "{{input.accountId}}",
+              secret: false,
+              applies: "agent",
+            },
+            {
+              name: "TENANT_URL",
+              source: "value",
+              value: "https://{{input.tenant}}.example.com",
+              secret: false,
+              applies: "agent",
+            },
+          ],
+        },
       }),
     ]);
 
@@ -184,15 +171,18 @@ describe("generateStepsFileContent", () => {
   test("leaves non-input tokens in an env template as literal text", () => {
     const content = generateStepsFileContent([
       makeStep({
-        envJson: [
-          {
-            name: "NOTE",
-            source: "value",
-            value: "{{env.OTHER}} for {{input.id}}",
-            secret: false,
-            applies: "agent",
-          },
-        ],
+        environment: {
+          kind: "inline",
+          envJson: [
+            {
+              name: "NOTE",
+              source: "value",
+              value: "{{env.OTHER}} for {{input.id}}",
+              secret: false,
+              applies: "agent",
+            },
+          ],
+        },
       }),
     ]);
 
@@ -202,55 +192,60 @@ describe("generateStepsFileContent", () => {
   test("emits secret values and inherit entries through Env, spelling out only non-default options", () => {
     const content = generateStepsFileContent([
       makeStep({
-        envJson: [
-          {
-            name: "TENANT_API_KEY",
-            source: "value",
-            value: "{{input.tenant}}-key",
-            secret: true,
-            applies: "agent",
-          },
-          {
-            name: "WAREHOUSE_TOKEN",
-            source: "inherit",
-            from: "WAREHOUSE_TOKEN",
-            secret: true,
-            optional: false,
-            applies: "agent",
-          },
-          {
-            name: "DB_PASSWORD",
-            source: "inherit",
-            from: "STAGING_DB_PASSWORD",
-            secret: true,
-            optional: false,
-            applies: "agent",
-          },
-          {
-            name: "LOG_LEVEL",
-            source: "inherit",
-            from: "LOG_LEVEL",
-            secret: false,
-            optional: true,
-            default: "info",
-            applies: "agent",
-          },
-          {
-            name: "SENTRY_DSN",
-            source: "inherit",
-            from: "SENTRY_DSN",
-            secret: false,
-            optional: false,
-            applies: "agent",
-          },
-        ],
+        environment: {
+          kind: "inline",
+          envJson: [
+            {
+              name: "TENANT_API_KEY",
+              source: "value",
+              value: "{{input.tenant}}-key",
+              secret: true,
+              applies: "agent",
+            },
+            {
+              name: "WAREHOUSE_TOKEN",
+              source: "inherit",
+              from: "WAREHOUSE_TOKEN",
+              secret: true,
+              optional: false,
+              applies: "agent",
+            },
+            {
+              name: "DB_PASSWORD",
+              source: "inherit",
+              from: "STAGING_DB_PASSWORD",
+              secret: true,
+              optional: false,
+              applies: "agent",
+            },
+            {
+              name: "LOG_LEVEL",
+              source: "inherit",
+              from: "LOG_LEVEL",
+              secret: false,
+              optional: true,
+              default: "info",
+              applies: "agent",
+            },
+            {
+              name: "SENTRY_DSN",
+              source: "inherit",
+              from: "SENTRY_DSN",
+              secret: false,
+              optional: false,
+              applies: "agent",
+            },
+          ],
+        },
       }),
     ]);
 
     expect(content).toContain(
       "TENANT_API_KEY: Env.value({ value: `${input.tenant}-key`, secret: true }),",
     );
-    expect(content).toContain("WAREHOUSE_TOKEN: Env.inherit({ secret: true }),");
+    expect(content).toContain(
+      "WAREHOUSE_TOKEN: Env.inherit({ secret: true }),",
+    );
     expect(content).toContain(
       'DB_PASSWORD: Env.inherit({ from: "STAGING_DB_PASSWORD", secret: true }),',
     );
@@ -266,22 +261,25 @@ describe("generateStepsFileContent", () => {
   test("emits unsafeAllowStatic for a static value on a secret-looking name", () => {
     const content = generateStepsFileContent([
       makeStep({
-        envJson: [
-          {
-            name: "PUBLIC_API_KEY",
-            source: "value",
-            value: "pk_live_123",
-            secret: false,
-            applies: "agent",
-          },
-          {
-            name: "TOKEN_URL",
-            source: "value",
-            value: "{{input.tenant}}/token",
-            secret: false,
-            applies: "agent",
-          },
-        ],
+        environment: {
+          kind: "inline",
+          envJson: [
+            {
+              name: "PUBLIC_API_KEY",
+              source: "value",
+              value: "pk_live_123",
+              secret: false,
+              applies: "agent",
+            },
+            {
+              name: "TOKEN_URL",
+              source: "value",
+              value: "{{input.tenant}}/token",
+              secret: false,
+              applies: "agent",
+            },
+          ],
+        },
       }),
     ]);
 
@@ -295,15 +293,18 @@ describe("generateStepsFileContent", () => {
     const content = generateStepsFileContent([
       makeStep({
         prompt: "Query {{env.WAREHOUSE_URL}}.",
-        envJson: [
-          {
-            name: "WAREHOUSE_URL",
-            source: "value",
-            value: "https://warehouse.internal",
-            secret: false,
-            applies: "agent",
-          },
-        ],
+        environment: {
+          kind: "inline",
+          envJson: [
+            {
+              name: "WAREHOUSE_URL",
+              source: "value",
+              value: "https://warehouse.internal",
+              secret: false,
+              applies: "agent",
+            },
+          ],
+        },
       }),
     ]);
 
@@ -389,7 +390,7 @@ describe("generateStepsFileContent", () => {
           },
           required: ["accountId", "tenant"],
         },
-        envJson,
+        environment: { kind: "inline", envJson },
       }),
     ]);
 
@@ -398,10 +399,12 @@ describe("generateStepsFileContent", () => {
       const file = path.join(dir, "steps.ts");
       await writeFile(file, content, "utf-8");
       const loaded = (await import(file)) as {
-        accountInvestigation: { envJson: EnvVarSpec[] | null };
+        accountInvestigation: { environment: { envJson: EnvVarSpec[] | null } };
       };
 
-      expect(envVarsSchema.parse(loaded.accountInvestigation.envJson)).toEqual(envJson);
+      expect(
+        envVarsSchema.parse(loaded.accountInvestigation.environment.envJson),
+      ).toEqual(envJson);
     } finally {
       await rm(dir, { recursive: true, force: true });
     }

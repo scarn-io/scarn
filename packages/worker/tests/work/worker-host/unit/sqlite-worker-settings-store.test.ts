@@ -1,3 +1,4 @@
+import { Database } from "bun:sqlite";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -13,7 +14,6 @@ function projectInput(
     projectId: "proj-1",
     projectRef: "acme/widgets",
     repoDir: "/repos/widgets",
-    sourceBranch: "main",
     baseUrl: "https://scarn.example",
     addedByUserId: "user-1",
     concurrency: null,
@@ -94,10 +94,10 @@ describe("SqliteWorkerSettingsStore", () => {
     store.upsertProject(projectInput({ concurrency: 2 }));
     clock = new Date("2026-01-05T00:00:00.000Z");
     const updated = store.upsertProject(
-      projectInput({ sourceBranch: "develop", concurrency: null }),
+      projectInput({ repoDir: "/repos/moved", concurrency: null }),
     );
 
-    expect(updated.sourceBranch).toBe("develop");
+    expect(updated.repoDir).toBe("/repos/moved");
     expect(updated.concurrency).toBeNull();
     expect(updated.createdAt).toBe("2026-01-01T00:00:00.000Z");
     expect(updated.updatedAt).toBe("2026-01-05T00:00:00.000Z");
@@ -141,5 +141,44 @@ describe("SqliteWorkerSettingsStore", () => {
     expect(store.getProject("scarn", "proj-1")?.projectRef).toBe(
       "acme/widgets",
     );
+  });
+
+  test("opens a database with the old source_branch column and saves to it", () => {
+    store.close();
+    const legacyPath = path.join(dir, "legacy.sqlite");
+    const legacy = new Database(legacyPath, { create: true, strict: true });
+    legacy.run(`
+      CREATE TABLE worker_projects (
+        instance TEXT NOT NULL,
+        project_id TEXT NOT NULL,
+        project_ref TEXT NOT NULL,
+        repo_dir TEXT NOT NULL,
+        source_branch TEXT NOT NULL,
+        base_url TEXT NOT NULL,
+        added_by_user_id TEXT NOT NULL,
+        concurrency INTEGER,
+        work_item_id TEXT,
+        preserve_runtime INTEGER NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        PRIMARY KEY (instance, project_id)
+      );
+    `);
+    legacy.run(
+      `INSERT INTO worker_projects VALUES
+         ('scarn', 'proj-old', 'acme/old', '/repos/old', 'develop',
+          'https://scarn.example', 'user-1', NULL, NULL, 0,
+          '2025-12-01T00:00:00.000Z', '2025-12-01T00:00:00.000Z')`,
+    );
+    legacy.close();
+
+    store = new SqliteWorkerSettingsStore({
+      databasePath: legacyPath,
+      now: () => clock,
+    });
+
+    expect(store.getProject("scarn", "proj-old")?.repoDir).toBe("/repos/old");
+    expect(store.upsertProject(projectInput()).projectId).toBe("proj-1");
+    expect(store.listProjects("scarn")).toHaveLength(2);
   });
 });

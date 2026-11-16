@@ -2,7 +2,7 @@
  * A step's managed runtime through the single-container launch orchestrator:
  * the synthesized config replaces config resolution, its path reaches the
  * patchers, the launch and the returned environment, an unknown identifier
- * fails before anything is cloned, and the config and the install's artifacts
+ * fails after checkout but before runtime startup, and the config and the install's artifacts
  * stay out of the work-branch commit. Shares the launch fakes with
  * `local-project-runtime-environment-config-path.test.ts`.
  */
@@ -11,6 +11,10 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { PIPELINE_BUILDER_DIR } from "@scarn/sdk/push";
+import {
+  EnvironmentInvalid,
+  type ResolvedEnvironmentRef,
+} from "@scarn/sdk/environment";
 import { DefaultLocalProjectRuntimeEnvironmentOrchestrator } from "../../../../src/work/task-run/infra/local-project-runtime-environment";
 import { WORK_BRANCH_EXCLUDE_PATHS } from "../../../../src/work/task-run/infra/work-branch-manager";
 import { MANAGED_RUNTIME_INSTALL_ARTIFACT_PATHS } from "../../../../src/runtime/runtime-service/domain/managed-runtimes";
@@ -63,7 +67,18 @@ describe("launch with a managed runtime", () => {
   }
 
   function launchInput(managedRuntime: string | null) {
-    return { ...buildLaunchInput(), startAgent: false, managedRuntime };
+    const environment =
+      managedRuntime === null
+        ? null
+        : {
+            kind: "inline",
+            runtime: { kind: "managed", id: managedRuntime },
+          };
+    return {
+      ...buildLaunchInput(),
+      startAgent: false,
+      environment: environment as ResolvedEnvironmentRef,
+    };
   }
 
   test("hands the launcher the synthesized config instead of resolving one from the clone", async () => {
@@ -157,8 +172,12 @@ describe("launch with a managed runtime", () => {
     const env = await orchestrator.launch({
       ...buildLaunchInput(),
       startAgent: true,
-      managedRuntime: "bun1",
-      repo: { mode: "readOnly", gitCredentials: "none" },
+      environment: { kind: "inline", runtime: { kind: "managed", id: "bun1" } },
+      repo: {
+        mode: "readOnly",
+        gitCredentials: "none",
+        baseBranch: null,
+      },
     });
 
     expect(deps.devcontainerLauncher.resolveConfigInputs).toEqual([]);
@@ -177,7 +196,7 @@ describe("launch with a managed runtime", () => {
     expect(deps.devcontainerLauncher.resolveConfigInputs).toHaveLength(1);
   });
 
-  test("an unknown identifier fails before the workspace is created, naming it and the supported ones", async () => {
+  test("an unknown identifier fails after checkout with the supported identifiers", async () => {
     const { log, deps, orchestrator } = setup();
 
     let caught: unknown;
@@ -187,13 +206,10 @@ describe("launch with a managed runtime", () => {
       caught = error;
     }
 
-    expect(caught).toBeInstanceOf(Error);
-    expect((caught as Error).message).toBe(
-      'Managed runtime "bun9" is not supported by this worker. ' +
-        "Supported managed runtimes: bun1, node24. " +
-        "Upgrade the Scarn CLI to a version that supports it.",
-    );
-    expect(log).toEqual([]);
+    expect(caught).toBeInstanceOf(EnvironmentInvalid);
+    expect((caught as Error).message).toContain("bun1");
+    expect((caught as Error).message).toContain("node24");
+    expect(log).toEqual(["createWorkspace", "clone"]);
     expect(deps.devcontainerLauncher.launchInputs).toEqual([]);
   });
 

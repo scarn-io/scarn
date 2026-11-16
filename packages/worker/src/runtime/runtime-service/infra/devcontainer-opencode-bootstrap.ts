@@ -16,7 +16,7 @@ import {
   HOST_GATEWAY_RUN_ARGS,
   type DevcontainerBindMount,
 } from "./devcontainer-mount-injection";
-import { buildDockerEnvFlags } from "./docker-env-flags";
+import { buildDockerEnvByName, dockerProcessEnv } from "./docker-env-flags";
 import { execDockerWithStdin, shQuote } from "./docker-exec-with-stdin";
 import {
   patchDevcontainerAppPort,
@@ -383,12 +383,10 @@ export class DevcontainerOpencodeBootstrap {
       "-e",
       `SCARN_WORKSPACE_FOLDER=${input.workspaceFolder}`,
     ];
-    envFlags.push(
-      ...buildDockerEnvFlags(input.providerEnv),
-      ...buildDockerEnvFlags(input.stepEnv ?? {}),
-      "-e",
-      `${SERVER_PASSWORD_ENV}=${serverPassword}`,
-    );
+    const byName = buildDockerEnvByName(input.providerEnv, input.stepEnv, {
+      [SERVER_PASSWORD_ENV]: serverPassword,
+    });
+    envFlags.push(...byName.flags);
 
     const serveCommand =
       // Ensure the overlay HOME base + log dir exist so a missing overlay HOME
@@ -410,14 +408,11 @@ export class DevcontainerOpencodeBootstrap {
       stepEnvKeys: Object.keys(input.stepEnv ?? {}).sort(),
     });
 
-    await execFileAsync("docker", [
-      "exec",
-      ...envFlags,
-      input.containerId,
-      "sh",
-      "-lc",
-      serveCommand,
-    ]);
+    await execFileAsync(
+      "docker",
+      ["exec", ...envFlags, input.containerId, "sh", "-lc", serveCommand],
+      { env: dockerProcessEnv(byName) },
+    );
 
     const masker = new SecretMasker([
       ...Object.values(input.providerEnv),

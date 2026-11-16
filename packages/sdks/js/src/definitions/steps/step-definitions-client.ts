@@ -73,10 +73,7 @@ const buildStepDefinitionsClient = (stepDefinitions: StepDefinitions) => {
         version: spec.version,
         kind: spec.kind,
         entrypointJson: spec.entrypointJson ?? null,
-        executionMode: spec.executionMode,
-        devcontainerConfigPath: spec.devcontainerConfigPath,
-        managedRuntime:
-          spec.managedRuntime as UpsertStepDefinitionInput["managedRuntime"],
+        environment: spec.environment,
         repo: spec.repo,
         inputSchemaJson: spec.inputSchemaJson ?? ANY_OBJECT_SCHEMA,
         resultSchemaJson:
@@ -85,7 +82,6 @@ const buildStepDefinitionsClient = (stepDefinitions: StepDefinitions) => {
             : spec.resultSchemaJson,
         opencodeMcpJson: spec.opencodeMcpJson,
         healthChecksJson: spec.healthChecksJson,
-        envJson: spec.envJson,
         errors: [...(spec.errors ?? [])],
         retry: (spec.retryJson ?? []).map((entry) => ({
           on: [...entry.on],

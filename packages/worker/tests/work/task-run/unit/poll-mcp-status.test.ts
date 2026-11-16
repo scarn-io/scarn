@@ -26,7 +26,7 @@ function mcpListResponse(
 }
 
 describe("pollMcpStatus", () => {
-  test("marks connected and disabled servers healthy, others unhealthy", async () => {
+  test("marks only connected servers healthy; disabled does not count", async () => {
     globalThis.fetch = (() =>
       Promise.resolve(
         mcpListResponse([
@@ -61,7 +61,56 @@ describe("pollMcpStatus", () => {
         error: "login required",
         healthy: false,
       },
-      { name: "slack", status: "disabled", error: undefined, healthy: true },
+      { name: "slack", status: "disabled", error: undefined, healthy: false },
+    ]);
+  });
+
+  test("with expectedServers, reports only those and ignores other listed servers", async () => {
+    globalThis.fetch = (() =>
+      Promise.resolve(
+        mcpListResponse([
+          { name: "github", status: { status: "connected" } },
+          { name: "repo-only", status: { status: "disabled" } },
+        ]),
+      )) as unknown as typeof fetch;
+
+    const report = await pollMcpStatus(
+      {
+        baseUrl: "http://127.0.0.1:4096",
+        password: "test-password",
+        workspaceFolder: "/workspaces/repo",
+      },
+      { windowMs: 200, intervalMs: 5, expectedServers: ["github"] },
+    );
+
+    expect(report).toEqual([
+      { name: "github", status: "connected", error: undefined, healthy: true },
+    ]);
+  });
+
+  test("reports an expected server OpenCode never lists as missing", async () => {
+    globalThis.fetch = (() =>
+      Promise.resolve(
+        mcpListResponse([{ name: "github", status: { status: "connected" } }]),
+      )) as unknown as typeof fetch;
+
+    const report = await pollMcpStatus(
+      {
+        baseUrl: "http://127.0.0.1:4096",
+        password: "test-password",
+        workspaceFolder: "/workspaces/repo",
+      },
+      { windowMs: 50, intervalMs: 5, expectedServers: ["github", "linear"] },
+    );
+
+    expect(report).toEqual([
+      { name: "github", status: "connected", error: undefined, healthy: true },
+      {
+        name: "linear",
+        status: "missing",
+        error: "OpenCode never registered this server",
+        healthy: false,
+      },
     ]);
   });
 

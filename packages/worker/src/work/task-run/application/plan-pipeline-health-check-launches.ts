@@ -1,28 +1,22 @@
-import type { EnvVarSpec } from "@scarn/sdk/env-vars";
+import type {
+  EnvironmentRef,
+  ResolvedEnvironment,
+  ResolvedEnvironmentRefInput,
+} from "@scarn/sdk/environment";
 import type { HealthCheck } from "@scarn/sdk/health-checks";
 import type { OpenCodeMcpServers } from "../../../common/contracts/opencode-mcp";
 
 /**
  * Plans how the post-push run-offer gate runs every step's health checks
- * with as few launches as possible: one launch per distinct runtime.
+ * with as few launches as possible: one per environment. Null remains the
+ * repository default; a named environment groups by `name@version` (its
+ * latest version, fetched before planning); inline refs compare as whole
+ * objects, including runtime and variables. Resolution happens independently
+ * after cloning each planned launch.
  *
- * **Distinct runtime** means a different answer to "what container (or host
- * process) would a real run of this step start?", which a step definition
- * states in three fields, normalised the way the orchestrators read them:
- *
- * - `executionMode: "no_workspace"`: the host. The orchestrator ignores
- *   `devcontainerConfigPath` and `managedRuntime`, so every host step shares
- *   one runtime.
- * - `managedRuntime` set: that managed image. It replaces the clone's
- *   devcontainer config, so `devcontainerConfigPath` is ignored.
- * - otherwise: the project's devcontainer at `devcontainerConfigPath`, where
- *   `null` (auto-detect) is its own runtime. Whether it resolves to the same
- *   file as an explicit path is only knowable after cloning.
- *
- * Two steps with the same runtime still need separate launches when the
- * launch's merged configuration would change what one of them sees: the
- * same `mcpServers` key with a different definition, or the same env var name
- * with a different spec.
+ * Two steps with the same reference still need separate launches when their
+ * rendered base branches differ (each launch checks out one), or when the
+ * same `mcpServers` key has different definitions.
  * Merging those silently would test a server one step never gets. Such a step
  * goes into the next launch of that runtime that has no conflict, or a new one.
  *
@@ -34,25 +28,25 @@ export type HealthCheckStep = {
   stepDefinitionId: string;
   key: string;
   name: string;
-  executionMode: "workspace" | "no_workspace";
-  devcontainerConfigPath: string | null;
-  managedRuntime: string | null;
+  /** The step's ref, with a named environment's latest version fetched. */
+  environment: ResolvedEnvironmentRefInput;
   opencodeMcpJson: OpenCodeMcpServers | null;
   healthChecksJson: HealthCheck[] | null;
-  envJson: EnvVarSpec[] | null;
+  /** The step's `baseBranch` rendered from `env` tokens alone; null when it has none or that was not possible. */
+  baseWorkBranch?: string | null | undefined;
+  /** Why the step's `baseBranch` was not rendered (see `renderEnvOnlyBaseBranch`). */
+  baseBranchNote?: string | null | undefined;
 };
 
-export type HealthCheckRuntime =
-  | { kind: "host" }
-  | { kind: "managed"; managedRuntime: string }
-  | { kind: "devcontainer"; devcontainerConfigPath: string | null };
+export type HealthCheckRuntime = ResolvedEnvironmentRefInput;
 
 export type PlannedHealthCheckLaunch = {
   runtime: HealthCheckRuntime;
+  /** Checked out after clone; null falls back to the configured or remote default branch. */
+  baseWorkBranch: string | null;
   /** In pipeline order; every one declares at least one check. */
   steps: HealthCheckStep[];
   opencodeMcpJson: OpenCodeMcpServers;
-  envJson: EnvVarSpec[];
 };
 
 export type HealthCheckLaunchPlan = {
@@ -64,28 +58,46 @@ export type HealthCheckLaunchPlan = {
 export function resolveHealthCheckRuntime(
   step: HealthCheckStep,
 ): HealthCheckRuntime {
-  if (step.executionMode === "no_workspace") return { kind: "host" };
-  if (step.managedRuntime !== null) {
-    return { kind: "managed", managedRuntime: step.managedRuntime };
-  }
-  return {
-    kind: "devcontainer",
-    devcontainerConfigPath: step.devcontainerConfigPath,
-  };
+  return step.environment;
+}
+
+/** Named environments group by `name@version`; inline ones by canonical content. */
+function launchKey(runtime: HealthCheckRuntime): string {
+  if (runtime?.kind !== "named") return canonicalJson(runtime);
+  return "notFound" in runtime
+    ? `named:${runtime.name}:not-found`
+    : `named:${runtime.name}@${String(runtime.version)}`;
 }
 
 export function describeHealthCheckRuntime(
-  runtime: HealthCheckRuntime,
+  runtime: EnvironmentRef | HealthCheckRuntime,
+  resolved?: ResolvedEnvironment,
 ): string {
-  switch (runtime.kind) {
+  if (resolved) {
+    const description = describeHealthCheckRuntime({
+      kind: "inline",
+      runtime: resolved.runtime,
+    });
+    if (runtime?.kind === "named") {
+      return `environment ${runtime.name} (${description})`;
+    }
+    return runtime === null || !runtime.runtime
+      ? `repository default (${description})`
+      : description;
+  }
+  if (runtime === null) return "repository default";
+  if (runtime.kind === "named") return `environment ${runtime.name}`;
+  const selected = runtime.runtime;
+  if (!selected) return "repository default";
+  switch (selected.kind) {
     case "host":
       return "host";
     case "managed":
-      return `managed runtime ${runtime.managedRuntime}`;
+      return `managed runtime ${selected.id}`;
     case "devcontainer":
-      return runtime.devcontainerConfigPath === null
+      return selected.config === undefined
         ? "project devcontainer"
-        : `devcontainer ${runtime.devcontainerConfigPath}`;
+        : `devcontainer ${selected.config}`;
   }
 }
 
@@ -124,28 +136,21 @@ function conflictsByKey<T>(
 const mcpEntries = (step: HealthCheckStep) =>
   new Map(Object.entries(step.opencodeMcpJson ?? {}));
 
-const envEntries = (step: HealthCheckStep) =>
-  new Map((step.envJson ?? []).map((spec) => [spec.name, spec]));
-
 type LaunchBuilder = {
   runtimeKey: string;
   runtime: HealthCheckRuntime;
+  baseWorkBranch: string | null;
   steps: HealthCheckStep[];
   mcp: Map<string, OpenCodeMcpServers[string]>;
-  env: Map<string, EnvVarSpec>;
 };
 
 function fits(builder: LaunchBuilder, step: HealthCheckStep): boolean {
-  return (
-    !conflictsByKey(builder.mcp, mcpEntries(step)) &&
-    !conflictsByKey(builder.env, envEntries(step))
-  );
+  return !conflictsByKey(builder.mcp, mcpEntries(step));
 }
 
 function addStep(builder: LaunchBuilder, step: HealthCheckStep): void {
   builder.steps.push(step);
   for (const [key, value] of mcpEntries(step)) builder.mcp.set(key, value);
-  for (const [key, value] of envEntries(step)) builder.env.set(key, value);
 }
 
 /** Group `steps` (in pipeline order) into the launches that run their checks. */
@@ -161,18 +166,21 @@ export function planHealthCheckLaunches(
       continue;
     }
     const runtime = resolveHealthCheckRuntime(step);
-    const runtimeKey = canonicalJson(runtime);
+    const runtimeKey = launchKey(runtime);
+    const baseWorkBranch = step.baseWorkBranch ?? null;
     let builder = builders.find(
       (candidate) =>
-        candidate.runtimeKey === runtimeKey && fits(candidate, step),
+        candidate.runtimeKey === runtimeKey &&
+        candidate.baseWorkBranch === baseWorkBranch &&
+        fits(candidate, step),
     );
     if (!builder) {
       builder = {
         runtimeKey,
         runtime,
+        baseWorkBranch,
         steps: [],
         mcp: new Map(),
-        env: new Map(),
       };
       builders.push(builder);
     }
@@ -182,9 +190,9 @@ export function planHealthCheckLaunches(
   return {
     launches: builders.map((builder) => ({
       runtime: builder.runtime,
+      baseWorkBranch: builder.baseWorkBranch,
       steps: builder.steps,
       opencodeMcpJson: Object.fromEntries(builder.mcp),
-      envJson: [...builder.env.values()],
     })),
     stepsWithoutChecks,
   };

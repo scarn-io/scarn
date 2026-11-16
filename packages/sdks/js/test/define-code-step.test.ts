@@ -1,3 +1,4 @@
+import { inlineEnvironment } from "./inline-environment";
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
 import { Runtime } from "../src/definitions/steps/runtime";
@@ -42,14 +43,16 @@ describe("codeStep", () => {
     "an omitted runtime compiles to the default managed identifier",
     () => {
       const spec = codeStep({ key: "noop", name: "Noop", fn: () => ({}) });
-      expect(spec.managedRuntime).toBe("bun1");
-      expect(spec.devcontainerConfigPath).toBeNull();
-      expect(spec.executionMode).toBe("workspace");
+      expect(spec.environment).toEqual({
+        kind: "inline",
+        runtime: { kind: "managed", id: "bun1" },
+        envJson: null,
+      });
     },
   );
 
   test.concurrent(
-    "an explicit devcontainer runtime compiles to a null managedRuntime",
+    "an explicit devcontainer runtime replaces the managed default",
     () => {
       const spec = codeStep({
         key: "noop",
@@ -57,7 +60,9 @@ describe("codeStep", () => {
         environment: { runtime: Runtime.devcontainer() },
         fn: () => ({}),
       });
-      expect(spec.managedRuntime).toBeNull();
+      expect(inlineEnvironment(spec.environment)?.runtime).toEqual({
+        kind: "devcontainer",
+      });
     },
   );
 

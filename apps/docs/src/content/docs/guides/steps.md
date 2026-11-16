@@ -77,11 +77,11 @@ Scarn currently provides `scarn.artifactsDir`, which points to the directory who
 
 The function form compiles to the same template syntax Scarn stores internally, such as `{{input.title}}` and `{{env.BASE_URL}}`. Existing raw tokens still work, but new steps should prefer scoped variables.
 
-In a step that does not declare [`environment.vars`](#environment-variables), `env` is the worker's environment: `.scarn/.env` merged over the worker's `process.env`. Once a step declares `vars`, the prompt's `env` is **strict** — only the declared, non-secret keys, and nothing else from the worker.
+Without named or inline variable declarations, `env` falls back to the worker's environment: `.scarn/.env` merged over the worker's `process.env`. With inline [`environment.vars`](#environment-variables), the prompt's `env` is **strict**—only declared, non-secret keys. A [`defineEnvironment`](/scarn/reference/sdk/#defineenvironmentoptions) handle is typed the same way from its `vars`. An environment named by string has its keys resolved at launch rather than inferred by TypeScript; secret values are still excluded.
 
 ## Environment
 
-`environment` describes how a step runs: **where** it runs (`runtime`), **which environment variables** it gets (`vars`), and **what it does to your repository** (`repo`). It is accepted by `defineStep()` and [`codeStep()`](#code-steps), and every field is optional.
+`environment` accepts a named environment (its handle or its name) or inline settings for **where** a step runs (`runtime`), its preferred `branch`, and its environment variables (`vars`). It is accepted by `defineStep()` and [`codeStep()`](#code-steps). Repository write policy is the separate top-level `repo` option. See [Environments](/scarn/guides/environments/) for named environments, defaults, and branch precedence.
 
 ```typescript
 import { defineStep, Runtime, Env } from "@scarn/sdk";
@@ -104,11 +104,8 @@ export const buildFrontend = defineStep({
 });
 ```
 
-| Field                 | Type                                                                                         | Default                                                 |
-| --------------------- | -------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
-| `environment.runtime` | `Runtime.devcontainer({ config? })` or `Runtime.host()`                                      | `Runtime.devcontainer()`                                |
-| `environment.vars`    | `({ input }) => Record<string, string \| EnvEntry>`                                          | none                                                    |
-| `environment.repo`    | `Repo.readWrite()`, `Repo.readOnly()` or `Repo.none()`, or `({ input, result }) => RepoSpec` | The runtime's default (see [Repo access](#repo-access)) |
+The inline fields and top-level `repo` types are listed in the
+[SDK reference](/scarn/reference/sdk/#stepdefinition-options).
 
 :::caution
 Declare `environment` **before** `agentPrompt`. TypeScript infers the keys declared in `vars` into the prompt's `env`, so `environment` has to come first in the object for `agentPrompt`'s `env` to be typed from it.
@@ -122,13 +119,13 @@ Put config in the step only when it is about that step: a different devcontainer
 
 ### Runtime
 
-`runtime` controls whether a step gets a checkout of your repository, and which container it runs in.
+`runtime` controls where a step runs. Every runtime gets a repository checkout; see [defaults](/scarn/guides/environments/#defaults) for automatic selection.
 
-| Runtime                  | What the worker sets up                                                                                                                                                                                | Use for                                                                                     |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
-| `Runtime.devcontainer()` | Clones your repository and launches your devcontainer; the agent runs **inside** that container. This is the default.                                                                                  | Steps that read, run, or modify your code.                                                  |
-| `Runtime.managed.<id>()` | Clones your repository into a worker-supplied image instead of your devcontainer; the agent runs **inside** that container. See [Managed runtimes for agent steps](#managed-runtimes-for-agent-steps). | Steps that read or change code but don't need your project's toolchain.                     |
-| `Runtime.host()`         | No clone and no dev container. The agent runs on the worker host against a temporary empty directory with only the prompt and its bound input.                                                         | Prompt-only steps: research, summarization, drafting, classification, or routing decisions. |
+| Runtime                  | What the worker sets up                                                                                                                                                                                | Use for                                                                 |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------- |
+| `Runtime.devcontainer()` | Clones your repository and launches your devcontainer; the agent runs **inside** that container.                                                                                                       | Steps needing your project's toolchain.                                 |
+| `Runtime.managed.<id>()` | Clones your repository into a worker-supplied image instead of your devcontainer; the agent runs **inside** that container. See [Managed runtimes for agent steps](#managed-runtimes-for-agent-steps). | Steps that read or change code but don't need your project's toolchain. |
+| `Runtime.host()`         | Clones your repository and runs the agent on the worker host without a container.                                                                                                                      | Steps using the host's tools without Docker isolation.                  |
 
 ```typescript
 import { defineStep, Runtime } from "@scarn/sdk";
@@ -145,7 +142,7 @@ export const classifyStep = defineStep({
 });
 ```
 
-`Runtime.host()` steps are faster and cheaper because they skip the clone and container startup, and they run even for projects without a dev container. Everything else works the same: bound input, `agentPrompt`, `result`, and `mcps` all behave identically, except that a host step can't use a [`ref`](#referencing-a-server-from-your-repository) MCP server: give it [`local`](#local-servers) or [`remote`](#remote-servers) servers instead. Because there is no checkout, the agent has no access to your repository files; if a step needs to read or change your code, keep the default `Runtime.devcontainer()`. `Runtime.host()` takes no options, so a host step cannot name a devcontainer config.
+`Runtime.host()` skips container startup, not the clone. Bound input, prompts, results, and MCP servers work against that checkout, including repository [`ref`](#referencing-a-server-from-your-repository) servers. It takes no options and cannot name a devcontainer config. Use top-level `repo: Repo.readOnly()` if the worker should not commit or push.
 
 See [Running Workers](/scarn/guides/workers/) for how each runtime is executed.
 
@@ -170,7 +167,7 @@ environment: {
 An explicit `config` has **no fallback**. The worker does not go looking for another config if yours is missing, because that would run the step in a different container than the one you chose. If the file does not exist, the step fails before the container launches:
 
 ```
-Devcontainer config ".devcontainer/frontend/devcontainer.json" not found in the cloned repository (branch "main")
+Devcontainer config not found: .devcontainer/frontend/devcontainer.json (branch "main")
 ```
 
 The error names the path and the branch it was looked up on.
@@ -183,7 +180,7 @@ The worker patches the config it launches (to add mounts, ports, and `containerE
 
 #### Runtime for code steps
 
-[`codeStep()`](#code-steps) takes the same `environment`, with one restriction: **`Runtime.host()` is not supported**. A code step runs code from your repository, and the host runtime has no clone, so the entrypoint could never be found. This is a type error on `codeStep`, and `scarn pipelines push` validation rejects a hand-built spec that does it.
+[`codeStep()`](#code-steps) takes the same named or inline `environment`, with one restriction: **host is not supported**. Code steps require a container runtime. Inline `Runtime.host()` is a type error, a handle whose runtime is host throws when the step is defined, and a name resolving to host fails at launch.
 
 A code step runs in a **managed runtime** by default: a small container the worker supplies, so the step does not boot your project's devcontainer to run a plain function. The worker owns the image, the generated config and the dependency install; your repository holds nothing for it. Pick one with `Runtime.managed.<id>()`, or opt out with `Runtime.devcontainer()` to run in your project's devcontainer (or the config it selects) instead.
 
@@ -210,7 +207,7 @@ export const needsProjectToolchain = codeStep({
 | `bun1`     | `oven/bun:1.4.0-debian` | Bun 1.x | `bun install --production`, whichever lockfile is present or none                                                                                                                                                                                 |
 | `node24`   | `node:24-bookworm-slim` | Node 24 | `npm install --omit=dev --no-audit --no-fund` for `package-lock.json`, `yarn.lock` or no lockfile; `corepack pnpm install --prod` for `pnpm-lock.yaml`; `bun.lock` or `bun.lockb` is not read by npm, so it installs without it and logs a notice |
 
-`bun1` is the default: omit `runtime` and you get `Runtime.managed.bun1()`. An identifier is the runtime plus its major line. Within a line the worker floats minor and patch versions, so a worker upgrade can move the image under your step. A new major is a new identifier.
+For automatic runtime selection, see the [defaults table](/scarn/guides/environments/#defaults). An identifier is the runtime plus its major line. Within a line the worker floats minor and patch versions, so a worker upgrade can move the image under your step. A new major is a new identifier.
 
 How the install works:
 
@@ -231,10 +228,6 @@ Runtime-specific behavior to know about:
 Before managed runtimes, a code step's working directory was whatever the container image set (for example `/home/bun/app` or `/`), so relative paths in `fn` behaved differently per image. It is now always the workspace. A step that relied on the old directory needs updating.
 :::
 
-:::note[Existing steps are unchanged until re-pushed]
-The default applies when a step is pushed. A code step already pushed keeps running in your project's devcontainer until you push it again with `scarn pipelines push`. To keep one on the devcontainer after a re-push, set `runtime: Runtime.devcontainer()` explicitly.
-:::
-
 A managed step has no `config`, and `repo` follows the usual rules: `Repo.readWrite()` (the default) or `Repo.readOnly()`.
 
 With `Runtime.devcontainer()` the runner script executes in your container. A container selected with a non-default `config` must provide a JavaScript runtime for it: the runner uses `bun` if it is on `PATH`, otherwise `node`. That is up to the author of the config.
@@ -249,35 +242,27 @@ import { defineStep, Repo, Runtime } from "@scarn/sdk";
 export const reviewStep = defineStep({
   key: "review",
   name: "Review",
-  environment: { runtime: Runtime.managed.bun1(), repo: Repo.readOnly() },
+  environment: { runtime: Runtime.managed.bun1() },
+  repo: Repo.readOnly(),
   agentPrompt: "Review the changes on this branch.",
 });
 ```
 
-- The default for `defineStep()` stays `Runtime.devcontainer()`. Name the managed runtime explicitly.
-- `repo` is `Repo.readWrite()` (the default) or `Repo.readOnly()`, with the same commit and push behavior as a devcontainer step. `Repo.none()` is rejected.
+- Automatic runtime selection follows the [environment defaults](/scarn/guides/environments/#defaults).
+- Top-level `repo` is `Repo.readWrite()` (the default) or `Repo.readOnly()`, with the same commit and push behavior as a devcontainer step.
 - The image has only the runtime its identifier names (Bun or Node) and the clone. If the agent needs your project's toolchain, services or setup commands, use `Runtime.devcontainer()`.
 - Multi-turn steps restore their agent session across hand-offs, as on a devcontainer.
 
 ### Repo access
 
-`repo` controls what the worker does with the repository clone: whether the step gets a [work branch](/scarn/guides/workers/#work-branches), and whether its changes are committed and pushed. Pick one of three modes:
+Top-level `repo` controls what the worker does with the repository clone: whether the step gets a [work branch](/scarn/guides/workers/#work-branches), and whether its changes are committed and pushed. Pick one of two modes:
 
-| Mode               | What the worker does                                                                                                                    | Use for                                              |
-| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
-| `Repo.readWrite()` | Creates a work branch, then commits the agent's changes and pushes the branch when the step succeeds. This is the devcontainer default. | Steps that change code.                              |
-| `Repo.readOnly()`  | Clones and checks out the base branch, but creates no work branch, commits nothing, pushes nothing, and reports no `workBranch`.        | Steps that only read code: triage, analysis, review. |
-| `Repo.none()`      | No repository. The worker does not clone, branch, commit, or push. This is the `Runtime.host()` default.                                | Prompt-only steps on `Runtime.host()`.               |
+| Mode               | What the worker does                                                                                                                         | Use for                                              |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| `Repo.readWrite()` | Creates a work branch, then commits the agent's changes and pushes the branch when the step succeeds. This is the default for every runtime. | Steps that change code.                              |
+| `Repo.readOnly()`  | Clones and checks out the base branch, but creates no work branch, commits nothing, pushes nothing, and reports no `workBranch`.             | Steps that only read code: triage, analysis, review. |
 
-Which modes a runtime accepts, and its default:
-
-| Runtime                  | `readWrite`           | `readOnly`            | `none`                                          | Default     |
-| ------------------------ | --------------------- | --------------------- | ----------------------------------------------- | ----------- |
-| `Runtime.devcontainer()` | Yes                   | Yes                   | No: the config is read from the clone           | `readWrite` |
-| `Runtime.managed.<id>()` | Yes                   | Yes                   | No: the worker writes its config into the clone | `readWrite` |
-| `Runtime.host()`         | No: there is no clone | No: there is no clone | Yes                                             | `none`      |
-
-A pair the runtime does not accept is a type error where TypeScript can express it. `scarn pipelines push` validation and the server (a `422`) reject it otherwise. A step that omits `repo` gets its runtime's default, so `Repo.readWrite()` on a devcontainer step and `Repo.none()` on a host step are redundant. [`codeStep()`](#code-steps) accepts `repo` with the same rules.
+Both modes are supported on every runtime, including host. [`codeStep()`](#code-steps) accepts the same top-level option.
 
 ```typescript
 import { defineStep, Repo } from "@scarn/sdk";
@@ -286,7 +271,7 @@ import { z } from "zod";
 export const triage = defineStep({
   key: "triage",
   name: "Triage",
-  environment: { repo: Repo.readOnly() },
+  repo: Repo.readOnly(),
   agentPrompt: "Find the code behind this report and summarize it.",
 });
 
@@ -295,22 +280,24 @@ export const implement = defineStep({
   name: "Implement",
   input: z.object({ title: z.string() }),
   result: z.object({ summary: z.string() }),
-  environment: {
-    repo: ({ result }) => Repo.readWrite({ message: `fix: ${result.summary}` }),
-  },
+  repo: ({ result }) => Repo.readWrite({ message: `fix: ${result.summary}` }),
   agentPrompt: ({ input }) => `Fix: ${input.title}`,
 });
 ```
 
 #### `Repo.readWrite` options
 
-| Option           | Type               | Default                | Description                                                                                             |
-| ---------------- | ------------------ | ---------------------- | ------------------------------------------------------------------------------------------------------- |
-| `message`        | `string`           | `scarn: task <taskId>` | The commit message, rendered from the step's input, its result and the work item's title or key         |
-| `onPushFailure`  | `"fail" \| "warn"` | `"fail"`               | Whether a failed push fails the step (`"fail"`) or is logged and ignored (`"warn"`)                     |
-| `gitCredentials` | `"auto" \| "none"` | `"auto"`               | Whether git in the container gets the worker's git credentials. See [Git credentials](#git-credentials) |
+| Option           | Type                                         | Default                | Description                                                                                             |
+| ---------------- | -------------------------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------- |
+| `message`        | `string`                                     | `scarn: task <taskId>` | The commit message, rendered from the step's input, its result and the work item's title or key         |
+| `onPushFailure`  | `"fail" \| "warn"`                           | `"fail"`               | Whether a failed push fails the step (`"fail"`) or is logged and ignored (`"warn"`)                     |
+| `gitCredentials` | `"auto" \| "none"`                           | `"auto"`               | Whether git in the container gets the worker's git credentials. See [Git credentials](#git-credentials) |
+| `baseBranch`     | `string`                                     | none                   | The branch to start from. See [Branches](#branches)                                                     |
+| `workBranch`     | `WorkBranch.create()` \| `WorkBranch.base()` | `WorkBranch.create()`  | Which branch the step commits to. See [Branches](#branches)                                             |
 
-**Commit message.** `repo` is a function of `{ input, result, workItem }`, the same way `vars` is a function of `{ input }`: both are typed from the step's `input` and `result` schemas, and a template literal built from them (`` `fix: ${result.summary}` ``) becomes a `{{result.summary}}` token that the worker renders when the step finishes. Write the string with a prefix before the interpolation, since a bare `` `${result.summary}` `` trips a lint rule. A static `Repo.readWrite({ message: "fix: {{result.summary}}" })` is the same thing, and the common case when the message needs no tokens.
+`Repo.readOnly()` takes `gitCredentials` and `baseBranch`.
+
+**Commit message.** `repo` is a function of `{ input, result, workItem, env }`, the same way `vars` is a function of `{ input }`: both are typed from the step's `input` and `result` schemas, and a template literal built from them (`` `fix: ${result.summary}` ``) becomes a `{{result.summary}}` token that the worker renders when the step finishes. Write the string with a prefix before the interpolation, since a bare `` `${result.summary}` `` trips a lint rule. A static `Repo.readWrite({ message: "fix: {{result.summary}}" })` is the same thing, and the common case when the message needs no tokens.
 
 - Only `{{input.…}}`, `{{result.…}}`, `{{workItem.title}}` and `{{workItem.platformKey}}` tokens are allowed. `{{env.…}}` is rejected, so an environment value can never reach git history.
 - `{{workItem.…}}` tokens are filled from a live read of the Task's work item when the worker commits (`` `wayfinder prototype: ${workItem.title}` ``). If the read fails, they render empty. No other work item field may be used.
@@ -319,6 +306,89 @@ export const implement = defineStep({
 - The same message is used for the superproject commit and for each submodule commit.
 
 **Push failure.** By default a failed push of the work branch, or of a submodule's copy of it, fails the step with a message naming the branch and the underlying git error. See [Work branches](/scarn/guides/workers/#work-branches) for the behavior change this made and the consequences.
+
+#### Branches
+
+Three settings pick the branch a step starts from and the branch it commits to. Each default matches what a step does without them.
+
+| Setting      | Modes       | Values                                                                                                             | Default                                                                               |
+| ------------ | ----------- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------- |
+| `baseBranch` | both        | A single-line template for the branch to start from. When set, it beats the previous step's work branch            | none: the previous step's work branch, else the worker's, project's or remote default |
+| `workBranch` | `readWrite` | `WorkBranch.create()`: a new `scarn/<key>-<id>`. `WorkBranch.base()`: commit onto the branch the step started from | `WorkBranch.create()`                                                                 |
+
+The full order, and how the previous step's branch is chosen, is in [Base branch](/scarn/guides/workers/#base-branch). The same Task continuing its own work (a yielded run, a retry after success) always starts from its own branch, even when `baseBranch` is set.
+
+**`baseBranch` tokens.** The worker renders the template before it checks out. It may use:
+
+- `{{input.…}}`: the step's input.
+- `{{env.X}}`: a variable declared in the step's environment, inline or named. It must be an `Env.value` or a non-secret `Env.inherit`. It reads the step's environment, never the raw worker environment, so `X` must be in the environment's `vars`. Secret variables are rejected, because branch names end up in logs, git and the UI.
+- `{{workItem.platformKey}}`: the work item's key, such as `ABC-123`.
+
+There's no `{{result.…}}`: the step has no result before it runs. Write tokens with the `repo` function's `env`, `input` and `workItem`, as for `message`. With an inline environment that has `vars` as a function, declare `environment` before `repo` so `env` is typed. A template without tokens must be a valid branch name, and it's at most 255 characters.
+
+An undeclared or secret `{{env.X}}` is rejected when you define the step (a handle or inline `vars`), at publish (`REPO_BASE_BRANCH_INVALID`), and when the run starts, since the environment can change after publish.
+
+**A ticket branch.** Say each ticket has an `ephemeral-<ticket>` branch, and the worker's `.scarn/.env` sets `TICKET_NUMBER`:
+
+```typescript
+// .scarn/pipeline-builder/environments.ts
+export const frontend = defineEnvironment({
+  name: "frontend",
+  runtime: Runtime.devcontainer({
+    config: ".devcontainer/frontend/devcontainer.json",
+  }),
+  vars: {
+    TICKET_NUMBER: Env.inherit(),
+  },
+});
+```
+
+```typescript
+// .scarn/pipeline-builder/steps.ts
+import { defineStep, Repo, WorkBranch } from "@scarn/sdk";
+import { frontend } from "./environments";
+
+// Start from the previous step's work, else ephemeral-<ticket>;
+// commit to a new scarn/fix-ui-bug-<id> branch.
+export const fixUiBug = defineStep({
+  key: "fix-ui-bug",
+  environment: frontend,
+  repo: ({ env, input }) =>
+    Repo.readWrite({
+      baseBranch: `ephemeral-${env.TICKET_NUMBER}`, // stored as "ephemeral-{{env.TICKET_NUMBER}}"
+      message: `fix: ${input.title}`,
+    }),
+  // …
+});
+
+// Always start from ephemeral-<ticket>, even mid-pipeline,
+// and commit straight onto it.
+export const applyToTicketBranch = defineStep({
+  key: "apply",
+  environment: frontend,
+  repo: ({ env }) =>
+    Repo.readWrite({
+      baseBranch: `ephemeral-${env.TICKET_NUMBER}`,
+      workBranch: WorkBranch.base(),
+    }),
+  // …
+});
+```
+
+`WorkBranch.base()` means "the branch I started from", not "my `baseBranch`". For a step that sets no `baseBranch` mid-pipeline, that's the previous step's branch. So a pipeline whose first step sets `baseBranch` and whose steps all use `WorkBranch.base()` does all its work on that one branch.
+
+**Committing onto the base.** With `WorkBranch.base()`:
+
+- The worker checks out the base as a local branch tracking `origin/<base>`, commits, and pushes with a plain push. It never forces.
+- If origin moved during the run, the push is rejected and the run says "origin moved; not forced". The step's `onPushFailure` decides what happens. Nothing rebases or merges.
+- A retry starts from the branch's current tip, including anything an earlier attempt pushed.
+- The run reports the base as both its `workBranch` and the branch it was created from.
+- Submodules still get their own `scarn/<key>-<id>` branch.
+- The base must come from the step's `baseBranch` or a previous step's branch. If it came from `SCARN_BASE_WORK_BRANCH`, `baseWorkBranch` or the remote default, the run fails at startup with `SCARN_REPO_BRANCH_INVALID`. To commit onto `main`, set `baseBranch: "main"`.
+
+Two runs that commit onto the same branch at once race, and the loser's push fails. Scarn doesn't prevent this. Give the step a [concurrency group](#concurrency-groups), such as `concurrency: { max: 1, waiting: 1 }`, so two of its Tasks on one work item don't run at once. A group belongs to one step, so it can't stop two different steps racing: don't put steps that commit onto the same branch in parallel [lanes](/scarn/guides/pipelines/#routes-splits-and-merges).
+
+**Failures.** A missing branch (`SCARN_REPO_BRANCH_NOT_FOUND`), a template that renders empty or to an invalid name (`SCARN_REPO_BRANCH_INVALID`) or a missing variable (`SCARN_ENVIRONMENT_UNRESOLVED`) fails the run at startup. It never falls back to the next rule. `scarn work --dry-run` renders `baseBranch` when it only uses `{{env.…}}` tokens; otherwise it warns "base branch depends on input; not checked".
 
 #### `readOnly` is a policy, not a sandbox
 
@@ -336,7 +406,7 @@ The worker answers git's credential requests with the worker machine's own git c
 The worker's git credential may be able to push, and anything in the container, the agent included, can read a credential it is given (for example with `git credential fill`). Blocking `git push` guards against accidents, not against an agent that wants to push. Turn it off for a step that doesn't need it:
 
 ```typescript
-environment: { repo: Repo.readOnly({ gitCredentials: "none" }) },
+repo: Repo.readOnly({ gitCredentials: "none" }),
 ```
 
 `Repo.readWrite({ gitCredentials: "none" })` works the same way. A worker owner can turn it off for every step with `SCARN_GIT_CREDENTIALS=off`.
@@ -348,7 +418,7 @@ environment: { repo: Repo.readOnly({ gitCredentials: "none" }) },
 
 ### Environment variables
 
-`vars` declares the environment variables a step needs. It is a function of `{ input }` that runs once at definition time against the same input proxy `agentPrompt` uses.
+Inline `vars` declares the environment variables a step needs. It accepts a record, or a function of `{ input }` that runs once at definition time against the same input proxy `agentPrompt` uses. Named environments take the same entries as a record only; see [Environments](/scarn/guides/environments/#use-a-named-environment).
 
 ```typescript
 import { defineStep, Env } from "@scarn/sdk";
@@ -469,7 +539,7 @@ Here `init-subrepos.sh` reads `INIT_SUBREPOS` on the host, and the `containerEnv
 
 #### Pulling steps
 
-`scarn pipelines pull` writes a step's `environment` back into `steps.ts`, before `agentPrompt`. A host step is written as `runtime: Runtime.host()`, a step with a selected config as `runtime: Runtime.devcontainer({ config })`, and a step on the default devcontainer omits `runtime`. `vars` is written inside `environment`, and so is `repo`, but only when it differs from the runtime's default: `Repo.readOnly()` for a read-only step, and `Repo.readWrite(...)` for a read-write step with a custom `message`, `onPushFailure: "warn"` or `gitCredentials: "none"` (the function form when the message uses `input` or `result` tokens). `gitCredentials` is written back on either mode only when it is `"none"`, since `"auto"` is the default. `Runtime`, `Env` and `Repo` are imported only when needed. A static, non-secret value on a credential-looking name round-trips as `Env.value({ value, unsafeAllowStatic: true })`.
+When writing step definitions, keep inline `runtime` and `vars` inside `environment`, and `repo` at the top level. See the [SDK reference](/scarn/reference/sdk/#stepdefinition-options) for the current authoring shape.
 
 See [Running Workers](/scarn/guides/workers/#step-environment-variables) for how the worker resolves and injects these, and [`Runtime`](/scarn/reference/sdk/#runtime), [`Env`](/scarn/reference/sdk/#env) and [`Repo`](/scarn/reference/sdk/#repo) in the SDK reference.
 
@@ -601,7 +671,7 @@ Each definition is converted to OpenCode's shape. OpenCode configs may use the v
 
 A literal credential in `env` or `headers` is dropped from the definition.
 
-A `Runtime.host()` step has no checkout, so it can't use a ref. Give it a [local](#local-servers) or [remote](#remote-servers) server instead.
+A `Runtime.host()` step resolves refs from its repository checkout; the referenced command must be available on the worker host.
 
 Push does not check that a ref exists, because the server can't see your machine. A ref that matches nothing fails the step before launch with an error that lists every file searched.
 
@@ -707,7 +777,7 @@ A failed `warn` check is reported, and the step still runs with the server.
 
 The worker checks a server's variables before it launches the step. A variable in `env`, or read by a `{env:VAR}` in the server's definition, is required: if it's missing, the step fails before launch, naming the variable and the server: `DATABASE_URI (for MCP "postgres")`. A variable listed in `optionalEnv` is passed when set and otherwise left out, without an error. A check's severity doesn't change this.
 
-A step's own [`environment.vars`](#environment-variables) entry with the same name wins over the server's, so a step can supply the value from its input. Two servers that need the same variable share one entry.
+A step's own agent variable entry with the same name wins over the server's, whether declared in inline [`environment.vars`](#environment-variables) or a [named environment](/scarn/guides/environments/). MCP declarations are merged at launch even for named environments. Two servers that need the same variable share one entry; required and secret declarations win when servers disagree.
 
 :::note[Code steps in the same file]
 A step file that also exports a [`codeStep`](#code-steps) must keep its `defineMcp`s in that file. The code-step container can't resolve an extensionless relative import such as `./mcps`, so share definitions across files only between files with no code steps.
@@ -735,7 +805,9 @@ one that is missing fails the step before launch; see
 A variable the step declares in [`environment.vars`](#environment-variables)
 is also visible to the server, and wins over the server's own entry — for
 example `environment: { vars: () => ({ DATABASE_URI: Env.inherit({ from: "REPLICA_URI", secret: true }) }) }`
-renames a worker variable for the server.
+renames a worker variable for the server. To share a credential across
+workers, save it as a [project secret](/scarn/guides/secrets/) and declare it
+with `Env.secret("NAME")`, inline or in a named environment.
 
 `.scarn/.env` is a plain dotenv file at your repository root that you create
 and manage yourself; Scarn never writes it and never uploads it. Commit
@@ -786,6 +858,8 @@ export const browserStep = defineStep({
 ```
 
 A `tool` check's `tool` is a flat plugin/standalone/built-in tool id. A step's `healthChecks` doesn't accept `mcp`; on a `defineMcp` check, `tool` is the bare tool name, resolved to `<mcpsKey>_<tool>` at runtime (OpenCode's MCP tool-naming convention).
+
+Checks run after the MCP startup gate: every server in the step's `mcps`, and every [connector](/scarn/guides/environments/#connectors), must report `connected` within 60 seconds first, or the run fails with `SCARN_CONNECTOR_UNAVAILABLE`. A check doesn't wait for a server the step doesn't list in `mcps`.
 
 | Field            | Type                      | Required | Description                                                                                                                                   |
 | ---------------- | ------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------- |

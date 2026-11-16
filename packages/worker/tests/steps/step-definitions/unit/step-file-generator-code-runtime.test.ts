@@ -2,7 +2,13 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { describe, expect, test } from "bun:test";
 import { resolveRepoConfig } from "@scarn/sdk/repo-config";
-import { codeStep, Runtime, toStepSpec } from "@scarn/sdk/definitions/steps";
+import { envVarsSchema } from "@scarn/sdk/env-vars";
+import {
+  codeStep,
+  Runtime,
+  toStepSpec,
+  type StepDefinitionSpec,
+} from "@scarn/sdk/definitions/steps";
 import {
   generateStepsFileContent,
   keyToVarName,
@@ -18,14 +24,12 @@ function makeStep(overrides: Partial<StepDefContract> = {}): StepDefContract {
     version: 1,
     status: "active",
     kind: "user_defined",
-    executionMode: "workspace",
-    devcontainerConfigPath: null,
-    repo: resolveRepoConfig("workspace"),
+    environment: null,
+    repo: resolveRepoConfig(),
     inputSchemaJson: null,
     resultSchemaJson: null,
     opencodeMcpJson: null,
     healthChecksJson: null,
-    envJson: null,
     ...overrides,
   };
 }
@@ -33,16 +37,31 @@ function makeStep(overrides: Partial<StepDefContract> = {}): StepDefContract {
 describe("generateStepsFileContent code step runtime", () => {
   test("omits runtime and the Runtime import for the default managed runtime", () => {
     const content = generateStepsFileContent([
-      makeStep({ kind: "code", managedRuntime: "bun1", prompt: null }),
+      makeStep({
+        kind: "code",
+        environment: {
+          kind: "inline",
+          runtime: { kind: "managed", id: "bun1" },
+        },
+        prompt: null,
+      }),
     ]);
 
-    expect(content).not.toContain("environment:");
+    expect(content).toContain("environment:");
+    expect(content).not.toContain("runtime:");
     expect(content).not.toContain("Runtime");
   });
 
   test("emits Runtime.managed.<id>() and imports Runtime for another managed runtime", () => {
     const content = generateStepsFileContent([
-      makeStep({ kind: "code", managedRuntime: "node24", prompt: null }),
+      makeStep({
+        kind: "code",
+        environment: {
+          kind: "inline",
+          runtime: { kind: "managed", id: "node24" },
+        },
+        prompt: null,
+      }),
     ]);
 
     expect(content).toContain(
@@ -55,24 +74,45 @@ describe("generateStepsFileContent code step runtime", () => {
 
   test("emits an explicit Runtime.devcontainer() for a non-managed code step without a config path", () => {
     const content = generateStepsFileContent([
-      makeStep({ kind: "code", managedRuntime: null, prompt: null }),
-      makeStep({ key: "legacy", kind: "code", prompt: null }),
+      makeStep({
+        kind: "code",
+        environment: { kind: "inline", runtime: { kind: "devcontainer" } },
+        prompt: null,
+      }),
     ]);
 
     expect(content.match(/runtime: Runtime\.devcontainer\(\),/g)).toHaveLength(
-      2,
+      1,
     );
     expect(content).toContain(
       'import { defineStep, Runtime } from "@scarn/sdk/definitions/steps";',
     );
   });
 
+  test("rejects a null code environment rather than changing repository default to a devcontainer", () => {
+    expect(() =>
+      generateStepsFileContent([
+        makeStep({
+          key: "repo-default",
+          kind: "code",
+          prompt: null,
+          environment: null,
+        }),
+      ]),
+    ).toThrow("SDK support for explicit null environments");
+  });
+
   test("keeps the config emission for a non-managed code step with a config path", () => {
     const content = generateStepsFileContent([
       makeStep({
         kind: "code",
-        managedRuntime: null,
-        devcontainerConfigPath: ".devcontainer/alt/devcontainer.json",
+        environment: {
+          kind: "inline",
+          runtime: {
+            kind: "devcontainer",
+            config: ".devcontainer/alt/devcontainer.json",
+          },
+        },
         prompt: null,
       }),
     ]);
@@ -85,7 +125,13 @@ describe("generateStepsFileContent code step runtime", () => {
 
   test("emits Runtime.managed.bun1() for an agent step, where bun1 is not the default", () => {
     const content = generateStepsFileContent([
-      makeStep({ kind: "user_defined", managedRuntime: "bun1" }),
+      makeStep({
+        kind: "user_defined",
+        environment: {
+          kind: "inline",
+          runtime: { kind: "managed", id: "bun1" },
+        },
+      }),
     ]);
 
     expect(content).toContain(
@@ -93,13 +139,13 @@ describe("generateStepsFileContent code step runtime", () => {
     );
   });
 
-  test("leaves agent steps unchanged whatever kind or managedRuntime they carry", () => {
+  test("leaves default agent steps unchanged whatever kind they carry", () => {
     const content = generateStepsFileContent([
       makeStep({ key: "plain-agent", kind: "user_defined" }),
       makeStep({
         key: "null-agent",
         kind: "user_defined",
-        managedRuntime: null,
+        environment: null,
       }),
       makeStep({ key: "legacy-agent", kind: undefined }),
     ]);
@@ -108,7 +154,7 @@ describe("generateStepsFileContent code step runtime", () => {
     expect(content).not.toContain("Runtime");
   });
 
-  test("pushing, pulling and pushing again keeps managedRuntime and devcontainerConfigPath", async () => {
+  test("pushing, pulling and pushing again keeps runtime selections", async () => {
     const noop = () => ({});
     const authored = [
       {
@@ -159,7 +205,11 @@ describe("generateStepsFileContent code step runtime", () => {
         key: "legacy",
         spec: {
           ...toStepSpec(codeStep({ key: "legacy", name: "Legacy", fn: noop })),
-          managedRuntime: null,
+          environment: {
+            kind: "inline" as const,
+            runtime: { kind: "devcontainer" as const },
+            envJson: null,
+          },
         },
       },
     ];
@@ -170,14 +220,18 @@ describe("generateStepsFileContent code step runtime", () => {
           key,
           kind: "code",
           prompt: null,
-          devcontainerConfigPath: spec.devcontainerConfigPath ?? null,
-          managedRuntime: spec.managedRuntime ?? null,
+          environment:
+            spec.environment?.kind !== "inline"
+              ? spec.environment
+              : {
+                  ...spec.environment,
+                  envJson: envVarsSchema
+                    .nullable()
+                    .parse(spec.environment.envJson),
+                },
         }),
       ),
-    ).replace(
-      'from "@scarn/sdk/definitions/steps"',
-      'from "./code-step-shim"',
-    );
+    ).replace('from "@scarn/sdk/definitions/steps"', 'from "./code-step-shim"');
 
     const shim = [
       'import { codeStep } from "@scarn/sdk/definitions/steps";',
@@ -195,8 +249,7 @@ describe("generateStepsFileContent code step runtime", () => {
       const loaded = (await import(file)) as Record<
         string,
         {
-          managedRuntime?: string | null;
-          devcontainerConfigPath?: string | null;
+          environment: StepDefinitionSpec["environment"];
         }
       >;
 
@@ -204,12 +257,10 @@ describe("generateStepsFileContent code step runtime", () => {
         const repushed = loaded[keyToVarName(key)];
         expect({
           key,
-          managedRuntime: repushed?.managedRuntime ?? null,
-          devcontainerConfigPath: repushed?.devcontainerConfigPath ?? null,
+          environment: repushed?.environment,
         }).toEqual({
           key,
-          managedRuntime: spec.managedRuntime ?? null,
-          devcontainerConfigPath: spec.devcontainerConfigPath ?? null,
+          environment: spec.environment,
         });
       }
     } finally {

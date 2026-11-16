@@ -6,7 +6,10 @@ import type { HealthCheck, ToolHealthCheck } from "@scarn/sdk/health-checks";
 import { startProcessClaimedTaskRun } from "../../../../src/work/task-run/application/process-claimed-task-run";
 import { HealthCheckFailedError } from "../../../../src/work/task-run/application/health-check-failed-error";
 import type { HealthCheckReport } from "../../../../src/work/task-run/application/run-health-checks";
-import type { ProcessProjectWorkDeps } from "../../../../src/work/task-run/contracts/process-project-work-types";
+import type {
+  ProcessProjectWorkDeps,
+  LaunchedRuntimeOrchestrator,
+} from "../../../../src/work/task-run/contracts/process-project-work-types";
 import {
   noopReporter,
   type WorkEvent,
@@ -14,6 +17,7 @@ import {
 import type { FakeAiServer } from "../../../../src/work/task-run/infra/fake-ai/fake-ai-server";
 import {
   createRunTracker,
+  createRecordingOrchestrator,
   createWorkerClient,
   createWorkerContext,
   projectId,
@@ -75,34 +79,22 @@ describe("startProcessClaimedTaskRun declared health checks", () => {
     workspacePath: string;
     cleanup: () => Promise<void>;
   }) {
-    // Accepts (and records) the launch call's argument object — needed so
-    // `launch.mock.calls[0]?.[0]` below is typed, rather than `[]`.
-    return vi.fn(
-      (launchInput: {
-        fakeAiProviderOverride?: { baseUrl: string } | undefined;
-      }) => {
-        void launchInput;
-        return Promise.resolve({
-          workspacePath: input.workspacePath,
-          workspaceFolder: "/workspaces/repo",
-          resolvedBranch: "main",
-          workBranch: null,
-          createdFromBranch: null,
-          devcontainerConfigPath: "",
-          runtimeContainerId: null,
-          agent: {
-            baseUrl: "http://localhost:4096",
-            password: "test-password",
-            version: "0.0.0-test",
-            logDirectory: path.join(input.workspacePath, ".logs"),
-          },
-          aiImage: "opencode-runtime@test",
-          networkName: "",
-          secretValues: [],
-          cleanup: input.cleanup,
-        });
+    return createRecordingOrchestrator(input.workspacePath, {
+      resolvedBranch: "main",
+      workBranch: null,
+      createdFromBranch: null,
+      devcontainerConfigPath: "",
+      runtimeContainerId: null,
+      agent: {
+        baseUrl: "http://localhost:4096",
+        password: "test-password",
+        version: "0.0.0-test",
+        logDirectory: path.join(input.workspacePath, ".logs"),
       },
-    );
+      aiImage: "opencode-runtime@test",
+      networkName: "",
+      cleanup: input.cleanup,
+    }).launch;
   }
 
   function createEventRecordingReporter(events: WorkEvent[]) {
@@ -168,7 +160,7 @@ describe("startProcessClaimedTaskRun declared health checks", () => {
     const launch = createLaunchMock({ workspacePath, cleanup });
     const workerClient = createWorkerClient();
     workerClient.getTaskRunWorkerContext = vi.fn(() =>
-      Promise.resolve(createWorkerContext("workspace", [healthCheck()])),
+      Promise.resolve(createWorkerContext(null, [healthCheck()])),
     );
     const { fakeAiServer, start, stop } = createFakeAiServerStub();
     const createFakeAiServerMock = vi.fn(() => fakeAiServer);
@@ -242,7 +234,7 @@ describe("startProcessClaimedTaskRun declared health checks", () => {
     const launch = createLaunchMock({ workspacePath, cleanup });
     const workerClient = createWorkerClient();
     workerClient.getTaskRunWorkerContext = vi.fn(() =>
-      Promise.resolve(createWorkerContext("workspace", [healthCheck()])),
+      Promise.resolve(createWorkerContext(null, [healthCheck()])),
     );
     const { fakeAiServer, stop } = createFakeAiServerStub();
     const createFakeAiServerMock = vi.fn(() => fakeAiServer);
@@ -322,7 +314,7 @@ describe("startProcessClaimedTaskRun declared health checks", () => {
     const launch = createLaunchMock({ workspacePath, cleanup });
     const workerClient = createWorkerClient();
     workerClient.getTaskRunWorkerContext = vi.fn(() =>
-      Promise.resolve(createWorkerContext("workspace", [healthCheck()])),
+      Promise.resolve(createWorkerContext(null, [healthCheck()])),
     );
     const { fakeAiServer } = createFakeAiServerStub();
     const runHealthChecksMock = vi.fn(() =>
@@ -379,19 +371,26 @@ describe("startProcessClaimedTaskRun declared health checks", () => {
   });
 
   test("stops the fake-AI harness from the failure path when the runtime launch itself throws", async () => {
-    // The harness is started (to compute `fakeAiProviderOverride`) BEFORE the
-    // runtime launch call it feeds into — so a launch failure leaves the
-    // harness running and never reaches the gate's own stop-in-`finally`.
-    // The outer `catch` block's stop-if-still-set fallback must cover this.
     const workerClient = createWorkerClient();
     workerClient.getTaskRunWorkerContext = vi.fn(() =>
-      Promise.resolve(createWorkerContext("workspace", [healthCheck()])),
+      Promise.resolve(createWorkerContext(null, [healthCheck()])),
     );
-    const { fakeAiServer, stop } = createFakeAiServerStub();
+    const { fakeAiServer, start, stop } = createFakeAiServerStub();
     const createFakeAiServerMock = vi.fn(() => fakeAiServer);
     const runHealthChecksMock = vi.fn(() => Promise.resolve([]));
-    const launch = vi.fn(() =>
-      Promise.reject(new Error("devcontainer failed to start")),
+    const launch = vi.fn<LaunchedRuntimeOrchestrator["launch"]>(
+      async (input) => {
+        await input.resolveEnvironmentEnv?.({
+          source: "repo-default",
+          runtime: {
+            kind: "devcontainer",
+            config: ".devcontainer/devcontainer.json",
+          },
+          envVars: [],
+          connectors: [],
+        });
+        throw new Error("devcontainer failed to start");
+      },
     );
     const events: WorkEvent[] = [];
 
@@ -423,6 +422,7 @@ describe("startProcessClaimedTaskRun declared health checks", () => {
     }
 
     expect((caught as Error).message).toBe("devcontainer failed to start");
+    expect(start).toHaveBeenCalledTimes(1);
     expect(runHealthChecksMock).not.toHaveBeenCalled();
     expect(deps.agentRunner.promptAsync).not.toHaveBeenCalled();
     expect(stop).toHaveBeenCalledTimes(1);

@@ -53,8 +53,8 @@ describe("Repo gitCredentials", () => {
       agentPrompt: "Fetch.",
       environment: {
         runtime: Runtime.devcontainer(),
-        repo: Repo.readOnly({ gitCredentials: "none" }),
       },
+      repo: Repo.readOnly({ gitCredentials: "none" }),
     });
     expect(spec.repo).toEqual({ mode: "readOnly", gitCredentials: "none" });
   });

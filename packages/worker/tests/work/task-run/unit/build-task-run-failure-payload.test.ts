@@ -1,10 +1,35 @@
 import { describe, expect, test } from "bun:test";
+import {
+  ConnectorMcpCollision,
+  ConnectorVarsMissing,
+} from "@scarn/sdk/connectors";
 import { buildTaskRunFailurePayload } from "../../../../src/work/task-run/application/build-task-run-failure-payload";
+import { ConnectorUnavailableError } from "../../../../src/work/task-run/application/connector-unavailable-error";
 import { HealthCheckFailedError } from "../../../../src/work/task-run/application/health-check-failed-error";
 import { RepoContextCommitUnavailableError } from "../../../../src/work/task-run/application/repo-context-commit-unavailable-error";
 import { WorkerStoppedError } from "../../../../src/work/task-run/application/worker-stopped-error";
 
 describe("buildTaskRunFailurePayload", () => {
+  test("names connector failures by their codes", () => {
+    expect(
+      buildTaskRunFailurePayload(
+        new ConnectorVarsMissing(undefined, [
+          { connector: "datadog", vars: ["DD_API_KEY"] },
+        ]),
+      ).errorJson,
+    ).toMatchObject({
+      name: "Scarn.ConnectorVarsMissing",
+      code: "SCARN_CONNECTOR_VARS_MISSING",
+    });
+    expect(
+      buildTaskRunFailurePayload(new ConnectorMcpCollision(["datadog"]))
+        .errorJson,
+    ).toMatchObject({
+      name: "Scarn.EnvironmentInvalid",
+      code: "SCARN_ENVIRONMENT_INVALID",
+    });
+  });
+
   test("names an ordinary error Scarn.StepFailed, with the generic worker-execution-failed code", () => {
     const payload = buildTaskRunFailurePayload(new Error("boom"));
 
@@ -24,6 +49,27 @@ describe("buildTaskRunFailurePayload", () => {
       name: "Scarn.HealthCheckFailed",
       code: "SCARN_HEALTH_CHECK_FAILED",
       message: 'Health check "greet" failed',
+    });
+  });
+
+  test("names a ConnectorUnavailableError Scarn.ConnectorUnavailable, listing each server", () => {
+    const payload = buildTaskRunFailurePayload(
+      new ConnectorUnavailableError([
+        {
+          name: "datadog",
+          status: "failed",
+          error: "401 Unauthorized",
+          healthy: false,
+        },
+        { name: "playwright", status: "pending", healthy: false },
+      ]),
+    );
+
+    expect(payload.errorJson).toEqual({
+      name: "Scarn.ConnectorUnavailable",
+      code: "SCARN_CONNECTOR_UNAVAILABLE",
+      message:
+        "MCP servers not connected: datadog (failed: 401 Unauthorized); playwright (pending)",
     });
   });
 

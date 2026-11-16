@@ -196,6 +196,34 @@ describe("HostOpencodeBootstrap.start startup failures", () => {
     expect(message).not.toMatch(/server password: [A-Za-z0-9_-]{43}/);
   });
 
+  test("gives the process the step variables, with step values over provider values", async () => {
+    const varsPath = path.join(tempDir, "vars.txt");
+    const launcher = await writeLauncher(
+      [
+        `echo "$SHARED $STEP_ONLY $PROVIDER_ONLY" > "${varsPath}"`,
+        `exit 4`,
+      ].join("\n"),
+    );
+
+    let caught: unknown;
+    try {
+      await new HostOpencodeBootstrap({
+        readinessIntervalMs: FAST_READINESS_INTERVAL_MS,
+      }).start(
+        startInput(launcher, {
+          providerEnv: { SHARED: "from-provider", PROVIDER_ONLY: "p" },
+          stepEnv: { SHARED: "from-step", STEP_ONLY: "s" },
+        }),
+      );
+    } catch (error) {
+      caught = error;
+    }
+
+    expect((caught as Error).message).toContain("exited with code 4");
+
+    expect((await readFile(varsPath, "utf8")).trim()).toBe("from-step s p");
+  });
+
   /**
    * A launcher standing in for `opencode serve`: binds the `--port` it is given
    * and answers `/api/info` with `version`, but only for the basic-auth

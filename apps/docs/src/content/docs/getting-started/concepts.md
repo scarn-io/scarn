@@ -49,8 +49,8 @@ the next. It is an opinionated starting point: change any of it.
 ## Step
 
 A step is the unit of work: an agent prompt and a typed result. The agent reads the prompt, does the work, and returns a result
-that must match the step's schema. Each step runs on the host or inside your
-devcontainer — see [Runtime](#runtime) below. See
+that must match the step's schema. Each step runs on the host or inside a
+container — see [Runtime](#runtime) below. See
 [Defining Steps](/scarn/guides/steps/).
 
 ## Evidence and artifacts
@@ -96,12 +96,11 @@ on as many machines as you like, a laptop or a CI box. Manage it with
 
 ## Runtime
 
-A step's runtime decides where its agent runs. `Runtime.devcontainer()` is the
-default: the worker clones your repository and runs the agent inside the
-container your `.devcontainer/devcontainer.json` describes, which needs
-Docker. `Runtime.host()` runs the agent on the worker's machine in an empty
-scratch directory, with no clone and no Docker — the designer uses it for
-steps that don't need your code, such as classification, scoring, and triage.
+A step's runtime decides where it runs: your devcontainer, a worker-managed
+container, or the worker host. Every runtime clones and checks out your
+repository. `Runtime.host()` skips Docker, not repository access.
+See [environment defaults](/scarn/guides/environments/#defaults) for automatic
+runtime selection.
 
 **A devcontainer is optional to start, and the designer writes one.** If your
 repository has none, the design session authors
@@ -114,6 +113,14 @@ missing devcontainer. A pipeline made only of host steps never needs one. See
 [Runtime](/scarn/guides/steps/#runtime), or
 [Set up a dev container](/scarn/how-to/devcontainer/) to write one by
 hand.
+
+## Environment
+
+An environment combines runtime selection, a preferred branch, and variables.
+A step can use a **named environment**, written with `defineEnvironment` next to
+your steps and stored in Scarn by `scarn pipelines push`, or declare inline
+settings. Repository read/write policy is a separate step
+option. See [Environments](/scarn/guides/environments/).
 
 ## The designer
 

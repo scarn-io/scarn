@@ -12,6 +12,26 @@ the error in Sentry, then query the read replica." Each tool you name becomes
 an MCP server on the step that needs it. A step gets only the servers it
 lists.
 
+## Is it a connector? Turn it on in the environment
+
+For a tool in the [connector catalog](/scarn/reference/connectors/), such as
+Datadog or Playwright, you don't need a `defineMcp`. List its id in the
+environment's `connectors` and provide the variables it needs, for example
+from [project secrets](/scarn/guides/secrets/):
+
+```jsonc
+{
+  "connectors": ["datadog"],
+  "vars": {
+    "DD_API_KEY": { "secret": "DD_API_KEY" },
+    "DD_APPLICATION_KEY": { "secret": "DD_APPLICATION_KEY" },
+  },
+}
+```
+
+Every step that uses the environment gets the server. Don't also give a step
+an `mcps` key with the same name as a connector id; that fails the run.
+
 ## Already in your repo? The step refers to it
 
 If your repository already defines the server (in `.opencode/opencode.json`,
@@ -40,8 +60,8 @@ const postgres = defineMcp({
 });
 ```
 
-A step on `Runtime.host()` has no checkout, so its servers are always written
-this way. Local and remote fields:
+A step on `Runtime.host()` also has a checkout and can use repository refs;
+its local server commands run on the worker host. Local and remote fields:
 [Local servers](/scarn/guides/steps/#local-servers) and
 [Remote servers](/scarn/guides/steps/#remote-servers).
 
@@ -69,10 +89,23 @@ of git — see [Commit and share your pipeline](/scarn/how-to/commit-your-pipeli
 
 The worker reads every `{env:VAR}` from `.scarn/.env`, then its own
 environment, and a missing one fails the step before launch — unless the
-server lists it in `optionalEnv`, so it launches without it. When a server only
-helps a step, set its checks to `severity: "warn"` so a failed check doesn't
-block the step. See [Secrets](/scarn/guides/steps/#secrets) and
+server lists it in `optionalEnv`, so it launches without it. To share a value
+across workers instead, save it as a [project secret](/scarn/guides/secrets/)
+and declare the variable as a `secret`. When a server only helps a step, set
+its checks to `severity: "warn"` so a failed check doesn't block the step. See
+[Secrets](/scarn/guides/steps/#secrets) and
 [Severity](/scarn/guides/steps/#severity).
+
+## Every server must connect before the first prompt
+
+Before the agent gets its prompt, every connector and every server in the
+step's `mcps` must report `connected` within 60 seconds. A server that fails,
+needs auth, is disabled, is still starting, or never registers fails the run
+with `SCARN_CONNECTOR_UNAVAILABLE`, whatever its checks' severity. Servers that
+appear only in your repository's own OpenCode config are not checked. Declared
+health checks run after this. A health check doesn't start or wait for a
+server on its own: list the server in the step's `mcps`. See
+[Failure codes](/scarn/guides/environments/#failure-codes).
 
 ## Check it connects
 
@@ -83,7 +116,8 @@ scarn work --dry-run
 ```
 
 Pick the step when asked. The dry run launches its environment, starts its MCP
-servers, and runs any [health checks](/scarn/guides/steps/#health-checks) it
-declares, then reports what connected — without running the step. The
+servers, reports each server's status, and runs any
+[health checks](/scarn/guides/steps/#health-checks) it declares — without
+running the step. The
 designer's own post-push check runs every step's health checks; see
 [Dry runs](/scarn/reference/cli/#dry-runs).

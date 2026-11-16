@@ -47,7 +47,7 @@ describe("resolveStepEnv: MCP variables", () => {
     () => {
       const error = missingError(() =>
         resolveStepEnv({
-          envJson: [mcpVar("DATADOG_API_KEY", "datadog")],
+          envVars: [mcpVar("DATADOG_API_KEY", "datadog")],
           inputJson: {},
           workerEnv: {},
         }),
@@ -62,7 +62,7 @@ describe("resolveStepEnv: MCP variables", () => {
     () => {
       const error = missingError(() =>
         resolveStepEnv({
-          envJson: [
+          envVars: [
             inherit("DD_KEY", { from: "DATADOG_API_KEY", mcp: "datadog" }),
           ],
           inputJson: {},
@@ -79,7 +79,7 @@ describe("resolveStepEnv: MCP variables", () => {
     "an optionalEnv MCP variable that is not set is omitted without error",
     () => {
       const result = resolveStepEnv({
-        envJson: [
+        envVars: [
           mcpVar("DATADOG_API_KEY", "datadog"),
           mcpVar("DATADOG_SITE", "datadog", true),
         ],
@@ -97,7 +97,7 @@ describe("resolveStepEnv: MCP variables", () => {
     () => {
       const error = missingError(() =>
         resolveStepEnv({
-          envJson: [
+          envVars: [
             inherit("PLAIN"),
             mcpVar("SENTRY_TOKEN", "sentry"),
             mcpVar("DATADOG_API_KEY", "datadog"),
@@ -165,13 +165,13 @@ describe("withInferredMcpEnv (D3)", () => {
     },
   );
 
-  test.concurrent("a variable shared by refs is tagged with the first", () => {
+  test.concurrent("a variable shared by refs has no single owner", () => {
     expect(
       withInferredMcpEnv(null, [
         { key: "a", requiredEnv: ["SHARED"] },
         { key: "b", requiredEnv: ["SHARED"] },
       ]),
-    ).toEqual([mcpVar("SHARED", "a")]);
+    ).toEqual([inherit("SHARED", { secret: true })]);
   });
 });
 
@@ -185,7 +185,7 @@ describe("planStepEnv", () => {
     "a step with only inline servers gets no MCP env resolver",
     () => {
       const plan = planStepEnv({
-        envJson: [inherit("PLAIN")],
+        envVars: [inherit("PLAIN")],
         inputJson: {},
         workerEnv: { PLAIN: "x" },
         opencodeMcpJson: { inline: { type: "local", command: ["x"] } },
@@ -200,7 +200,7 @@ describe("planStepEnv", () => {
     () => {
       const error = missingError(() =>
         planStepEnv({
-          envJson: [mcpVar("LINEAR_API_KEY", "linear")],
+          envVars: [mcpVar("LINEAR_API_KEY", "linear")],
           inputJson: {},
           workerEnv: {},
           opencodeMcpJson: { linear: { type: "remote", url: "https://x" } },
@@ -210,25 +210,20 @@ describe("planStepEnv", () => {
     },
   );
 
-  test.concurrent(
-    "a ref fails the step on a missing inferred variable",
-    () => {
-      const plan = planStepEnv({
-        envJson: null,
-        inputJson: {},
-        workerEnv: {},
-        opencodeMcpJson: { datadog: { type: "ref" } },
-      });
-      const error = missingError(() =>
-        plan.resolveMcpEnv?.([datadogRef]),
-      );
-      expect(error.missing).toEqual(['DATADOG_API_KEY (for MCP "datadog")']);
-    },
-  );
+  test.concurrent("a ref fails the step on a missing inferred variable", () => {
+    const plan = planStepEnv({
+      envVars: null,
+      inputJson: {},
+      workerEnv: {},
+      opencodeMcpJson: { datadog: { type: "ref" } },
+    });
+    const error = missingError(() => plan.resolveMcpEnv?.([datadogRef]));
+    expect(error.missing).toEqual(['DATADOG_API_KEY (for MCP "datadog")']);
+  });
 
   test.concurrent("injects and masks an inferred variable that is set", () => {
     const plan = planStepEnv({
-      envJson: null,
+      envVars: null,
       inputJson: {},
       workerEnv: { DATADOG_API_KEY: "dd-api-key-value" },
       opencodeMcpJson: { datadog: { type: "ref" } },

@@ -3,11 +3,7 @@
  * in this process, and reports its health instead of running work.
  */
 import { AnalyticsEvents } from "@scarn/observability/analytics/events";
-import {
-  readLocalEnvVars,
-  resolveScarnBaseUrl,
-  resolveSourceBranch,
-} from "@scarn/worker";
+import { readLocalEnvVars, resolveScarnBaseUrl } from "@scarn/worker";
 import {
   createCliLogger,
   createTransport,
@@ -35,12 +31,6 @@ export type WorkDryRunOptions = {
   baseUrl?: string | undefined;
   /** Keep the rehearsed runtime instead of tearing it down after the report. */
   preserveRuntimeOnComplete?: boolean | undefined;
-  /**
-   * Override the branch the rehearsal checks out (instead of resolving and
-   * verifying the current local branch). An override only needs to exist on
-   * `origin`.
-   */
-  sourceBranch?: string | undefined;
   /** Fetch this step definition's real MCP servers to test. */
   stepId?: string | undefined;
   /**
@@ -85,32 +75,7 @@ export async function runWorkDryRun(
     process.exit(1);
   }
 
-  // Resolve (and verify) the branch the same way a real run does, before
-  // anything else. Fails fast rather than silently falling back to the
-  // repo's default branch.
-  let sourceBranch: string | null;
-  try {
-    const result = await resolveSourceBranch({
-      cwd: process.cwd(),
-      override: arguments_.sourceBranch,
-    });
-    sourceBranch = result.branch;
-    if (result.warning) {
-      reporter.warn(result.warning);
-      logger.warn({ branch: sourceBranch }, result.warning);
-    }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    reporter.error(message);
-    logger.error({ err: error }, "Failed to resolve the source branch");
-    await shutdownTelemetry();
-    process.exit(1);
-  }
-
   reporter.start("Scarn worker (dry run)");
-  if (sourceBranch) {
-    reporter.info(`Using source branch: ${sourceBranch}`);
-  }
 
   let projectId: string;
   try {
@@ -139,7 +104,6 @@ export async function runWorkDryRun(
       stepId: arguments_.stepId,
       globalOnly,
       pipelineId: arguments_.pipelineId,
-      sourceBranch,
     },
     "Starting work dry run",
   );
@@ -165,7 +129,6 @@ export async function runWorkDryRun(
       keep: preserveRuntimeOnComplete,
       localEnvVars,
       reporter,
-      sourceBranch,
     });
 
     if (!ok) {

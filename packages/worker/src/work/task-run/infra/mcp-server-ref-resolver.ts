@@ -128,7 +128,9 @@ export function resolveStepMcpServers(input: {
 
   for (const [key, entry] of Object.entries(input.servers ?? {})) {
     if (entry.type !== "ref") {
-      servers[key] = entry;
+      const native = { ...entry };
+      delete native.workerVars;
+      servers[key] = native;
       used.add(key);
       continue;
     }

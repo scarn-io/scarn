@@ -77,6 +77,7 @@ apps/docs/
 │   ├── content.config.ts                   ← Astro content collection config (rarely edited)
 │   ├── components/
 │   │   ├── CatalogExample.astro            ← shared title/description/source-disclosure chrome for catalog entries
+│   │   ├── ConnectorCatalog.astro          ← renders `CONNECTOR_CATALOG` (`@scarn/sdk/connectors`) at build time for reference/connectors.mdx
 │   │   ├── Head.astro                      ← Starlight Head override: PostHog page views + Quickstart events (docs/analytics.md)
 │   │   ├── PipelineGraphIsland.astro       ← `client:visible` PipelineGraphView island, skipped when rendering llms-full.txt
 │   │   └── Transcript.astro                ← renders a `src/content/transcripts/` file as a terminal block

@@ -15,6 +15,7 @@ import type {
   SubmoduleHasChangesInput,
 } from "../application/git-commit-push-service";
 import { noopLogger, type Logger } from "@scarn/observability/logging/host";
+import { GitCommandError } from "./git-failure";
 import {
   chmodRecursiveWithDocker,
   isPermissionError,
@@ -45,6 +46,20 @@ function identityArgs(): string[] {
  */
 function excludePathspec(relativePath: string): string {
   return `:(exclude,top)${relativePath}`;
+}
+
+// eslint-disable-next-line local/no-unknown-parameter-type -- narrows a caught failure
+function toGitCommandError(error: unknown): unknown {
+  if (
+    error instanceof Error &&
+    "stderr" in error &&
+    typeof error.stderr === "string" &&
+    "code" in error &&
+    typeof error.code === "number"
+  ) {
+    return new GitCommandError(error.message, error.stderr, error.code);
+  }
+  return error;
 }
 
 export class GitCliCommitPushService implements GitCommitPushService {
@@ -103,11 +118,15 @@ export class GitCliCommitPushService implements GitCommitPushService {
    */
   async checkoutBase(input: CheckoutBaseInput): Promise<void> {
     if (!(await this.hasRemoteTrackingRef(input))) {
-      await this.git(input.workspacePath, [
-        "fetch",
-        "origin",
-        input.baseWorkBranch,
-      ]);
+      try {
+        await this.git(input.workspacePath, [
+          "fetch",
+          "origin",
+          input.baseWorkBranch,
+        ]);
+      } catch (error) {
+        throw toGitCommandError(error);
+      }
     }
     await this.git(input.workspacePath, ["checkout", input.baseWorkBranch]);
   }
@@ -129,11 +148,7 @@ export class GitCliCommitPushService implements GitCommitPushService {
   }
 
   async createBranch(input: CreateBranchInput): Promise<void> {
-    await this.git(input.workspacePath, [
-      "checkout",
-      "-b",
-      input.branchName,
-    ]);
+    await this.git(input.workspacePath, ["checkout", "-b", input.branchName]);
   }
 
   async commitAll(input: CommitAllInput): Promise<CommitAllResult> {
@@ -195,18 +210,25 @@ export class GitCliCommitPushService implements GitCommitPushService {
     return true;
   }
 
+  /**
+   * Never forced: when origin moved past the local branch (a step committing
+   * onto its base), the rejection surfaces as a {@link GitCommandError} the
+   * caller classifies with `isNonFastForwardRejection`.
+   */
   async push(input: PushInput): Promise<void> {
-    await this.git(input.workspacePath, [
-      "push",
-      "--set-upstream",
-      "origin",
-      input.branchName,
-    ]);
+    try {
+      await this.git(input.workspacePath, [
+        "push",
+        "--set-upstream",
+        "origin",
+        input.branchName,
+      ]);
+    } catch (error) {
+      throw toGitCommandError(error);
+    }
   }
 
-  async submoduleHasChanges(
-    input: SubmoduleHasChangesInput,
-  ): Promise<boolean> {
+  async submoduleHasChanges(input: SubmoduleHasChangesInput): Promise<boolean> {
     const subPath = path.join(input.workspacePath, input.submodulePath);
     // Guard: an uninitialized submodule has no `.git` (file or dir) inside it.
     // Treat it as "no changes" so it is never branched/committed.
@@ -294,12 +316,7 @@ export class GitCliCommitPushService implements GitCommitPushService {
     relativePath: string,
   ): Promise<boolean> {
     try {
-      await this.git(workspacePath, [
-        "check-ignore",
-        "-q",
-        "--",
-        relativePath,
-      ]);
+      await this.git(workspacePath, ["check-ignore", "-q", "--", relativePath]);
       return true;
     } catch {
       return false;
@@ -324,11 +341,7 @@ export class GitCliCommitPushService implements GitCommitPushService {
 
   private async hasStagedChanges(workspacePath: string): Promise<boolean> {
     try {
-      await this.git(workspacePath, [
-        "diff",
-        "--cached",
-        "--quiet",
-      ]);
+      await this.git(workspacePath, ["diff", "--cached", "--quiet"]);
       // Exit 0 => no staged changes.
       return false;
     } catch {

@@ -1,8 +1,11 @@
 import type { DestinationStream } from "pino";
 import { createScarnClient } from "@scarn/sdk";
-import type { EnvVarSpec } from "@scarn/sdk/env-vars";
+import type {
+  EnvironmentRef,
+  ResolvedEnvironment,
+} from "@scarn/sdk/environment";
 import type { HealthCheck } from "@scarn/sdk/health-checks";
-import type { RepoConfig } from "@scarn/sdk/repo-config";
+import { resolveRepoConfig, type RepoConfig } from "@scarn/sdk/repo-config";
 import { createUuidV7, parseUuidV7 } from "../../../common/contracts/uuid-v7";
 import type { OpenCodeMcpServers } from "../../../common/contracts/opencode-mcp";
 import { ConfigurationError } from "../../../lib/errors";
@@ -15,15 +18,23 @@ import { logWork, logWorkError } from "./work-logger";
 import { noopReporter, type WorkReporter } from "../contracts/work-reporter";
 import { buildFakeAiProviderOverride, FakeAiServer } from "../infra/fake-ai";
 import {
-  buildDryRunNoWorkspaceOrchestrator,
-  buildDryRunWorkspaceOrchestrator,
+  buildDryRunOrchestrator,
   DRY_RUN_CLAIM_TOKEN,
 } from "./run-work-dry-run-orchestrators";
 import type { McpHandshakeReport } from "./run-work-dry-run-health-checks";
 import { runInDryRunEnvironment } from "./dry-run-environment";
 import { runHealthChecks, type HealthCheckReport } from "./run-health-checks";
 import { computeDryRunOk } from "./compute-dry-run-ok";
-import { planStepEnv } from "./resolve-step-env";
+import { dryRunBaseBranch, environmentRefVars } from "./render-base-branch";
+import { planDryRunStepEnv } from "./plan-step-env-with-secrets";
+import type { DryRunSecretReport } from "./resolve-secret-env";
+import type { LaunchedRuntimeOrchestrator } from "../contracts/process-project-work-types";
+import { describeHealthCheckRuntime } from "./plan-pipeline-health-check-launches";
+import {
+  createLatestEnvironmentFetcher,
+  resolveStepEnvironmentRef,
+  type DryRunLaunchStep,
+} from "./resolve-step-environment-ref";
 
 export type { McpHandshakeReport } from "./run-work-dry-run-health-checks";
 export type {
@@ -37,8 +48,10 @@ export type WorkDryRunScope =
       stepDefinitionId: string;
       stepDefinitionKey: string;
       stepDefinitionName: string;
-      executionMode: "workspace" | "no_workspace";
+      runtimeKind: "host" | "devcontainer" | "managed" | null;
       devcontainerConfigPath: string | null;
+      environmentSource?: ResolvedEnvironment["source"];
+      environmentName?: string;
     }
   | { kind: "global-only" };
 
@@ -46,6 +59,7 @@ export type WorkDryRunReport = {
   /** See {@link computeDryRunOk} — health, handshakes, and health check outcomes combined. */
   ok: boolean;
   scope: WorkDryRunScope;
+  runtime?: string;
   workspacePath: string | null;
   runtimeContainerId: string | null;
   agentBaseUrl: string | null;
@@ -64,6 +78,17 @@ export type WorkDryRunReport = {
    * step declares none; there is no fallback verification in that case.
    */
   healthChecks: HealthCheckReport[];
+  /**
+   * Each `secret` var's source: `worker` when `.scarn/.env` holds it, else
+   * `scarn` (a real run requests it from Scarn; a dry run never fetches it).
+   */
+  secrets: DryRunSecretReport[];
+  /**
+   * Set when the step's `baseBranch` could not be rendered without a run
+   * (see `renderEnvOnlyBaseBranch`), so the dry run checked out the
+   * configured or remote default branch instead.
+   */
+  baseBranchNote?: string | undefined;
   /** Set only when the environment failed to launch at all (no health data below applies). */
   launchError?: string | undefined;
 };
@@ -86,34 +111,63 @@ export type WorkDryRunOptions = {
   /** Env vars read from .scarn/.env in the user's local project directory. */
   localEnvVars?: Record<string, string> | undefined;
   reporter?: WorkReporter | undefined;
-  /**
-   * The CLI's resolved/overridden current local branch at invocation (see
-   * `resolveSourceBranch`). A dry run has no step key (no work branch is
-   * created), but this branch is still checked out after clone so the
-   * rehearsed devcontainer config matches what a real run would use.
-   */
-  sourceBranch?: string | null | undefined;
 };
 
 export type StepDefinitionForDryRun = {
   id: string;
   key: string;
   name: string;
-  executionMode: "workspace" | "no_workspace";
-  devcontainerConfigPath: string | null;
-  managedRuntime: string | null;
+  environment: EnvironmentRef;
   repo: RepoConfig;
   resultSchemaJson: Record<string, unknown> | null;
   opencodeMcpJson: OpenCodeMcpServers | null;
   healthChecksJson: HealthCheck[] | null;
-  envJson: EnvVarSpec[] | null;
 };
 
 /** A global-only dry run has no step, so it commits nothing: read-only. */
-const DRY_RUN_GLOBAL_REPO: RepoConfig = {
+const DRY_RUN_GLOBAL_REPO: RepoConfig = resolveRepoConfig({
   mode: "readOnly",
   gitCredentials: "none",
-};
+});
+
+export function buildWorkDryRunRuntimeInput(
+  stepDefinition: DryRunLaunchStep | null,
+): Pick<
+  Parameters<LaunchedRuntimeOrchestrator["launch"]>[0],
+  "environment" | "repo"
+> {
+  return {
+    environment: stepDefinition?.environment ?? null,
+    repo: stepDefinition?.repo ?? DRY_RUN_GLOBAL_REPO,
+  };
+}
+
+export function buildWorkDryRunScope(
+  step: StepDefinitionForDryRun | null,
+  resolved?: ResolvedEnvironment,
+): WorkDryRunScope {
+  if (!step) return { kind: "global-only" };
+  const runtime =
+    resolved?.runtime ??
+    (step.environment?.kind === "inline"
+      ? step.environment.runtime
+      : undefined);
+  return {
+    kind: "step",
+    stepDefinitionId: step.id,
+    stepDefinitionKey: step.key,
+    stepDefinitionName: step.name,
+    runtimeKind: runtime?.kind ?? null,
+    devcontainerConfigPath:
+      runtime?.kind === "devcontainer" ? (runtime.config ?? null) : null,
+    environmentSource:
+      resolved?.source ??
+      (step.environment === null ? "repo-default" : step.environment.kind),
+    ...(step.environment?.kind === "named"
+      ? { environmentName: step.environment.name }
+      : {}),
+  };
+}
 
 export function buildAuthHeaders(accessToken: string) {
   return { Authorization: `Bearer ${accessToken}` };
@@ -146,21 +200,7 @@ export async function fetchStepDefinition(
     path: { stepDefinitionId },
     headers,
   });
-  const data = result.data as
-    | {
-        id: string;
-        key: string;
-        name: string;
-        executionMode?: "workspace" | "no_workspace";
-        devcontainerConfigPath?: string | null;
-        managedRuntime?: string | null;
-        repo: RepoConfig;
-        resultSchemaJson: Record<string, unknown> | null;
-        opencodeMcpJson: OpenCodeMcpServers | null;
-        healthChecksJson: HealthCheck[] | null;
-        envJson: EnvVarSpec[] | null;
-      }
-    | undefined;
+  const data = result.data as StepDefinitionForDryRun | undefined;
   if (!data) {
     throw new ConfigurationError(
       `Step definition ${stepDefinitionId} was not found.`,
@@ -170,14 +210,11 @@ export async function fetchStepDefinition(
     id: data.id,
     key: data.key,
     name: data.name,
-    executionMode: data.executionMode ?? "workspace",
-    devcontainerConfigPath: data.devcontainerConfigPath ?? null,
-    managedRuntime: data.managedRuntime ?? null,
+    environment: data.environment,
     repo: data.repo,
     resultSchemaJson: data.resultSchemaJson,
     opencodeMcpJson: data.opencodeMcpJson,
     healthChecksJson: data.healthChecksJson,
-    envJson: data.envJson,
   };
 }
 
@@ -217,17 +254,21 @@ export async function runWorkDryRun(
   const stepDefinition = options.stepDefinitionId
     ? await fetchStepDefinition(client, headers, options.stepDefinitionId)
     : null;
+  const launchStep = stepDefinition && {
+    environment: await resolveStepEnvironmentRef(
+      stepDefinition.environment,
+      createLatestEnvironmentFetcher(client, headers, options.projectId),
+    ),
+    repo: stepDefinition.repo,
+  };
 
-  const scope: WorkDryRunScope = stepDefinition
-    ? {
-        kind: "step",
-        stepDefinitionId: stepDefinition.id,
-        stepDefinitionKey: stepDefinition.key,
-        stepDefinitionName: stepDefinition.name,
-        executionMode: stepDefinition.executionMode,
-        devcontainerConfigPath: stepDefinition.devcontainerConfigPath,
-      }
-    : { kind: "global-only" };
+  const scope = buildWorkDryRunScope(stepDefinition);
+  const { baseWorkBranch, baseBranchNote } = dryRunBaseBranch({
+    template: stepDefinition?.repo.baseBranch ?? null,
+    envVars: launchStep ? environmentRefVars(launchStep.environment) : [],
+    workerEnv: { ...process.env, ...options.localEnvVars },
+  });
+  const note = baseBranchNote ? { baseBranchNote } : {};
 
   const reporter = options.reporter ?? noopReporter;
   const logger = createLogger(
@@ -246,15 +287,11 @@ export async function runWorkDryRun(
   const safeProviderAccessResolver = new SafeProviderAccessResolver(
     new DirectProviderAccessResolver({ logger }),
   );
-  const isNoWorkspace =
-    scope.kind === "step" && scope.executionMode === "no_workspace";
-  const orchestrator = isNoWorkspace
-    ? buildDryRunNoWorkspaceOrchestrator(logger, safeProviderAccessResolver)
-    : buildDryRunWorkspaceOrchestrator(
-        logger,
-        options.localEnvVars ?? {},
-        safeProviderAccessResolver,
-      );
+  const orchestrator = buildDryRunOrchestrator(
+    logger,
+    options.localEnvVars ?? {},
+    safeProviderAccessResolver,
+  );
 
   logWork("dry-run", "Starting work dry run", {
     projectId: options.projectId,
@@ -272,25 +309,20 @@ export async function runWorkDryRun(
   await fakeAiServer.start();
 
   const keep = options.keep ?? false;
+  let secrets: DryRunSecretReport[] = [];
   try {
-    const { resolved, resolveMcpEnv } = planStepEnv({
-      envJson: stepDefinition?.envJson ?? null,
-      inputJson: null,
-      workerEnv: { ...process.env, ...options.localEnvVars },
-      opencodeMcpJson: stepDefinition?.opencodeMcpJson ?? null,
-    });
     const outcome = await runInDryRunEnvironment({
       orchestrator,
       keep,
       launchInput: {
+        ...buildWorkDryRunRuntimeInput(launchStep),
         startAgent: true,
         sessionId,
         projectId,
         requestedByUserId,
         gitUrl,
         claimToken: DRY_RUN_CLAIM_TOKEN,
-        baseWorkBranch: null,
-        sourceBranch: options.sourceBranch ?? null,
+        stepBaseBranch: baseWorkBranch,
         localEnvVars: options.localEnvVars,
         // No stepKey: skips work-branch creation, so a dry run never pushes or
         // even creates a `scarn/...` branch.
@@ -303,22 +335,29 @@ export async function runWorkDryRun(
         },
         reporter,
         taskRunId,
-        fakeAiProviderOverride: buildFakeAiProviderOverride({
-          fakeAiServer,
-          isNoWorkspace,
-        }),
-        stepEnv: resolved.stepEnv,
-        setupEnv: resolved.setupEnv,
-        resolveMcpEnv,
-        devcontainerConfigPath: stepDefinition?.devcontainerConfigPath ?? null,
-        managedRuntime: stepDefinition?.managedRuntime ?? null,
-        repo: stepDefinition?.repo ?? DRY_RUN_GLOBAL_REPO,
+        resolveFakeAiProviderOverride: (environment) =>
+          buildFakeAiProviderOverride({
+            fakeAiServer,
+            isNoWorkspace: environment.runtime.kind === "host",
+          }),
+        resolveEnvironmentEnv: (environment) => {
+          const dryRun = planDryRunStepEnv({
+            envVars: environment.envVars,
+            inputJson: null,
+            workerEnv: { ...process.env, ...options.localEnvVars },
+            localEnvVars: options.localEnvVars,
+            opencodeMcpJson: stepDefinition?.opencodeMcpJson ?? null,
+          });
+          secrets = dryRun.secrets;
+          return Promise.resolve(dryRun.plan);
+        },
       },
       // Same runner the real-execution gate uses (`runHealthChecks`, #119),
       // with its declaration-order, abort-required-then-skip-the-rest
-      // semantics and internal MCP warm-up unchanged. Dry run's different
-      // policy (#121) sits above this call: a failing check never throws or
-      // cuts the dry run short, and every check gets a reported outcome.
+      // semantics unchanged; the probe already ran the MCP startup gate. Dry
+      // run's different policy (#121) sits above this call: a failing check
+      // never throws or cuts the dry run short, and every check gets a
+      // reported outcome.
       onLaunched: () => {
         reporter.event({ type: "task:runtime-ready", taskRunId });
       },
@@ -354,6 +393,8 @@ export async function runWorkDryRun(
         providerCredentials,
         mcpServers: [],
         healthChecks: [],
+        secrets,
+        ...note,
         launchError: reason,
       };
     }
@@ -392,7 +433,11 @@ export async function runWorkDryRun(
 
     return {
       ok,
-      scope,
+      scope: buildWorkDryRunScope(stepDefinition, outcome.resolvedEnvironment),
+      runtime: describeHealthCheckRuntime(
+        stepDefinition?.environment ?? null,
+        outcome.resolvedEnvironment,
+      ),
       workspacePath: outcome.workspacePath,
       runtimeContainerId: outcome.runtimeContainerId,
       agentBaseUrl: outcome.agentBaseUrl,
@@ -402,6 +447,8 @@ export async function runWorkDryRun(
       providerCredentials,
       mcpServers: health.mcpServers,
       healthChecks,
+      secrets,
+      ...note,
     };
   } finally {
     // eslint-disable-next-line local/no-unknown-parameter-type -- narrows a caught value, not a real input boundary
@@ -411,43 +458,4 @@ export async function runWorkDryRun(
       });
     });
   }
-}
-
-export async function listProjectStepDefinitionsForDryRun(input: {
-  projectId: string;
-  baseUrl?: string | undefined;
-}): Promise<Array<{ id: string; key: string; name: string }>> {
-  const baseUrl = resolveScarnBaseUrl(input.baseUrl);
-  const authenticated = await loadAuthenticatedSession(baseUrl);
-  if (!authenticated) {
-    throw new ConfigurationError(`Not signed in to ${baseUrl}.`);
-  }
-  const headers = buildAuthHeaders(authenticated.profile.accessToken);
-  const client = createScarnClient(baseUrl);
-  const result = await client.stepDefinitions.listStepDefinitions({
-    query: { projectId: input.projectId },
-    headers,
-  });
-  const steps = (result.data ?? []) as Array<{
-    id: string;
-    key: string;
-    name: string;
-    version: number;
-  }>;
-
-  // Dedupe to the latest version per key, matching `pullPipelineDefinitions`'s
-  // convention — the picker should offer one entry per step, not one per
-  // historical version.
-  const latestByKey = new Map<string, (typeof steps)[number]>();
-  for (const step of steps) {
-    const existing = latestByKey.get(step.key);
-    if (!existing || step.version > existing.version) {
-      latestByKey.set(step.key, step);
-    }
-  }
-  return [...latestByKey.values()].map(({ id, key, name }) => ({
-    id,
-    key,
-    name,
-  }));
 }

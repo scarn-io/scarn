@@ -1,4 +1,5 @@
 import { readFile, writeFile } from "node:fs/promises";
+import type { ResolvedEnvironment } from "@scarn/sdk/environment";
 import path from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
@@ -9,6 +10,11 @@ import {
   parseDevcontainerWorkspaceFolderFromContent,
 } from "../../../runtime/runtime-service/infra/local-devcontainer-jsonc";
 import { logWork } from "../application/work-logger";
+import {
+  resolveManagedRuntime,
+  type ResolvedManagedRuntime,
+} from "../../../runtime/runtime-service/domain/managed-runtimes";
+import { writeManagedRuntimeConfig } from "../../../runtime/runtime-service/infra/managed-runtime-config";
 
 export const execFileAsync = promisify(execFile);
 
@@ -38,6 +44,39 @@ export async function resolveDevcontainerConfig(input: {
       cause: error,
     });
   }
+}
+
+export async function selectLaunchRuntimeConfig(input: {
+  devcontainerLauncher: DevcontainerLauncher;
+  workspacePath: string;
+  lookupBranch: string;
+  runtime: ResolvedEnvironment["runtime"];
+  startAgent: boolean;
+}): Promise<{
+  devcontainerConfigPath: string;
+  managedRuntime: ResolvedManagedRuntime | null;
+}> {
+  if (input.runtime.kind === "devcontainer") {
+    return {
+      devcontainerConfigPath: await resolveDevcontainerConfig({
+        ...input,
+        requestedConfigPath: input.runtime.config,
+      }),
+      managedRuntime: null,
+    };
+  }
+  if (input.runtime.kind !== "managed")
+    throw new Error("Host runtime has no container config");
+  const managedRuntime = resolveManagedRuntime(input.runtime.id);
+  const devcontainerConfigPath = await writeManagedRuntimeConfig({
+    workspacePath: input.workspacePath,
+    id: managedRuntime.id,
+    installPipelineBuilder: !input.startAgent,
+  });
+  return {
+    devcontainerConfigPath,
+    managedRuntime,
+  };
 }
 
 /**

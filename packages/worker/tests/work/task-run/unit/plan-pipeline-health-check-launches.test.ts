@@ -18,9 +18,7 @@ function step(
   return {
     stepDefinitionId: `id-${overrides.key}`,
     name: overrides.key,
-    executionMode: "workspace",
-    devcontainerConfigPath: null,
-    managedRuntime: null,
+    environment: null,
     opencodeMcpJson: null,
     healthChecksJson: [
       {
@@ -31,7 +29,6 @@ function step(
         timeoutSeconds: 15,
       },
     ],
-    envJson: null,
     ...overrides,
   };
 }
@@ -42,43 +39,86 @@ const keysPerLaunch = (steps: HealthCheckStep[]) =>
   );
 
 describe("resolveHealthCheckRuntime", () => {
-  test("a host step ignores the container fields", () => {
-    expect(
-      resolveHealthCheckRuntime(
-        step({
-          key: "a",
-          executionMode: "no_workspace",
-          devcontainerConfigPath: ".devcontainer/x.json",
-          managedRuntime: "node-22",
-        }),
-      ),
-    ).toEqual({ kind: "host" });
+  test("an omitted runtime resolves to the repository default", () => {
+    expect(resolveHealthCheckRuntime(step({ key: "default" }))).toBeNull();
   });
 
-  test("a managed runtime replaces the devcontainer path", () => {
+  test("an explicit pathless devcontainer retains its provenance", () => {
+    expect(
+      resolveHealthCheckRuntime(
+        step({
+          key: "dev",
+          environment: { kind: "inline", runtime: { kind: "devcontainer" } },
+        }),
+      ),
+    ).toEqual({ kind: "inline", runtime: { kind: "devcontainer" } });
+  });
+
+  test("an explicit host step resolves to host", () => {
     expect(
       resolveHealthCheckRuntime(
         step({
           key: "a",
-          devcontainerConfigPath: ".devcontainer/x.json",
-          managedRuntime: "node-22",
+          environment: { kind: "inline", runtime: { kind: "host" } },
         }),
       ),
-    ).toEqual({ kind: "managed", managedRuntime: "node-22" });
+    ).toEqual({ kind: "inline", runtime: { kind: "host" } });
+  });
+
+  test("an explicit managed runtime resolves its image", () => {
+    expect(
+      resolveHealthCheckRuntime(
+        step({
+          key: "a",
+          environment: {
+            kind: "inline",
+            runtime: { kind: "managed", id: "node24" },
+          },
+        }),
+      ),
+    ).toEqual({ kind: "inline", runtime: { kind: "managed", id: "node24" } });
   });
 
   test("names each runtime for the report", () => {
-    expect(describeHealthCheckRuntime({ kind: "host" })).toBe("host");
+    expect(describeHealthCheckRuntime(null)).toBe("repository default");
+    expect(
+      describeHealthCheckRuntime({ kind: "inline", runtime: { kind: "host" } }),
+    ).toBe("host");
     expect(
       describeHealthCheckRuntime({
-        kind: "devcontainer",
-        devcontainerConfigPath: null,
+        kind: "inline",
+        runtime: { kind: "devcontainer" },
       }),
     ).toBe("project devcontainer");
   });
 });
 
 describe("planHealthCheckLaunches", () => {
+  test("repository defaults never share a launch with explicit pathless devcontainers", () => {
+    const plan = planHealthCheckLaunches([
+      step({ key: "default-1" }),
+      step({
+        key: "dev-1",
+        environment: { kind: "inline", runtime: { kind: "devcontainer" } },
+      }),
+      step({ key: "default-2" }),
+      step({
+        key: "dev-2",
+        environment: { kind: "inline", runtime: { kind: "devcontainer" } },
+      }),
+    ]);
+    expect(plan.launches.map((launch) => launch.runtime)).toEqual([
+      null,
+      { kind: "inline", runtime: { kind: "devcontainer" } },
+    ]);
+    expect(
+      plan.launches.map((launch) => launch.steps.map(({ key }) => key)),
+    ).toEqual([
+      ["default-1", "default-2"],
+      ["dev-1", "dev-2"],
+    ]);
+  });
+
   test("steps with the same runtime share one launch, in pipeline order", () => {
     expect(
       keysPerLaunch([
@@ -92,15 +132,30 @@ describe("planHealthCheckLaunches", () => {
   test("one launch per distinct runtime", () => {
     expect(
       keysPerLaunch([
-        step({ key: "host-1", executionMode: "no_workspace" }),
+        step({
+          key: "host-1",
+          environment: { kind: "inline", runtime: { kind: "host" } },
+        }),
         step({ key: "dev-1" }),
-        step({ key: "managed", managedRuntime: "node-22" }),
+        step({
+          key: "managed",
+          environment: {
+            kind: "inline",
+            runtime: { kind: "managed", id: "node24" },
+          },
+        }),
         step({ key: "dev-2" }),
         step({
           key: "other-dev",
-          devcontainerConfigPath: ".devcontainer/b.json",
+          environment: {
+            kind: "inline",
+            runtime: { kind: "devcontainer", config: ".devcontainer/b.json" },
+          },
         }),
-        step({ key: "host-2", executionMode: "no_workspace" }),
+        step({
+          key: "host-2",
+          environment: { kind: "inline", runtime: { kind: "host" } },
+        }),
       ]),
     ).toEqual([
       ["host-1", "host-2"],
@@ -114,7 +169,7 @@ describe("planHealthCheckLaunches", () => {
     const plan = planHealthCheckLaunches([
       step({
         key: "code",
-        executionMode: "no_workspace",
+        environment: { kind: "inline", runtime: { kind: "host" } },
         healthChecksJson: null,
       }),
       step({ key: "empty", healthChecksJson: [] }),
@@ -126,24 +181,29 @@ describe("planHealthCheckLaunches", () => {
     ]);
   });
 
-  test("merges MCP servers and env of a shared launch", () => {
+  test("merges MCP servers when the whole environment ref is shared", () => {
+    const environment = {
+      kind: "inline",
+      envJson: [
+        {
+          name: "A",
+          source: "inherit",
+          from: "A",
+          secret: false,
+          optional: false,
+          applies: "agent",
+        },
+      ],
+    } as const;
     const [launch] = planHealthCheckLaunches([
       step({
         key: "a",
         opencodeMcpJson: { playwright: { type: "ref" } },
-        envJson: [
-          {
-            name: "A",
-            source: "inherit",
-            from: "A",
-            secret: false,
-            optional: false,
-            applies: "agent",
-          },
-        ],
+        environment: { ...environment, envJson: [...environment.envJson] },
       }),
       step({
         key: "b",
+        environment: { ...environment, envJson: [...environment.envJson] },
         opencodeMcpJson: { playwright: { type: "ref" }, db: { type: "ref" } },
       }),
     ]).launches;
@@ -151,7 +211,10 @@ describe("planHealthCheckLaunches", () => {
       "playwright",
       "db",
     ]);
-    expect(launch?.envJson.map((spec) => spec.name)).toEqual(["A"]);
+    expect(launch?.runtime).toEqual({
+      ...environment,
+      envJson: [...environment.envJson],
+    });
   });
 
   test("an MCP key defined differently splits the steps into separate launches", () => {
@@ -193,29 +256,49 @@ describe("planHealthCheckLaunches", () => {
       keysPerLaunch([
         step({
           key: "a",
-          envJson: [
-            {
-              name: "URL",
-              source: "value",
-              value: "x",
-              secret: false,
-              applies: "agent",
-            },
-          ],
+          environment: {
+            kind: "inline",
+            envJson: [
+              {
+                name: "URL",
+                source: "value",
+                value: "x",
+                secret: false,
+                applies: "agent",
+              },
+            ],
+          },
         }),
         step({
           key: "b",
-          envJson: [
-            {
-              name: "URL",
-              source: "value",
-              value: "y",
-              secret: false,
-              applies: "agent",
-            },
-          ],
+          environment: {
+            kind: "inline",
+            envJson: [
+              {
+                name: "URL",
+                source: "value",
+                value: "y",
+                secret: false,
+                applies: "agent",
+              },
+            ],
+          },
         }),
       ]),
     ).toEqual([["a"], ["b"]]);
+  });
+
+  test("steps with different rendered base branches launch separately", () => {
+    const steps = [
+      step({ key: "a", baseWorkBranch: "release" }),
+      step({ key: "b" }),
+      step({ key: "c", baseWorkBranch: "release" }),
+    ];
+    expect(keysPerLaunch(steps)).toEqual([["a", "c"], ["b"]]);
+    expect(
+      planHealthCheckLaunches(steps).launches.map(
+        (launch) => launch.baseWorkBranch,
+      ),
+    ).toEqual(["release", null]);
   });
 });

@@ -334,8 +334,6 @@ describe("worker start --foreground --once", () => {
             projectRef: "acme/app",
             projectId: FAKE_PROJECT_ID,
             repoDir: home,
-            sourceBranch: "main",
-            sourceBranchWarning: undefined,
           }),
         readLocalEnv: () => Promise.resolve({ TOKEN: "x" }),
         runProjectWork: async (options) => {
@@ -354,7 +352,6 @@ describe("worker start --foreground --once", () => {
       concurrency: 2,
       preserveRuntimeOnComplete: true,
       workItemId: "item-1",
-      sourceBranch: "main",
       env: { TOKEN: "x" },
     });
     expect(calls[0]?.slots).toBeUndefined();

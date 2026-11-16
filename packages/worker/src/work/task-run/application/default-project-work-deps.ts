@@ -3,7 +3,6 @@ import { createLogger } from "@scarn/observability/logging/host";
 import type { WorkReporter } from "../contracts/process-project-work-types";
 import { SqliteLocalRuntimeSessionStore } from "../infra/sqlite-local-runtime-session-store";
 import { DefaultLocalProjectRuntimeEnvironmentOrchestrator } from "../infra/local-project-runtime-environment";
-import { DefaultLocalNoWorkspaceRuntimeEnvironmentOrchestrator } from "../infra/local-noworkspace-runtime-environment";
 import { DefaultOpencodeStepRunner } from "../infra/opencode-step-runner";
 import { createTaskPlaneWorkerClient } from "../infra/worker-api-client";
 import type { ProjectWorkHostDeps } from "./project-work-setup";
@@ -31,10 +30,6 @@ export function createDefaultProjectWorkDeps(
     runtimeEnvironmentOrchestrator:
       new DefaultLocalProjectRuntimeEnvironmentOrchestrator(
         logger.child({ scope: "runtime-environment-orchestrator" }),
-      ),
-    noWorkspaceRuntimeEnvironmentOrchestrator:
-      new DefaultLocalNoWorkspaceRuntimeEnvironmentOrchestrator(
-        logger.child({ scope: "noworkspace-runtime-environment-orchestrator" }),
       ),
     agentRunner: new DefaultOpencodeStepRunner(),
     sleep: (milliseconds, signal) =>

@@ -6,19 +6,25 @@ import type {
 } from "../../opencode-mcp";
 import { isMcpHandle, resolveMcpChecks, type McpHandle } from "./define-mcp";
 import { inferredMcpEnv } from "./mcp-server-config";
+import {
+  connectorMcpCollisionMessage,
+  findConnectorMcpCollisions,
+} from "../../connectors";
+import { isEnvironmentHandle } from "../../push/code-step-lookup";
 
 /**
  * Compiles a step's `mcps` (`defineMcp` handles keyed by the step's server
- * key) into the wire fields, and merges them with the step's own
- * `healthChecks` and `environment.vars`.
+ * key) into wire fields, carrying each server's worker vars independently
+ * from the step environment and combining health checks.
  */
 
-type InheritEnvVarSpec = Extract<EnvVarSpec, { source: "inherit" }>;
+type InheritEnvVarSpec = Extract<EnvVarSpec, { source: "inherit" }> & {
+  applies: "agent";
+};
 
 export type CompiledMcps = {
   opencodeMcpJson: OpenCodeMcpServers;
   healthChecks: HealthChecksInput;
-  envEntries: InheritEnvVarSpec[];
 };
 
 export type StepMcpFields = {
@@ -31,17 +37,20 @@ function compileServer(
   key: string,
   handle: McpHandle,
 ): OpenCodeMcpServerConfig {
+  const workerVars = compileEnv(key, handle);
+  const metadata = workerVars.length > 0 ? { workerVars } : {};
   switch (handle.type) {
     case "ref":
       return {
         type: "ref",
         ...(handle.name !== key ? { name: handle.name } : {}),
         ...structuredClone(handle.server),
+        ...metadata,
       };
     case "local":
-      return { type: "local", ...structuredClone(handle.server) };
+      return { type: "local", ...structuredClone(handle.server), ...metadata };
     case "remote":
-      return { type: "remote", ...structuredClone(handle.server) };
+      return { type: "remote", ...structuredClone(handle.server), ...metadata };
   }
 }
 
@@ -86,30 +95,6 @@ function compileEnv(key: string, handle: McpHandle): InheritEnvVarSpec[] {
   ];
 }
 
-/**
- * Two servers declaring the same var collapse into one entry: required if
- * either requires it, and untagged, since no single server owns it.
- */
-function dedupeEnv(entries: InheritEnvVarSpec[]): InheritEnvVarSpec[] {
-  const byName = new Map<string, InheritEnvVarSpec>();
-  for (const entry of entries) {
-    const existing = byName.get(entry.name);
-    if (!existing) {
-      byName.set(entry.name, entry);
-      continue;
-    }
-    byName.set(entry.name, {
-      source: "inherit",
-      name: entry.name,
-      from: entry.from,
-      secret: true,
-      optional: existing.optional && entry.optional,
-      applies: "agent",
-    });
-  }
-  return [...byName.values()];
-}
-
 /** Throws when a value under `mcps` is not a `defineMcp` handle. */
 export function compileMcps(
   mcps: Readonly<Record<string, McpHandle>>,
@@ -118,7 +103,6 @@ export function compileMcps(
   const compiled: CompiledMcps = {
     opencodeMcpJson: {},
     healthChecks: [],
-    envEntries: [],
   };
   for (const [key, handle] of Object.entries(mcps)) {
     if (!isMcpHandle(handle)) {
@@ -128,10 +112,30 @@ export function compileMcps(
     }
     compiled.opencodeMcpJson[key] = compileServer(key, handle);
     compiled.healthChecks.push(...compileChecks(key, handle));
-    compiled.envEntries.push(...compileEnv(key, handle));
   }
-  compiled.envEntries = dedupeEnv(compiled.envEntries);
   return compiled;
+}
+
+/**
+ * Throws when a step `mcps` key reuses a connector id of the step's
+ * environment handle. A name-only environment is checked at publish and
+ * startup instead.
+ */
+export function assertNoConnectorMcpCollisions(
+  stepKey: string,
+  // eslint-disable-next-line local/no-unknown-parameter-type
+  environment: unknown,
+  mcps: Readonly<Record<string, McpHandle>> | undefined,
+): void {
+  if (!isEnvironmentHandle(environment) || mcps === undefined) return;
+  const collisions = findConnectorMcpCollisions(
+    environment.content.connectors ?? [],
+    Object.keys(mcps),
+  );
+  if (collisions.length === 0) return;
+  throw new Error(
+    `Step "${stepKey}" environment "${environment.name}": ${connectorMcpCollisionMessage(collisions)}`,
+  );
 }
 
 function nonEmpty<T>(items: T[]): T[] | null {
@@ -140,7 +144,7 @@ function nonEmpty<T>(items: T[]): T[] | null {
 
 /**
  * Merges compiled `mcps` into the step's own fields: MCP checks run before the
- * step's own, and a step var replaces an MCP var of the same name.
+ * step's own. Variable declarations stay on each server until worker resolution.
  */
 export function mergeStepMcps(
   stepKey: string,
@@ -158,17 +162,12 @@ export function mergeStepMcps(
     };
   }
   const compiled = compileMcps(input.mcps, stepKey);
-  const stepVars = input.envJson ?? [];
-  const stepVarNames = new Set(stepVars.map((entry) => entry.name));
   return {
     opencodeMcpJson: compiled.opencodeMcpJson,
     healthChecksJson: nonEmpty([
       ...compiled.healthChecks,
       ...(input.healthChecks ?? []),
     ]),
-    envJson: nonEmpty([
-      ...compiled.envEntries.filter((entry) => !stepVarNames.has(entry.name)),
-      ...stepVars,
-    ]),
+    envJson: input.envJson,
   };
 }

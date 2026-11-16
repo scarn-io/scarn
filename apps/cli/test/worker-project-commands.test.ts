@@ -46,7 +46,7 @@ describe("worker add", () => {
     );
     expect(h.supervisor.added).toEqual([settingsFor(BASE_URL)]);
     expect(output).toContain(
-      `Added acme/app (/repos/app @ main) to worker instance ${INSTANCE}.`,
+      `Added acme/app (/repos/app) to worker instance ${INSTANCE}.`,
     );
     expect(output).toContain(`${INSTANCE} worker status`);
     expect(output).toContain(`${INSTANCE} worker logs acme/app -f`);
@@ -273,7 +273,7 @@ describe("scarn work", () => {
     expect(h.supervisor.added).toEqual([settingsFor(BASE_URL)]);
     expect(output).toContain(`Started worker instance ${INSTANCE}`);
     expect(output).toContain(
-      `Added acme/app (/repos/app @ main) to worker instance ${INSTANCE}.`,
+      `Added acme/app (/repos/app) to worker instance ${INSTANCE}.`,
     );
     expect(output).toContain(`${INSTANCE} worker logs acme/app -f`);
   });

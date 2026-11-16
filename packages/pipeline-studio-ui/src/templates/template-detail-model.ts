@@ -206,17 +206,35 @@ export function useSuccessMessage(result: {
   };
 }
 
-/** "Read-only", "Read and write" or "None" for a step's repository access. */
+/** The repository policy, including the shared read-write default. */
 export function formatRepoAccess(repo: TemplateStepRepoAccess | null): string {
   switch (repo?.mode) {
     case undefined:
-    case "none":
-      return "None";
+      return "Read and write (default)";
     case "readOnly":
       return "Read-only";
     case "readWrite":
       return "Read and write";
   }
+}
+
+/**
+ * Where the step starts and commits, e.g. "Base release/{{input.version}};
+ * commits to a new branch". A set base beats the previous step's branch; an
+ * omitted setting shows its default.
+ */
+export function formatRepoBranches(
+  repo: TemplateStepRepoAccess | null,
+): string {
+  const base = repo?.baseBranch
+    ? `Base ${repo.baseBranch}`
+    : "Base: previous step's branch, else project or remote default";
+  if (repo?.mode === "readOnly") return base;
+  const work =
+    repo?.workBranch?.kind === "base"
+      ? "commits onto the branch it started from"
+      : "commits to a new branch";
+  return `${base}; ${work}`;
 }
 
 /**
@@ -233,14 +251,17 @@ export function describeGrants(grants: readonly Grant[]): string {
     .join("; ");
 }
 
-/** "Workspace (devcontainer: path)", "Workspace (managed: name)" or "No workspace". */
-export function formatRuntime(runtime: TemplateStepPreview["runtime"]): string {
-  if (runtime.executionMode === "no_workspace") return "No workspace";
-  if (runtime.devcontainerConfigPath) {
-    return `Workspace (devcontainer: ${runtime.devcontainerConfigPath})`;
+/** The selected runtime, keeping repository default distinct from explicit devcontainer. */
+export function formatRuntime(
+  environment: TemplateStepPreview["environment"],
+): string {
+  if (environment?.kind === "named")
+    return `Named environment (${environment.name})`;
+  const runtime = environment?.runtime;
+  if (runtime?.kind === "host") return "Host";
+  if (runtime === undefined) return "Repository default";
+  if (runtime.kind === "devcontainer") {
+    return runtime.config ? `Devcontainer (${runtime.config})` : "Devcontainer";
   }
-  if (runtime.managedRuntime) {
-    return `Workspace (managed: ${runtime.managedRuntime})`;
-  }
-  return "Workspace";
+  return `Managed container (${runtime.id})`;
 }

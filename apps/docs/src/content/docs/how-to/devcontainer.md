@@ -3,7 +3,7 @@ title: Set up a dev container
 description: Generate a minimal .devcontainer/devcontainer.json for your project using an AI prompt
 ---
 
-`scarn work` spins up a single Docker container from your project's `.devcontainer/devcontainer.json` for every task, and runs the OpenCode agent **inside that same container** (from a Scarn-managed mounted runtime payload). So your devcontainer is the one and only runtime — it must contain the language toolchain your steps need, but it does **not** need OpenCode installed; Scarn mounts and launches its own pinned OpenCode runtime.
+When a step uses your devcontainer, `scarn work` runs the agent **inside that same container** from a Scarn-managed mounted runtime payload. The container must contain the language toolchain your step needs, but not OpenCode; Scarn mounts and launches its own pinned runtime. Devcontainers are one runtime choice, alongside managed containers and host execution; see [environment defaults](/scarn/guides/environments/#defaults).
 
 This page provides a prompt you can paste into any AI coding assistant (Claude, Copilot, etc.) to generate a minimal, project-appropriate devcontainer config.
 
@@ -124,10 +124,10 @@ Things to know when you write an alternate config:
 
 ## Troubleshooting
 
-| Symptom                                                                        | Likely cause                                                                                                                                                              |
-| ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `scarn work` fails with "image not found"                                      | Base image name is wrong or private — check `docker pull <image>` manually                                                                                                |
-| Agent can't find the package manager                                           | Add an `onCreateCommand` to install deps, or use a `features` entry                                                                                                       |
-| Container starts but step fails with missing binary                            | A system package or runtime tool is absent — add it via `features` or a custom `Dockerfile`                                                                               |
-| Step fails with `Devcontainer config "..." not found in the cloned repository` | The path in `Runtime.devcontainer({ config })` does not exist on the branch the step starts from. Check the path and that the file is committed and pushed to that branch |
-| Execution is slow                                                              | The `onCreateCommand` runs on every job; move stable deps into the image                                                                                                  |
+| Symptom                                              | Likely cause                                                                                                                                                              |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `scarn work` fails with "image not found"            | Base image name is wrong or private — check `docker pull <image>` manually                                                                                                |
+| Agent can't find the package manager                 | Add an `onCreateCommand` to install deps, or use a `features` entry                                                                                                       |
+| Container starts but step fails with missing binary  | A system package or runtime tool is absent — add it via `features` or a custom `Dockerfile`                                                                               |
+| Step fails with `Devcontainer config not found: ...` | The path in `Runtime.devcontainer({ config })` does not exist on the branch the step starts from. Check the path and that the file is committed and pushed to that branch |
+| Execution is slow                                    | The `onCreateCommand` runs on every job; move stable deps into the image                                                                                                  |

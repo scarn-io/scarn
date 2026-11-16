@@ -442,6 +442,15 @@ function extractDevcontainerErrorSummary(combined: string): string {
   return "devcontainer CLI exited with a non-zero exit code";
 }
 
+export class ImplicitDevcontainerConfigMissingError extends Error {
+  constructor(workspacePath: string) {
+    super(
+      `No devcontainer spec found in ${workspacePath}. Expected .devcontainer/devcontainer.json or devcontainer.json`,
+    );
+    this.name = "ImplicitDevcontainerConfigMissingError";
+  }
+}
+
 export class DevcontainerCliLauncher implements DevcontainerLauncher {
   async resolveConfigPath(
     input: ResolveDevcontainerConfigInput,
@@ -457,14 +466,14 @@ export class DevcontainerCliLauncher implements DevcontainerLauncher {
       try {
         await access(path.join(input.workspacePath, candidate));
         return candidate;
-      } catch {
-        // Try the next candidate.
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+          throw error;
+        }
       }
     }
 
-    throw new Error(
-      `No devcontainer spec found in ${input.workspacePath}. Expected .devcontainer/devcontainer.json or devcontainer.json`,
-    );
+    throw new ImplicitDevcontainerConfigMissingError(input.workspacePath);
   }
 
   async launch(

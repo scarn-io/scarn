@@ -138,7 +138,9 @@ describe("compileMcps — server types", () => {
       environment: { TOKEN: "{env:SVC_TOKEN}" },
       optionalEnv: ["SVC_HOME"],
     });
-    expect(compileMcps({ svc: local }, "step").envEntries).toEqual([
+    expect(
+      compileMcps({ svc: local }, "step").opencodeMcpJson.svc?.workerVars,
+    ).toEqual([
       inherit("REGION", false, "svc"),
       inherit("SVC_TOKEN", false, "svc"),
       inherit("SVC_HOME", true, "svc"),
@@ -153,7 +155,9 @@ describe("compileMcps — server types", () => {
       headers: { Authorization: "Bearer {env:API_TOKEN}" },
       env: ["API_TOKEN"],
     });
-    expect(compileMcps({ api: remote }, "step").envEntries).toEqual([
+    expect(
+      compileMcps({ api: remote }, "step").opencodeMcpJson.api?.workerVars,
+    ).toEqual([
       inherit("API_TOKEN", false, "api"),
       inherit("API_HOST", false, "api"),
     ]);
@@ -176,6 +180,7 @@ describe("compileMcps — server types", () => {
         type: "local",
         command: ["pw-mcp"],
         environment: { BROWSERS: "{env:PLAYWRIGHT_BROWSERS_PATH}" },
+        workerVars: [inherit("PLAYWRIGHT_BROWSERS_PATH", false, "pw")],
       },
     });
     expect(compiled.healthChecks).toEqual([
@@ -196,7 +201,7 @@ describe("compileMcps — server types", () => {
         severity: "warn",
       },
     ]);
-    expect(compiled.envEntries).toEqual([
+    expect(compiled.opencodeMcpJson.pw?.workerVars).toEqual([
       inherit("PLAYWRIGHT_BROWSERS_PATH", false, "pw"),
     ]);
   });

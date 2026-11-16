@@ -6,6 +6,7 @@ import {
   detachedStepNotice,
   findTemplateStep,
   formatRepoAccess,
+  formatRepoBranches,
   formatRuntime,
 } from "./template-detail-model";
 import type { TemplateEntryKind, TemplateStepPreview } from "./templates-api";
@@ -52,11 +53,15 @@ function TemplateStepSections({
           <tbody>
             <tr>
               <th scope="row">Runtime</th>
-              <td>{formatRuntime(step.runtime)}</td>
+              <td>{formatRuntime(step.environment)}</td>
             </tr>
             <tr>
               <th scope="row">Repository</th>
               <td>{formatRepoAccess(step.repo)}</td>
+            </tr>
+            <tr>
+              <th scope="row">Branches</th>
+              <td>{formatRepoBranches(step.repo)}</td>
             </tr>
             <tr>
               <th scope="row">Work item grants</th>

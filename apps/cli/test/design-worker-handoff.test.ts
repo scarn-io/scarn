@@ -96,7 +96,7 @@ describe("handOffToWorker", () => {
       `Started worker instance ${INSTANCE} (pid ${String(process.pid)}).`,
     );
     expect(messages).toContain(
-      `Added acme/app (/repos/app @ main) to worker instance ${INSTANCE}.`,
+      `Added acme/app (/repos/app) to worker instance ${INSTANCE}.`,
     );
     expect(messages.at(-1)).toBe(queuedMessage(INSTANCE));
     expect(queuedMessage(INSTANCE)).toBe(

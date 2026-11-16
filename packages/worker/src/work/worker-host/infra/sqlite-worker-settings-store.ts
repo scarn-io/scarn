@@ -30,7 +30,6 @@ const PROJECT_COLUMNS = `
   project_id AS projectId,
   project_ref AS projectRef,
   repo_dir AS repoDir,
-  source_branch AS sourceBranch,
   base_url AS baseUrl,
   added_by_user_id AS addedByUserId,
   concurrency,
@@ -68,7 +67,6 @@ export class SqliteWorkerSettingsStore implements WorkerSettingsStore {
         project_id TEXT NOT NULL,
         project_ref TEXT NOT NULL,
         repo_dir TEXT NOT NULL,
-        source_branch TEXT NOT NULL,
         base_url TEXT NOT NULL,
         added_by_user_id TEXT NOT NULL,
         concurrency INTEGER,
@@ -79,6 +77,17 @@ export class SqliteWorkerSettingsStore implements WorkerSettingsStore {
         PRIMARY KEY (instance, project_id)
       );
     `);
+    this.dropLegacySourceBranchColumn();
+  }
+
+  /** Workers no longer pick a source branch (ADR 0010); older databases still carry the `NOT NULL` column. */
+  private dropLegacySourceBranchColumn(): void {
+    const columns = this.db
+      .query<{ name: string }, []>("PRAGMA table_info(worker_projects)")
+      .all();
+    if (columns.some((column) => column.name === "source_branch")) {
+      this.db.run("ALTER TABLE worker_projects DROP COLUMN source_branch");
+    }
   }
 
   getInstance(instance: string): WorkerInstanceSettings | null {
@@ -138,14 +147,13 @@ export class SqliteWorkerSettingsStore implements WorkerSettingsStore {
     this.db
       .query(
         `INSERT INTO worker_projects (
-           instance, project_id, project_ref, repo_dir, source_branch,
+           instance, project_id, project_ref, repo_dir,
            base_url, added_by_user_id, concurrency, work_item_id,
            preserve_runtime, created_at, updated_at
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT (instance, project_id) DO UPDATE SET
            project_ref = excluded.project_ref,
            repo_dir = excluded.repo_dir,
-           source_branch = excluded.source_branch,
            base_url = excluded.base_url,
            added_by_user_id = excluded.added_by_user_id,
            concurrency = excluded.concurrency,
@@ -158,7 +166,6 @@ export class SqliteWorkerSettingsStore implements WorkerSettingsStore {
         input.projectId,
         input.projectRef,
         input.repoDir,
-        input.sourceBranch,
         input.baseUrl,
         input.addedByUserId,
         input.concurrency,

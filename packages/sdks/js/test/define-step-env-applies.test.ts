@@ -1,3 +1,4 @@
+import { inlineEnvironment } from "./inline-environment";
 import { describe, expect, test } from "bun:test";
 import { Env, Runtime, defineStep } from "../src";
 
@@ -17,7 +18,7 @@ describe("defineStep — environment.vars applies", () => {
       },
       agentPrompt: "go",
     });
-    expect(spec.envJson).toEqual([
+    expect(inlineEnvironment(spec.environment)?.envJson).toEqual([
       { name: "AGENT_ONLY", source: "value", value: "a", secret: false },
       { name: "EXPLICIT_AGENT", source: "value", value: "b", secret: false },
       {

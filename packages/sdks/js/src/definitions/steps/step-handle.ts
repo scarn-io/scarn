@@ -18,6 +18,8 @@ import type {
   StepDefinitionSpec,
   StepRetryEntry,
 } from "./define-step";
+import type { EnvironmentHandle } from "../environments/define-environment";
+import { isEnvironmentHandle } from "../../push/code-step-lookup";
 
 export type StepHandle<
   TInput = unknown,
@@ -112,8 +114,15 @@ export function compileStepConcurrency(
  * Wraps a compiled spec in a callable handle. `name` is set with
  * `Object.defineProperty` because a function's own `name` is read-only. The
  * pipeline chain methods are non-enumerable, so they aren't spec fields.
+ *
+ * `environmentHandle` is the `defineEnvironment` handle the step was given,
+ * kept as a non-enumerable `environmentHandle` property so push can find
+ * environments that aren't exported. `toStepSpec` drops it.
  */
-export function toStepHandle(spec: StepDefinitionSpec): StepHandle {
+export function toStepHandle(
+  spec: StepDefinitionSpec,
+  environmentHandle?: EnvironmentHandle,
+): StepHandle {
   const node = stepNode(spec);
   const call = stepCall(node);
   const { name, ...rest } = spec;
@@ -122,7 +131,24 @@ export function toStepHandle(spec: StepDefinitionSpec): StepHandle {
     enumerable: true,
   });
   Object.assign(call, rest);
+  if (environmentHandle !== undefined) {
+    Object.defineProperty(call, "environmentHandle", {
+      value: environmentHandle,
+      enumerable: false,
+    });
+  }
   return makeHandle(call, node) as unknown as StepHandle;
+}
+
+/** The `defineEnvironment` handle a step handle was given, if any. */
+export function stepEnvironmentHandle(
+  // eslint-disable-next-line local/no-unknown-parameter-type
+  step: unknown,
+): EnvironmentHandle | undefined {
+  if (typeof step !== "function" && typeof step !== "object") return undefined;
+  if (step === null) return undefined;
+  const handle = (step as { environmentHandle?: unknown }).environmentHandle;
+  return isEnvironmentHandle(handle) ? handle : undefined;
 }
 
 /**

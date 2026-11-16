@@ -20,6 +20,7 @@ export function stepSpec(
     version: 1,
     kind: "user_defined",
     status: "active",
+    environment: null,
     prompt: null,
     inputSchemaJson: null,
     resultSchemaJson: result ? z.toJSONSchema(result) : null,

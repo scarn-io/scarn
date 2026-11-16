@@ -20,15 +20,17 @@ export function checkEnv(
   const issues: DefinitionValidationIssue[] = [];
 
   for (const step of steps) {
-    if (!step.envJson) continue;
+    const envJson =
+      step.environment?.kind === "inline" ? step.environment.envJson : null;
+    if (!envJson) continue;
     issues.push(...checkEnvMcpOwners(step));
     issues.push(...checkEnvApplies(step));
-    const result = envVarsSchema.safeParse(step.envJson);
+    const result = envVarsSchema.safeParse(envJson);
     if (result.success) continue;
 
     for (const issue of result.error.issues) {
       const [index, ...field] = issue.path;
-      const entry = typeof index === "number" ? step.envJson[index] : undefined;
+      const entry = typeof index === "number" ? envJson[index] : undefined;
       const where =
         typeof index === "number" && entry
           ? `Step "${step.key}" env var #${String(index + 1)} ("${entry.name}")`
@@ -53,7 +55,10 @@ function checkEnvMcpOwners(
   const serverKeySet = new Set(serverKeys);
   const issues: DefinitionValidationIssue[] = [];
 
-  (step.envJson ?? []).forEach((entry, index) => {
+  (step.environment?.kind === "inline"
+    ? (step.environment.envJson ?? [])
+    : []
+  ).forEach((entry, index) => {
     if (entry.source !== "inherit" || entry.mcp === undefined) return;
     if (serverKeySet.has(entry.mcp)) return;
     issues.push({
@@ -75,15 +80,17 @@ function checkEnvApplies(
 ): DefinitionValidationIssue[] {
   const issues: DefinitionValidationIssue[] = [];
 
-  (step.envJson ?? []).forEach((entry, index) => {
+  if (step.environment?.kind !== "inline") return issues;
+  const environment = step.environment;
+  (environment.envJson ?? []).forEach((entry, index) => {
     const applies: EnvVarApplies = entry.applies ?? "agent";
     if (applies === "agent") return;
     const where = `Step "${step.key}" env var #${String(index + 1)} ("${entry.name}") applies "${applies}"`;
-    if (step.executionMode === "no_workspace") {
+    if (environment.runtime?.kind === "host") {
       issues.push({
         check: "env-var-applies",
         severity: "error",
-        message: `${where}: setup variables reach devcontainer up, but the step runs on the host (executionMode "no_workspace") with no container to set up. Use applies "agent" or Runtime.devcontainer().`,
+        message: `${where}: setup variables reach devcontainer up, but the step runs on the host with no container to set up. Use applies "agent" or Runtime.devcontainer().`,
       });
     }
     if (entry.source === "inherit" && entry.mcp !== undefined) {

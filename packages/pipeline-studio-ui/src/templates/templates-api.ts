@@ -1,4 +1,5 @@
 import type { Grant } from "@scarn/sdk/definitions/steps";
+import type { EnvVarSpec } from "@scarn/sdk/env-vars";
 import type { PipelineGraphSnapshot } from "../graph/studio-graph-types";
 
 /**
@@ -45,25 +46,35 @@ export type PipelineTemplateCard = {
   conflicts: TemplateConflicts;
 };
 
+type TemplateStepRepoBranches = {
+  baseBranch?: string | null;
+};
+
 export type TemplateStepRepoAccess =
-  | { mode: "none" }
-  | { mode: "readOnly" }
-  | {
+  | ({ mode: "readOnly" } & TemplateStepRepoBranches)
+  | ({
       mode: "readWrite";
       message?: string | null;
       onPushFailure?: "fail" | "warn";
-    };
+      workBranch?: { kind: "create" } | { kind: "base" };
+    } & TemplateStepRepoBranches);
 
 export type TemplateStepPreview = {
   key: string;
   name: string;
   description: string | null;
   prompt: string | null;
-  runtime: {
-    executionMode: "workspace" | "no_workspace";
-    devcontainerConfigPath: string | null;
-    managedRuntime: string | null;
-  };
+  environment:
+    | null
+    | {
+        kind: "inline";
+        runtime?:
+          | { kind: "host" }
+          | { kind: "devcontainer"; config?: string }
+          | { kind: "managed"; id: string };
+        envJson?: EnvVarSpec[] | null;
+      }
+    | { kind: "named"; name: string };
   repo: TemplateStepRepoAccess | null;
   grants: Grant[];
   maxTurns: number | null;

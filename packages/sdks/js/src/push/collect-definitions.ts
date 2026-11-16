@@ -8,9 +8,21 @@
 import { readdirSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import { isDeepStrictEqual } from "node:util";
+import type {
+  EnvironmentContent,
+  EnvironmentHandle,
+} from "../definitions/environments/define-environment";
 import type { StepDefinitionSpec } from "../definitions/steps";
-import { toStepSpec } from "../definitions/steps/step-handle";
-import { isStepDefinitionSpec, stepsInModule } from "./code-step-lookup";
+import {
+  stepEnvironmentHandle,
+  toStepSpec,
+} from "../definitions/steps/step-handle";
+import {
+  isEnvironmentHandle,
+  isStepDefinitionSpec,
+  stepsInModule,
+} from "./code-step-lookup";
 
 /**
  * Files that drive a push or the pipeline-builder studio rather than
@@ -37,9 +49,22 @@ const INTERNAL_SCRIPT_NAMES = new Set([
  */
 export const PIPELINE_BUILDER_DIR = ".scarn/pipeline-builder";
 
+/** A named environment found while collecting, and the file it came from. */
+export type CollectedEnvironment = {
+  readonly name: string;
+  readonly content: EnvironmentContent;
+  /** The builder file's basename, e.g. `environments.ts`. */
+  readonly sourceFile: string;
+};
+
 export type CollectedDefinitions = {
   /** Deduped by `key@vN`. */
   readonly steps: readonly StepDefinitionSpec[];
+  /**
+   * Exported `defineEnvironment` handles plus any handle a collected step
+   * uses, deduped by name.
+   */
+  readonly environments: readonly CollectedEnvironment[];
 };
 
 /**
@@ -67,10 +92,74 @@ type RegisteredCodeStep = {
 type CollectionState = {
   readonly stepMap: Map<string, StepDefinitionSpec>;
   readonly codeSteps: Map<string, RegisteredCodeStep>;
+  readonly environments: Map<string, CollectedEnvironmentEntry>;
+};
+
+type CollectedEnvironmentEntry = {
+  readonly handle: EnvironmentHandle;
+  readonly sourceFile: string;
+  /** False when only a step reached it; an exporting file then takes over `sourceFile`. */
+  readonly exported: boolean;
 };
 
 function createCollectionState(): CollectionState {
-  return { stepMap: new Map(), codeSteps: new Map() };
+  return { stepMap: new Map(), codeSteps: new Map(), environments: new Map() };
+}
+
+/**
+ * Every environment handle a module reaches: its exported handles, then the
+ * handles its exported steps were given and that it doesn't export.
+ */
+function environmentHandlesInModule(
+  mod: Readonly<Record<string, unknown>>,
+): { handle: EnvironmentHandle; exported: boolean }[] {
+  const found = new Map<EnvironmentHandle, boolean>();
+  for (const [exportName, value] of Object.entries(mod)) {
+    if (exportName !== "default" && isEnvironmentHandle(value)) {
+      found.set(value, true);
+    }
+  }
+  for (const step of stepsInModule(mod)) {
+    const handle = stepEnvironmentHandle(step);
+    if (handle && !found.has(handle)) found.set(handle, false);
+  }
+  return [...found].map(([handle, exported]) => ({ handle, exported }));
+}
+
+/**
+ * The environment entries one file adds or updates. Throws when a name is
+ * already taken by different content; the same handle, or another handle
+ * with equal content, seen again is fine. Reads `state` without changing it,
+ * so a conflict rejects the whole file.
+ */
+function environmentEntriesForFile(
+  state: CollectionState,
+  found: readonly { handle: EnvironmentHandle; exported: boolean }[],
+  sourceFile: string,
+): CollectedEnvironmentEntry[] {
+  const entries = new Map<string, CollectedEnvironmentEntry>();
+  for (const { handle, exported } of found) {
+    const existing =
+      entries.get(handle.name) ?? state.environments.get(handle.name);
+    if (existing === undefined) {
+      entries.set(handle.name, { handle, sourceFile, exported });
+      continue;
+    }
+    if (
+      existing.handle !== handle &&
+      !isDeepStrictEqual(existing.handle.content, handle.content)
+    ) {
+      throw new Error(
+        `Environment "${handle.name}" is defined twice with different content ` +
+          `(${existing.sourceFile} and ${sourceFile}). ` +
+          `Give each environment a unique name, or define it once and import it.`,
+      );
+    }
+    if (exported && !existing.exported) {
+      entries.set(handle.name, { handle, sourceFile, exported });
+    }
+  }
+  return [...entries.values()];
 }
 
 /**
@@ -180,8 +269,18 @@ async function collectFile(
 ): Promise<void> {
   const mod = await importModule(absoluteFilePath);
 
+  const environmentEntries = environmentEntriesForFile(
+    state,
+    environmentHandlesInModule(mod),
+    relative(absDir, absoluteFilePath),
+  );
+
   for (const step of stepsInModule(mod)) {
     registerCodeStep(state, step, absoluteFilePath);
+  }
+
+  for (const entry of environmentEntries) {
+    state.environments.set(entry.handle.name, entry);
   }
 
   for (const [exportName, value] of Object.entries(mod)) {
@@ -189,6 +288,14 @@ async function collectFile(
     const resolved = resolveCodeStepEntrypoint(value, absoluteFilePath, absDir);
     state.stepMap.set(`${resolved.key}@v${String(resolved.version)}`, resolved);
   }
+}
+
+function collectedEnvironments(state: CollectionState): CollectedEnvironment[] {
+  return [...state.environments.values()].map(({ handle, sourceFile }) => ({
+    name: handle.name,
+    content: handle.content,
+    sourceFile,
+  }));
 }
 
 /**
@@ -225,7 +332,10 @@ export async function collectDefinitionsFromDirectory(
     await collectFile(join(absDir, file), absDir, state);
   }
 
-  return { steps: [...state.stepMap.values()] };
+  return {
+    steps: [...state.stepMap.values()],
+    environments: collectedEnvironments(state),
+  };
 }
 
 /**
@@ -259,6 +369,7 @@ export async function collectDefinitionsFromDirectoryTolerant(
 
   return {
     steps: [...state.stepMap.values()],
+    environments: collectedEnvironments(state),
     brokenPipelines,
   };
 }

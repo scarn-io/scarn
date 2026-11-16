@@ -1,4 +1,5 @@
 import path from "node:path";
+import type { EnvironmentDiagnostics } from "../contracts/environment-diagnostics";
 
 /**
  * Relative location (under the resolved workspace folder) where step artifacts
@@ -93,12 +94,14 @@ export function resolveBaseWorkBranch(
 }
 
 export function buildRunningMetadata(environment: {
+  environmentDiagnostics?: EnvironmentDiagnostics | undefined;
   resolvedBranch: string;
   devcontainerConfigPath: string;
   aiImage: string;
   networkName: string;
 }): string {
   return JSON.stringify({
+    environment: environment.environmentDiagnostics,
     resolvedBranch: environment.resolvedBranch,
     devcontainerConfigPath: environment.devcontainerConfigPath,
     aiImage: environment.aiImage,

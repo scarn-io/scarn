@@ -80,7 +80,6 @@ export function scheduleClaimedTaskRunJob(
             requestedByUserId: deps.workerClient.userId,
             claim,
             leaseDurationSeconds: input.leaseDurationSeconds,
-            sourceBranch: input.sourceBranch,
             localEnvVars,
             preserveRuntimeOnFailure: input.preserveRuntimeOnComplete ?? false,
             run,

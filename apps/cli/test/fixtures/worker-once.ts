@@ -15,8 +15,6 @@ const startCommand = createWorkerStartCommand({
         projectRef: "acme/app",
         projectId: FAKE_PROJECT_ID,
         repoDir: process.cwd(),
-        sourceBranch: null,
-        sourceBranchWarning: undefined,
       }),
     runProjectWork: (options) => {
       const { readLocalEnv, reporter, dest, ...printable } = options;

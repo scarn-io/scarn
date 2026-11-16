@@ -3,7 +3,7 @@
  * the clone, branches and `.scarn/.env` patch, but none of the OpenCode work
  * runs — no payload, provider access, mount planning/patching, agent HOME
  * seeding, or `opencode serve` start/stop. Also: a dry-run launch (no step key)
- * still checks out the CLI's `sourceBranch`.
+ * still checks out its base branch.
  */
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import os from "node:os";
@@ -69,7 +69,7 @@ describe("DefaultLocalProjectRuntimeEnvironmentOrchestrator.launch (startAgent: 
     expect(env.secretValues).toEqual([]);
   });
 
-  test("leaves the devcontainer config free of the OpenCode mount and port, but still applies the .scarn/.env patch", async () => {
+  test("leaves the devcontainer config free of the OpenCode mount, port and .scarn/.env values", async () => {
     const log: CallLog = [];
     const deps = buildDeps(log);
     const orchestrator = new DefaultLocalProjectRuntimeEnvironmentOrchestrator(
@@ -92,7 +92,8 @@ describe("DefaultLocalProjectRuntimeEnvironmentOrchestrator.launch (startAgent: 
     expect(config["mounts"]).toBeUndefined();
     expect(config["appPort"]).toBeUndefined();
     expect(config["runArgs"]).toBeUndefined();
-    expect(config["containerEnv"]).toEqual({ MY_VAR: "my-value" });
+    expect(config["containerEnv"]).toBeUndefined();
+    expect(JSON.stringify(config)).not.toContain("my-value");
   });
 
   test("cleanup tears down the container and workspace without stopping OpenCode", async () => {
@@ -138,8 +139,8 @@ describe("DefaultLocalProjectRuntimeEnvironmentOrchestrator.launch (startAgent: 
   });
 });
 
-describe("sourceBranch launch behavior", () => {
-  test("no step key (dry run): still checks out sourceBranch even though no work branch is created", async () => {
+describe("dry run base branch", () => {
+  test("no step key (dry run): still checks out the base even though no work branch is created", async () => {
     const log: CallLog = [];
     const commitPush = new FakeGitCommitPushService(log);
     const orchestrator = new DefaultLocalProjectRuntimeEnvironmentOrchestrator(
@@ -154,7 +155,7 @@ describe("sourceBranch launch behavior", () => {
 
     const env = await orchestrator.launch({
       ...buildLaunchInput(),
-      sourceBranch: "feature-x",
+      baseWorkBranch: "feature-x",
     });
 
     expect(commitPush.checkoutBaseCalls).toEqual(["feature-x"]);

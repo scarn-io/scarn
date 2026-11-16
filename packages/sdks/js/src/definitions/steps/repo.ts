@@ -1,24 +1,22 @@
 import {
+  describeBaseBranchEnvProblem,
+  findBaseBranchEnvProblems,
   repoConfigInputSchema,
-  repoRuntimeMismatch,
+  type BaseBranchEnvVar,
   type RepoConfigInput,
-  type RepoExecutionMode,
   type RepoGitCredentials,
+  type RepoWorkBranch,
 } from "../../repo-config";
 import {
   createPromptInputProxy,
   type PromptInputProxy,
 } from "./prompt-template";
-import type { RuntimeSpec } from "./runtime";
 
 /**
- * Authoring helpers for a step's `environment.repo` option, and the
+ * Authoring helpers for a step's top-level `repo` option, and the
  * definition-time compilation that turns it into the `repo` wire field
  * (`../../repo-config.ts`).
  */
-
-/** The step gets no repository: no clone, branch, commit or push. */
-export type NoneRepoSpec = { readonly mode: "none" };
 
 type GitCredentialsOpt = {
   /**
@@ -30,10 +28,23 @@ type GitCredentialsOpt = {
   readonly gitCredentials?: RepoGitCredentials;
 };
 
+type BranchOpts = {
+  /**
+   * The branch to start from, a single-line template: `{{input.…}}`,
+   * `{{env.NAME}}` (a variable declared in the step's environment) and
+   * `{{workItem.platformKey}}` tokens only. Without tokens it must be a valid
+   * branch name. When set, it beats the previous step's work branch. Unset,
+   * the step starts from the previous step's work branch, else the worker's
+   * or project's base branch, else the remote's default branch.
+   */
+  readonly baseBranch?: string;
+};
+
 /** Clones and checks out the base branch; creates no branch, commits and pushes nothing. */
 export type ReadOnlyRepoSpec = {
   readonly mode: "readOnly";
-} & GitCredentialsOpt;
+} & GitCredentialsOpt &
+  BranchOpts;
 
 export type ReadWriteRepoSpec = {
   readonly mode: "readWrite";
@@ -45,42 +56,53 @@ export type ReadWriteRepoSpec = {
   readonly message?: string;
   /** Defaults to `"fail"`: a failed push fails the step. */
   readonly onPushFailure?: "fail" | "warn";
-} & GitCredentialsOpt;
+  /**
+   * Defaults to `WorkBranch.create()`, a new `scarn/<key>-<id>` branch.
+   * `WorkBranch.base()` commits onto the branch the step started from.
+   */
+  readonly workBranch?: RepoWorkBranch;
+} & GitCredentialsOpt &
+  BranchOpts;
 
-export type RepoSpec = NoneRepoSpec | ReadOnlyRepoSpec | ReadWriteRepoSpec;
+export type RepoSpec = ReadOnlyRepoSpec | ReadWriteRepoSpec;
 
-/** What `Runtime.devcontainer()` and `Runtime.managed.<id>()` accept. */
-export type DevcontainerRepoSpec = ReadOnlyRepoSpec | ReadWriteRepoSpec;
-
-/** What `Runtime.host()` accepts. */
-export type HostRepoSpec = NoneRepoSpec;
-
-/** Runs once at definition time, against the same proxies `agentPrompt` and `vars` use. */
 /** The work item values a commit message may name, read live at commit time. */
 export type CommitMessageWorkItem = { title: string; platformKey: string };
 
-export type RepoFn<TInput, TResult, TSpec extends RepoSpec> = (context: {
+/** The default `env` of a repo function: any variable, as a token. */
+export type RepoEnvDefault = PromptInputProxy<
+  Record<string, string | undefined>
+>;
+
+/**
+ * Runs once at definition time, against the same proxies `agentPrompt` and
+ * `vars` use. `env` is typed as `agentPrompt`'s is (`PromptEnvContext`).
+ */
+export type RepoFn<
+  TInput,
+  TResult,
+  TSpec extends RepoSpec,
+  TEnv = RepoEnvDefault,
+> = (context: {
   input: PromptInputProxy<TInput>;
   result: PromptInputProxy<TResult>;
   /** The Task's work item: `{{workItem.title}}` and `{{workItem.platformKey}}`. */
   workItem: PromptInputProxy<CommitMessageWorkItem>;
+  /** The step's environment variables, for `baseBranch`: `{{env.NAME}}`. */
+  env: TEnv;
 }) => TSpec;
 
-export type RepoField<TInput, TResult, TSpec extends RepoSpec> =
-  TSpec | RepoFn<TInput, TResult, TSpec>;
+export type RepoField<
+  TInput,
+  TResult,
+  TSpec extends RepoSpec,
+  TEnv = RepoEnvDefault,
+> = TSpec | RepoFn<TInput, TResult, TSpec, TEnv>;
 
 export type ReadOnlyRepoOpts = Omit<ReadOnlyRepoSpec, "mode">;
 export type ReadWriteRepoOpts = Omit<ReadWriteRepoSpec, "mode">;
 
 export const Repo = {
-  /**
-   * The step gets no repository. What `Runtime.host()` already implies, stated
-   * as a value. Only valid with `Runtime.host()`.
-   */
-  none(): NoneRepoSpec {
-    return { mode: "none" };
-  },
-
   /**
    * Clones and checks out the base branch, but creates no work branch, commits
    * nothing, pushes nothing and reports no `workBranch`. A policy, not a
@@ -92,10 +114,28 @@ export const Repo = {
 
   /**
    * Creates a work branch, then commits and pushes it when the step succeeds.
-   * This is the default for a devcontainer step.
+   * This is the shared default for every runtime.
    */
   readWrite(opts?: ReadWriteRepoOpts): ReadWriteRepoSpec {
     return { mode: "readWrite", ...opts };
+  },
+} as const;
+
+/** Which branch a `Repo.readWrite()` step commits to (its `workBranch`). */
+export const WorkBranch = {
+  /** A new `scarn/<key>-<id>` branch. The default. */
+  create(): RepoWorkBranch {
+    return { kind: "create" };
+  },
+
+  /**
+   * The branch the step started from: the rendered `baseBranch`, else the
+   * previous step's work branch. Pushed without force, so a moved origin fails
+   * the push. Needs an explicit `baseBranch`; a worker, project or remote
+   * default base is rejected at startup.
+   */
+  base(): RepoWorkBranch {
+    return { kind: "base" };
   },
 } as const;
 
@@ -104,19 +144,14 @@ export type CompileRepoContext = {
   readonly stepKey?: string;
 };
 
-function executionModeOf(runtime: RuntimeSpec | undefined): RepoExecutionMode {
-  return runtime?.kind === "host" ? "no_workspace" : "workspace";
-}
-
 /**
- * Runs the authored `environment.repo` once (the function form against `input`
- * and `result` proxies) and returns the wire shape, or `undefined` when the step
- * declares no `repo`. Throws when the mode does not fit the runtime or breaks
- * the `repoConfigInputSchema` rules.
+ * Runs the authored `repo` once (the function form against `input`, `result`,
+ * `workItem` and `env` proxies) and returns the wire shape, or `undefined`
+ * when the step declares no `repo`. Throws when it breaks the
+ * `repoConfigInputSchema` rules, e.g. a `{{result.…}}` token in `baseBranch`.
  */
-export function compileRepo<TInput, TResult>(
-  repo: RepoField<TInput, TResult, RepoSpec> | undefined,
-  runtime: RuntimeSpec | undefined,
+export function compileRepo<TInput, TResult, TEnv = RepoEnvDefault>(
+  repo: RepoField<TInput, TResult, RepoSpec, TEnv> | undefined,
   ctx: CompileRepoContext = {},
 ): RepoConfigInput | undefined {
   if (repo === undefined) return undefined;
@@ -127,18 +162,11 @@ export function compileRepo<TInput, TResult>(
           input: createPromptInputProxy<TInput>(["input"]),
           result: createPromptInputProxy<TResult>(["result"]),
           workItem: createPromptInputProxy<CommitMessageWorkItem>(["workItem"]),
+          env: createPromptInputProxy(["env"]) as unknown as TEnv,
         })
       : repo;
 
   const where = ctx.stepKey ? `Step "${ctx.stepKey}" repo` : "repo";
-  const executionMode = executionModeOf(runtime);
-  const mismatch = repoRuntimeMismatch(executionMode, spec.mode);
-  if (mismatch !== null) {
-    throw new Error(
-      `${where} "${spec.mode}" cannot be used with executionMode "${executionMode}": ${mismatch}.`,
-    );
-  }
-
   const config = toRepoConfigInput(spec);
   const parsed = repoConfigInputSchema.safeParse(config);
   if (!parsed.success) {
@@ -150,10 +178,38 @@ export function compileRepo<TInput, TResult>(
 }
 
 function toRepoConfigInput(spec: RepoSpec): RepoConfigInput {
-  if (spec.mode === "readWrite") return toReadWriteConfig(spec);
-  if (spec.mode === "readOnly")
-    return { mode: "readOnly", ...gitCredentialsOf(spec) };
-  return { mode: "none" };
+  switch (spec.mode) {
+    case "readWrite":
+      return toReadWriteConfig(spec);
+    case "readOnly":
+      return {
+        mode: "readOnly",
+        ...gitCredentialsOf(spec),
+        ...branchOptsOf(spec),
+      };
+  }
+  throw new Error("repo mode must be readOnly or readWrite");
+}
+
+/**
+ * Throws when the compiled `repo.baseBranch` has an `{{env.X}}` token the
+ * step's environment doesn't allow (undeclared, or secret). `vars` is the
+ * environment's var list, or `undefined` for an environment known only by
+ * name: the server checks that one at publish.
+ */
+export function assertBaseBranchFitsEnvironment(
+  repo: RepoConfigInput | undefined,
+  vars: readonly BaseBranchEnvVar[] | undefined,
+  ctx: CompileRepoContext = {},
+): void {
+  const baseBranch = repo?.baseBranch;
+  if (baseBranch == null || vars === undefined) return;
+  const problems = findBaseBranchEnvProblems(baseBranch, vars);
+  if (problems.length === 0) return;
+  const where = ctx.stepKey ? `Step "${ctx.stepKey}" repo` : "repo";
+  throw new Error(
+    `${where}: baseBranch ${problems.map(describeBaseBranchEnvProblem).join("; ")}`,
+  );
 }
 
 function gitCredentialsOf(spec: GitCredentialsOpt): GitCredentialsOpt {
@@ -162,10 +218,20 @@ function gitCredentialsOf(spec: GitCredentialsOpt): GitCredentialsOpt {
     : {};
 }
 
+function branchOptsOf(spec: BranchOpts): BranchOpts {
+  return spec.baseBranch !== undefined
+    ? {
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-template-expression -- a bare input or env reference is a proxy object typed as string; the template coerces it to its {{…}} token
+        baseBranch: `${spec.baseBranch}`,
+      }
+    : {};
+}
+
 function toReadWriteConfig(spec: ReadWriteRepoSpec): RepoConfigInput {
   return {
     mode: "readWrite",
     ...gitCredentialsOf(spec),
+    ...branchOptsOf(spec),
     ...(spec.message !== undefined
       ? {
           // eslint-disable-next-line @typescript-eslint/no-unnecessary-template-expression -- a bare input or result reference is a proxy object typed as string; the template coerces it to its {{…}} token
@@ -175,5 +241,6 @@ function toReadWriteConfig(spec: ReadWriteRepoSpec): RepoConfigInput {
     ...(spec.onPushFailure !== undefined
       ? { onPushFailure: spec.onPushFailure }
       : {}),
+    ...(spec.workBranch !== undefined ? { workBranch: spec.workBranch } : {}),
   };
 }

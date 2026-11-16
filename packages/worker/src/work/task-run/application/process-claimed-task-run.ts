@@ -3,7 +3,8 @@ import path from "node:path";
 import type { HealthCheck } from "@scarn/sdk/health-checks";
 import { assertNever } from "../../../common/assert-never";
 import { createUuidV7, type UuidV7 } from "../../../common/contracts/uuid-v7";
-import { planStepEnv } from "./resolve-step-env";
+import { planClaimedStepEnv } from "./plan-step-env-with-secrets";
+import { requestProjectSecrets } from "./request-project-secrets";
 import { taskKindUsesAgent } from "./task-kind-runtime";
 import { runAgentStepBranch } from "./process-claimed-task-run-agent-branch";
 import { runCodeStepBranch } from "./process-claimed-task-run-code-branch";
@@ -21,7 +22,6 @@ import {
   resolveProjectWorkLogger,
   resolveProjectWorkReporter,
 } from "./process-project-work-logger";
-import { toOpencodeServerHandle } from "../../../runtime/runtime-service/infra/opencode-server-contract";
 import type {
   OpencodeServerHandle,
   ProcessProjectWorkDeps,
@@ -33,7 +33,7 @@ import type {
 import type { FakeAiServer } from "../infra/fake-ai";
 import type { RunHandle } from "./run-registry";
 import {
-  runDeclaredHealthChecksOrThrow,
+  runLaunchGatesOrThrow,
   startHealthCheckHarnessIfDeclared,
 } from "./health-check-gate";
 
@@ -62,8 +62,6 @@ export async function startProcessClaimedTaskRun(
     requestedByUserId: UuidV7;
     claim: TaskRunWorkerClaim;
     leaseDurationSeconds: number;
-    /** See `ProcessProjectWorkInput.sourceBranch`. */
-    sourceBranch?: string | null | undefined;
     /**
      * This run's `.scarn/.env` values (see `ProcessProjectWorkInput.readLocalEnv`).
      * Laid over `process.env` to form the worker env, and handed to the launch.
@@ -145,21 +143,9 @@ export async function startProcessClaimedTaskRun(
       promptLength: workerContext.agentPrompt.promptText.length,
     });
 
-    // Resolved before anything launches so a missing required variable fails
-    // fast, and its secrets are masked before any runtime log can echo them.
-    // Variables inferred from MCP server refs are resolved by the launch once
-    // it has discovered them (`resolveMcpEnv`), and masked via its secrets.
     const workerEnv = { ...process.env, ...input.localEnvVars };
-    const {
-      resolved: { stepEnv, setupEnv, promptEnv, secretValues },
-      resolveMcpEnv,
-    } = planStepEnv({
-      envJson: workerContext.runtime.envJson,
-      inputJson: workerContext.task.inputJson,
-      workerEnv,
-      opencodeMcpJson: workerContext.runtime.opencodeMcpJson,
-    });
-    logStream?.registerSecretValues(secretValues);
+    let stepEnv: Record<string, string> = {};
+    let promptEnv: Record<string, string> = {};
 
     // Steps whose kind does not prompt an agent (`code`: a plain function run
     // in the devcontainer) never declare health checks (no prompting harness
@@ -175,14 +161,6 @@ export async function startProcessClaimedTaskRun(
     const declaredHealthChecks: HealthCheck[] = usesAgent
       ? (workerContext.runtime.healthChecksJson ?? [])
       : [];
-    const harness = usesAgent
-      ? await startHealthCheckHarnessIfDeclared({
-          healthChecks: declaredHealthChecks,
-          isNoWorkspace: workerContext.runtime.executionMode === "no_workspace",
-          createFakeAiServer: deps.createFakeAiServer,
-        })
-      : { fakeAiServer: undefined, fakeAiProviderOverride: undefined };
-    fakeAiServer = harness.fakeAiServer;
     throwIfAborted();
 
     logger.log("step", "Launching runtime environment", {
@@ -207,7 +185,6 @@ export async function startProcessClaimedTaskRun(
       requestedByUserId: input.requestedByUserId,
       reporter,
       taskRunId: input.claim.task.id,
-      sourceBranch: input.sourceBranch,
       localEnvVars: input.localEnvVars,
       onDevcontainerLogLine: logStream
         ? (line, level) => {
@@ -227,10 +204,43 @@ export async function startProcessClaimedTaskRun(
             });
           }
         : undefined,
-      fakeAiProviderOverride: harness.fakeAiProviderOverride,
-      stepEnv,
-      setupEnv,
-      resolveMcpEnv,
+      resolveEnvironmentEnv: async (resolvedEnvironment) => {
+        const plan = await planClaimedStepEnv({
+          envVars: resolvedEnvironment.envVars,
+          inputJson: workerContext.task.inputJson,
+          workerEnv,
+          localEnvVars: input.localEnvVars,
+          opencodeMcpJson: workerContext.runtime.opencodeMcpJson,
+          requestSecrets: (names) =>
+            requestProjectSecrets(client, input.claim, names),
+          onSecretValues: (values) => logStream?.registerSecretValues(values),
+        });
+        stepEnv = plan.resolved.stepEnv;
+        promptEnv = plan.resolved.promptEnv;
+        logStream?.registerSecretValues(plan.resolved.secretValues);
+        const resolveMcp = plan.resolveMcpEnv;
+        const resolveMcpEnv: typeof resolveMcp = resolveMcp
+          ? (refs) => {
+              const resolved = resolveMcp(refs);
+              stepEnv = resolved.stepEnv;
+              promptEnv = resolved.promptEnv;
+              return resolved;
+            }
+          : undefined;
+        const harness = usesAgent
+          ? await startHealthCheckHarnessIfDeclared({
+              healthChecks: declaredHealthChecks,
+              isNoWorkspace: resolvedEnvironment.runtime.kind === "host",
+              createFakeAiServer: deps.createFakeAiServer,
+            })
+          : { fakeAiServer: undefined, fakeAiProviderOverride: undefined };
+        fakeAiServer = harness.fakeAiServer;
+        return {
+          ...plan,
+          resolveMcpEnv,
+          fakeAiProviderOverride: harness.fakeAiProviderOverride,
+        };
+      },
       preserveRuntimeOnFailure: input.preserveRuntimeOnFailure,
     });
     cleanup = async () => {
@@ -261,43 +271,35 @@ export async function startProcessClaimedTaskRun(
       agentBaseUrl: environment.agent?.baseUrl ?? null,
       aiImage: environment.aiImage,
       networkName: environment.networkName,
+      environmentDiagnostics: environment.environmentDiagnostics,
     });
     reporter.event({
       type: "task:runtime-ready",
       taskRunId: input.claim.task.id,
     });
 
-    // The health check gate (#120): a required failure throws here, before
-    // any provider tokens are spent and before the prompt is even rendered.
-    // A gate, not a race — see `run-health-checks.ts` for why checks are not
-    // run concurrently with the agent. The forced call's announcement and
-    // the tool's output land in the durable log feed for free: the in-container
-    // OpenCode log tail was already attached above, before this point.
-    if (fakeAiServer) {
-      const healthCheckAgent = environment.agent;
-      if (!healthCheckAgent) {
-        throw new Error(
-          "Health checks require a running agent, but the runtime environment launched without one",
-        );
-      }
-      try {
-        await runDeclaredHealthChecksOrThrow({
-          fakeAiServer,
-          server: toOpencodeServerHandle(
-            healthCheckAgent,
-            environment.workspaceFolder,
-          ),
-          healthChecks: declaredHealthChecks,
-          runHealthChecksOverride: deps.runHealthChecks,
-          logger,
-          reporter,
-          taskRunId: input.claim.task.id,
-        });
-      } finally {
-        // Already stopped internally; cleared so the `catch` block below
-        // doesn't try to stop it again.
-        fakeAiServer = undefined;
-      }
+    // The launch gates: the MCP startup gate (decision 10), then declared
+    // health checks (#120). A failure throws here, before any provider tokens
+    // are spent and before the prompt is even rendered.
+    try {
+      await runLaunchGatesOrThrow({
+        usesAgent,
+        environment,
+        stepMcpServerKeys: Object.keys(
+          workerContext.runtime.opencodeMcpJson ?? {},
+        ),
+        mcpStartupGate: deps.mcpStartupGate,
+        fakeAiServer,
+        healthChecks: declaredHealthChecks,
+        runHealthChecksOverride: deps.runHealthChecks,
+        logger,
+        reporter,
+        taskRunId: input.claim.task.id,
+      });
+    } finally {
+      // Stopped by the gates on every path; cleared so the `catch` block
+      // below doesn't try to stop it again.
+      fakeAiServer = undefined;
     }
 
     throwIfAborted();

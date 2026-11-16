@@ -175,6 +175,35 @@ describe("createTaskPlaneWorkerClient auth", () => {
       expect((error as ProjectUnavailableError).status as number).toBe(status);
     },
   );
+
+  test("leaves a 403 SECRET_NOT_REFERENCED as a plain error carrying its detail", async () => {
+    saveAuthProfile(baseUrl, { accessToken: "token-a", userId: USER_A });
+    const client = await createClient();
+    responseStatus = 403;
+    responseBody = {
+      type: "about:blank",
+      title: "x",
+      status: 403,
+      code: "SECRET_NOT_REFERENCED",
+      detail: "Secrets not referenced by this task run's environment: X.",
+    };
+
+    const error = await captureError(
+      Promise.resolve(
+        client.resolveTaskRunEnvironment?.({
+          taskRunId: TASK_ID,
+          claimToken: "claim",
+          secretNames: ["X"],
+        }),
+      ),
+    );
+
+    expect(error).not.toBeInstanceOf(WorkerAuthError);
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toContain(
+      "Secrets not referenced by this task run's environment: X.",
+    );
+  });
 });
 
 describe("createTaskPlaneWorkerClient issueWorkSignalToken", () => {

@@ -19,8 +19,16 @@ import {
   type CallLog,
 } from "./helpers/orchestrator-launch-fakes";
 
-const AUTO_REPO: RepoConfig = { mode: "readOnly", gitCredentials: "auto" };
-const NONE_REPO: RepoConfig = { mode: "readOnly", gitCredentials: "none" };
+const AUTO_REPO: RepoConfig = {
+  mode: "readOnly",
+  gitCredentials: "auto",
+  baseBranch: null,
+};
+const NONE_REPO: RepoConfig = {
+  mode: "readOnly",
+  gitCredentials: "none",
+  baseBranch: null,
+};
 
 describe("prepareGitCredentialRelay", () => {
   let workspacePath: string;
@@ -83,7 +91,13 @@ describe("prepareGitCredentialRelay", () => {
     await writeConfig({ image: "base" });
 
     expect(await prepare(NONE_REPO)).toBeNull();
-    expect(await prepare({ mode: "none" })).toBeNull();
+    expect(
+      await prepare({
+        mode: "readOnly",
+        gitCredentials: "none",
+        baseBranch: null,
+      }),
+    ).toBeNull();
 
     expect(opener.openInputs).toHaveLength(0);
     expect(await readConfig()).toEqual({ image: "base" });

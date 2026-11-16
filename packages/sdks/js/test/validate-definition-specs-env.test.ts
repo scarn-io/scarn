@@ -15,21 +15,24 @@ describe("validateDefinitionSpecs — env vars", () => {
     expect(
       validate([
         stepSpecWithOverrides("env-step", {
-          envJson: [
-            {
-              name: "ACCOUNT_ID",
-              source: "value",
-              value: "{{input.accountId}}",
-              secret: false,
-            },
-            {
-              name: "WAREHOUSE_TOKEN",
-              source: "inherit",
-              from: "WAREHOUSE_TOKEN",
-              secret: true,
-              optional: false,
-            },
-          ],
+          environment: {
+            kind: "inline",
+            envJson: [
+              {
+                name: "ACCOUNT_ID",
+                source: "value",
+                value: "{{input.accountId}}",
+                secret: false,
+              },
+              {
+                name: "WAREHOUSE_TOKEN",
+                source: "inherit",
+                from: "WAREHOUSE_TOKEN",
+                secret: true,
+                optional: false,
+              },
+            ],
+          },
         }),
       ]),
     ).toEqual([]);
@@ -38,7 +41,9 @@ describe("validateDefinitionSpecs — env vars", () => {
   test.concurrent("stays quiet for null and omitted envJson", () => {
     expect(
       validate([
-        stepSpecWithOverrides("null-env", { envJson: null }),
+        stepSpecWithOverrides("null-env", {
+          environment: { kind: "inline", envJson: null },
+        }),
         stepSpecWithOverrides("no-env"),
       ]),
     ).toEqual([]);
@@ -47,15 +52,18 @@ describe("validateDefinitionSpecs — env vars", () => {
   test.concurrent("rejects a reserved name, naming the step and entry", () => {
     const issues = validate([
       stepSpecWithOverrides("env-step", {
-        envJson: [
-          {
-            name: "ACCOUNT_ID",
-            source: "value",
-            value: "x",
-            secret: false,
-          },
-          { name: "HOME", source: "value", value: "/tmp", secret: false },
-        ],
+        environment: {
+          kind: "inline",
+          envJson: [
+            {
+              name: "ACCOUNT_ID",
+              source: "value",
+              value: "x",
+              secret: false,
+            },
+            { name: "HOME", source: "value", value: "/tmp", secret: false },
+          ],
+        },
       }),
     ]);
     expect(issues).toHaveLength(1);
@@ -70,9 +78,17 @@ describe("validateDefinitionSpecs — env vars", () => {
   test.concurrent("rejects a static secret value", () => {
     const issues = validate([
       stepSpecWithOverrides("env-step", {
-        envJson: [
-          { name: "API_KEY", source: "value", value: "hunter2", secret: true },
-        ],
+        environment: {
+          kind: "inline",
+          envJson: [
+            {
+              name: "API_KEY",
+              source: "value",
+              value: "hunter2",
+              secret: true,
+            },
+          ],
+        },
       }),
     ]);
     expect(issues).toHaveLength(1);
@@ -84,16 +100,19 @@ describe("validateDefinitionSpecs — env vars", () => {
   test.concurrent("rejects a secret inherit carrying a default", () => {
     const issues = validate([
       stepSpecWithOverrides("env-step", {
-        envJson: [
-          {
-            name: "DB_PASSWORD",
-            source: "inherit",
-            from: "DB_PASSWORD",
-            secret: true,
-            optional: true,
-            default: "fallback",
-          },
-        ],
+        environment: {
+          kind: "inline",
+          envJson: [
+            {
+              name: "DB_PASSWORD",
+              source: "inherit",
+              from: "DB_PASSWORD",
+              secret: true,
+              optional: true,
+              default: "fallback",
+            },
+          ],
+        },
       }),
     ]);
     expect(issues).toHaveLength(1);
@@ -105,16 +124,19 @@ describe("validateDefinitionSpecs — env vars", () => {
       validate([
         stepSpecWithOverrides("env-step", {
           opencodeMcpJson: { datadog: { type: "ref" } },
-          envJson: [
-            {
-              name: "DATADOG_API_KEY",
-              source: "inherit",
-              from: "DATADOG_API_KEY",
-              secret: true,
-              optional: false,
-              mcp: "datadog",
-            },
-          ],
+          environment: {
+            kind: "inline",
+            envJson: [
+              {
+                name: "DATADOG_API_KEY",
+                source: "inherit",
+                from: "DATADOG_API_KEY",
+                secret: true,
+                optional: false,
+                mcp: "datadog",
+              },
+            ],
+          },
         }),
       ]),
     ).toEqual([]);
@@ -128,24 +150,27 @@ describe("validateDefinitionSpecs — env vars", () => {
             playwright: { type: "local", command: ["npx", "x"] },
             linear: { type: "remote", url: "https://x" },
           },
-          envJson: [
-            {
-              name: "PW_TOKEN",
-              source: "inherit",
-              from: "PW_TOKEN",
-              secret: true,
-              optional: false,
-              mcp: "playwright",
-            },
-            {
-              name: "LINEAR_API_KEY",
-              source: "inherit",
-              from: "LINEAR_API_KEY",
-              secret: true,
-              optional: false,
-              mcp: "linear",
-            },
-          ],
+          environment: {
+            kind: "inline",
+            envJson: [
+              {
+                name: "PW_TOKEN",
+                source: "inherit",
+                from: "PW_TOKEN",
+                secret: true,
+                optional: false,
+                mcp: "playwright",
+              },
+              {
+                name: "LINEAR_API_KEY",
+                source: "inherit",
+                from: "LINEAR_API_KEY",
+                secret: true,
+                optional: false,
+                mcp: "linear",
+              },
+            ],
+          },
         }),
       ]),
     ).toEqual([]);
@@ -158,16 +183,19 @@ describe("validateDefinitionSpecs — env vars", () => {
           postgres: { type: "ref" },
           playwright: { type: "local", command: ["npx", "x"] },
         },
-        envJson: [
-          {
-            name: "A",
-            source: "inherit",
-            from: "A",
-            secret: true,
-            optional: false,
-            mcp: "datadog",
-          },
-        ],
+        environment: {
+          kind: "inline",
+          envJson: [
+            {
+              name: "A",
+              source: "inherit",
+              from: "A",
+              secret: true,
+              optional: false,
+              mcp: "datadog",
+            },
+          ],
+        },
       }),
     ]);
     expect(issues.map((issue) => issue.check)).toEqual(["env-var-mcp"]);
@@ -185,16 +213,19 @@ describe("validateDefinitionSpecs — env vars", () => {
     () => {
       const issues = validate([
         stepSpecWithOverrides("env-step", {
-          envJson: [
-            {
-              name: "TOKEN",
-              source: "inherit",
-              from: "TOKEN",
-              secret: true,
-              optional: false,
-              mcp: "tch",
-            },
-          ],
+          environment: {
+            kind: "inline",
+            envJson: [
+              {
+                name: "TOKEN",
+                source: "inherit",
+                from: "TOKEN",
+                secret: true,
+                optional: false,
+                mcp: "tch",
+              },
+            ],
+          },
         }),
       ]);
       expect(issues).toHaveLength(1);
@@ -210,7 +241,9 @@ describe("validateDefinitionSpecs — env vars", () => {
       secret: false,
     } as const;
     const issues = validate([
-      stepSpecWithOverrides("env-step", { envJson: [entry, entry] }),
+      stepSpecWithOverrides("env-step", {
+        environment: { kind: "inline", envJson: [entry, entry] },
+      }),
     ]);
     expect(issues).toHaveLength(1);
     expect(issues[0]?.message).toContain('Step "env-step" env:');
@@ -221,63 +254,72 @@ describe("validateDefinitionSpecs — env vars", () => {
     expect(
       validate([
         stepSpecWithOverrides("env-step", {
-          envJson: [
-            {
-              name: "NPM_TOKEN",
-              source: "inherit",
-              from: "NPM_TOKEN",
-              secret: true,
-              optional: false,
-              applies: "setup",
-            },
-            {
-              name: "REGISTRY",
-              source: "value",
-              value: "r",
-              secret: false,
-              applies: "both",
-            },
-          ],
+          environment: {
+            kind: "inline",
+            envJson: [
+              {
+                name: "NPM_TOKEN",
+                source: "inherit",
+                from: "NPM_TOKEN",
+                secret: true,
+                optional: false,
+                applies: "setup",
+              },
+              {
+                name: "REGISTRY",
+                source: "value",
+                value: "r",
+                secret: false,
+                applies: "both",
+              },
+            ],
+          },
         }),
       ]),
     ).toEqual([]);
   });
 
-  test.concurrent("rejects a setup var on a no_workspace step", () => {
+  test.concurrent("rejects a setup var on a host step", () => {
     const issues = validate([
       stepSpecWithOverrides("host-step", {
-        executionMode: "no_workspace",
-        envJson: [
-          {
-            name: "NPM_TOKEN",
-            source: "value",
-            value: "x",
-            secret: false,
-            applies: "setup",
-          },
-        ],
+        environment: {
+          kind: "inline",
+          runtime: { kind: "host" },
+          envJson: [
+            {
+              name: "NPM_TOKEN",
+              source: "value",
+              value: "x",
+              secret: false,
+              applies: "setup",
+            },
+          ],
+        },
       }),
     ]);
     expect(issues).toHaveLength(1);
     expect(issues[0]?.check).toBe("env-var-applies");
-    expect(issues[0]?.message).toContain("no_workspace");
+    expect(issues[0]?.message).toContain("runs on the host");
   });
 
   test.concurrent("rejects a setup var on an MCP-owned entry", () => {
     const issues = validate([
       stepSpecWithOverrides("mcp-step", {
         opencodeMcpJson: { datadog: { type: "ref" } },
-        envJson: [
-          {
-            name: "DATADOG_API_KEY",
-            source: "inherit",
-            from: "DATADOG_API_KEY",
-            secret: true,
-            optional: false,
-            mcp: "datadog",
-            applies: "both",
-          },
-        ],
+        environment: {
+          kind: "inline",
+          envJson: [
+            {
+              name: "DATADOG_API_KEY",
+              source: "inherit",
+              from: "DATADOG_API_KEY",
+              secret: true,
+              optional: false,
+              mcp: "datadog",
+              applies: "both",
+            },
+          ],
+        },
       }),
     ]);
     expect(issues.map((issue) => issue.check)).toEqual(["env-var-applies"]);

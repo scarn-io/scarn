@@ -100,14 +100,12 @@ export async function handOffToWorker(
         concurrency: undefined,
         preserveRuntimeOnComplete: false,
         workItemId: undefined,
-        sourceBranch: undefined,
       },
-      reporter,
       { ...deps, cwd: projectRoot },
     );
     const result = await addProjectToWorker(instance, worker, settings);
     reporter.info(
-      `Added ${settings.projectRef} (${settings.repoDir} @ ${settings.sourceBranch}) to worker instance ${instance}.`,
+      `Added ${settings.projectRef} (${settings.repoDir}) to worker instance ${instance}.`,
     );
     if (result.error !== null) {
       reporter.warn(

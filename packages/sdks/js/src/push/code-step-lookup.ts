@@ -11,6 +11,7 @@
  * the SDK and can be imported on its own (`@scarn/sdk/code-step-lookup`).
  */
 
+import type { EnvironmentHandle } from "../definitions/environments/define-environment";
 import type { StepDefinitionSpec } from "../definitions/steps";
 
 type CodeStepFn = NonNullable<StepDefinitionSpec["entrypoint"]>["fn"];
@@ -31,6 +32,24 @@ export function isStepDefinitionSpec(
     typeof obj["name"] === "string" &&
     typeof obj["version"] === "number" &&
     (obj["kind"] === "user_defined" || obj["kind"] === "code")
+  );
+}
+
+/**
+ * An environment handle from `defineEnvironment`. Checks the shape only, like
+ * `isStepDefinitionSpec`, so a handle from another copy of the SDK counts.
+ */
+export function isEnvironmentHandle(
+  // eslint-disable-next-line local/no-unknown-parameter-type
+  value: unknown,
+): value is EnvironmentHandle {
+  if (typeof value !== "object" || value === null) return false;
+  const obj = value as Record<string, unknown>;
+  return (
+    obj["kind"] === "environment" &&
+    typeof obj["name"] === "string" &&
+    typeof obj["content"] === "object" &&
+    obj["content"] !== null
   );
 }
 

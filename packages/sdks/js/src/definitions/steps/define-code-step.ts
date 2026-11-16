@@ -18,10 +18,20 @@ import {
 import { DEFAULT_CODE_STEP_RUNTIME_ID } from "../../managed-runtimes";
 import {
   compileEnvironment,
+  knownEnvironmentVars,
   Runtime,
-  type CodeStepEnvironment,
+  type InlineCodeStepEnvironment,
+  type NamedStepEnvironment,
 } from "./runtime";
+import type { EnvRecord, PromptEnvContext } from "./env";
 import type { CodeStepFeature } from "./step-features";
+import {
+  assertBaseBranchFitsEnvironment,
+  compileRepo,
+  type RepoField,
+  type RepoSpec,
+} from "./repo";
+import { isEnvironmentHandle } from "../../push/code-step-lookup";
 
 /** What the worker passes a code step besides its input. */
 export type CodeStepContext = {
@@ -42,6 +52,9 @@ export type DefineCodeStepInput<
   TInput extends ZodType = ZodType,
   TResult extends ZodType = ZodType,
   TFeatures extends ReadonlyArray<CodeStepFeature> = never[],
+  TEnv extends EnvRecord = EnvRecord,
+  TNamed extends NamedStepEnvironment | undefined =
+    NamedStepEnvironment | undefined,
 > = {
   key: string;
   name: string;
@@ -74,23 +87,33 @@ export type DefineCodeStepInput<
    */
   features?: TFeatures;
   /**
-   * Where the step's runner executes (`runtime`) and the environment variables
-   * it receives (`vars`). The function reads the variables back through
-   * `process.env`; unlike `defineStep()`, there is no typed `env` argument to
-   * `fn`.
+   * A named environment (its name or `defineEnvironment` handle), or inline
+   * runtime and environment variables (`vars`).
+   * The function reads the variables back through `process.env`; unlike
+   * `defineStep()`, there is no typed `env` argument to `fn`.
    *
-   * Omitting `runtime` compiles to `Runtime.managed.bun1()`, a worker-supplied
-   * container. `Runtime.devcontainer()` opts into the project's own container,
-   * which must then provide a JS runtime for the runner script.
+   * For an inline environment, omitting `runtime` compiles to
+   * `Runtime.managed.bun1()`, a worker-supplied container.
+   * `Runtime.devcontainer()` opts into the project's own container, which must
+   * then provide a JS runtime for the runner script.
    *
    * `Runtime.host()` is not supported: a code step runs repo code, so it needs
    * a workspace, and the host runtime has none. It is a type error here and
    * `validateDefinitionSpecs` rejects it for hand-built specs.
+   * A handle whose runtime is host throws here; a name's runtime is checked by
+   * the worker after resolution.
    *
    * `repo` follows the same rules as for `defineStep()`; `result` is typed from
    * `resultSchema`.
    */
-  environment?: CodeStepEnvironment<TInput["_output"], TResult["_output"]>;
+  environment?: InlineCodeStepEnvironment<TInput["_output"], TEnv> | TNamed;
+  /** `env` is typed from the environment as `defineStep()`'s prompt `env` is. */
+  repo?: RepoField<
+    TInput["_output"],
+    TResult["_output"],
+    RepoSpec,
+    PromptEnvContext<TEnv, TNamed>
+  >;
   status?: "draft" | "active";
   /**
    * Error names this step can fail with, beyond the built-in ones. A
@@ -115,9 +138,11 @@ export function codeStep<
   TResult extends ZodType = ZodType,
   const TFeatures extends ReadonlyArray<CodeStepFeature> = never[],
   const TErrors extends string = never,
+  TEnv extends EnvRecord = EnvRecord,
+  TNamed extends NamedStepEnvironment | undefined = undefined,
 >(
   config: Omit<
-    DefineCodeStepInput<TInput, TResult, TFeatures>,
+    DefineCodeStepInput<TInput, TResult, TFeatures, TEnv, TNamed>,
     "errors" | "retry"
   > & {
     errors?: readonly TErrors[];
@@ -146,16 +171,24 @@ export function codeStep<
       : feature._resultExtension;
   }
 
-  const {
-    executionMode,
-    devcontainerConfigPath,
-    managedRuntime,
-    envJson,
-    repo,
-  } = compileEnvironment(config.environment, {
+  const environmentHandle = isEnvironmentHandle(config.environment)
+    ? config.environment
+    : undefined;
+  if (environmentHandle?.content.runtime?.kind === "host") {
+    throw new Error(
+      `Step "${config.key}" environment "${environmentHandle.name}": a code step needs a container, but the environment's runtime is Runtime.host(). Use Runtime.managed.bun1() or Runtime.devcontainer().`,
+    );
+  }
+  const environment = compileEnvironment(config.environment, {
     stepKey: config.key,
     defaultRuntime: Runtime.managed[DEFAULT_CODE_STEP_RUNTIME_ID](),
   });
+  const repo = compileRepo(config.repo, { stepKey: config.key });
+  assertBaseBranchFitsEnvironment(
+    repo,
+    knownEnvironmentVars(config.environment, environment),
+    { stepKey: config.key },
+  );
 
   const spec: StepDefinitionSpec = {
     key: config.key,
@@ -164,9 +197,7 @@ export function codeStep<
     version: config.version ?? 1,
     kind: "code",
     status: config.status ?? "active",
-    executionMode,
-    devcontainerConfigPath,
-    managedRuntime,
+    environment,
     prompt: null,
     inputSchemaJson: config.inputSchema
       ? toJSONSchema(config.inputSchema as unknown as $ZodType)
@@ -176,7 +207,6 @@ export function codeStep<
       : null,
     opencodeMcpJson: null,
     healthChecksJson: null,
-    envJson,
     ...(repo !== undefined ? { repo } : {}),
     errors: compileStepErrors(config.key, config.errors),
     retryJson: compileStepRetry(config.key, config.retry, config.errors ?? []),
@@ -188,7 +218,7 @@ export function codeStep<
     entrypoint: { fn: config.fn },
   };
 
-  return toStepHandle(spec) as StepHandle<
+  return toStepHandle(spec, environmentHandle) as StepHandle<
     TInput["_output"],
     EffectiveResult<TResult["_output"], TFeatures>,
     TErrors

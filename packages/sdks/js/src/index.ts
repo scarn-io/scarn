@@ -12,3 +12,5 @@ export type { PipelineDefinition } from "./pipelines";
 export * from "./opencode-mcp";
 export * from "./jsonc";
 export * from "./scarn-config-parser";
+export * from "./environment";
+export * from "./resolve-environment";

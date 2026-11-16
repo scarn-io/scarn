@@ -6,10 +6,19 @@ import {
   createPipelineDefinitionsClient,
   PipelineDefinitionsApiError,
 } from "../definitions/pipelines";
+import {
+  createEnvironmentsClient,
+  EnvironmentsApiError,
+  type EnvironmentsClient,
+} from "../definitions/environments/environments-client";
 import { createStepDefinitionsClient } from "../definitions/steps";
+import type { StepDefinitionSpec } from "../definitions/steps";
 import { assertValidDefinitionSpecs } from "../definitions/validation";
 import { z } from "zod";
-import { collectDefinitionsFromDirectory } from "./collect-definitions";
+import {
+  collectDefinitionsFromDirectory,
+  type CollectedEnvironment,
+} from "./collect-definitions";
 import {
   collectBuiltDocuments,
   type PipelineDocumentFile,
@@ -24,6 +33,10 @@ export interface PushFromDirectoryOptions {
 }
 
 export interface PushFromDirectoryResult {
+  /** Names of the environments that got a new version. */
+  publishedEnvironments: string[];
+  /** Names of the environments whose content matched their latest version. */
+  unchangedEnvironments: string[];
   pushedSteps: number;
   /** Keys of the pipelines that got a new active version. */
   publishedPipelines: string[];
@@ -42,10 +55,15 @@ type Headers = { Authorization: string };
 const latestVersionSchema = z.object({ version: z.number() });
 
 /**
- * Pushes a pipeline-builder directory to the server, in three passes:
+ * Pushes a pipeline-builder directory to the server, in four passes:
  *
+ * 0. Publishes every environment collected from the `.ts`/`.js` files: each
+ *    exported `defineEnvironment` handle and each handle a collected step
+ *    uses. Content matching the latest version publishes nothing.
  * 1. Upserts every step exported from the `.ts`/`.js` files (except the push
- *    script itself).
+ *    script itself). A step naming an environment by string that isn't
+ *    collected must already exist on the server; that's checked with one
+ *    list call before anything is uploaded.
  * 2. Publishes every built pipeline document (`<key>.json`, from
  *    `scarn pipelines build`), creating the pipeline when its key is new.
  *    The server pins each document to the steps just pushed; a document
@@ -74,7 +92,7 @@ export async function pushFromDirectory(
     });
   const headers = { Authorization: `Bearer ${opts.accessToken}` };
 
-  const { steps } = await collectDefinitionsFromDirectory(dir);
+  const { steps, environments } = await collectDefinitionsFromDirectory(dir);
   const built = collectBuiltDocuments(dir);
   const documents = built.filter((file) => file.kind === "pipeline");
   const automations = built
@@ -86,10 +104,34 @@ export async function pushFromDirectory(
     );
 
   log(
-    `Found ${String(steps.length)} step(s), ${String(documents.length)} pipeline document(s) and ${String(automations.length)} automation document(s).`,
+    `Found ${String(environments.length)} environment(s), ${String(steps.length)} step(s), ${String(documents.length)} pipeline document(s) and ${String(automations.length)} automation document(s).`,
   );
 
   assertValidDefinitionSpecs(steps);
+
+  const environmentsClient = createEnvironmentsClient(opts.baseUrl);
+  await assertNamedEnvironmentsExist(
+    steps,
+    environments,
+    opts.projectId,
+    headers,
+    environmentsClient,
+  );
+
+  const publishedEnvironments: string[] = [];
+  const unchangedEnvironments: string[] = [];
+  for (const environment of environments) {
+    const published = await publishEnvironment(
+      environment,
+      opts.projectId,
+      headers,
+      environmentsClient,
+      log,
+    );
+    (published ? publishedEnvironments : unchangedEnvironments).push(
+      environment.name,
+    );
+  }
 
   const stepsClient = createStepDefinitionsClient(opts.baseUrl);
   for (const spec of steps) {
@@ -136,12 +178,94 @@ export async function pushFromDirectory(
   }
 
   return {
+    publishedEnvironments,
+    unchangedEnvironments,
     pushedSteps: steps.length,
     publishedPipelines,
     unchangedPipelines,
     publishedAutomations,
     unchangedAutomations,
   };
+}
+
+/**
+ * Fails before any upload when a step names an environment by string that is
+ * neither collected locally nor on the server. Lists the server's
+ * environments only when some name isn't collected.
+ */
+async function assertNamedEnvironmentsExist(
+  steps: readonly StepDefinitionSpec[],
+  environments: readonly CollectedEnvironment[],
+  projectId: string,
+  headers: Headers,
+  environmentsClient: EnvironmentsClient,
+): Promise<void> {
+  const local = new Set(environments.map((environment) => environment.name));
+  const stepsByMissingName = new Map<string, string[]>();
+  for (const step of steps) {
+    if (step.environment?.kind !== "named") continue;
+    const name = step.environment.name;
+    if (local.has(name)) continue;
+    stepsByMissingName.set(name, [
+      ...(stepsByMissingName.get(name) ?? []),
+      step.key,
+    ]);
+  }
+  if (stepsByMissingName.size === 0) return;
+
+  const onServer = new Set(
+    (await environmentsClient.listByProjectId(projectId, { headers })).map(
+      (environment) => environment.name,
+    ),
+  );
+  const unknown = [...stepsByMissingName].filter(
+    ([name]) => !onServer.has(name),
+  );
+  if (unknown.length === 0) return;
+  throw new Error(
+    [
+      "Steps name environments that aren't defined locally or on the server:",
+      ...unknown.map(
+        ([name, keys]) =>
+          `  "${name}" (used by ${[...new Set(keys)].join(", ")})`,
+      ),
+      "Define them with defineEnvironment in the pipeline-builder directory, then push again. Nothing was uploaded.",
+    ].join("\n"),
+  );
+}
+
+/** Returns false when the content matched the environment's latest version. */
+async function publishEnvironment(
+  { name, content, sourceFile }: CollectedEnvironment,
+  projectId: string,
+  headers: Headers,
+  environmentsClient: EnvironmentsClient,
+  log: (msg: string) => void,
+): Promise<boolean> {
+  try {
+    const result = await environmentsClient.publish(projectId, name, content, {
+      headers,
+    });
+    const version = String(result.version.version);
+    log(
+      result.published
+        ? `✓ environment ${name} v${version} → published (${sourceFile})`
+        : `✓ environment ${name} v${version} → unchanged (${sourceFile})`,
+    );
+    return result.published;
+  } catch (error) {
+    if (!(error instanceof EnvironmentsApiError)) throw error;
+    const issues = error.issues.map(
+      (issue) => `  ${issue.path || "/"}: ${issue.message}`,
+    );
+    throw new Error(
+      [
+        `Could not publish environment "${name}" (${sourceFile}): ${error.message}`,
+        ...issues,
+      ].join("\n"),
+      { cause: error },
+    );
+  }
 }
 
 /** Returns false when the document matched the pipeline's latest version. */

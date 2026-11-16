@@ -1,0 +1,52 @@
+---
+title: Connectors
+description: The MCP servers an environment can turn on by id
+---
+
+import ConnectorCatalog from "../../../components/ConnectorCatalog.astro";
+
+A **connector** is an MCP server Scarn has already set up. An environment turns
+connectors on by id:
+
+```jsonc
+{
+  "connectors": ["datadog"],
+  "vars": {
+    "DD_API_KEY": { "secret": "DD_API_KEY" },
+    "DD_APPLICATION_KEY": { "secret": "DD_APPLICATION_KEY" },
+  },
+}
+```
+
+Inline environments take the same `connectors` array. Each id may appear once.
+
+## How connectors work
+
+- **Variables.** A connector names the variables it needs. The environment's
+  `vars` provide them, from any source: a [project secret](/scarn/guides/secrets/),
+  a `worker` variable or a fixed value. A variable with `applies: "setup"` does
+  not count, because the MCP server runs with the agent. If one is missing, the
+  run fails with `SCARN_CONNECTOR_VARS_MISSING`.
+- **Merging.** Connectors and the step's own `mcps` become one set of MCP
+  servers. A connector runs under its id.
+- **Name clashes.** A step `mcps` key equal to a connector id is an error,
+  `SCARN_ENVIRONMENT_INVALID`. An environment handle reports it when the step
+  is defined, and inline or named environments when you publish; a named
+  environment that changed after the step was published reports it when the
+  run starts. Rename the step's server or drop the
+  connector.
+- **Startup.** Before the first prompt, every connector must report
+  `connected` within 60 seconds, or the run fails with
+  `SCARN_CONNECTOR_UNAVAILABLE`. See
+  [Connectors](/scarn/guides/environments/#connectors).
+
+`GET /api/connectors` lists the catalog: id, name, description, auth and
+required variables. See [Failure codes](/scarn/guides/environments/#failure-codes)
+for how to fix each error.
+
+## Catalog
+
+This list is generated from the SDK's `CONNECTOR_CATALOG`
+(`@scarn/sdk/connectors`), so it matches what the worker accepts.
+
+<ConnectorCatalog />

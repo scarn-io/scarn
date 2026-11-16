@@ -4,8 +4,7 @@
  * or updates its settings when it is already added. `scarn work` shares the
  * same steps after starting the worker.
  *
- * The project, repo root and source branch are resolved from the current
- * directory, and the user ID from the login, before the worker is asked;
+ * The project and repo root are resolved from the current directory, and the user ID from the login, before the worker is asked;
  * a project on another server than the instance's is refused.
  */
 import type { ArgumentsCamelCase, Argv, CommandModule } from "yargs";
@@ -39,7 +38,6 @@ export type AddProjectArguments = {
   concurrency: number | undefined;
   preserveRuntimeOnComplete: boolean;
   workItemId: string | undefined;
-  sourceBranch: string | undefined;
 };
 
 export type ProjectSettingsDeps = {
@@ -78,12 +76,10 @@ function assertConcurrency(concurrency: number | undefined): void {
 
 /**
  * The settings `PUT /projects/:projectId` takes for the project in the
- * current checkout: its repo root, verified source branch, and the signed-in
- * user. Warnings (an unpushed branch) go to `reporter`.
+ * current checkout: its repo root and the signed-in user.
  */
 export async function resolveProjectSettings(
   arguments_: AddProjectArguments,
-  reporter: Pick<BaseReporter, "warn" | "info">,
   deps: ProjectSettingsDeps = {},
 ): Promise<ProjectSettingsInput> {
   assertConcurrency(arguments_.concurrency);
@@ -98,17 +94,8 @@ export async function resolveProjectSettings(
   const target = await (deps.resolveTarget ?? resolveWorkTarget)({
     project: arguments_.project,
     baseUrl: arguments_.baseUrl,
-    sourceBranch: arguments_.sourceBranch,
     cwd: repoDir,
   });
-  if (target.sourceBranchWarning) reporter.warn(target.sourceBranchWarning);
-  if (!target.sourceBranch) {
-    throw new CliError(
-      "invalid_usage",
-      "The checkout has no current branch (detached HEAD?). Check out a branch or pass --source-branch.",
-    );
-  }
-  reporter.info(`Using source branch: ${target.sourceBranch}`);
   const userId = await (deps.resolveUserId ?? signedInUserId)(target.baseUrl);
   if (!userId) {
     throw new CliError(
@@ -120,7 +107,6 @@ export async function resolveProjectSettings(
     projectId: target.projectId,
     projectRef: target.projectRef,
     repoDir: target.repoDir,
-    sourceBranch: target.sourceBranch,
     baseUrl: target.baseUrl,
     addedByUserId: userId,
     concurrency: arguments_.concurrency ?? null,
@@ -182,9 +168,9 @@ export function addedProjectLines(
   instance: string,
   result: AddProjectResult,
 ): string[] {
-  const { projectRef, repoDir, sourceBranch } = result.settings;
+  const { projectRef, repoDir } = result.settings;
   const summary = {
-    added: `Added ${projectRef} (${repoDir} @ ${sourceBranch}) to worker instance ${instance}.`,
+    added: `Added ${projectRef} (${repoDir}) to worker instance ${instance}.`,
     updated: `Updated ${projectRef}'s settings on worker instance ${instance}.`,
     restarting: `${projectRef} restarts on worker instance ${instance} with the new settings once its current runs finish.`,
     removed: `${projectRef} was removed from worker instance ${instance} while it was being added.`,
@@ -207,13 +193,13 @@ export async function runWorkerAdd(
       { checkVersion: true },
       deps,
     );
-    const settings = await resolveProjectSettings(arguments_, reporter, deps);
+    const settings = await resolveProjectSettings(arguments_, deps);
     const result = await addProjectToWorker(instance, worker, settings);
     reportAddedProject(instance, result, reporter);
   });
 }
 
-/** `[project]`, `-c`, `-k`, `--work-item-id`, `--source-branch` and `--base-url`, shared with `scarn work`. */
+/** `[project]`, `-c`, `-k`, `--work-item-id` and `--base-url`, shared with `scarn work`. */
 export const withAddProjectOptions = <T>(argv: Argv<T>) =>
   argv
     .positional("project", {
@@ -243,14 +229,6 @@ export const withAddProjectOptions = <T>(argv: Argv<T>) =>
     .option("workItemId", {
       alias: "work-item-id",
       describe: "Only process tasks for this work item ID",
-      type: "string",
-    })
-    .option("sourceBranch", {
-      alias: "source-branch",
-      describe:
-        "Override the branch checked out for the first step of a run " +
-        "(defaults to your current local branch, which must exist and be " +
-        "in sync with its origin remote)",
       type: "string",
     });
 

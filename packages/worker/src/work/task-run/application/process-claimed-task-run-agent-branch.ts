@@ -18,7 +18,7 @@ import type {
   OpencodeServerHandle,
   ProcessProjectWorkDeps,
   ProjectWorkLogger,
-  TaskRuntimeEnvironment,
+  LaunchedRuntime,
   TaskRunWorkerContext,
   WorkReporter,
 } from "../contracts/process-project-work-types";
@@ -28,7 +28,7 @@ export async function runAgentStepBranch(input: {
   logger: ProjectWorkLogger;
   reporter: WorkReporter;
   workerContext: TaskRunWorkerContext;
-  environment: TaskRuntimeEnvironment;
+  environment: LaunchedRuntime;
   taskRunId: string;
   localRuntimeSessionId: string;
   stepArtifactsDir: string;
@@ -60,9 +60,13 @@ export async function runAgentStepBranch(input: {
     buildPromptRenderContext({
       inputJson: workerContext.task.inputJson,
       env: input.workerEnv,
-      promptEnv: workerContext.runtime.envJson?.length
-        ? input.promptEnv
-        : undefined,
+      promptEnv:
+        environment.resolvedEnvironment.envVars.length ||
+        Object.values(workerContext.runtime.opencodeMcpJson ?? {}).some(
+          (server) => server.type === "ref" || server.workerVars?.length,
+        )
+          ? input.promptEnv
+          : undefined,
       artifactsDir: `${containerStepArtifactsDir}/`,
     }),
   );

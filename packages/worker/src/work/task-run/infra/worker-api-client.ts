@@ -108,6 +108,9 @@ function requireProfile(
   return profile;
 }
 
+/** A 403 about the run's request, not the worker's credentials: the run fails, the worker keeps going. */
+const SECRET_NOT_REFERENCED = "SECRET_NOT_REFERENCED";
+
 async function readErrorCode(response: Response): Promise<string | undefined> {
   try {
     const body: unknown = await response.clone().json();
@@ -184,7 +187,11 @@ export async function createTaskPlaneWorkerClient(
     onResponse: async (response) => {
       await throwIfProjectUnavailable(response, baseUrl);
       await throwIfLogFeedLimited(response);
-      if (response.status === 401 || response.status === 403) {
+      if (
+        response.status === 401 ||
+        (response.status === 403 &&
+          (await readErrorCode(response)) !== SECRET_NOT_REFERENCED)
+      ) {
         throw new WorkerAuthError(
           "auth_rejected",
           `${baseUrl} rejected the worker's credentials (HTTP ${String(response.status)}). Run \`scarn auth login\` to authenticate.`,

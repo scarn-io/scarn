@@ -2,15 +2,16 @@ import {
   toOpencodeServerHandle,
   type OpencodeServerHandle,
 } from "../../../runtime/runtime-service/infra/opencode-server-contract";
+import type { ResolvedEnvironment } from "@scarn/sdk/environment";
 import type {
-  TaskRuntimeEnvironment,
-  TaskRuntimeEnvironmentOrchestrator,
+  LaunchedRuntime,
+  LaunchedRuntimeOrchestrator,
 } from "../contracts/process-project-work-types";
 import {
   checkOpencodeHealth,
-  pollMcpStatus,
   type McpHandshakeReport,
 } from "./run-work-dry-run-health-checks";
+import { checkMcpStartupGate, mcpStartupGateServers } from "./mcp-startup-gate";
 import { logWorkError } from "./work-logger";
 
 /**
@@ -25,18 +26,19 @@ import { logWorkError } from "./work-logger";
 export type DryRunEnvironmentHealth = {
   containerHealth: { status: string; healthy: boolean } | null;
   opencodeHealth: { healthy: boolean; detail?: string | undefined };
-  /** Handshake status per configured MCP server. */
+  /** The MCP startup gate's result per step `mcps` server and connector. */
   mcpServers: McpHandshakeReport[];
 };
 
 export type DryRunLaunchInput = Parameters<
-  TaskRuntimeEnvironmentOrchestrator["launch"]
+  LaunchedRuntimeOrchestrator["launch"]
 >[0];
 
 export type DryRunEnvironmentOutcome<T> =
   | { kind: "launch-failed"; reason: string }
   | {
       kind: "ran";
+      resolvedEnvironment: ResolvedEnvironment;
       health: DryRunEnvironmentHealth;
       result: T;
       workspacePath: string;
@@ -46,15 +48,18 @@ export type DryRunEnvironmentOutcome<T> =
     };
 
 export type ProbeDryRunEnvironment = (input: {
-  environment: TaskRuntimeEnvironment;
+  environment: LaunchedRuntime;
   server: OpencodeServerHandle;
   agentVersion: string;
+  /** The MCP startup gate's servers: the step `mcps` keys plus connectors. */
+  mcpServerNames: readonly string[];
 }) => Promise<DryRunEnvironmentHealth>;
 
 export const probeDryRunEnvironment: ProbeDryRunEnvironment = async ({
   environment,
   server,
   agentVersion,
+  mcpServerNames,
 }) => {
   const containerHealth =
     environment.runtimeContainerId && environment.checkContainerHealth
@@ -66,7 +71,7 @@ export const probeDryRunEnvironment: ProbeDryRunEnvironment = async ({
         }))
       : null;
   const opencodeHealth = await checkOpencodeHealth(server, agentVersion);
-  const mcpServers = await pollMcpStatus(server);
+  const mcpServers = await checkMcpStartupGate(server, mcpServerNames);
   return { containerHealth, opencodeHealth, mcpServers };
 };
 
@@ -76,7 +81,7 @@ function errorMessage(error: unknown): string {
 }
 
 export async function runInDryRunEnvironment<T>(input: {
-  orchestrator: TaskRuntimeEnvironmentOrchestrator;
+  orchestrator: LaunchedRuntimeOrchestrator;
   launchInput: DryRunLaunchInput;
   /** Preserve the environment instead of tearing it down (`--keep`). */
   keep: boolean;
@@ -84,11 +89,11 @@ export async function runInDryRunEnvironment<T>(input: {
   onLaunched?: (() => void) | undefined;
   run: (
     server: OpencodeServerHandle,
-    environment: TaskRuntimeEnvironment,
+    environment: LaunchedRuntime,
   ) => Promise<T>;
   probe?: ProbeDryRunEnvironment | undefined;
 }): Promise<DryRunEnvironmentOutcome<T>> {
-  let environment: TaskRuntimeEnvironment;
+  let environment: LaunchedRuntime;
   try {
     environment = await input.orchestrator.launch(input.launchInput);
   } catch (error) {
@@ -108,10 +113,15 @@ export async function runInDryRunEnvironment<T>(input: {
       environment,
       server,
       agentVersion: agent.version,
+      mcpServerNames: mcpStartupGateServers({
+        stepMcpServerKeys: Object.keys(input.launchInput.opencodeMcpJson ?? {}),
+        connectors: environment.resolvedEnvironment.connectors,
+      }),
     });
     const result = await input.run(server, environment);
     return {
       kind: "ran",
+      resolvedEnvironment: environment.resolvedEnvironment,
       health,
       result,
       workspacePath: environment.workspacePath,

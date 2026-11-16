@@ -3,7 +3,7 @@ import { parseUuidV7 } from "../../../../src/common/contracts/uuid-v7";
 import type {
   TaskAgentRunner,
   TaskRunTracker,
-  TaskRuntimeEnvironmentOrchestrator,
+  LaunchedRuntimeOrchestrator,
   TaskRunWorkerClient,
   TaskRunWorkerContext,
 } from "../../../../src/work/task-run/contracts/process-project-work-types";
@@ -68,16 +68,15 @@ function createWorkerClient(
           grants: [],
         },
         runtime: {
-          executionMode: "workspace",
-          devcontainerConfigPath: null,
-          managedRuntime: null,
+          environment: null,
           repo: {
             mode: "readWrite",
             message: null,
             onPushFailure: "fail",
             gitCredentials: "none",
+            baseBranch: null,
+            workBranch: { kind: "create" },
           },
-          envJson: null,
           healthChecksJson: null,
           opencodeMcpJson: null,
         },
@@ -147,7 +146,7 @@ describe("CLI processProjectWork", () => {
           createRunTracker,
           runtimeEnvironmentOrchestrator: {
             launch: vi.fn(() => Promise.reject(new Error("Not used"))),
-          } satisfies TaskRuntimeEnvironmentOrchestrator,
+          } satisfies LaunchedRuntimeOrchestrator,
           agentRunner: {
             promptAsync: vi.fn(() => Promise.reject(new Error("Not used"))),
             getSessionStatus: vi.fn(() => Promise.resolve({ running: false })),
@@ -202,7 +201,7 @@ describe("CLI processProjectWork", () => {
           createRunTracker,
           runtimeEnvironmentOrchestrator: {
             launch: vi.fn(() => Promise.reject(new Error("Not used"))),
-          } satisfies TaskRuntimeEnvironmentOrchestrator,
+          } satisfies LaunchedRuntimeOrchestrator,
           agentRunner: {
             promptAsync: vi.fn(() => Promise.reject(new Error("Not used"))),
             getSessionStatus: vi.fn(() => Promise.resolve({ running: false })),
@@ -249,7 +248,7 @@ describe("CLI processProjectWork", () => {
             createRunTracker,
             runtimeEnvironmentOrchestrator: {
               launch: vi.fn(() => Promise.reject(new Error("Not used"))),
-            } satisfies TaskRuntimeEnvironmentOrchestrator,
+            } satisfies LaunchedRuntimeOrchestrator,
             agentRunner: {
               promptAsync: vi.fn(() => Promise.reject(new Error("Not used"))),
               getSessionStatus: vi.fn(() =>
@@ -309,7 +308,7 @@ describe("CLI processProjectWork", () => {
             createRunTracker,
             runtimeEnvironmentOrchestrator: {
               launch: vi.fn(() => Promise.reject(new Error("Not used"))),
-            } satisfies TaskRuntimeEnvironmentOrchestrator,
+            } satisfies LaunchedRuntimeOrchestrator,
             agentRunner: {
               promptAsync: vi.fn(() => Promise.reject(new Error("Not used"))),
               getSessionStatus: vi.fn(() =>

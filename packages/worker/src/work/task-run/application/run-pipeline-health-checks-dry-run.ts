@@ -1,6 +1,7 @@
 import type { DestinationStream } from "pino";
 import { createScarnClient } from "@scarn/sdk";
-import type { RepoConfig } from "@scarn/sdk/repo-config";
+import { resolveRepoConfig, type RepoConfig } from "@scarn/sdk/repo-config";
+import type { ResolvedEnvironment } from "@scarn/sdk/environment";
 import { createLogger } from "@scarn/observability/logging/host";
 import { createUuidV7, parseUuidV7 } from "../../../common/contracts/uuid-v7";
 import { ConfigurationError } from "../../../lib/errors";
@@ -8,11 +9,10 @@ import { resolveScarnBaseUrl } from "../../../auth/session/infra/auth-config";
 import { loadAuthenticatedSession } from "../../../auth/session/application/load-authenticated-session";
 import { DirectProviderAccessResolver } from "../infra/provider-access/direct-provider-access-resolver";
 import { SafeProviderAccessResolver } from "../infra/provider-access/safe-provider-access-resolver";
+import type { LaunchedRuntimeOrchestrator } from "../contracts/process-project-work-types";
 import { buildFakeAiProviderOverride, FakeAiServer } from "../infra/fake-ai";
-import type { TaskRuntimeEnvironmentOrchestrator } from "../contracts/process-project-work-types";
 import {
-  buildDryRunNoWorkspaceOrchestrator,
-  buildDryRunWorkspaceOrchestrator,
+  buildDryRunOrchestrator,
   DRY_RUN_CLAIM_TOKEN,
 } from "./run-work-dry-run-orchestrators";
 import {
@@ -20,7 +20,7 @@ import {
   type DryRunEnvironmentHealth,
 } from "./dry-run-environment";
 import { runHealthChecks, type HealthCheckReport } from "./run-health-checks";
-import { planStepEnv } from "./resolve-step-env";
+import { planDryRunStepEnv } from "./plan-step-env-with-secrets";
 import {
   buildAuthHeaders,
   fetchProjectGitUrl,
@@ -29,6 +29,7 @@ import {
 import {
   describeHealthCheckRuntime,
   planHealthCheckLaunches,
+  type HealthCheckRuntime,
   type HealthCheckStep,
   type PlannedHealthCheckLaunch,
 } from "./plan-pipeline-health-check-launches";
@@ -36,7 +37,13 @@ import {
   computePipelineHealthGateOk,
   type StepHealthCheckReport,
 } from "./pipeline-health-check-report";
+import {
+  createLatestEnvironmentFetcher,
+  resolveStepEnvironmentRef,
+} from "./resolve-step-environment-ref";
 import { logWork, logWorkError } from "./work-logger";
+import { dryRunBaseBranch, environmentRefVars } from "./render-base-branch";
+import { mcpStartupGateServers } from "./mcp-startup-gate";
 import {
   listPinnedStepDefinitionIds,
   readActivePipelineVersion,
@@ -71,6 +78,7 @@ export type HealthCheckLaunchOutcome =
   | { kind: "launch-failed"; reason: string }
   | {
       kind: "ran";
+      resolvedEnvironment: ResolvedEnvironment;
       health: DryRunEnvironmentHealth;
       /** Keyed by `stepDefinitionId`. */
       healthChecksByStep: ReadonlyMap<string, HealthCheckReport[]>;
@@ -79,6 +87,12 @@ export type HealthCheckLaunchOutcome =
 export type RunHealthCheckLaunch = (
   launch: PlannedHealthCheckLaunch,
 ) => Promise<HealthCheckLaunchOutcome>;
+
+export function buildPipelineHealthCheckRuntimeInput(
+  runtime: HealthCheckRuntime,
+): Pick<Parameters<LaunchedRuntimeOrchestrator["launch"]>[0], "environment"> {
+  return { environment: runtime };
+}
 
 function environmentProblems(health: DryRunEnvironmentHealth): string[] {
   const problems: string[] = [];
@@ -103,6 +117,7 @@ function toStepReport(
     stepKey: step.key,
     stepName: step.name,
     runtime,
+    baseBranchNote: step.baseBranchNote ?? null,
   };
   if (outcome.kind === "launch-failed") {
     return {
@@ -113,7 +128,12 @@ function toStepReport(
       healthChecks: [],
     };
   }
-  const declared = new Set(Object.keys(step.opencodeMcpJson ?? {}));
+  const declared = new Set(
+    mcpStartupGateServers({
+      stepMcpServerKeys: Object.keys(step.opencodeMcpJson ?? {}),
+      connectors: outcome.resolvedEnvironment.connectors,
+    }),
+  );
   return {
     ...base,
     launchError: null,
@@ -148,7 +168,10 @@ export async function runPipelineHealthCheckLaunches(input: {
     } catch (error) {
       outcome = { kind: "launch-failed", reason: errorMessage(error) };
     }
-    const runtime = describeHealthCheckRuntime(launch.runtime);
+    const runtime = describeHealthCheckRuntime(
+      launch.runtime,
+      outcome.kind === "ran" ? outcome.resolvedEnvironment : undefined,
+    );
     for (const step of launch.steps) {
       reportByStep.set(
         step.stepDefinitionId,
@@ -180,15 +203,11 @@ export type PipelineHealthChecksDryRunOptions = {
   dest?: DestinationStream | undefined;
   /** Env vars read from `.scarn/.env` in the user's local project directory. */
   localEnvVars?: Record<string, string> | undefined;
-  /** See `WorkDryRunOptions.sourceBranch`. */
-  sourceBranch?: string | null | undefined;
 };
 
-/** A dry run has no step key, so it never commits: read-only, or no clone on the host. */
-const repoForLaunch = (launch: PlannedHealthCheckLaunch): RepoConfig =>
-  launch.runtime.kind === "host"
-    ? { mode: "none" }
-    : { mode: "readOnly", gitCredentials: "none" };
+/** A dry run has no step key, so it never commits, on any runtime. */
+const repoForLaunch = (): RepoConfig =>
+  resolveRepoConfig({ mode: "readOnly", gitCredentials: "none" });
 
 // eslint-disable-next-line local/no-unknown-parameter-type -- narrows a caught value, not a real input boundary
 function errorMessage(error: unknown): string {
@@ -198,7 +217,9 @@ function errorMessage(error: unknown): string {
 /**
  * Fetch `pipelineDefinitionId`'s steps and run every one's health checks, one
  * launch per distinct runtime. Never throws for an unhealthy environment or a
- * failing check — those are in the report — only for an unreadable pipeline.
+ * failing check — those are in the report, as is a named environment the
+ * project does not have — only for an unreadable pipeline, step, or
+ * environment.
  */
 export async function runPipelineHealthChecksDryRun(
   options: PipelineHealthChecksDryRunOptions,
@@ -226,17 +247,33 @@ export async function runPipelineHealthChecksDryRun(
       fetchStepDefinition(client, headers, id),
     ),
   );
-  const steps: HealthCheckStep[] = stepDefinitions.map((step) => ({
-    stepDefinitionId: step.id,
-    key: step.key,
-    name: step.name,
-    executionMode: step.executionMode,
-    devcontainerConfigPath: step.devcontainerConfigPath,
-    managedRuntime: step.managedRuntime,
-    opencodeMcpJson: step.opencodeMcpJson,
-    healthChecksJson: step.healthChecksJson,
-    envJson: step.envJson,
-  }));
+  const fetchLatestEnvironment = createLatestEnvironmentFetcher(
+    client,
+    headers,
+    options.projectId,
+  );
+  const localEnvVars = options.localEnvVars ?? {};
+  const steps: HealthCheckStep[] = await Promise.all(
+    stepDefinitions.map(async (step) => {
+      const environment = await resolveStepEnvironmentRef(
+        step.environment,
+        fetchLatestEnvironment,
+      );
+      return {
+        stepDefinitionId: step.id,
+        key: step.key,
+        name: step.name,
+        environment,
+        opencodeMcpJson: step.opencodeMcpJson,
+        healthChecksJson: step.healthChecksJson,
+        ...dryRunBaseBranch({
+          template: step.repo.baseBranch,
+          envVars: environmentRefVars(environment),
+          workerEnv: { ...process.env, ...localEnvVars },
+        }),
+      };
+    }),
+  );
 
   const logger = createLogger(
     {
@@ -248,20 +285,11 @@ export async function runPipelineHealthChecksDryRun(
   const providerAccessResolver = new SafeProviderAccessResolver(
     new DirectProviderAccessResolver({ logger }),
   );
-  const localEnvVars = options.localEnvVars ?? {};
-  let workspaceOrchestrator: TaskRuntimeEnvironmentOrchestrator | undefined;
-  let hostOrchestrator: TaskRuntimeEnvironmentOrchestrator | undefined;
-  const orchestratorFor = (isHost: boolean) =>
-    isHost
-      ? (hostOrchestrator ??= buildDryRunNoWorkspaceOrchestrator(
-          logger,
-          providerAccessResolver,
-        ))
-      : (workspaceOrchestrator ??= buildDryRunWorkspaceOrchestrator(
-          logger,
-          localEnvVars,
-          providerAccessResolver,
-        ));
+  const orchestrator = buildDryRunOrchestrator(
+    logger,
+    localEnvVars,
+    providerAccessResolver,
+  );
 
   const gitUrl = await fetchProjectGitUrl(client, headers, options.projectId);
 
@@ -271,19 +299,7 @@ export async function runPipelineHealthChecksDryRun(
   await fakeAiServer.start();
 
   const runLaunch: RunHealthCheckLaunch = async (launch) => {
-    const isHost = launch.runtime.kind === "host";
     const runtime = describeHealthCheckRuntime(launch.runtime);
-    let stepEnvPlan: ReturnType<typeof planStepEnv>;
-    try {
-      stepEnvPlan = planStepEnv({
-        envJson: launch.envJson,
-        inputJson: null,
-        workerEnv: { ...process.env, ...localEnvVars },
-        opencodeMcpJson: launch.opencodeMcpJson,
-      });
-    } catch (error) {
-      return { kind: "launch-failed", reason: errorMessage(error) };
-    }
     const taskRunId = createUuidV7();
     logWork("dry-run", "Launching for pipeline health checks", {
       pipelineDefinitionId: options.pipelineDefinitionId,
@@ -291,17 +307,17 @@ export async function runPipelineHealthChecksDryRun(
       steps: launch.steps.map((step) => step.key),
     });
     const outcome = await runInDryRunEnvironment({
-      orchestrator: orchestratorFor(isHost),
+      orchestrator,
       keep: false,
       launchInput: {
+        ...buildPipelineHealthCheckRuntimeInput(launch.runtime),
         startAgent: true,
         sessionId: taskRunId,
         projectId,
         requestedByUserId,
         gitUrl,
         claimToken: DRY_RUN_CLAIM_TOKEN,
-        baseWorkBranch: null,
-        sourceBranch: options.sourceBranch ?? null,
+        stepBaseBranch: launch.baseWorkBranch,
         localEnvVars,
         stepKey: undefined,
         opencodeMcpJson: launch.opencodeMcpJson,
@@ -311,22 +327,22 @@ export async function runPipelineHealthChecksDryRun(
           turnsRemaining: null,
         },
         taskRunId,
-        fakeAiProviderOverride: buildFakeAiProviderOverride({
-          fakeAiServer,
-          isNoWorkspace: isHost,
-        }),
-        stepEnv: stepEnvPlan.resolved.stepEnv,
-        setupEnv: stepEnvPlan.resolved.setupEnv,
-        resolveMcpEnv: stepEnvPlan.resolveMcpEnv,
-        devcontainerConfigPath:
-          launch.runtime.kind === "devcontainer"
-            ? launch.runtime.devcontainerConfigPath
-            : null,
-        managedRuntime:
-          launch.runtime.kind === "managed"
-            ? launch.runtime.managedRuntime
-            : null,
-        repo: repoForLaunch(launch),
+        resolveFakeAiProviderOverride: (environment) =>
+          buildFakeAiProviderOverride({
+            fakeAiServer,
+            isNoWorkspace: environment.runtime.kind === "host",
+          }),
+        resolveEnvironmentEnv: (environment) =>
+          Promise.resolve(
+            planDryRunStepEnv({
+              envVars: environment.envVars,
+              inputJson: null,
+              workerEnv: { ...process.env, ...localEnvVars },
+              localEnvVars,
+              opencodeMcpJson: launch.opencodeMcpJson,
+            }).plan,
+          ),
+        repo: repoForLaunch(),
       },
       run: async (server) => {
         const healthChecksByStep = new Map<string, HealthCheckReport[]>();
@@ -353,6 +369,7 @@ export async function runPipelineHealthChecksDryRun(
     }
     return {
       kind: "ran",
+      resolvedEnvironment: outcome.resolvedEnvironment,
       health: outcome.health,
       healthChecksByStep: outcome.result,
     };

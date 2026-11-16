@@ -38,7 +38,6 @@ export type RunOnceOptions = {
   concurrency?: number | undefined;
   preserveRuntimeOnComplete: boolean;
   workItemId?: string | undefined;
-  sourceBranch?: string | undefined;
 };
 
 export type RunOnceDeps = {
@@ -69,15 +68,7 @@ export async function runWorkerOnce(
   const target = await (deps.resolveTarget ?? resolveWorkTarget)({
     project: options.project,
     baseUrl: options.baseUrl,
-    sourceBranch: options.sourceBranch,
   });
-  if (target.sourceBranchWarning) {
-    reporter.warn(target.sourceBranchWarning);
-    logger.warn({ branch: target.sourceBranch }, target.sourceBranchWarning);
-  }
-  if (target.sourceBranch) {
-    reporter.info(`Using source branch: ${target.sourceBranch}`);
-  }
 
   const borrowed = await borrowWorkerSlots(options.instance, deps);
   const readLocalEnv = deps.readLocalEnv ?? readLocalEnvVars;
@@ -89,7 +80,6 @@ export async function runWorkerOnce(
       preserveRuntimeOnComplete: options.preserveRuntimeOnComplete,
       once: true,
       workItemId: options.workItemId,
-      sourceBranch: target.sourceBranch,
       readLocalEnv: () => readLocalEnv(target.repoDir),
       slots: borrowed,
       reporter,

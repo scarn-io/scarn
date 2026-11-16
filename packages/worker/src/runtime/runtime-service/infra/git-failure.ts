@@ -49,6 +49,17 @@ const CORRUPTION_PATTERNS: readonly RegExp[] = [
   /\b(missing|broken) (blob|tree|commit|tag|object)\b/i,
 ];
 
+/**
+ * True when `stderr` shows a push was rejected because the remote branch moved
+ * past the local one (`! [rejected] ... (non-fast-forward)` or `(fetch first)`).
+ */
+export function isNonFastForwardRejection(stderr: string): boolean {
+  return (
+    /\[rejected\]/.test(stderr) &&
+    /\((non-fast-forward|fetch first)\)/.test(stderr)
+  );
+}
+
 /** True when `stderr` points at the environment rather than the repository. */
 export function isEnvironmentFailure(stderr: string): boolean {
   return ENVIRONMENT_FAILURE_PATTERNS.some((pattern) => pattern.test(stderr));

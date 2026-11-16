@@ -8,6 +8,7 @@ import {
   logWorkError,
 } from "../../../work/task-run/application/work-logger";
 import { findFreePort } from "./devcontainer-opencode-bootstrap";
+import { buildDockerEnvByName } from "./docker-env-flags";
 import { seedBundledSkills } from "./opencode-agent-home";
 import {
   opencodeCredentialSecrets,
@@ -168,9 +169,9 @@ export class HostOpencodeBootstrap {
       // plugin's findings tool reads `.scarn/current-execution/execution.json`
       // relative to it.
       SCARN_WORKSPACE_FOLDER: input.workspaceFolder,
-      ...input.providerEnv,
-      ...input.stepEnv,
-      [SERVER_PASSWORD_ENV]: serverPassword,
+      ...buildDockerEnvByName(input.providerEnv, input.stepEnv, {
+        [SERVER_PASSWORD_ENV]: serverPassword,
+      }).env,
     };
 
     logWork("runtime", "Starting host OpenCode", {

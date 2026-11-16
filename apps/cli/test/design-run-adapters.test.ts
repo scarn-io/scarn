@@ -77,29 +77,35 @@ describe("firstPipelineKeyOf", () => {
 });
 
 describe("stepNeedsProjectDevcontainer", () => {
-  test("a workspace step without a managed runtime runs in the project devcontainer", () => {
-    expect(
-      stepNeedsProjectDevcontainer({
-        executionMode: "workspace",
-        managedRuntime: null,
-      }),
-    ).toBe(true);
-  });
+  test.each([undefined, ".devcontainer/test.json"])(
+    "explicit devcontainer with config %s needs the project devcontainer",
+    (config) => {
+      expect(
+        stepNeedsProjectDevcontainer({
+          environment: {
+            kind: "inline",
+            runtime: { kind: "devcontainer", config },
+          },
+        }),
+      ).toBe(true);
+    },
+  );
 
   test("a managed-runtime step brings its own container", () => {
     expect(
       stepNeedsProjectDevcontainer({
-        executionMode: "workspace",
-        managedRuntime: "bun1",
+        environment: {
+          kind: "inline",
+          runtime: { kind: "managed", id: "bun1" },
+        },
       }),
     ).toBe(false);
   });
 
-  test("a no_workspace step runs on the host", () => {
+  test("a host step does not need the project devcontainer", () => {
     expect(
       stepNeedsProjectDevcontainer({
-        executionMode: "no_workspace",
-        managedRuntime: null,
+        environment: { kind: "inline", runtime: { kind: "host" } },
       }),
     ).toBe(false);
   });
@@ -107,14 +113,33 @@ describe("stepNeedsProjectDevcontainer", () => {
   test("reads the execution target off a step definition response", () => {
     const parsed = stepRuntimeTargetSchema.parse({
       id: "019ed1c9-3333-7170-a08a-1ff912085f7b",
-      executionMode: "workspace",
-      managedRuntime: null,
+      environment: null,
       kind: "user_defined",
     });
 
     expect(parsed).toEqual({
-      executionMode: "workspace",
-      managedRuntime: null,
+      environment: null,
     });
+  });
+
+  test("repository defaults do not imply a devcontainer", () => {
+    expect(stepNeedsProjectDevcontainer({ environment: null })).toBe(false);
+    expect(
+      stepNeedsProjectDevcontainer({ environment: { kind: "inline" } }),
+    ).toBe(false);
+    expect(
+      stepNeedsProjectDevcontainer({
+        environment: { kind: "named", name: "shared" },
+      }),
+    ).toBe(false);
+  });
+
+  test("rejects a legacy response without an explicit runtime kind", () => {
+    expect(
+      stepRuntimeTargetSchema.safeParse({
+        executionMode: "workspace",
+        managedRuntime: null,
+      }).success,
+    ).toBe(false);
   });
 });

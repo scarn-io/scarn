@@ -48,11 +48,7 @@ export async function prepareGitCredentialRelay(input: {
   onSecretValues?: ((values: readonly string[]) => void) | undefined;
 }): Promise<GitCredentialRelaySession | null> {
   const open = input.deps.openGitCredentialRelaySession;
-  if (
-    open === null ||
-    input.repo.mode === "none" ||
-    input.repo.gitCredentials !== "auto"
-  ) {
+  if (open === null || input.repo.gitCredentials !== "auto") {
     return null;
   }
 

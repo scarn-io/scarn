@@ -1,6 +1,6 @@
 ---
 title: Let a step work inside your repo
-description: Move a step off the host runtime so it gets a clone of your repository inside your devcontainer
+description: Choose repository access policy and use your project's devcontainer toolchain
 ---
 
 ```bash
@@ -14,31 +14,29 @@ read it, run the tests, or change it.
 
 Every step has a [runtime](/scarn/getting-started/concepts/#runtime):
 
-- **`Runtime.devcontainer()`** — the default. The worker clones your
-  repository and runs the agent inside your devcontainer.
-- **`Runtime.host()`** — no clone and no Docker. The designer picks it for
-  steps that only need the work item: classification, scoring, triage of the
-  ticket text.
+- **`Runtime.devcontainer()`** — runs the agent inside your project's container.
+- **`Runtime.managed.<id>()`** — runs it inside a worker-supplied container.
+- **`Runtime.host()`** — runs it on the worker host without Docker.
 
-So a step that can't see your code is a host step. Your first pipeline may
-have none, some, or only host steps, depending on what the designer built for
-that work item. Open the pipeline file and look for
-`runtime: Runtime.host()` to see which.
+Every runtime gets a repository checkout, including host. Choose a devcontainer
+when the step needs your project's installed toolchain or services, not merely
+to read files. See [environment defaults](/scarn/guides/environments/#defaults).
 
 ## Move the step into the devcontainer
 
 In an [edit session](/scarn/how-to/change-a-pipeline/), ask for the change
-— it's a **tweak**. The designer removes the step's `Runtime.host()`, so it
-falls back to `Runtime.devcontainer()`, and rewrites its prompt to use the
-code. By hand it's the same edit:
+— it's a **tweak**. Ask for `Runtime.devcontainer()` explicitly when the step
+needs that toolchain, and describe how its prompt should use the code.
+By hand:
 
 ```typescript
-import { defineStep, Repo } from "@scarn/sdk";
+import { defineStep, Repo, Runtime } from "@scarn/sdk";
 
 export const triage = defineStep({
   key: "triage",
   name: "Triage",
-  environment: { repo: Repo.readOnly() },
+  environment: { runtime: Runtime.devcontainer() },
+  repo: Repo.readOnly(),
   agentPrompt: "Find the code behind this report and summarize it.",
 });
 ```
@@ -47,9 +45,8 @@ Add `repo: Repo.readOnly()`, as here, when the step only reads code; leave
 `repo` off when it changes code, and its work is committed to a work branch.
 See [Repo access](/scarn/guides/steps/#repo-access).
 
-If the repository has no `.devcontainer/devcontainer.json`, the designer
-writes one in the same session, before it touches the pipeline. It doesn't
-build it. To write or adjust one yourself, see
+For the designer's devcontainer setup behavior, see
+[Runtime](/scarn/getting-started/concepts/#runtime). To write or adjust one yourself, see
 [Set up a dev container](/scarn/how-to/devcontainer/); for a different
 config per step, see
 [Selecting a devcontainer config](/scarn/guides/steps/#selecting-a-devcontainer-config).
@@ -59,10 +56,10 @@ config per step, see
 - **Docker**, running wherever `scarn work` runs. Host steps never needed
   it; devcontainer steps do.
 - **The config on your remote.** The worker reads it from the clone, so commit
-  and push `.devcontainer/` on the branch you run from (see
-  [Source branch](/scarn/reference/cli/#source-branch)).
-- **Secrets move too.** A devcontainer step reads `.scarn/.env`; a host step
-  reads the worker's environment. See
+  and push `.devcontainer/` on the branch the step starts from (see
+  [Base branch](/scarn/guides/workers/#base-branch)).
+- **Keep secrets on the worker.** All runtimes use the same worker-variable
+  lookup policy. See
   [Secrets](/scarn/guides/steps/#secrets).
 
 ## Verify it

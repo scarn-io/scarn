@@ -11,7 +11,7 @@ import type {
   ProjectWorkLogger,
   TaskAgentRunner,
   TaskRunTracker,
-  TaskRuntimeEnvironmentOrchestrator,
+  LaunchedRuntimeOrchestrator,
   TaskRunWorkerClient,
   WorkReporter,
 } from "../contracts/process-project-work-types";
@@ -56,7 +56,6 @@ export type ProjectWorkOptions = {
   /** See `TaskPlaneWorkerClientOptions.expectedUserId`. */
   expectedUserId?: string | undefined;
   reporter?: WorkReporter | undefined;
-  sourceBranch?: string | null | undefined;
   /** See `ProcessProjectWorkInput.slots`. */
   slots?: SlotPort | undefined;
   /** See `ProcessProjectWorkInput.runRegistry`. */
@@ -73,10 +72,7 @@ export type ProjectWorkHostDeps = {
     options: TaskPlaneWorkerClientOptions,
   ): Promise<TaskRunWorkerClient>;
   createRunTracker(): TaskRunTracker;
-  runtimeEnvironmentOrchestrator: TaskRuntimeEnvironmentOrchestrator;
-  /** Orchestrator for `no_workspace` steps (host OpenCode, no clone/container). */
-  noWorkspaceRuntimeEnvironmentOrchestrator?:
-    TaskRuntimeEnvironmentOrchestrator | undefined;
+  runtimeEnvironmentOrchestrator: LaunchedRuntimeOrchestrator;
   agentRunner: TaskAgentRunner;
   /**
    * Override the artifact store. When omitted the store is resolved from the
@@ -245,7 +241,6 @@ export async function buildProjectWorkSetup(
       sessionStartTimeoutMs: options.sessionStartTimeoutMs,
       missingFindingsGraceMs: options.missingFindingsGraceMs,
       readLocalEnv: options.readLocalEnv,
-      sourceBranch: options.sourceBranch,
       slots: options.slots,
       runRegistry: options.runRegistry,
       drainSignal: options.drainSignal,
@@ -255,8 +250,6 @@ export async function buildProjectWorkSetup(
       workerClient,
       createRunTracker: () => hostDeps.createRunTracker(),
       runtimeEnvironmentOrchestrator: hostDeps.runtimeEnvironmentOrchestrator,
-      noWorkspaceRuntimeEnvironmentOrchestrator:
-        hostDeps.noWorkspaceRuntimeEnvironmentOrchestrator,
       agentRunner: hostDeps.agentRunner,
       artifactStore,
       sleep: (milliseconds, signal) => hostDeps.sleep(milliseconds, signal),

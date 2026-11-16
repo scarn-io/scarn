@@ -44,7 +44,8 @@ export const plan = defineStep({
   description:
     "Charts the map on its work item: folds closed child work items into it, creates the next ones, and closes the map once the way is found.",
   status: "active",
-  environment: { runtime: Runtime.devcontainer(), repo: Repo.readOnly() },
+  environment: { runtime: Runtime.devcontainer() },
+  repo: Repo.readOnly(),
   features: [
     Features.workItems.read({ scope: "self" }),
     Features.workItems.update({ scope: "self" }),
@@ -106,7 +107,8 @@ export const research = defineStep({
   name: "Wayfinder Research",
   description: "Answers one question on the map with evidence.",
   status: "active",
-  environment: { runtime: Runtime.devcontainer(), repo: Repo.readOnly() },
+  environment: { runtime: Runtime.devcontainer() },
+  repo: Repo.readOnly(),
   features: [
     Features.workItems.update({ scope: "self" }),
     Features.workItems.comment({ scope: "self" }),
@@ -136,13 +138,11 @@ export const prototype = defineStep({
   description:
     "Builds a throwaway spike to find out whether an approach works.",
   status: "active",
-  environment: {
-    runtime: Runtime.devcontainer(),
-    repo: Repo.readWrite({
-      message: "wayfinder prototype: {{workItem.title}}",
-      onPushFailure: "warn",
-    }),
-  },
+  environment: { runtime: Runtime.devcontainer() },
+  repo: Repo.readWrite({
+    message: "wayfinder prototype: {{workItem.title}}",
+    onPushFailure: "warn",
+  }),
   features: [
     Features.workItems.update({ scope: "self" }),
     Features.workItems.comment({ scope: "self" }),
@@ -169,7 +169,8 @@ export const grilling = defineStep({
   name: "Wayfinder Grilling",
   description: "Settles a decision with a person, round by round.",
   status: "active",
-  environment: { runtime: Runtime.devcontainer(), repo: Repo.readOnly() },
+  environment: { runtime: Runtime.devcontainer() },
+  repo: Repo.readOnly(),
   features: [
     Features.workItems.update({ scope: "self" }),
     Features.workItems.comment({ scope: "self" }),

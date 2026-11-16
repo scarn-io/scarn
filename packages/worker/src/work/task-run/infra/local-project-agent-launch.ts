@@ -79,6 +79,7 @@ export async function prepareAgentLaunch(input: {
   devcontainerConfigPath: string;
   agentWorkspaceFolder: string;
   opencodeMcpJson?: OpenCodeMcpServers | null | undefined;
+  connectors?: readonly string[] | undefined;
   stepEnv?: Readonly<Record<string, string>> | undefined;
   resolveMcpEnv?: ((refs: readonly McpEnvRef[]) => ResolvedStepEnv) | undefined;
 }): Promise<AgentLaunchPlan> {
@@ -87,6 +88,7 @@ export async function prepareAgentLaunch(input: {
   const mcp = applyStepMcpEnv({
     plan: await planStepMcpServers({
       servers: input.opencodeMcpJson,
+      connectors: input.connectors,
       workspacePath: input.workspacePath,
       sessionId: input.sessionId,
     }),

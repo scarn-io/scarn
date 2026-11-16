@@ -107,7 +107,7 @@ export async function shipLaunchGitTimingLines() {
       claimToken: "claim-token",
       localRuntimeSessionId: createUuidV7(),
       workerContext: {
-        ...createWorkerContext("workspace"),
+        ...createWorkerContext(null),
         gitUrl: fx.remote,
       },
       requestedByUserId,

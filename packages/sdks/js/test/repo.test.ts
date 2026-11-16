@@ -1,3 +1,4 @@
+import { inlineEnvironment } from "./inline-environment";
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
 import { Env, Repo, Runtime, defineStep } from "../src";
@@ -6,11 +7,9 @@ import { compileEnvironment } from "../src/definitions/steps/runtime";
 import { validateDefinitionSpecs } from "../src/definitions/validation";
 
 describe("Repo constructors", () => {
-  test("none() takes no options and readOnly() takes no message", () => {
-    expect(Repo.none()).toEqual({ mode: "none" });
+  test("only read policies are exposed and readOnly() takes no message", () => {
+    expect("none" in Repo).toBe(false);
     expect(Repo.readOnly()).toEqual({ mode: "readOnly" });
-    // @ts-expect-error none takes no options
-    Repo.none({ message: "x" });
     // @ts-expect-error readOnly takes no message
     Repo.readOnly({ message: "x" });
   });
@@ -34,56 +33,34 @@ describe("Repo constructors", () => {
   });
 });
 
-describe("compileRepo — compatibility table", () => {
-  const devcontainer = Runtime.devcontainer();
-  const host = Runtime.host();
+describe("compileRepo — modes", () => {
   const specs: Record<string, RepoSpec> = {
     readWrite: Repo.readWrite(),
     readOnly: Repo.readOnly(),
-    none: Repo.none(),
   };
 
-  test.each([
-    ["readWrite", "devcontainer", devcontainer, true],
-    ["readOnly", "devcontainer", devcontainer, true],
-    ["none", "devcontainer", devcontainer, false],
-    ["readWrite", "host", host, false],
-    ["readOnly", "host", host, false],
-    ["none", "host", host, true],
-    ["readWrite", "no runtime", undefined, true],
-    ["readOnly", "no runtime", undefined, true],
-    ["none", "no runtime", undefined, false],
-  ] as const)("%s on %s: allowed=%p", (mode, _label, runtime, allowed) => {
-    const spec = specs[mode];
-    if (!spec) throw new Error("missing spec");
-    if (allowed) {
-      expect(compileRepo(spec, runtime)).toEqual({ mode });
-    } else {
-      expect(() => compileRepo(spec, runtime)).toThrow(/cannot be used with/);
-    }
-  });
+  test.each(["readWrite", "readOnly"] as const)(
+    "compiles %s without runtime coupling",
+    (mode) => {
+      const spec = specs[mode];
+      if (!spec) throw new Error("missing spec");
+      expect(compileRepo(spec)).toEqual({ mode });
+    },
+  );
 
-  test("a host step is rejected because it has no clone", () => {
+  test("the removed none mode is rejected for untyped callers", () => {
     expect(() =>
-      compileRepo(Repo.readWrite(), host, { stepKey: "triage" }),
-    ).toThrow(
-      'Step "triage" repo "readWrite" cannot be used with executionMode "no_workspace": a host step has no clone.',
-    );
-  });
-
-  test("a devcontainer step is rejected because it reads config from the clone", () => {
-    expect(() =>
-      compileRepo(Repo.none(), devcontainer, { stepKey: "build" }),
-    ).toThrow(
-      'Step "build" repo "none" cannot be used with executionMode "workspace": a devcontainer step reads its config from the clone.',
-    );
+      compileRepo({ mode: "none" } as unknown as RepoSpec, {
+        stepKey: "build",
+      }),
+    ).toThrow(/repo mode must be readOnly or readWrite/);
   });
 });
 
 describe("compileRepo — forms", () => {
   test("no repo compiles to undefined", () => {
     expect(compileRepo(undefined, undefined)).toBeUndefined();
-    expect(compileRepo(undefined, Runtime.host())).toBeUndefined();
+    expect(compileRepo(undefined, { stepKey: "host" })).toBeUndefined();
   });
 
   test("static form carries only what the author wrote", () => {
@@ -98,7 +75,6 @@ describe("compileRepo — forms", () => {
       message: "fix",
     });
   });
-
 
   test("an explicitly undefined option is dropped from the wire shape", () => {
     const config = compileRepo(
@@ -162,25 +138,22 @@ describe("compileRepo — forms", () => {
     expect(calls).toBe(1);
   });
 
-  test("function form returning readOnly and none compiles to the bare mode", () => {
+  test("function form returning readOnly compiles to the bare mode", () => {
     expect(compileRepo(() => Repo.readOnly(), undefined)).toEqual({
       mode: "readOnly",
     });
-    expect(compileRepo(() => Repo.none(), Runtime.host())).toEqual({
-      mode: "none",
-    });
   });
 
-  test("function form is checked against the runtime too", () => {
-    expect(() => compileRepo(() => Repo.readWrite(), Runtime.host())).toThrow(
-      /a host step has no clone/,
-    );
+  test("function form validates the repository shape too", () => {
+    expect(() =>
+      compileRepo(() => ({ mode: "none" }) as unknown as RepoSpec),
+    ).toThrow(/repo/);
   });
 });
 
 describe("compileRepo — message rejections", () => {
   const compile = (message: string) =>
-    compileRepo(Repo.readWrite({ message }), undefined, { stepKey: "s" });
+    compileRepo(Repo.readWrite({ message }), { stepKey: "s" });
 
   test("rejects a message over 500 characters", () => {
     expect(() => compile("a".repeat(501))).toThrow(/^Step "s" repo: message/);
@@ -216,33 +189,53 @@ describe("compileRepo — message rejections", () => {
 });
 
 describe("compileEnvironment — repo", () => {
-  test("no repo leaves it undefined and the key off the wire shape", () => {
-    expect(compileEnvironment({}).repo).toBeUndefined();
-    expect(compileEnvironment(undefined).repo).toBeUndefined();
+  test("repo is not part of the environment wire shape", () => {
+    expect(compileEnvironment({})).not.toHaveProperty("repo");
+    expect(compileEnvironment(undefined)).toBeNull();
+    const host = compileEnvironment({ runtime: Runtime.host() });
+    expect(host).not.toHaveProperty("repo");
+    expect(host?.runtime).toEqual({ kind: "host" });
   });
 
   test("compiles repo alongside runtime and vars", () => {
-    const compiled = compileEnvironment({
-      runtime: Runtime.devcontainer(),
-      vars: () => ({ A: "x" }),
+    const compiled = defineStep({
+      key: "repo-vars",
+      name: "Repo vars",
+      agentPrompt: "go",
+      environment: {
+        runtime: Runtime.devcontainer(),
+        vars: () => ({ A: "x" }),
+      },
       repo: Repo.readOnly(),
     });
-    expect(compiled.executionMode).toBe("workspace");
-    expect(compiled.envJson).toHaveLength(1);
+    expect(inlineEnvironment(compiled.environment)?.runtime).toEqual({
+      kind: "devcontainer",
+    });
+    expect(inlineEnvironment(compiled.environment)?.envJson).toHaveLength(1);
     expect(compiled.repo).toEqual({ mode: "readOnly" });
   });
 
-  test("a host step accepts none and rejects the rest", () => {
-    expect(
-      compileEnvironment({ runtime: Runtime.host(), repo: Repo.none() }).repo,
-    ).toEqual({ mode: "none" });
-    expect(() =>
-      compileEnvironment({
-        runtime: Runtime.host(),
-        // @ts-expect-error a host step has no clone
-        repo: Repo.readWrite(),
+  test("a host step accepts every repo policy without changing runtime", () => {
+    for (const repo of [
+      Repo.readOnly({ gitCredentials: "none" }),
+      Repo.readWrite({
+        message: "fix",
+        onPushFailure: "warn",
+        gitCredentials: "none",
       }),
-    ).toThrow(/a host step has no clone/);
+    ]) {
+      const compiled = defineStep({
+        key: "host-repo",
+        name: "Host repo",
+        agentPrompt: "go",
+        environment: { runtime: Runtime.host() },
+        repo,
+      });
+      expect(compiled.repo).toEqual(repo);
+      expect(inlineEnvironment(compiled.environment)?.runtime).toEqual({
+        kind: "host",
+      });
+    }
   });
 });
 
@@ -253,32 +246,68 @@ describe("defineStep — repo", () => {
     const spec = defineStep(base);
     expect(spec.repo).toBeUndefined();
     expect("repo" in spec).toBe(false);
+    const host = defineStep({
+      ...base,
+      environment: { runtime: Runtime.host() },
+    });
+    expect("repo" in host).toBe(false);
+    expect(inlineEnvironment(host.environment)?.runtime).toEqual({
+      kind: "host",
+    });
   });
 
   test("static Repo.readOnly() emits repo", () => {
     const spec = defineStep({
       ...base,
-      environment: { repo: Repo.readOnly() },
+      repo: Repo.readOnly(),
     });
     expect(spec.repo).toEqual({ mode: "readOnly" });
-    expect(spec.executionMode).toBe("workspace");
+    expect(spec.environment).toBeNull();
   });
 
   test("Repo.readWrite() on a devcontainer step emits an explicit readWrite", () => {
     const spec = defineStep({
       ...base,
-      environment: { runtime: Runtime.devcontainer(), repo: Repo.readWrite() },
+      environment: { runtime: Runtime.devcontainer() },
+      repo: Repo.readWrite(),
     });
     expect(spec.repo).toEqual({ mode: "readWrite" });
   });
 
-  test("Repo.none() on a host step emits an explicit none", () => {
+  test("readOnly on a host step preserves disabled credentials", () => {
     const spec = defineStep({
       ...base,
-      environment: { runtime: Runtime.host(), repo: Repo.none() },
+      environment: {
+        runtime: Runtime.host(),
+      },
+      repo: Repo.readOnly({ gitCredentials: "none" }),
     });
-    expect(spec.repo).toEqual({ mode: "none" });
-    expect(spec.executionMode).toBe("no_workspace");
+    expect(spec.repo).toEqual({ mode: "readOnly", gitCredentials: "none" });
+    expect(inlineEnvironment(spec.environment)?.runtime).toEqual({
+      kind: "host",
+    });
+  });
+
+  test.each([
+    Repo.readOnly({ gitCredentials: "none" }),
+    Repo.readWrite({
+      message: "fix",
+      onPushFailure: "warn",
+      gitCredentials: "none",
+    }),
+  ])("host static and function authoring accepts %j", (repo) => {
+    for (const field of [repo, () => repo]) {
+      const spec = defineStep({
+        ...base,
+        environment: { runtime: Runtime.host() },
+        repo: field,
+      });
+      expect(spec.repo).toEqual(repo);
+      expect(inlineEnvironment(spec.environment)?.runtime).toEqual({
+        kind: "host",
+      });
+      expect(validateDefinitionSpecs([spec])).toEqual([]);
+    }
   });
 
   test("function form types result from the result schema and input from the input schema", () => {
@@ -288,13 +317,13 @@ describe("defineStep — repo", () => {
       input: z.object({ title: z.string() }),
       result: z.object({ summary: z.string() }),
       environment: {
-        runtime: Runtime.devcontainer(),
-        repo: ({ input, result }) =>
-          Repo.readWrite({
-            message: `fix: ${result.summary} (${input.title})`,
-            onPushFailure: "warn",
-          }),
+        runtime: Runtime.host(),
       },
+      repo: ({ input, result }) =>
+        Repo.readWrite({
+          message: `fix: ${result.summary} (${input.title})`,
+          onPushFailure: "warn",
+        }),
       agentPrompt: ({ input }) => `Fix: ${input.title}`,
     });
     expect(spec.repo).toEqual({
@@ -302,18 +331,19 @@ describe("defineStep — repo", () => {
       message: "fix: {{result.summary}} ({{input.title}})",
       onPushFailure: "warn",
     });
+    expect(inlineEnvironment(spec.environment)?.runtime).toEqual({
+      kind: "host",
+    });
   });
 
   test("function form rejects an unknown result field at the type level", () => {
     defineStep({
       ...base,
       result: z.object({ summary: z.string() }),
-      environment: {
-        repo: ({ result }) => {
-          // @ts-expect-error `nope` is not on the result schema
-          void result.nope;
-          return Repo.readOnly();
-        },
+      repo: ({ result }) => {
+        // @ts-expect-error `nope` is not on the result schema
+        void result.nope;
+        return Repo.readOnly();
       },
     });
   });
@@ -322,26 +352,24 @@ describe("defineStep — repo", () => {
     defineStep({
       ...base,
       input: z.object({ title: z.string() }),
-      environment: {
-        repo: ({ input }) => {
-          // @ts-expect-error `nope` is not on the input schema
-          void input.nope;
-          return Repo.readOnly();
-        },
+      repo: ({ input }) => {
+        // @ts-expect-error `nope` is not on the input schema
+        void input.nope;
+        return Repo.readOnly();
       },
     });
   });
 
-  test("repo does not break vars inference, declared before or after vars", () => {
+  test("repo does not break vars inference: static vars in any order, a vars function before repo", () => {
     const repoFirst = defineStep({
       key: "a",
       name: "A",
       input: z.object({ id: z.string() }),
       result: z.object({ summary: z.string() }),
+      repo: ({ result }) =>
+        Repo.readWrite({ message: `fix: ${result.summary}` }),
       environment: {
-        repo: ({ result }) =>
-          Repo.readWrite({ message: `fix: ${result.summary}` }),
-        vars: ({ input }) => ({ ID: input.id, LEVEL: Env.inherit() }),
+        vars: { ID: "{{input.id}}", LEVEL: Env.inherit() },
       },
       agentPrompt: ({ env }) => {
         const id: string = env.ID;
@@ -356,43 +384,37 @@ describe("defineStep — repo", () => {
       input: z.object({ id: z.string() }),
       environment: {
         vars: ({ input }) => ({ ID: input.id }),
-        repo: Repo.readOnly(),
       },
+      repo: ({ env }) => Repo.readOnly({ baseBranch: env.ID }),
       agentPrompt: ({ env }) => env.ID,
     });
     expect(repoFirst.repo?.mode).toBe("readWrite");
-    expect(varsFirst.repo).toEqual({ mode: "readOnly" });
+    expect(varsFirst.repo).toEqual({
+      mode: "readOnly",
+      baseBranch: "{{env.ID}}",
+    });
   });
 
-  test("the runtime and repo pairs are type errors where the types can express them", () => {
+  test("removed repo modes are type errors with explicit or omitted runtimes", () => {
     const pairs = [
       () =>
         defineStep({
           ...base,
-          // @ts-expect-error a host step has no clone, so readWrite is rejected
-          environment: { runtime: Runtime.host(), repo: Repo.readWrite() },
+          environment: {
+            runtime: Runtime.devcontainer(),
+          },
+          // @ts-expect-error none is not a current repository mode
+          repo: { mode: "none" },
         }),
       () =>
         defineStep({
           ...base,
-          // @ts-expect-error a host step has no clone, so readOnly is rejected
-          environment: { runtime: Runtime.host(), repo: Repo.readOnly() },
-        }),
-      () =>
-        defineStep({
-          ...base,
-          // @ts-expect-error a devcontainer step reads its config from the clone
-          environment: { runtime: Runtime.devcontainer(), repo: Repo.none() },
-        }),
-      () =>
-        defineStep({
-          ...base,
-          // @ts-expect-error an omitted runtime is a devcontainer step
-          environment: { repo: Repo.none() },
+          // @ts-expect-error none is not a current repository mode
+          repo: { mode: "none" },
         }),
     ];
     for (const pair of pairs)
-      expect(pair).toThrow(/^Step "s" repo ".*" cannot be used with/);
+      expect(pair).toThrow(/repo mode must be readOnly or readWrite/);
   });
 
   test("a produced spec passes validateDefinitionSpecs", () => {
@@ -400,17 +422,20 @@ describe("defineStep — repo", () => {
       defineStep({
         ...base,
         key: "rw",
-        environment: { repo: Repo.readWrite() },
+        repo: Repo.readWrite(),
       }),
       defineStep({
         ...base,
         key: "ro",
-        environment: { repo: Repo.readOnly() },
+        repo: Repo.readOnly(),
       }),
       defineStep({
         ...base,
         key: "host",
-        environment: { runtime: Runtime.host(), repo: Repo.none() },
+        environment: {
+          runtime: Runtime.host(),
+        },
+        repo: Repo.readOnly({ gitCredentials: "none" }),
       }),
     ];
     expect(validateDefinitionSpecs(steps)).toEqual([]);

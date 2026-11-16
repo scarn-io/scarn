@@ -72,7 +72,7 @@ export function formatWorkerStatus(
         ? ` (${project.errorReason}${project.errorMessage ? `: ${project.errorMessage}` : ""}${project.nextRetryAt ? `; retry at ${project.nextRetryAt}` : ""})`
         : "";
     lines.push(
-      `  ${project.projectRef}  ${project.state}${error}  runs ${String(project.activeRuns)}/${limit === null ? "-" : String(limit)}  ${project.settings.repoDir} @ ${project.settings.sourceBranch}`,
+      `  ${project.projectRef}  ${project.state}${error}  runs ${String(project.activeRuns)}/${limit === null ? "-" : String(limit)}  ${project.settings.repoDir}`,
     );
   }
   lines.push("", "Active runs:");

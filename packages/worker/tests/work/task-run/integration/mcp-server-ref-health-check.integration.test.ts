@@ -5,10 +5,9 @@
  * worker resolves the ref, OpenCode starts the real fixture MCP server, and a
  * forced health check call through the ref'd key passes.
  *
- * Uses the `no_workspace` orchestrator (a real host `opencode serve`, no
- * Docker). Its temp working dir is `<tmpdir>/scarn-noworkspace/<sessionId>`,
- * so the test seeds the project config there before launch; in real use that
- * dir is empty and a ref cannot resolve. OpenCode also loads that same
+ * Uses the shared checkout orchestrator (a real host `opencode serve`, no
+ * Docker). The test commits the project config to a local repository before
+ * launch clones it. OpenCode also loads that same
  * project config natively, so this covers the overlay and the user config
  * both defining the server.
  *
@@ -18,12 +17,10 @@
  * Run with:
  *   SCARN_INTEGRATION=true bun test tests/work/task-run/integration/mcp-server-ref-health-check.integration.test.ts
  */
-import { mkdir, writeFile } from "node:fs/promises";
-import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { forceAndVerifyMcpHealthCheck } from "../../../../src/work/task-run/application/force-and-verify-mcp-health-check";
-import { pollMcpStatus } from "../../../../src/work/task-run/application/poll-mcp-status";
+import { checkMcpStartupGate } from "../../../../src/work/task-run/application/mcp-startup-gate";
 import { planStepEnv } from "../../../../src/work/task-run/application/resolve-step-env";
 import type { OpenCodeMcpServers } from "../../../../src/common/contracts/opencode-mcp";
 import {
@@ -31,14 +28,8 @@ import {
   type UuidV7,
 } from "../../../../src/common/contracts/uuid-v7";
 import { FakeAiServer } from "../../../../src/work/task-run/infra/fake-ai/fake-ai-server";
-import { DefaultLocalNoWorkspaceRuntimeEnvironmentOrchestrator } from "../../../../src/work/task-run/infra/local-noworkspace-runtime-environment";
-import { OpencodeRuntimePayloadProvisioner } from "../../../../src/runtime/runtime-service/infra/opencode-runtime-payload-provisioner";
-import { HostOpencodeBootstrap } from "../../../../src/runtime/runtime-service/infra/host-opencode-bootstrap";
-import { SessionRuntimeConfigMaterializer } from "../../../../src/work/task-run/infra/provider-access/session-runtime-config-materializer";
-import { SafeProviderAccessResolver } from "../../../../src/work/task-run/infra/provider-access/safe-provider-access-resolver";
-import { DirectProviderAccessResolver } from "../../../../src/work/task-run/infra/provider-access/direct-provider-access-resolver";
-import { noopLogger, createLogger } from "@scarn/observability/logging/host";
-import type { TaskRuntimeEnvironment } from "../../../../src/work/task-run/contracts/process-project-work-types";
+import { buildHostCheckout } from "./helpers/build-host-checkout";
+import type { LaunchedRuntime } from "../../../../src/work/task-run/contracts/process-project-work-types";
 
 const integrationEnabled = process.env["SCARN_INTEGRATION"] === "true";
 const TEST_TIMEOUT_MS = 3 * 60 * 1000;
@@ -50,58 +41,25 @@ const FIXTURE_SERVER_PATH = path.join(
   "fixture-mcp-server.ts",
 );
 
-function buildOrchestrator() {
-  const logger = createLogger({
-    name: "@scarn/worker",
-    level:
-      process.env["SCARN_INTEGRATION_VERBOSE"] === "true" ? "debug" : "silent",
-  });
-  return new DefaultLocalNoWorkspaceRuntimeEnvironmentOrchestrator(logger, {
-    payloadProvisioner: new OpencodeRuntimePayloadProvisioner(),
-    providerAccessResolver: new SafeProviderAccessResolver(
-      new DirectProviderAccessResolver({ logger: noopLogger }),
-    ),
-    runtimeConfigMaterializer: new SessionRuntimeConfigMaterializer({
-      outputBaseDir: path.join(process.cwd(), ".scarn-tmp-provider-config"),
-    }),
-    hostOpencodeBootstrap: new HostOpencodeBootstrap(),
-    loadCredentials: () => Promise.resolve([]),
-  });
-}
-
-async function seedProjectMcpConfig(
-  sessionId: string,
-  mcp: Record<string, unknown>,
-): Promise<void> {
-  const projectConfigDir = path.join(
-    os.tmpdir(),
-    "scarn-noworkspace",
-    sessionId,
-    ".opencode",
-  );
-  await mkdir(projectConfigDir, { recursive: true });
-  await writeFile(
-    path.join(projectConfigDir, "opencode.json"),
-    JSON.stringify({ mcp }),
-  );
-}
-
 describe.skipIf(!integrationEnabled)(
   "MCP server ref health check (integration)",
   () => {
     let fakeAiServer: FakeAiServer;
-    let environment: TaskRuntimeEnvironment | undefined;
+    let environment: LaunchedRuntime | undefined;
+    let checkout: Awaited<ReturnType<typeof buildHostCheckout>>;
 
-    beforeEach(() => {
+    beforeEach(async () => {
       fakeAiServer = new FakeAiServer({
         verbose: process.env["SCARN_INTEGRATION_VERBOSE"] === "true",
       });
+      checkout = await buildHostCheckout();
     });
 
     afterEach(async () => {
       await environment?.cleanup().catch(() => undefined);
       environment = undefined;
       await fakeAiServer.stop().catch(() => undefined);
+      await checkout.dispose();
     });
 
     async function launch(
@@ -110,18 +68,24 @@ describe.skipIf(!integrationEnabled)(
     ) {
       await fakeAiServer.start();
       const { resolved, resolveMcpEnv } = planStepEnv({
-        envJson: null,
+        envVars: [],
         inputJson: {},
         workerEnv: process.env,
         opencodeMcpJson,
       });
-      environment = await buildOrchestrator().launch({
+      environment = await checkout.orchestrator.launch({
+        environment: { kind: "inline", runtime: { kind: "host" } },
+        claimToken: "integration-claim-token",
         startAgent: true,
         sessionId,
         projectId: createUuidV7(),
         requestedByUserId: createUuidV7(),
-        gitUrl: "unused-for-no_workspace",
-        repo: { mode: "none" },
+        gitUrl: checkout.gitUrl,
+        repo: {
+          mode: "readOnly",
+          gitCredentials: "none",
+          baseBranch: null,
+        },
         opencodeMcpJson,
         stepEnv: resolved.stepEnv,
         resolveMcpEnv,
@@ -152,7 +116,7 @@ describe.skipIf(!integrationEnabled)(
       "a ref resolved from the project config starts and answers a forced tool call",
       async () => {
         const sessionId = createUuidV7();
-        await seedProjectMcpConfig(sessionId, {
+        await checkout.seedMcpConfig({
           "fixture-source": {
             type: "local",
             command: ["bun", "run", FIXTURE_SERVER_PATH],
@@ -164,9 +128,7 @@ describe.skipIf(!integrationEnabled)(
           fixture: { type: "ref", name: "fixture-source" },
         });
 
-        const statuses = await pollMcpStatus(server, {
-          expectedServers: ["fixture"],
-        });
+        const statuses = await checkMcpStartupGate(server, ["fixture"]);
         expect(
           statuses.find((status) => status.name === "fixture")?.healthy,
         ).toBe(true);

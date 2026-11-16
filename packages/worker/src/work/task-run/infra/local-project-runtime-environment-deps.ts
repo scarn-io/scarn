@@ -14,6 +14,7 @@ import type { SubmoduleService } from "../../../runtime/runtime-service/applicat
 import type { WorkspaceManager } from "../../../runtime/runtime-service/application/workspace-manager";
 import { DevcontainerCliLauncher } from "../../../runtime/runtime-service/infra/devcontainer-cli-launcher";
 import { DevcontainerOpencodeBootstrap } from "../../../runtime/runtime-service/infra/devcontainer-opencode-bootstrap";
+import { HostOpencodeBootstrap } from "../../../runtime/runtime-service/infra/host-opencode-bootstrap";
 import { createGitCloneService } from "../../../runtime/runtime-service/infra/create-git-clone-service";
 import { GitCliCommitPushService } from "../../../runtime/runtime-service/infra/git-cli-commit-push-service";
 import { GitCliSubmoduleService } from "../../../runtime/runtime-service/infra/git-cli-submodule-service";
@@ -28,10 +29,12 @@ import type { RuntimeConfigMaterializer } from "../contracts/agent-runtime/runti
 import { DirectProviderAccessResolver } from "./provider-access/direct-provider-access-resolver";
 import { SessionRuntimeConfigMaterializer } from "./provider-access/session-runtime-config-materializer";
 import { GitCliRepoContext, type RepoContextGit } from "./git-cli-repo-context";
+import { readGitCommit } from "./git-commit";
 
 export type LocalProjectRuntimeEnvironmentDeps = {
   workspaceManager: WorkspaceManager;
   gitCloneService: GitCloneService;
+  readGitCommit: typeof readGitCommit;
   /**
    * The git mirror cache dir `gitCloneService` reads from, exported to the
    * devcontainer CLI's host environment. `null` when the cache is off; absent
@@ -47,6 +50,7 @@ export type LocalProjectRuntimeEnvironmentDeps = {
   // provider-access resolution/materialization.
   payloadProvisioner: OpencodeRuntimePayloadProvisioner;
   opencodeBootstrap: DevcontainerOpencodeBootstrap;
+  hostOpencodeBootstrap: HostOpencodeBootstrap;
   providerAccessResolver: ProviderAccessResolver;
   runtimeConfigMaterializer: RuntimeConfigMaterializer;
   /** Loads the user's provider credentials injected into each session. */
@@ -78,6 +82,7 @@ export function buildLocalProjectRuntimeDeps(
   return {
     workspaceManager: new LocalWorkspaceManager(),
     gitCloneService,
+    readGitCommit,
     gitCacheDir: cacheDir,
     gitCommitPushService: new GitCliCommitPushService(logger),
     repoContextGit: new GitCliRepoContext(),
@@ -85,6 +90,7 @@ export function buildLocalProjectRuntimeDeps(
     devcontainerLauncher: new DevcontainerCliLauncher(),
     payloadProvisioner: new OpencodeRuntimePayloadProvisioner(),
     opencodeBootstrap: new DevcontainerOpencodeBootstrap(),
+    hostOpencodeBootstrap: new HostOpencodeBootstrap(),
     providerAccessResolver: new DirectProviderAccessResolver({ logger }),
     runtimeConfigMaterializer: new SessionRuntimeConfigMaterializer({
       outputBaseDir: path.join(os.tmpdir(), "scarn-provider-config"),

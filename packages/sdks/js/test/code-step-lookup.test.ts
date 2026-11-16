@@ -22,6 +22,7 @@ function userDefinedStep(key: string): StepDefinitionSpec {
     version: 1,
     kind: "user_defined",
     status: "active",
+    environment: null,
     prompt: "hello",
     inputSchemaJson: null,
     resultSchemaJson: null,

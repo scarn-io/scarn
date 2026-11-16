@@ -3,7 +3,7 @@
  *
  * Exercises the same real pieces
  * `force-and-verify-mcp-health-check.integration.test.ts` does — a real
- * `opencode serve` process (via the `no_workspace` orchestrator), a real
+ * `opencode serve` process (via the shared host checkout orchestrator), a real
  * `FakeAiServer`, and the real stdio fixture MCP server
  * (`helpers/mcp/fixture-mcp-server.ts`, exposing a working `echo` tool and a
  * deliberately throwing `boom` tool) — but drives them through
@@ -28,17 +28,12 @@
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import type { HealthCheck, ToolHealthCheck } from "@scarn/sdk/health-checks";
+import { checkMcpStartupGate } from "../../../../src/work/task-run/application/mcp-startup-gate";
 import { runHealthChecks } from "../../../../src/work/task-run/application/run-health-checks";
 import { createUuidV7 } from "../../../../src/common/contracts/uuid-v7";
 import { FakeAiServer } from "../../../../src/work/task-run/infra/fake-ai/fake-ai-server";
-import { DefaultLocalNoWorkspaceRuntimeEnvironmentOrchestrator } from "../../../../src/work/task-run/infra/local-noworkspace-runtime-environment";
-import { OpencodeRuntimePayloadProvisioner } from "../../../../src/runtime/runtime-service/infra/opencode-runtime-payload-provisioner";
-import { HostOpencodeBootstrap } from "../../../../src/runtime/runtime-service/infra/host-opencode-bootstrap";
-import { SessionRuntimeConfigMaterializer } from "../../../../src/work/task-run/infra/provider-access/session-runtime-config-materializer";
-import { SafeProviderAccessResolver } from "../../../../src/work/task-run/infra/provider-access/safe-provider-access-resolver";
-import { DirectProviderAccessResolver } from "../../../../src/work/task-run/infra/provider-access/direct-provider-access-resolver";
-import { noopLogger, createLogger } from "@scarn/observability/logging/host";
-import type { TaskRuntimeEnvironment } from "../../../../src/work/task-run/contracts/process-project-work-types";
+import { buildHostCheckout } from "./helpers/build-host-checkout";
+import type { LaunchedRuntime } from "../../../../src/work/task-run/contracts/process-project-work-types";
 
 const integrationEnabled = process.env["SCARN_INTEGRATION"] === "true";
 const TEST_TIMEOUT_MS = 3 * 60 * 1000;
@@ -79,57 +74,42 @@ function boomCheck(overrides: Partial<ToolHealthCheck> = {}): HealthCheck {
 
 describe.skipIf(!integrationEnabled)("runHealthChecks (integration)", () => {
   let fakeAiServer: FakeAiServer;
-  let environment: TaskRuntimeEnvironment | undefined;
+  let environment: LaunchedRuntime | undefined;
+  let checkout: Awaited<ReturnType<typeof buildHostCheckout>>;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     fakeAiServer = new FakeAiServer({
       verbose: process.env["SCARN_INTEGRATION_VERBOSE"] === "true",
     });
+    checkout = await buildHostCheckout();
   });
 
   afterEach(async () => {
     await environment?.cleanup().catch(() => undefined);
     environment = undefined;
     await fakeAiServer.stop().catch(() => undefined);
+    await checkout.dispose();
   });
 
   test(
     "runs declared checks against a real OpenCode process and a real MCP server",
     async () => {
-      const logger = createLogger({
-        name: "@scarn/worker",
-        level:
-          process.env["SCARN_INTEGRATION_VERBOSE"] === "true"
-            ? "debug"
-            : "silent",
-      });
-
-      const orchestrator =
-        new DefaultLocalNoWorkspaceRuntimeEnvironmentOrchestrator(logger, {
-          payloadProvisioner: new OpencodeRuntimePayloadProvisioner(),
-          providerAccessResolver: new SafeProviderAccessResolver(
-            new DirectProviderAccessResolver({ logger: noopLogger }),
-          ),
-          runtimeConfigMaterializer: new SessionRuntimeConfigMaterializer({
-            outputBaseDir: path.join(
-              process.cwd(),
-              ".scarn-tmp-provider-config",
-            ),
-          }),
-          hostOpencodeBootstrap: new HostOpencodeBootstrap(),
-          loadCredentials: () => Promise.resolve([]),
-        });
-
       await fakeAiServer.start();
 
       const sessionId = createUuidV7();
-      environment = await orchestrator.launch({
+      environment = await checkout.orchestrator.launch({
+        environment: { kind: "inline", runtime: { kind: "host" } },
+        claimToken: "integration-claim-token",
         startAgent: true,
         sessionId,
         projectId: createUuidV7(),
         requestedByUserId: createUuidV7(),
-        gitUrl: "unused-for-no_workspace",
-        repo: { mode: "none" },
+        gitUrl: checkout.gitUrl,
+        repo: {
+          mode: "readOnly",
+          gitCredentials: "none",
+          baseBranch: null,
+        },
         opencodeMcpJson: {
           fixture: {
             type: "local",
@@ -150,13 +130,21 @@ describe.skipIf(!integrationEnabled)("runHealthChecks (integration)", () => {
         throw new Error("Expected the launch to start an agent");
       }
 
+      const server = {
+        baseUrl: agent.baseUrl,
+        password: agent.password,
+        workspaceFolder: environment.workspaceFolder,
+      };
+      // The real sequence: the MCP startup gate runs before declared checks,
+      // so the fixture server is connected when the first check fires.
+      const gate = await checkMcpStartupGate(server, ["fixture"]);
+      expect(gate.map(({ name, status }) => [name, status])).toEqual([
+        ["fixture", "connected"],
+      ]);
+
       // A single working MCP check passes.
       const working = await runHealthChecks({
-        server: {
-          baseUrl: agent.baseUrl,
-          password: agent.password,
-          workspaceFolder: environment.workspaceFolder,
-        },
+        server,
         healthChecks: [echoCheck()],
         fakeAiServer,
       });

@@ -22,8 +22,6 @@ export type RunWorkDryRunCommandOptions = {
   keep: boolean;
   localEnvVars: Record<string, string>;
   reporter: CliReporter;
-  /** The CLI's resolved/overridden current local branch (see `resolveSourceBranch`). */
-  sourceBranch: string | null;
 };
 
 /**
@@ -60,7 +58,6 @@ export async function runWorkDryRunCommand(
       dest: createTransport(),
       localEnvVars: options.localEnvVars,
       reporter: options.reporter,
-      sourceBranch: options.sourceBranch,
     });
     return renderAndConclude(report, options.reporter);
   }
@@ -84,7 +81,6 @@ export async function runWorkDryRunCommand(
     dest: createTransport(),
     localEnvVars: options.localEnvVars,
     reporter: options.reporter,
-    sourceBranch: options.sourceBranch,
   });
 
   return renderAndConclude(report, options.reporter);

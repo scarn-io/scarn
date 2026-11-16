@@ -50,12 +50,8 @@ export type TemplateStepPreview = {
   name: string;
   description: string | null;
   prompt: string | null;
-  runtime: {
-    executionMode: "workspace" | "no_workspace";
-    devcontainerConfigPath: string | null;
-    managedRuntime: string | null;
-  };
-  /** `null` when the step leaves repository access to the runtime's default. */
+  environment: StepDefinitionSpec["environment"];
+  /** `null` when the step uses the shared read-write default. */
   repo: StepDefinitionSpec["repo"] | null;
   grants: Grant[];
   maxTurns: number | null;
@@ -87,11 +83,7 @@ function toStepPreview(step: StepDefinitionSpec): TemplateStepPreview {
     name: step.name,
     description: step.description,
     prompt: step.prompt,
-    runtime: {
-      executionMode: step.executionMode ?? "workspace",
-      devcontainerConfigPath: step.devcontainerConfigPath ?? null,
-      managedRuntime: step.managedRuntime ?? null,
-    },
+    environment: step.environment,
     repo: step.repo ?? null,
     grants: (step.grants ?? []).map((grant) => ({ ...grant })),
     maxTurns: step.maxTurns ?? null,

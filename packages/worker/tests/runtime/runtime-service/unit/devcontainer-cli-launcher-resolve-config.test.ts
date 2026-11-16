@@ -1,7 +1,7 @@
 /**
  * `DevcontainerCliLauncher.resolveConfigPath`: an explicitly requested config is
  * validated, contained in the workspace by `realpath`, and never falls back to
- * the canonical search; with no request, the candidate search is unchanged.
+ * the canonical search; only genuine implicit absence gets a typed error.
  */
 import {
   mkdir,
@@ -14,7 +14,10 @@ import {
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { DevcontainerCliLauncher } from "../../../../src/runtime/runtime-service/infra/devcontainer-cli-launcher";
+import {
+  DevcontainerCliLauncher,
+  ImplicitDevcontainerConfigMissingError,
+} from "../../../../src/runtime/runtime-service/infra/devcontainer-cli-launcher";
 
 describe("DevcontainerCliLauncher.resolveConfigPath", () => {
   let root: string;
@@ -95,6 +98,7 @@ describe("DevcontainerCliLauncher.resolveConfigPath", () => {
       expect(error.message).toBe(
         'Devcontainer config ".devcontainer/alt/devcontainer.json" not found in the cloned repository',
       );
+      expect(error).not.toBeInstanceOf(ImplicitDevcontainerConfigMissingError);
     });
 
     test("rejects a path with a .. segment even when the file exists outside the workspace", async () => {
@@ -226,6 +230,75 @@ describe("DevcontainerCliLauncher.resolveConfigPath", () => {
       );
 
       expect(error.message).toContain("No devcontainer spec found");
+      expect(error).toBeInstanceOf(ImplicitDevcontainerConfigMissingError);
+    });
+
+    test.each([undefined, null])(
+      "reports typed absence when both canonical configs are missing (configPath %p)",
+      async (configPath) => {
+        const error = await failureOf(
+          launcher.resolveConfigPath({ workspacePath, configPath }),
+        );
+
+        expect(error).toBeInstanceOf(ImplicitDevcontainerConfigMissingError);
+        expect(error.message).toBe(
+          `No devcontainer spec found in ${workspacePath}. Expected .devcontainer/devcontainer.json or devcontainer.json`,
+        );
+      },
+    );
+
+    test("propagates ENOTDIR instead of selecting a root config", async () => {
+      await writeFile(
+        path.join(workspacePath, ".devcontainer"),
+        "not a directory",
+      );
+      await writeConfig("devcontainer.json");
+
+      const error = await failureOf(
+        launcher.resolveConfigPath({ workspacePath }),
+      );
+
+      expect(error).not.toBeInstanceOf(ImplicitDevcontainerConfigMissingError);
+      expect((error as NodeJS.ErrnoException).code).toBe("ENOTDIR");
+    });
+
+    test("propagates errors accessing the second candidate", async () => {
+      await symlink(
+        "devcontainer.json",
+        path.join(workspacePath, "devcontainer.json"),
+      );
+
+      const error = await failureOf(
+        launcher.resolveConfigPath({ workspacePath }),
+      );
+
+      expect(error).not.toBeInstanceOf(ImplicitDevcontainerConfigMissingError);
+      expect((error as NodeJS.ErrnoException).code).toBe("ELOOP");
+    });
+
+    test.each([".devcontainer/devcontainer.json", "devcontainer.json"])(
+      "selects an existing invalid config at %s without classifying it as missing",
+      async (configPath) => {
+        await writeConfig(configPath);
+        await writeFile(path.join(workspacePath, configPath), "{invalid json");
+
+        expect(await launcher.resolveConfigPath({ workspacePath })).toBe(
+          configPath,
+        );
+      },
+    );
+
+    test("selects a config path that is a directory for downstream validation", async () => {
+      await mkdir(
+        path.join(workspacePath, ".devcontainer", "devcontainer.json"),
+        {
+          recursive: true,
+        },
+      );
+
+      expect(await launcher.resolveConfigPath({ workspacePath })).toBe(
+        ".devcontainer/devcontainer.json",
+      );
     });
   });
 });

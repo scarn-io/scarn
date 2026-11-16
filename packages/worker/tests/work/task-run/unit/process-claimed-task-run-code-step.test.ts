@@ -17,6 +17,7 @@ import type { RunCodeStepCommand } from "../../../../src/work/task-run/applicati
 import type { ProcessProjectWorkDeps } from "../../../../src/work/task-run/contracts/process-project-work-types";
 import {
   createCodeStepWorkerContext,
+  createRecordingOrchestrator,
   createRunTracker,
   createWorkerContext,
   createWorkerClient,
@@ -39,28 +40,22 @@ describe("startProcessClaimedTaskRun kind: 'code' branch", () => {
     entrypointJson: { sourceFile: string };
     runCodeStepCommand: ProcessProjectWorkDeps["runCodeStepCommand"];
     envJson?: Parameters<typeof createCodeStepWorkerContext>[1];
-    managedRuntime?: Parameters<typeof createCodeStepWorkerContext>[2];
+    runtime?: Parameters<typeof createCodeStepWorkerContext>[2];
   }): {
     deps: ProcessProjectWorkDeps;
     tracker: ReturnType<typeof createRunTracker>;
     launch: ReturnType<typeof vi.fn>;
   } {
-    const launch = vi.fn(() =>
-      Promise.resolve({
-        workspacePath,
-        workspaceFolder: "/workspaces/repo",
-        resolvedBranch: "main",
-        workBranch: null,
-        createdFromBranch: null,
-        devcontainerConfigPath: ".devcontainer/devcontainer.json",
-        runtimeContainerId: "runtime-container-id",
-        agent: null,
-        aiImage: "",
-        networkName: "test-network",
-        secretValues: [],
-        cleanup: () => Promise.resolve(),
-      }),
-    );
+    const { launch } = createRecordingOrchestrator(workspacePath, {
+      resolvedBranch: "main",
+      workBranch: null,
+      createdFromBranch: null,
+      devcontainerConfigPath: ".devcontainer/devcontainer.json",
+      runtimeContainerId: "runtime-container-id",
+      agent: null,
+      aiImage: "",
+      networkName: "test-network",
+    });
 
     const workerClient = createWorkerClient();
     workerClient.getTaskRunWorkerContext = vi.fn(() =>
@@ -68,7 +63,7 @@ describe("startProcessClaimedTaskRun kind: 'code' branch", () => {
         createCodeStepWorkerContext(
           input.entrypointJson,
           input.envJson,
-          input.managedRuntime,
+          input.runtime,
         ),
       ),
     );
@@ -156,7 +151,7 @@ describe("startProcessClaimedTaskRun kind: 'code' branch", () => {
     expect(tracker.attachAgentSession).not.toHaveBeenCalled();
   });
 
-  test.each([
+  test.each<["bun1" | "node24", string]>([
     ["bun1", "bun run"],
     ["node24", "node '"],
   ])(
@@ -171,7 +166,7 @@ describe("startProcessClaimedTaskRun kind: 'code' branch", () => {
       const { deps, tracker, launch } = buildDeps({
         entrypointJson: { sourceFile: "steps/review.ts" },
         runCodeStepCommand,
-        managedRuntime,
+        runtime: { kind: "managed", id: managedRuntime },
       });
 
       await startProcessClaimedTaskRun(
@@ -190,7 +185,14 @@ describe("startProcessClaimedTaskRun kind: 'code' branch", () => {
       );
 
       expect(launch).toHaveBeenCalledWith(
-        expect.objectContaining({ managedRuntime, startAgent: false }),
+        expect.objectContaining({
+          environment: {
+            kind: "inline",
+            runtime: { kind: "managed", id: managedRuntime },
+            envJson: null,
+          },
+          startAgent: false,
+        }),
       );
       const shellCommand = runCodeStepCommand.mock.calls[0]?.[0].shellCommand;
       expect(shellCommand).toContain(invocation);
@@ -306,7 +308,7 @@ describe("startProcessClaimedTaskRun kind: 'code' branch", () => {
     expect(tracker.markFailed).toHaveBeenCalledTimes(1);
   });
 
-  test("rejects a code step in no_workspace mode before launching any runtime", async () => {
+  test("rejects a code step on the host after resolution before dispatching", async () => {
     workspacePath = await mkdtemp(
       path.join(os.tmpdir(), "scarn-code-step-branch-no-workspace-"),
     );
@@ -318,18 +320,18 @@ describe("startProcessClaimedTaskRun kind: 'code' branch", () => {
       entrypointJson: { sourceFile: "steps/review.ts" },
       runCodeStepCommand,
     });
-    const noWorkspaceLaunch = vi.fn();
-    const noWorkspaceDeps = {
-      ...deps,
-      noWorkspaceRuntimeEnvironmentOrchestrator: { launch: noWorkspaceLaunch },
-    } satisfies ProcessProjectWorkDeps;
+    const noWorkspaceDeps = deps;
     noWorkspaceDeps.workerClient.getTaskRunWorkerContext = vi.fn(() =>
       Promise.resolve(
-        createWorkerContext("no_workspace", null, {
-          kind: "code",
-          prompt: null,
-          entrypointJson: { sourceFile: "steps/review.ts" },
-        }),
+        createWorkerContext(
+          { kind: "inline", runtime: { kind: "host" } },
+          null,
+          {
+            kind: "code",
+            prompt: null,
+            entrypointJson: { sourceFile: "steps/review.ts" },
+          },
+        ),
       ),
     );
 
@@ -354,10 +356,9 @@ describe("startProcessClaimedTaskRun kind: 'code' branch", () => {
     }
 
     expect(caught).toBeInstanceOf(Error);
-    expect((caught as Error).message).toContain("no_workspace");
-    expect((caught as Error).message).toContain("require an agent");
-    expect(launch).not.toHaveBeenCalled();
-    expect(noWorkspaceLaunch).not.toHaveBeenCalled();
+    expect((caught as Error).message).toContain("host");
+    expect((caught as Error).message).toContain("cannot use the host runtime");
+    expect(launch).toHaveBeenCalledTimes(1);
     expect(runCodeStepCommand).not.toHaveBeenCalled();
   });
 
@@ -373,22 +374,16 @@ describe("startProcessClaimedTaskRun kind: 'code' branch", () => {
     workerClient.getTaskRunWorkerContext = vi.fn(() =>
       Promise.resolve(createCodeStepWorkerContext(null)),
     );
-    const launch = vi.fn(() =>
-      Promise.resolve({
-        workspacePath,
-        workspaceFolder: "/workspaces/repo",
-        resolvedBranch: "main",
-        workBranch: null,
-        createdFromBranch: null,
-        devcontainerConfigPath: ".devcontainer/devcontainer.json",
-        runtimeContainerId: "runtime-container-id",
-        agent: null,
-        aiImage: "",
-        networkName: "test-network",
-        secretValues: [],
-        cleanup: () => Promise.resolve(),
-      }),
-    );
+    const { launch } = createRecordingOrchestrator(workspacePath, {
+      resolvedBranch: "main",
+      workBranch: null,
+      createdFromBranch: null,
+      devcontainerConfigPath: ".devcontainer/devcontainer.json",
+      runtimeContainerId: "runtime-container-id",
+      agent: null,
+      aiImage: "",
+      networkName: "test-network",
+    });
     const tracker = createRunTracker();
     const deps = {
       workerClient,

@@ -199,13 +199,13 @@ const runPush = (args: ArgumentsCamelCase<PushArguments>): Promise<void> =>
       process.exit(exitCode);
     }
 
-    task.succeed("Pushed steps, built pipelines and automations");
+    task.succeed("Pushed environments, steps, built pipelines and automations");
     captureMilestone(AnalyticsEvents.CliPipelinePushed);
   });
 
 const pushCommand: CommandModule<object, PushArguments> = {
   command: "push [project]",
-  describe: `Push the steps, and the built pipeline and automation JSON in ${PIPELINE_BUILDER_DIR} to the server`,
+  describe: `Push the environments, steps, and the built pipeline and automation JSON in ${PIPELINE_BUILDER_DIR} to the server`,
   builder: (argv: Argv<object>) =>
     argv
       .positional("project", {

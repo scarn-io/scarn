@@ -5,20 +5,48 @@
  */
 import path from "node:path";
 import { vi } from "bun:test";
+import type { ResolvedEnvironmentRef } from "@scarn/sdk/environment";
+import type { EnvVarSpec } from "@scarn/sdk/env-vars";
+import { resolveEnvironment } from "@scarn/sdk/resolve-environment";
 import { parseUuidV7 } from "../../../../../src/common/contracts/uuid-v7";
+import type { pollMcpStatus } from "../../../../../src/work/task-run/application/poll-mcp-status";
 import { startProcessClaimedTaskRun } from "../../../../../src/work/task-run/application/process-claimed-task-run";
 import type {
   ProcessProjectWorkDeps,
   TaskRunTracker,
   TaskRunWorkerClient,
   TaskRunWorkerContext,
+  LaunchedRuntimeOrchestrator,
+  LaunchedRuntime,
 } from "../../../../../src/work/task-run/contracts/process-project-work-types";
+
+/**
+ * An MCP startup gate poll that reports every expected server `connected`,
+ * for claimed-run tests that declare step MCP servers but run no OpenCode.
+ */
+export const connectedMcpStartupGate = {
+  poll: (
+    _server: Parameters<typeof pollMcpStatus>[0],
+    options?: Parameters<typeof pollMcpStatus>[1],
+  ) =>
+    Promise.resolve(
+      (options?.expectedServers ?? []).map((name) => ({
+        name,
+        status: "connected" as const,
+        healthy: true,
+      })),
+    ),
+};
 
 export const projectId = parseUuidV7("01966a2c-9494-7db5-aa46-0f8f5cbbe001");
 export const requestedByUserId = parseUuidV7(
   "01966a2c-9494-7db5-aa46-0f8f5cbbe002",
 );
 export const taskRunId = parseUuidV7("01966a2c-9494-7db5-aa46-0f8f5cbbe003");
+export const hostEnvironment = {
+  kind: "inline",
+  runtime: { kind: "host" },
+} as const;
 type WorkerContextTask = TaskRunWorkerContext["task"];
 type WorkerContextRuntime = TaskRunWorkerContext["runtime"];
 
@@ -26,11 +54,10 @@ export type WorkerContextOverrides = Partial<WorkerContextTask> &
   Partial<WorkerContextRuntime>;
 
 export function createWorkerContext(
-  executionMode?: "workspace" | "no_workspace",
+  environment: ResolvedEnvironmentRef = null,
   healthChecksJson?: WorkerContextRuntime["healthChecksJson"],
   overrides: WorkerContextOverrides = {},
 ): TaskRunWorkerContext {
-  const resolvedExecutionMode = executionMode ?? "workspace";
   const task: WorkerContextTask = {
     id: taskRunId,
     status: "running",
@@ -46,19 +73,22 @@ export function createWorkerContext(
     grants: [],
   };
   const runtime: WorkerContextRuntime = {
-    executionMode: resolvedExecutionMode,
-    devcontainerConfigPath: null,
-    managedRuntime: null,
+    environment,
     repo:
-      resolvedExecutionMode === "no_workspace"
-        ? { mode: "none" }
+      environment?.kind === "inline" && environment.runtime?.kind === "host"
+        ? {
+            mode: "readOnly",
+            gitCredentials: "none",
+            baseBranch: null,
+          }
         : {
             mode: "readWrite",
             message: null,
             onPushFailure: "fail",
             gitCredentials: "none",
+            baseBranch: null,
+            workBranch: { kind: "create" },
           },
-    envJson: null,
     healthChecksJson: healthChecksJson ?? null,
     opencodeMcpJson: null,
   };
@@ -90,15 +120,18 @@ export function createCodeStepWorkerContext(
   entrypointJson: WorkerContextTask["entrypointJson"] = {
     sourceFile: ".scarn/pipeline-builder/review-file-step.ts",
   },
-  envJson: WorkerContextRuntime["envJson"] = null,
-  managedRuntime: WorkerContextRuntime["managedRuntime"] = null,
+  envJson: EnvVarSpec[] | null = null,
+  runtime: NonNullable<
+    Extract<ResolvedEnvironmentRef, { kind: "inline" }>["runtime"]
+  > = {
+    kind: "managed",
+    id: "bun1",
+  },
 ): TaskRunWorkerContext {
-  return createWorkerContext("workspace", null, {
+  return createWorkerContext({ kind: "inline", runtime, envJson }, null, {
     kind: "code",
     prompt: null,
     entrypointJson,
-    envJson,
-    managedRuntime,
   });
 }
 
@@ -114,7 +147,7 @@ export function createRunTracker(): TaskRunTracker {
 }
 
 export function createWorkerClient(
-  executionMode: "workspace" | "no_workspace" = "workspace",
+  environment: ResolvedEnvironmentRef = null,
 ): TaskRunWorkerClient {
   return {
     userId: requestedByUserId,
@@ -129,7 +162,7 @@ export function createWorkerClient(
     appendTaskLogs: vi.fn(() => Promise.resolve({ nextOffset: 0 })),
     getTaskRun: vi.fn(),
     getTaskRunWorkerContext: vi.fn(() =>
-      Promise.resolve(createWorkerContext(executionMode)),
+      Promise.resolve(createWorkerContext(environment)),
     ),
     createArtifactUploadUrl: vi.fn(),
     createSessionUploadUrl: vi.fn(),
@@ -165,22 +198,49 @@ export function runClaim(
 /**
  * A recording runtime-environment orchestrator: its `launch` resolves the same
  * fake environment the existing test uses, but records that it was invoked so
- * routing between the `workspace` and `no_workspace` orchestrators can be
+ * routing between container and host runtime launches can be
  * asserted through the exported {@link startProcessClaimedTaskRun} seam
  * (`resolveRuntimeEnvironmentOrchestrator` itself is module-private).
  */
 export function createRecordingOrchestrator(
   workspacePath: string,
-  overrides: {
-    resolvedBranch?: string;
-    devcontainerConfigPath?: string;
-    runtimeContainerId?: string | null;
-    aiImage?: string;
-    networkName?: string;
-  } = {},
+  overrides: Partial<Omit<LaunchedRuntime, "resolvedEnvironment">> = {},
 ) {
-  const launch = vi.fn(() =>
-    Promise.resolve({
+  const lifecycle = vi.fn<(phase: "cloned" | "resolved" | "startup") => void>();
+  const launch = vi.fn<LaunchedRuntimeOrchestrator["launch"]>(async (input) => {
+    lifecycle("cloned");
+    const resolvedEnvironment = await resolveEnvironment(
+      {
+        devcontainerExists: () => Promise.resolve(true),
+      },
+      input.environment,
+    );
+    if (resolvedEnvironment instanceof Error) throw resolvedEnvironment;
+    lifecycle("resolved");
+    if (
+      resolvedEnvironment.runtime.kind === "host" &&
+      input.taskKind === "code"
+    ) {
+      throw new Error(
+        `Code step "${input.stepKey ?? ""}" cannot use the host runtime.`,
+      );
+    }
+    const envPlan = await input.resolveEnvironmentEnv?.(resolvedEnvironment);
+    if (envPlan) {
+      input.stepEnv = envPlan.resolved.stepEnv;
+      input.setupEnv = envPlan.resolved.setupEnv;
+      input.resolveMcpEnv = envPlan.resolveMcpEnv;
+      input.fakeAiProviderOverride = envPlan.fakeAiProviderOverride;
+      input.onSecretValues?.(envPlan.resolved.secretValues);
+    }
+    input.currentExecutionInfo =
+      input.resolveCurrentExecutionInfo?.(resolvedEnvironment) ??
+      input.currentExecutionInfo;
+    input.fakeAiProviderOverride ??=
+      input.resolveFakeAiProviderOverride?.(resolvedEnvironment);
+    lifecycle("startup");
+    return {
+      resolvedEnvironment,
       workspacePath,
       workspaceFolder: "/workspaces/repo",
       resolvedBranch: "",
@@ -199,26 +259,19 @@ export function createRecordingOrchestrator(
       secretValues: [],
       cleanup: () => Promise.resolve(),
       ...overrides,
-    }),
-  );
-  return { launch };
+    };
+  });
+  return { launch, lifecycle };
 }
 
 export function createRoutingDeps(input: {
   workerClient: TaskRunWorkerClient;
   workspaceOrchestrator: { launch: ReturnType<typeof vi.fn> };
-  noWorkspaceOrchestrator?: { launch: ReturnType<typeof vi.fn> } | undefined;
 }): ProcessProjectWorkDeps {
   return {
     workerClient: input.workerClient,
     createRunTracker,
     runtimeEnvironmentOrchestrator: input.workspaceOrchestrator,
-    ...(input.noWorkspaceOrchestrator
-      ? {
-          noWorkspaceRuntimeEnvironmentOrchestrator:
-            input.noWorkspaceOrchestrator,
-        }
-      : {}),
     agentRunner: {
       promptAsync: vi.fn(() =>
         Promise.resolve({ sessionId: "agent-session-id" }),
@@ -236,5 +289,6 @@ export function createRoutingDeps(input: {
       log: vi.fn(),
       error: vi.fn(),
     },
+    mcpStartupGate: connectedMcpStartupGate,
   } satisfies ProcessProjectWorkDeps;
 }

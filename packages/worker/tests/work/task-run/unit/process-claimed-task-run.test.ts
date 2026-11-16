@@ -2,7 +2,7 @@ import { mkdtemp } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterAll, afterEach, describe, expect, test, vi } from "bun:test";
-import type { RepoConfig } from "@scarn/sdk/repo-config";
+import { resolveRepoConfig, type RepoConfig } from "@scarn/sdk/repo-config";
 import { startProcessClaimedTaskRun } from "../../../../src/work/task-run/application/process-claimed-task-run";
 import type { ProcessProjectWorkDeps } from "../../../../src/work/task-run/contracts/process-project-work-types";
 import {
@@ -11,6 +11,7 @@ import {
   createRunTracker,
   createWorkerClient,
   createWorkerContext,
+  hostEnvironment,
   projectId,
   requestedByUserId,
   runClaim,
@@ -172,7 +173,7 @@ describe("startProcessClaimedTaskRun", () => {
  * Routing coverage for `resolveRuntimeEnvironmentOrchestrator`. That helper is
  * module-private, so its behavior is exercised through the exported
  * `startProcessClaimedTaskRun` seam by varying the worker context's
- * `stepDefinition.executionMode` and asserting which orchestrator's `launch`
+ * `runtime.runtimeKind` and asserting which orchestrator's `launch`
  * ran (matching the existing test's fake-deps style).
  */
 describe("startProcessClaimedTaskRun runtime orchestrator routing", () => {
@@ -180,22 +181,21 @@ describe("startProcessClaimedTaskRun runtime orchestrator routing", () => {
     vi.restoreAllMocks();
   });
 
-  test("routes 'no_workspace' steps to the no-workspace orchestrator", async () => {
+  test("routes host steps to the shared orchestrator with a host target", async () => {
     const workspacePath = await mkdtemp(
       path.join(os.tmpdir(), "scarn-routing-nws-"),
     );
     const workspaceOrchestrator = createRecordingOrchestrator(workspacePath);
-    const noWorkspaceOrchestrator = createRecordingOrchestrator(workspacePath);
     const deps = createRoutingDeps({
-      workerClient: createWorkerClient("no_workspace"),
+      workerClient: createWorkerClient(hostEnvironment),
       workspaceOrchestrator,
-      noWorkspaceOrchestrator,
     });
 
     await runClaim(deps);
 
-    expect(noWorkspaceOrchestrator.launch).toHaveBeenCalledTimes(1);
-    expect(workspaceOrchestrator.launch).not.toHaveBeenCalled();
+    expect(workspaceOrchestrator.launch).toHaveBeenCalledWith(
+      expect.objectContaining({ environment: hostEnvironment }),
+    );
   });
 
   test("routes 'workspace' steps to the default orchestrator", async () => {
@@ -203,41 +203,50 @@ describe("startProcessClaimedTaskRun runtime orchestrator routing", () => {
       path.join(os.tmpdir(), "scarn-routing-ws-"),
     );
     const workspaceOrchestrator = createRecordingOrchestrator(workspacePath);
-    const noWorkspaceOrchestrator = createRecordingOrchestrator(workspacePath);
     const deps = createRoutingDeps({
-      workerClient: createWorkerClient("workspace"),
+      workerClient: createWorkerClient(null),
       workspaceOrchestrator,
-      noWorkspaceOrchestrator,
     });
 
     await runClaim(deps);
 
     expect(workspaceOrchestrator.launch).toHaveBeenCalledTimes(1);
-    expect(noWorkspaceOrchestrator.launch).not.toHaveBeenCalled();
+    expect(workspaceOrchestrator.launch).toHaveBeenCalledWith(
+      expect.objectContaining({ environment: null }),
+    );
   });
 
-  test("throws a clear error for 'no_workspace' when the orchestrator is not configured", async () => {
+  test("explicit managed runtime is not eligible for repo-default fallback", async () => {
+    const workspacePath = await mkdtemp(path.join(os.tmpdir(), "managed-"));
+    const workspaceOrchestrator = createRecordingOrchestrator(workspacePath);
+    const environment = {
+      kind: "inline",
+      runtime: { kind: "managed", id: "bun1" },
+    } as const;
+    const workerClient = createWorkerClient(environment);
+
+    await runClaim(createRoutingDeps({ workerClient, workspaceOrchestrator }));
+
+    expect(workspaceOrchestrator.launch).toHaveBeenCalledWith(
+      expect.objectContaining({ environment }),
+    );
+  });
+
+  test("host execution needs no separate no-workspace orchestrator", async () => {
     const workspacePath = await mkdtemp(
       path.join(os.tmpdir(), "scarn-routing-missing-"),
     );
     const workspaceOrchestrator = createRecordingOrchestrator(workspacePath);
     const deps = createRoutingDeps({
-      workerClient: createWorkerClient("no_workspace"),
+      workerClient: createWorkerClient(hostEnvironment),
       workspaceOrchestrator,
       // noWorkspaceRuntimeEnvironmentOrchestrator intentionally omitted.
     });
 
-    let caught: unknown;
-    try {
-      await runClaim(deps);
-    } catch (error) {
-      caught = error;
-    }
-    expect(caught).toBeInstanceOf(Error);
-    expect((caught as Error).message).toMatch(
-      /no_workspace execution mode but no/,
+    await runClaim(deps);
+    expect(workspaceOrchestrator.launch).toHaveBeenCalledWith(
+      expect.objectContaining({ environment: hostEnvironment }),
     );
-    expect(workspaceOrchestrator.launch).not.toHaveBeenCalled();
   });
 
   test.each<["agent"]>([["agent"]])(
@@ -247,9 +256,9 @@ describe("startProcessClaimedTaskRun runtime orchestrator routing", () => {
         path.join(os.tmpdir(), "scarn-routing-start-agent-"),
       );
       const workspaceOrchestrator = createRecordingOrchestrator(workspacePath);
-      const workerClient = createWorkerClient("workspace");
+      const workerClient = createWorkerClient(null);
       workerClient.getTaskRunWorkerContext = vi.fn(() =>
-        Promise.resolve(createWorkerContext("workspace", null, { kind })),
+        Promise.resolve(createWorkerContext(null, null, { kind })),
       );
       const deps = createRoutingDeps({ workerClient, workspaceOrchestrator });
 
@@ -268,66 +277,59 @@ describe("startProcessClaimedTaskRun runtime orchestrator routing", () => {
         path.join(os.tmpdir(), "scarn-routing-config-"),
       );
       const workspaceOrchestrator = createRecordingOrchestrator(workspacePath);
-      const workerClient = createWorkerClient("workspace");
-      workerClient.getTaskRunWorkerContext = vi.fn(() =>
-        Promise.resolve(
-          createWorkerContext("workspace", null, { devcontainerConfigPath }),
-        ),
-      );
+      const environment = {
+        kind: "inline",
+        runtime: {
+          kind: "devcontainer",
+          ...(devcontainerConfigPath ? { config: devcontainerConfigPath } : {}),
+        },
+      } as const;
+      const workerClient = createWorkerClient(environment);
       const deps = createRoutingDeps({ workerClient, workspaceOrchestrator });
 
       await runClaim(deps);
 
       expect(workspaceOrchestrator.launch).toHaveBeenCalledWith(
-        expect.objectContaining({ devcontainerConfigPath }),
+        expect.objectContaining({ environment }),
       );
     },
   );
 
-  test.each<[RepoConfig, "workspace" | "no_workspace"]>([
-    [{ mode: "readOnly", gitCredentials: "none" }, "workspace"],
+  test.each<[RepoConfig, "devcontainer" | "host" | null]>([
+    [resolveRepoConfig({ mode: "readOnly", gitCredentials: "none" }), null],
     [
-      {
-        mode: "readWrite",
-        message: null,
-        onPushFailure: "fail",
-        gitCredentials: "none",
-      },
-      "workspace",
+      resolveRepoConfig({ mode: "readWrite", gitCredentials: "none" }),
+      "devcontainer",
     ],
     [
-      {
+      resolveRepoConfig({
         mode: "readWrite",
         message: "fix: {{result.summary}}",
         onPushFailure: "warn",
         gitCredentials: "none",
-      },
-      "workspace",
+      }),
+      "host",
     ],
-    [{ mode: "none" }, "no_workspace"],
+    [resolveRepoConfig({ mode: "readOnly", gitCredentials: "none" }), "host"],
   ])(
     "hands the step's resolved repo (%p) to the %s launch unchanged, with the step input",
-    async (repo, executionMode) => {
+    async (repo, runtimeKind) => {
       const workspacePath = await mkdtemp(
         path.join(os.tmpdir(), "scarn-routing-repo-"),
       );
       const orchestrator = createRecordingOrchestrator(workspacePath);
-      const unusedOrchestrator = createRecordingOrchestrator(workspacePath);
-      const workerClient = createWorkerClient(executionMode);
+      const environment =
+        runtimeKind === null
+          ? null
+          : ({ kind: "inline", runtime: { kind: runtimeKind } } as const);
+      const workerClient = createWorkerClient(environment);
       workerClient.getTaskRunWorkerContext = vi.fn(() =>
-        Promise.resolve(createWorkerContext(executionMode, null, { repo })),
+        Promise.resolve(createWorkerContext(environment, null, { repo })),
       );
-      const deps =
-        executionMode === "workspace"
-          ? createRoutingDeps({
-              workerClient,
-              workspaceOrchestrator: orchestrator,
-            })
-          : createRoutingDeps({
-              workerClient,
-              workspaceOrchestrator: unusedOrchestrator,
-              noWorkspaceOrchestrator: orchestrator,
-            });
+      const deps = createRoutingDeps({
+        workerClient,
+        workspaceOrchestrator: orchestrator,
+      });
 
       await runClaim(deps);
 
@@ -342,32 +344,35 @@ describe("startProcessClaimedTaskRun runtime orchestrator routing", () => {
 });
 
 describe("startProcessClaimedTaskRun step env", () => {
-  test("fails before launch, naming every missing required variable and no values", async () => {
+  test("fails after resolution but before startup, naming every missing required variable and no values", async () => {
     const workspaceOrchestrator = createRecordingOrchestrator(
       await mkdtemp(path.join(os.tmpdir(), "scarn-claimed-step-env-")),
     );
     const workerClient = createWorkerClient();
     workerClient.getTaskRunWorkerContext = vi.fn(() =>
       Promise.resolve(
-        createWorkerContext("workspace", null, {
-          envJson: [
-            {
-              name: "WAREHOUSE_TOKEN",
-              source: "inherit",
-              from: "WAREHOUSE_TOKEN",
-              secret: true,
-              optional: false,
-              applies: "agent",
-            },
-            {
-              name: "DB_PASSWORD",
-              source: "inherit",
-              from: "STAGING_DB_PASSWORD",
-              secret: true,
-              optional: false,
-              applies: "agent",
-            },
-          ],
+        createWorkerContext(null, null, {
+          environment: {
+            kind: "inline",
+            envJson: [
+              {
+                name: "WAREHOUSE_TOKEN",
+                source: "inherit",
+                from: "WAREHOUSE_TOKEN",
+                secret: true,
+                optional: false,
+                applies: "agent",
+              },
+              {
+                name: "DB_PASSWORD",
+                source: "inherit",
+                from: "STAGING_DB_PASSWORD",
+                secret: true,
+                optional: false,
+                applies: "agent",
+              },
+            ],
+          },
         }),
       ),
     );
@@ -391,7 +396,11 @@ describe("startProcessClaimedTaskRun step env", () => {
     expect(message).toContain("WAREHOUSE_TOKEN");
     expect(message).toContain("STAGING_DB_PASSWORD");
     expect(message).not.toContain("should-not-appear-anywhere");
-    expect(workspaceOrchestrator.launch).not.toHaveBeenCalled();
+    expect(workspaceOrchestrator.launch).toHaveBeenCalledTimes(1);
+    expect(workspaceOrchestrator.lifecycle.mock.calls).toEqual([
+      ["cloned"],
+      ["resolved"],
+    ]);
     // eslint-disable-next-line @typescript-eslint/unbound-method -- reading through a plain object, not a class instance
     expect(tracker.markFailed).toHaveBeenCalledWith(
       expect.objectContaining({ failureReason: message }),

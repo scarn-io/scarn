@@ -35,7 +35,6 @@ export function settingsFor(baseUrl: string): ProjectSettingsInput {
     projectId: FAKE_PROJECT_ID,
     projectRef: "acme/app",
     repoDir: "/repos/app",
-    sourceBranch: "main",
     baseUrl,
     addedByUserId: "user-1",
     concurrency: 2,
@@ -216,8 +215,6 @@ export function projectDeps(baseUrl: string = BASE_URL): ProjectSettingsDeps {
         projectRef: "acme/app",
         projectId: FAKE_PROJECT_ID,
         repoDir: "/repos/app",
-        sourceBranch: "main",
-        sourceBranchWarning: undefined,
       }),
     resolveUserId: () => Promise.resolve("user-1"),
   };
@@ -229,5 +226,4 @@ export const addArguments: AddProjectArguments = {
   concurrency: 2,
   preserveRuntimeOnComplete: false,
   workItemId: undefined,
-  sourceBranch: undefined,
 };

@@ -9,7 +9,7 @@ import { executeCodeStep } from "./execute-code-step";
 import type {
   ProcessProjectWorkDeps,
   ProjectWorkLogger,
-  TaskRuntimeEnvironment,
+  LaunchedRuntime,
   TaskRunWorkerContext,
   WorkReporter,
 } from "../contracts/process-project-work-types";
@@ -19,7 +19,7 @@ export async function runCodeStepBranch(input: {
   logger: ProjectWorkLogger;
   reporter: WorkReporter;
   workerContext: TaskRunWorkerContext;
-  environment: TaskRuntimeEnvironment;
+  environment: LaunchedRuntime;
   taskRunId: string;
   localRuntimeSessionId: string;
   stepEnv: Readonly<Record<string, string>>;
@@ -32,10 +32,11 @@ export async function runCodeStepBranch(input: {
     );
   }
 
-  const { managedRuntime } = workerContext.runtime;
-  const runtime = managedRuntime
-    ? resolveManagedRuntime(managedRuntime).definition.runtime
-    : undefined;
+  const resolvedRuntime = environment.resolvedEnvironment.runtime;
+  const runtime =
+    resolvedRuntime.kind === "managed"
+      ? resolveManagedRuntime(resolvedRuntime.id).definition.runtime
+      : undefined;
 
   input.logger.log("step", "Starting code task", {
     taskRunId: input.taskRunId,

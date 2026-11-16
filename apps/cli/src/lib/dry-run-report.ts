@@ -102,10 +102,16 @@ export function renderDryRunReport(
       : "Scope: global-only — no step MCP overrides injected",
   );
 
+  if (report.baseBranchNote) {
+    reporter.warn(`Base branch: ${report.baseBranchNote}`);
+  }
+
   if (report.launchError) {
     reporter.error(`Environment failed to launch: ${report.launchError}`);
     return;
   }
+
+  if (report.runtime) reporter.info(`Runtime: ${report.runtime}`);
 
   if (report.containerHealth) {
     const line = `Container: ${report.containerHealth.status}`;
@@ -138,8 +144,20 @@ export function renderDryRunReport(
     reporter.warn(providerLine);
   }
 
+  for (const secret of report.secrets) {
+    const target =
+      secret.name === secret.secretName
+        ? secret.name
+        : `${secret.name} (${secret.secretName})`;
+    reporter.info(
+      secret.source === "worker"
+        ? `Secret ${target}: from .scarn/.env`
+        : `Secret ${target}: will request from Scarn`,
+    );
+  }
+
   if (report.mcpServers.length === 0) {
-    reporter.info("MCP servers: none configured");
+    reporter.info("MCP servers: no connectors or step MCP servers");
   } else {
     for (const server of report.mcpServers) {
       const line = `MCP ${server.name}: ${server.status}${

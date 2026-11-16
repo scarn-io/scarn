@@ -1,12 +1,23 @@
 /**
  * Step-declared MCP servers, in OpenCode v2's native `mcp.servers.<name>` entry
  * shape, plus a Scarn-only `ref` entry. The worker resolves refs before
- * passing the resulting `local`/`remote` entries to the runtime overlay, so
- * the `local`/`remote` schemas mirror the v2 config schema.
+ * passing the resulting `local`/`remote` entries to the runtime overlay.
+ * Authored entries carry optional Scarn-only `workerVars`; resolved entries
+ * never do. The native `local`/`remote` schemas mirror the v2 config schema.
  * `test/opencode-config-shapes.test.ts` fails typecheck if they drift from
  * `@opencode/client`'s generated `ConfigEntry` type.
  */
 import { z } from "zod";
+import { inheritEnvVarSchema, MAX_ENV_VARS } from "./env-vars";
+
+const workerVarsSchema = z
+  .array(inheritEnvVarSchema.safeExtend({ applies: z.literal("agent") }))
+  .max(MAX_ENV_VARS)
+  .refine(
+    (entries) =>
+      new Set(entries.map((entry) => entry.name)).size === entries.length,
+    { message: "MCP worker variable names must be unique" },
+  );
 
 const nonEmptyStringSchema = z.string().trim().min(1);
 
@@ -73,13 +84,14 @@ export const openCodeMcpRemoteConfigSchema = z
  * files (`.opencode/opencode.json`, `.mcp.json`, `.codex/config.toml`, …).
  * `name` defaults to the step's server key. The worker resolves refs into
  * `local`/`remote` entries before launch, applying the shared fields on top;
- * `name` is Scarn-only and dropped during resolution, so a ref never reaches
- * OpenCode.
+ * `name` and `workerVars` are Scarn-only and dropped during resolution, so a
+ * ref never reaches OpenCode.
  */
 export const openCodeMcpRefConfigSchema = z
   .object({
     type: z.literal("ref"),
     name: nonEmptyStringSchema.optional(),
+    workerVars: workerVarsSchema.optional(),
     ...sharedServerFields,
   })
   .strict();
@@ -96,8 +108,12 @@ export const openCodeResolvedMcpServersSchema = z.record(
 
 /** The authored/stored shape: `local`, `remote`, or an unresolved `ref`. */
 export const openCodeMcpServerConfigSchema = z.discriminatedUnion("type", [
-  openCodeMcpLocalConfigSchema,
-  openCodeMcpRemoteConfigSchema,
+  openCodeMcpLocalConfigSchema.extend({
+    workerVars: workerVarsSchema.optional(),
+  }),
+  openCodeMcpRemoteConfigSchema.extend({
+    workerVars: workerVarsSchema.optional(),
+  }),
   openCodeMcpRefConfigSchema,
 ]);
 

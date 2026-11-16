@@ -39,7 +39,6 @@ export function createSettings(
     projectId,
     projectRef: "acme/app",
     repoDir: "/repos/app",
-    sourceBranch: "main",
     baseUrl: "http://scarn.test",
     addedByUserId: "01966a2c-9494-7db5-aa46-0f8f5cbbe002",
     concurrency: null,

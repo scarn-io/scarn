@@ -65,8 +65,8 @@ type AnthropicMessage = {
   content: string | MessageContentBlock[];
 };
 
-/** A /messages request as the server received it. */
-export type FakeAiRecordedRequest = { messages: AnthropicMessage[] };
+/** A /messages request as the server received it, with the tools it offered. */
+export type FakeAiRecordedRequest = AnthropicRequest;
 
 type AnthropicRequest = {
   messages: AnthropicMessage[];
@@ -446,7 +446,7 @@ export class FakeAiServer {
         );
         return;
       }
-      this.recordedRequests.push({ messages: parsed.messages });
+      this.recordedRequests.push(parsed);
 
       const { toolName, toolArgs } =
         parseForcedToolCallFromMessages(parsed.messages) ?? this.forcedToolCall;

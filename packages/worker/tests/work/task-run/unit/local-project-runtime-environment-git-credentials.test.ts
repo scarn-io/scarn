@@ -23,6 +23,8 @@ const AUTO_REPO: RepoConfig = {
   message: null,
   onPushFailure: "fail",
   gitCredentials: "auto",
+  baseBranch: null,
+  workBranch: { kind: "create" },
 };
 
 describe("launch with gitCredentials", () => {
@@ -64,6 +66,7 @@ describe("launch with gitCredentials", () => {
       ...input,
       repo: AUTO_REPO,
       onSecretValues: (values) => {
+        log.push(`registerSecrets:${values.join(",")}`);
         secrets.push(...values);
       },
     });
@@ -79,8 +82,19 @@ describe("launch with gitCredentials", () => {
       claimToken: input.claimToken,
       repoGitUrl: input.gitUrl,
     });
+    const registered = log.indexOf(
+      "registerSecrets:https://api.example.com,secret-token,fake-credential-secret",
+    );
+    expect(registered).toBeGreaterThan(-1);
+    expect(registered).toBeLessThan(log.indexOf("launchDevcontainer"));
+    expect(registered).toBeLessThan(log.indexOf("startOpencode"));
     opened?.onSecretValues(["relay-password"]);
-    expect(secrets).toEqual(["relay-password"]);
+    expect(secrets).toEqual([
+      "https://api.example.com",
+      "secret-token",
+      "fake-credential-secret",
+      "relay-password",
+    ]);
     expect(deps.gitCredentialRelay.stopCalls).toBe(0);
 
     await environment.cleanup();

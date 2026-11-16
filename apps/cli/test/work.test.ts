@@ -1,11 +1,9 @@
 /**
- * Black-box CLI tests for `scarn work`'s source-branch resolution/guard
- * (#112): the CLI resolves the user's current local branch (or an explicit
- * `--source-branch` override) and verifies it against `origin` BEFORE any
- * network/auth call, so these tests never need a real signed-in session —
- * they assert on the fail-fast branch-guard message itself, or that the
- * command proceeds past it to the (expected, pre-existing) "not signed in"
- * failure. Mirrors `init.test.ts`'s runCli + fake-HOME style.
+ * Black-box CLI tests for `scarn work`'s checkout guard: it must run inside a
+ * git repository, and it no longer resolves or verifies a source branch, so
+ * any checkout (even an unpushed branch) proceeds to the (expected,
+ * pre-existing) "not signed in" failure. Mirrors `init.test.ts`'s runCli +
+ * fake-HOME style.
  */
 import { describe, expect, setDefaultTimeout, test } from "bun:test";
 import { execFileSync } from "node:child_process";
@@ -68,13 +66,8 @@ function buildRepoWithOrigin(): {
   return { root, workspace, remote };
 }
 
-describe("scarn work — source branch", () => {
-  test("--help documents --source-branch", async () => {
-    const result = await runCli(["work", "--help"]);
-    expect(result.stdout).toContain("--source-branch");
-  });
-
-  test("--help no longer offers the foreground loop's flags", async () => {
+describe("scarn work", () => {
+  test("--help no longer offers the foreground loop's flags or --source-branch", async () => {
     const result = await runCli(["work", "--help"]);
     for (const flag of [
       "--once",
@@ -84,38 +77,16 @@ describe("scarn work — source branch", () => {
       "--max-poll-interval-ms",
       "--connected-max-poll-interval-ms",
       "--leaseDurationSeconds",
+      "--source-branch",
     ]) {
       expect(result.stdout).not.toContain(flag);
     }
   });
 
-  test("fails fast when the current branch has never been pushed to origin", async () => {
+  test("does not check the current branch against origin", async () => {
     const { root, workspace } = buildRepoWithOrigin();
     try {
       git(workspace, ["checkout", "-b", "feature-never-pushed"]);
-      const home = mkdtempSync(resolve(tmpdir(), "scarn-work-home-"));
-      try {
-        const result = await runWork([], { cwd: workspace, home });
-        expect(result.exitCode).toBe(1);
-        expect(
-          hasReporterLine(
-            result.stderr,
-            'Current branch "feature-never-pushed" does not exist on origin',
-          ),
-        ).toBe(true);
-        // Never got far enough to hit the (pre-existing) auth check.
-        expect(hasReporterLine(result.stderr, "Not signed in")).toBe(false);
-      } finally {
-        rmSync(home, { recursive: true, force: true });
-      }
-    } finally {
-      rmSync(root, { recursive: true, force: true });
-    }
-  });
-
-  test("proceeds past the branch guard (to the pre-existing auth failure) when the current branch is in sync with origin", async () => {
-    const { root, workspace } = buildRepoWithOrigin();
-    try {
       const home = mkdtempSync(resolve(tmpdir(), "scarn-work-home-"));
       try {
         const result = await runWork([], { cwd: workspace, home });
@@ -144,30 +115,6 @@ describe("scarn work — source branch", () => {
     } finally {
       rmSync(notARepo, { recursive: true, force: true });
       rmSync(home, { recursive: true, force: true });
-    }
-  });
-
-  test("--source-branch overrides the current branch and only requires existence on origin", async () => {
-    const { root, workspace } = buildRepoWithOrigin();
-    try {
-      const home = mkdtempSync(resolve(tmpdir(), "scarn-work-home-"));
-      try {
-        const result = await runWork(["--source-branch", "ghost-branch"], {
-          cwd: workspace,
-          home,
-        });
-        expect(result.exitCode).toBe(1);
-        expect(
-          hasReporterLine(
-            result.stderr,
-            'Branch "ghost-branch" (--source-branch) does not exist on origin',
-          ),
-        ).toBe(true);
-      } finally {
-        rmSync(home, { recursive: true, force: true });
-      }
-    } finally {
-      rmSync(root, { recursive: true, force: true });
     }
   });
 });

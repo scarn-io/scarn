@@ -4,7 +4,7 @@ import { stepSpecWithOverrides } from "./definition-spec-fixtures";
 
 /**
  * `validateDefinitionSpecs — repo`: the `repo` check runs `repoConfigInputSchema`
- * over hand-built specs that bypass `Repo`, and enforces the runtime pairing.
+ * over hand-built specs that bypass `Repo`, independently of runtime.
  */
 describe("validateDefinitionSpecs — repo", () => {
   const validate = (steps: ReturnType<typeof stepSpecWithOverrides>[]) =>
@@ -14,37 +14,55 @@ describe("validateDefinitionSpecs — repo", () => {
     expect(
       validate([
         stepSpecWithOverrides("rw", {
-          executionMode: "workspace",
+          environment: {
+            kind: "inline",
+            runtime: { kind: "devcontainer" },
+            envJson: null,
+          },
           repo: { mode: "readWrite", message: "fix: {{result.summary}}" },
         }),
         stepSpecWithOverrides("ro", {
-          executionMode: "workspace",
+          environment: {
+            kind: "inline",
+            runtime: { kind: "devcontainer" },
+            envJson: null,
+          },
           repo: { mode: "readOnly" },
         }),
         stepSpecWithOverrides("host", {
-          executionMode: "no_workspace",
-          repo: { mode: "none" },
+          environment: {
+            kind: "inline",
+            runtime: { kind: "host" },
+            envJson: null,
+          },
+          repo: { mode: "readOnly", gitCredentials: "none" },
         }),
       ]),
     ).toEqual([]);
   });
 
-  test.concurrent("treats an omitted executionMode as a workspace", () => {
+  test.concurrent("validates repo shape with an omitted runtime", () => {
     expect(
       validate([stepSpecWithOverrides("s", { repo: { mode: "readOnly" } })]),
     ).toEqual([]);
     const issues = validate([
-      stepSpecWithOverrides("s", { repo: { mode: "none" } }),
+      stepSpecWithOverrides("s", { repo: { mode: "none" } as never }),
     ]);
     expect(issues).toHaveLength(1);
-    expect(issues[0]?.message).toContain('executionMode "workspace"');
+    expect(issues[0]?.check).toBe("repo");
   });
 
   test.concurrent("stays quiet for an omitted repo", () => {
     expect(
       validate([
         stepSpecWithOverrides("a"),
-        stepSpecWithOverrides("b", { executionMode: "no_workspace" }),
+        stepSpecWithOverrides("b", {
+          environment: {
+            kind: "inline",
+            runtime: { kind: "host" },
+            envJson: null,
+          },
+        }),
       ]),
     ).toEqual([]);
   });
@@ -60,45 +78,58 @@ describe("validateDefinitionSpecs — repo", () => {
   });
 
   test.each([
-    [{ mode: "readWrite" }, "readWrite"],
-    [{ mode: "readOnly" }, "readOnly"],
-  ] as const)("rejects %j on a no_workspace step", (repo, mode) => {
-    const issues = validate([
-      stepSpecWithOverrides("host-step", {
-        executionMode: "no_workspace",
-        repo,
-      }),
-    ]);
-    expect(issues).toHaveLength(1);
-    expect(issues[0]?.check).toBe("repo");
-    expect(issues[0]?.severity).toBe("error");
-    expect(issues[0]?.message).toContain('Step "host-step"');
-    expect(issues[0]?.message).toContain(`"${mode}"`);
-    expect(issues[0]?.message).toContain('"no_workspace"');
-    expect(issues[0]?.message).toContain("a host step has no clone");
+    { mode: "readWrite" },
+    { mode: "readOnly" },
+    { mode: "readOnly", gitCredentials: "none" },
+    {
+      mode: "readWrite",
+      message: "fix: {{result.summary}}",
+      onPushFailure: "warn",
+      gitCredentials: "none",
+    },
+  ] as const)("accepts %j on a host step", (repo) => {
+    expect(
+      validate([
+        stepSpecWithOverrides("host-step", {
+          environment: {
+            kind: "inline",
+            runtime: { kind: "host" },
+            envJson: null,
+          },
+          repo,
+        }),
+      ]),
+    ).toEqual([]);
   });
 
-  test.concurrent("rejects none on a workspace step", () => {
-    const issues = validate([
-      stepSpecWithOverrides("dev-step", {
-        executionMode: "workspace",
-        repo: { mode: "none" },
-      }),
-    ]);
-    expect(issues).toHaveLength(1);
-    expect(issues[0]?.check).toBe("repo");
-    expect(issues[0]?.severity).toBe("error");
-    expect(issues[0]?.message).toContain('Step "dev-step"');
-    expect(issues[0]?.message).toContain('"none"');
-    expect(issues[0]?.message).toContain('"workspace"');
-    expect(issues[0]?.message).toContain(
-      "a devcontainer step reads its config from the clone",
-    );
-  });
+  test.concurrent(
+    "rejects the removed none mode on a devcontainer step",
+    () => {
+      const issues = validate([
+        stepSpecWithOverrides("dev-step", {
+          environment: {
+            kind: "inline",
+            runtime: { kind: "devcontainer" },
+            envJson: null,
+          },
+          repo: { mode: "none" } as never,
+        }),
+      ]);
+      expect(issues).toHaveLength(1);
+      expect(issues[0]?.check).toBe("repo");
+      expect(issues[0]?.severity).toBe("error");
+      expect(issues[0]?.message).toContain('Step "dev-step"');
+      expect(issues[0]?.message).toContain("readOnly");
+      expect(issues[0]?.message).toContain("readWrite");
+    },
+  );
 
-  test.concurrent("rejects a code step with none (workspace)", () => {
+  test.concurrent("rejects a code step with the removed none mode", () => {
     const issues = validate([
-      stepSpecWithOverrides("code", { kind: "code", repo: { mode: "none" } }),
+      stepSpecWithOverrides("code", {
+        kind: "code",
+        repo: { mode: "none" } as never,
+      }),
     ]);
     expect(issues).toHaveLength(1);
     expect(issues[0]?.check).toBe("repo");
@@ -166,17 +197,18 @@ describe("validateDefinitionSpecs — repo", () => {
     },
   );
 
-  test.concurrent(
-    "reports a bad shape without also reporting the pairing",
-    () => {
-      const issues = validate([
-        stepSpecWithOverrides("both", {
-          executionMode: "no_workspace",
-          repo: { mode: "readWrite", message: "{{env.X}}" },
-        }),
-      ]);
-      expect(issues).toHaveLength(1);
-      expect(issues[0]?.message).toContain("tokens");
-    },
-  );
+  test.concurrent("still rejects an invalid message on a host step", () => {
+    const issues = validate([
+      stepSpecWithOverrides("both", {
+        environment: {
+          kind: "inline",
+          runtime: { kind: "host" },
+          envJson: null,
+        },
+        repo: { mode: "readWrite", message: "{{env.X}}" },
+      }),
+    ]);
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.message).toContain("tokens");
+  });
 });

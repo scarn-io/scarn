@@ -5,8 +5,16 @@ import { MANAGED_DEVCONTAINERS_DIR } from "../../../runtime/runtime-service/doma
 import {
   commitMessageUsesWorkItem,
   type RepoOnPushFailure,
+  type RepoWorkBranch,
 } from "@scarn/sdk/repo-config";
 import { startStopwatch } from "../../../lib/elapsed";
+import {
+  GitCommandError,
+  isNonFastForwardRejection,
+} from "../../../runtime/runtime-service/infra/git-failure";
+import { rethrowBranchFailure } from "./classify-branch-failure";
+import { RepoBranchInvalidError } from "../application/repo-branch-invalid-error";
+import type { BaseBranchSource } from "../contracts/environment-diagnostics";
 import { logWork } from "../application/work-logger";
 import type {
   CommitAndPushWorkBranchContext,
@@ -95,6 +103,10 @@ export type PrepareWorkBranchInput = {
   taskRunId: string;
   /** Optional prefix from the repo config; defaults to `scarn`. */
   branchPrefix?: string | null | undefined;
+  /** `create` (default) branches off the base; `base` commits onto it. */
+  workBranch?: RepoWorkBranch | undefined;
+  /** Which rule picked `baseWorkBranch`; `base` mode refuses the fallbacks. */
+  baseSource?: BaseBranchSource | undefined;
   /** Receives the info-level timing line, so it ships in the step log. */
   logger?: ProjectWorkLogger | undefined;
 };
@@ -102,7 +114,18 @@ export type PrepareWorkBranchInput = {
 export type PreparedWorkBranch = {
   workBranch: string;
   createdFromBranch: string;
+  /**
+   * The `<prefix>/<key>-<id>` branch submodules commit to. Equals `workBranch`
+   * in `create` mode; in `base` mode submodules still get their own branch.
+   */
+  submoduleWorkBranch: string;
 };
+
+/** Base sources a `WorkBranch.base()` step may commit onto. */
+const COMMITTABLE_BASE_SOURCES: readonly BaseBranchSource[] = [
+  "server",
+  "step",
+];
 
 /**
  * Put the workspace on the step's base branch right after clone and return it:
@@ -125,28 +148,59 @@ export async function checkoutBaseBranch(
 ): Promise<string> {
   if (!input.baseWorkBranch) return input.resolvedBranch;
 
-  await input.gitCommitPushService.checkoutBase({
-    workspacePath: input.workspacePath,
-    baseWorkBranch: input.baseWorkBranch,
-  });
+  try {
+    await input.gitCommitPushService.checkoutBase({
+      workspacePath: input.workspacePath,
+      baseWorkBranch: input.baseWorkBranch,
+    });
+  } catch (error) {
+    rethrowBranchFailure(error, input.baseWorkBranch);
+  }
   return input.baseWorkBranch;
 }
 
 /**
- * Check out the base (see {@link checkoutBaseBranch}) and create the step's
- * work branch off it.
+ * Check out the base (see {@link checkoutBaseBranch}), then:
+ *  - `create`: create the step's work branch off it.
+ *  - `base` (ADR 0010): commit onto the base itself, checked out as a local
+ *    branch tracking `origin/<base>`. Only a base the step or server named
+ *    explicitly qualifies; one from the worker, project or remote default
+ *    fails with {@link RepoBranchInvalidError} before anything is checked out.
  */
 export async function prepareWorkBranch(
   input: PrepareWorkBranchInput,
 ): Promise<PreparedWorkBranch> {
   const elapsed = startStopwatch();
-  const createdFromBranch = await checkoutBaseBranch(input);
-
-  const workBranch = buildWorkBranchName({
+  const submoduleWorkBranch = buildWorkBranchName({
     stepKey: input.stepKey,
     taskRunId: input.taskRunId,
     branchPrefix: input.branchPrefix,
   });
+
+  if (input.workBranch?.kind === "base") {
+    const source = input.baseSource ?? "remoteDefault";
+    if (!input.baseWorkBranch || !COMMITTABLE_BASE_SOURCES.includes(source)) {
+      throw new RepoBranchInvalidError(
+        `WorkBranch.base() needs an explicit baseBranch: the base ` +
+          `"${input.baseWorkBranch ?? input.resolvedBranch}" came from ` +
+          `${describeBaseSource(source)}, which a step may not commit onto`,
+      );
+    }
+    const base = await checkoutBaseBranch(input);
+    logWork("runtime", "Committing onto the base branch", {
+      workspacePath: input.workspacePath,
+      workBranch: base,
+    });
+    input.logger?.log("runtime", `work branch prepared in ${elapsed()}`);
+    return {
+      workBranch: base,
+      createdFromBranch: base,
+      submoduleWorkBranch,
+    };
+  }
+
+  const createdFromBranch = await checkoutBaseBranch(input);
+  const workBranch = submoduleWorkBranch;
 
   await input.gitCommitPushService.createBranch({
     workspacePath: input.workspacePath,
@@ -160,7 +214,21 @@ export async function prepareWorkBranch(
   });
   input.logger?.log("runtime", `work branch prepared in ${elapsed()}`);
 
-  return { workBranch, createdFromBranch };
+  return { workBranch, createdFromBranch, submoduleWorkBranch };
+}
+
+function describeBaseSource(source: BaseBranchSource): string {
+  switch (source) {
+    case "worker":
+      return "SCARN_BASE_WORK_BRANCH in .scarn/.env";
+    case "project":
+      return "baseWorkBranch in .scarn/scarn.jsonc";
+    case "remoteDefault":
+      return "the remote's default branch";
+    case "server":
+    case "step":
+      return source;
+  }
 }
 
 /**
@@ -182,24 +250,36 @@ type SubmoduleProcessingResult = {
 export class WorkBranchPushError extends Error {
   readonly workBranch: string;
   readonly submodulePath: string | null;
+  /** The remote branch moved past ours (non-fast-forward); never forced. */
+  readonly originMoved: boolean;
 
   constructor(input: {
     workBranch: string;
     submodulePath?: string | undefined;
     cause: unknown;
   }) {
+    const originMoved = isOriginMoved(input.cause);
     const reason =
       input.cause instanceof Error ? input.cause.message : String(input.cause);
     const target = input.submodulePath
       ? `submodule "${input.submodulePath}" work branch "${input.workBranch}"`
       : `work branch "${input.workBranch}"`;
-    super(`Failed to push ${target}: ${reason}`, {
-      cause: input.cause,
-    });
+    super(
+      `Failed to push ${target}: ${originMoved ? "origin moved; not forced. " : ""}${reason}`,
+      { cause: input.cause },
+    );
     this.name = "WorkBranchPushError";
     this.workBranch = input.workBranch;
     this.submodulePath = input.submodulePath ?? null;
+    this.originMoved = originMoved;
   }
+}
+
+// eslint-disable-next-line local/no-unknown-parameter-type -- narrows a caught failure
+function isOriginMoved(error: unknown): boolean {
+  return (
+    error instanceof GitCommandError && isNonFastForwardRejection(error.stderr)
+  );
 }
 
 /**
@@ -312,6 +392,8 @@ export function buildCommitAndPushWorkBranch(input: {
   submoduleService: SubmoduleService;
   workspacePath: string;
   workBranch: string;
+  /** The branch submodules commit to; defaults to `workBranch`. */
+  submoduleWorkBranch?: string | undefined;
   taskRunId: string;
   /** Commit message template; null or omitted means the default message. */
   message?: string | null | undefined;
@@ -357,7 +439,7 @@ export function buildCommitAndPushWorkBranch(input: {
       gitCommitPushService: input.gitCommitPushService,
       submoduleService: input.submoduleService,
       workspacePath: input.workspacePath,
-      workBranch: input.workBranch,
+      workBranch: input.submoduleWorkBranch ?? input.workBranch,
       message,
       onPushFailure,
     });
@@ -407,6 +489,7 @@ export function buildCommitAndPushWorkBranch(input: {
       }
       logWork("runtime", "Failed to push work branch (continuing)", {
         workBranch: input.workBranch,
+        originMoved: isOriginMoved(error),
         error: error instanceof Error ? error.message : String(error),
       });
       return { pushed: false };

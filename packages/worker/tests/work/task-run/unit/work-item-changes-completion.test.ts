@@ -29,6 +29,15 @@ function createStartedTask(workspacePath: string): StartedClaimedTask {
     claimToken: "claim-token",
     agentSessionId: "agent-session-id",
     environment: {
+      resolvedEnvironment: {
+        source: "repo-default",
+        runtime: {
+          kind: "devcontainer",
+          config: ".devcontainer/devcontainer.json",
+        },
+        envVars: [],
+        connectors: [],
+      },
       workspacePath,
       workspaceFolder: "/workspaces/repo",
       resolvedBranch: "main",
@@ -211,19 +220,19 @@ describe("current execution info for the work item tools", () => {
 
 describe("agentReachableBaseUrl", () => {
   test("points a devcontainer at the host for a loopback API", () => {
-    expect(agentReachableBaseUrl("http://localhost:3000", "workspace")).toBe(
+    expect(agentReachableBaseUrl("http://localhost:3000", null)).toBe(
       "http://host.docker.internal:3000",
     );
-    expect(agentReachableBaseUrl("http://127.0.0.1:3000/", "workspace")).toBe(
-      "http://host.docker.internal:3000",
-    );
+    expect(
+      agentReachableBaseUrl("http://127.0.0.1:3000/", "devcontainer"),
+    ).toBe("http://host.docker.internal:3000");
   });
 
   test("keeps a remote API and host runs as they are", () => {
-    expect(agentReachableBaseUrl("https://scarn.example", "workspace")).toBe(
+    expect(agentReachableBaseUrl("https://scarn.example", "managed")).toBe(
       "https://scarn.example",
     );
-    expect(agentReachableBaseUrl("http://localhost:3000", "no_workspace")).toBe(
+    expect(agentReachableBaseUrl("http://localhost:3000", "host")).toBe(
       "http://localhost:3000",
     );
   });

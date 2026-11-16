@@ -4,8 +4,7 @@
  * `findGitRoot` is exercised against plain directories/files on disk (no real
  * git needed) since it only has to recognize a `.git` entry, mirroring
  * `ensure-devcontainer.test.ts`'s style. `resolveGitRepository` additionally
- * shells out for the `origin` remote, so its tests use a real temp git repo,
- * mirroring `git-cli-source-branch-port.test.ts`'s style.
+ * shells out for the `origin` remote, so its tests use a real temp git repo.
  */
 import { execFile } from "node:child_process";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
@@ -117,9 +116,8 @@ describe("findGitRoot", () => {
 
 describe("resolveGitRepository", () => {
   // Not `concurrentTest`: each test needs its own isolated tmp root, and
-  // `beforeEach`/`afterEach` here share mutable `root`/`repo` bindings the
-  // same way `git-cli-source-branch-port.test.ts` does, so tests run in
-  // sequence rather than racing each other's setup/teardown.
+  // `beforeEach`/`afterEach` here share mutable `root`/`repo` bindings, so
+  // tests run in sequence rather than racing each other's setup/teardown.
   let root: string;
   let repo: string;
 

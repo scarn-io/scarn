@@ -165,12 +165,11 @@ describe("ProjectWorker", () => {
     await harness.finish();
   });
 
-  test("asks for a restart when the repo directory, branch or runtime setting changes", () => {
+  test("asks for a restart when the repo directory or runtime setting changes", () => {
     const harness = createHarness();
 
     for (const change of [
       { repoDir: "/repos/other" },
-      { sourceBranch: "develop" },
       { preserveRuntime: true },
     ]) {
       expect(harness.worker.updateSettings(createSettings(change))).toBe(

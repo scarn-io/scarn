@@ -235,8 +235,26 @@ describe("FakeAiServer — final text", () => {
     const port = await server.start();
     await postMessages(port, [{ role: "user", content: "Do the task." }]);
 
-    expect(server.requests).toEqual([
-      { messages: [{ role: "user", content: "Do the task." }] },
+    expect(server.requests.map((request) => request.messages)).toEqual([
+      [{ role: "user", content: "Do the task." }],
+    ]);
+  });
+
+  test("records the tools each request offers", async () => {
+    server = new FakeAiServer({ initialToolUseDelayMs: 0 });
+    const port = await server.start();
+    await fetch(`http://127.0.0.1:${String(port)}/messages`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        messages: [{ role: "user", content: "Do the task." }],
+        tools: [{ name: "e2e-fake_seen_abc" }],
+        stream: false,
+      }),
+    });
+
+    expect(server.requests[0]?.tools?.map((tool) => tool.name)).toEqual([
+      "e2e-fake_seen_abc",
     ]);
   });
 });

@@ -18,7 +18,6 @@ export type WorkerProjectSettings = {
   projectId: string;
   projectRef: string;
   repoDir: string;
-  sourceBranch: string;
   baseUrl: string;
   addedByUserId: string;
   concurrency: number | null;

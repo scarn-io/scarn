@@ -1,19 +1,14 @@
-import { devcontainerConfigPathSchema } from "../../devcontainer-config-path";
 import {
-  isManagedRuntimeId,
-  MANAGED_RUNTIME_IDS,
-} from "../../managed-runtimes";
+  environmentNameSchema,
+  environmentRuntimeSchema,
+} from "../../environment";
+import { devcontainerConfigPathSchema } from "../../devcontainer-config-path";
 import type { StepDefinitionSpec } from "../steps/define-step";
 import type { DefinitionValidationIssue } from "./validation-issue";
 
 /**
- * Check: a step's `devcontainerConfigPath` satisfies the shared path schema and
- * is only set on a `workspace` step, a `code` step is not a host
- * (`no_workspace`) step, and a step's `managedRuntime` is valid (see
- * `checkManagedRuntime`). `Runtime` already makes host plus a config path
- * unrepresentable and guards the path at definition time, and `codeStep`'s
- * types exclude the host runtime; this catches hand-built or generated specs
- * that bypass them.
+ * Validates inline runtimes in hand-built or generated specs and rejects host
+ * execution for code steps, which require a container.
  */
 export function checkRuntime(
   steps: readonly StepDefinitionSpec[],
@@ -21,75 +16,51 @@ export function checkRuntime(
   const issues: DefinitionValidationIssue[] = [];
 
   for (const step of steps) {
-    if (step.kind === "code" && step.executionMode === "no_workspace") {
+    if (step.environment?.kind === "named") {
+      const result = environmentNameSchema.safeParse(step.environment.name);
+      if (!result.success) {
+        for (const issue of result.error.issues) {
+          issues.push({
+            check: "runtime",
+            severity: "error",
+            message: `Step "${step.key}" environment.name: ${issue.message}`,
+          });
+        }
+      }
+      continue;
+    }
+    if (step.environment?.kind !== "inline") continue;
+    const runtime = step.environment.runtime;
+    if (runtime === undefined) continue;
+    if (runtime.kind !== "devcontainer" && "config" in runtime) {
+      const config = devcontainerConfigPathSchema.safeParse(runtime.config);
+      if (!config.success) {
+        for (const issue of config.error.issues) {
+          issues.push({
+            check: "runtime",
+            severity: "error",
+            message: `Step "${step.key}" environment.runtime.config: ${issue.message}`,
+          });
+        }
+      }
+    }
+    if (step.kind === "code" && runtime.kind === "host") {
       issues.push({
         check: "runtime",
         severity: "error",
-        message: `Step "${step.key}": code steps run repo code and need a workspace, so Runtime.host() (executionMode "no_workspace") is not supported for codeStep. Use Runtime.managed.<id>() or Runtime.devcontainer(), or drop the runtime.`,
+        message: `Step "${step.key}": code steps need a container, so Runtime.host() is not supported for codeStep. Use Runtime.managed.<id>() or Runtime.devcontainer(), or drop the runtime.`,
       });
     }
-
-    issues.push(...checkManagedRuntime(step));
-
-    if (step.devcontainerConfigPath == null) continue;
-    const where = `Step "${step.key}" devcontainerConfigPath "${step.devcontainerConfigPath}"`;
-
-    if (step.executionMode === "no_workspace") {
-      issues.push({
-        check: "runtime",
-        severity: "error",
-        message: `${where}: a devcontainer config needs a workspace, but the step runs on the host (executionMode "no_workspace"). Use Runtime.devcontainer({ config }) or drop the config.`,
-      });
-    }
-
-    const result = devcontainerConfigPathSchema.safeParse(
-      step.devcontainerConfigPath,
-    );
+    const result = environmentRuntimeSchema.safeParse(runtime);
     if (result.success) continue;
-
     for (const issue of result.error.issues) {
       issues.push({
         check: "runtime",
         severity: "error",
-        message: `${where}: ${issue.message}`,
+        message: `Step "${step.key}" environment.runtime${issue.path.length ? `.${issue.path.map(String).join(".")}` : ""}: ${issue.message}`,
       });
     }
   }
 
   return issues;
-}
-
-/**
- * A step's `managedRuntime` is a known identifier and is only set on a step
- * that runs in a workspace with no devcontainer config.
- */
-function checkManagedRuntime(
-  step: StepDefinitionSpec,
-): DefinitionValidationIssue[] {
-  if (step.managedRuntime == null) return [];
-
-  const where = `Step "${step.key}" managedRuntime "${step.managedRuntime}"`;
-  const problems: string[] = [];
-
-  if (!isManagedRuntimeId(step.managedRuntime)) {
-    problems.push(
-      `unknown managed runtime; expected one of ${MANAGED_RUNTIME_IDS.join(", ")}`,
-    );
-  }
-  if (step.executionMode === "no_workspace") {
-    problems.push(
-      'a managed runtime needs a workspace, but the step runs on the host (executionMode "no_workspace")',
-    );
-  }
-  if (step.devcontainerConfigPath != null) {
-    problems.push(
-      "cannot be combined with devcontainerConfigPath. Use either Runtime.managed.<id>() or Runtime.devcontainer({ config })",
-    );
-  }
-
-  return problems.map((problem) => ({
-    check: "runtime",
-    severity: "error",
-    message: `${where}: ${problem}.`,
-  }));
 }

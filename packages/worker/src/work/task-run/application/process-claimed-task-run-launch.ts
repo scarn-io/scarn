@@ -11,6 +11,7 @@ import type {
   RepoContextLaunchInput,
   TaskRunWorkerClaim,
   TaskRunWorkerClient,
+  LaunchedRuntimeOrchestrator,
 } from "../contracts/process-project-work-types";
 import type { TaskRunWorkerContextContract } from "../contracts/task-run-contracts";
 import type { WorkReporter } from "../contracts/work-reporter";
@@ -27,27 +28,6 @@ export async function fetchWorkerContext(
   });
 }
 
-/**
- * Select the runtime orchestrator for the step's execution mode. `no_workspace`
- * steps run OpenCode directly on the host (no clone, no devcontainer) via the
- * dedicated orchestrator; everything else uses the default workspace path.
- */
-function resolveRuntimeEnvironmentOrchestrator(
-  deps: ProcessProjectWorkDeps,
-  executionMode: "workspace" | "no_workspace",
-) {
-  if (executionMode === "no_workspace") {
-    if (!deps.noWorkspaceRuntimeEnvironmentOrchestrator) {
-      throw new Error(
-        "Step requires no_workspace execution mode but no " +
-          "noWorkspaceRuntimeEnvironmentOrchestrator is configured.",
-      );
-    }
-    return deps.noWorkspaceRuntimeEnvironmentOrchestrator;
-  }
-  return deps.runtimeEnvironmentOrchestrator;
-}
-
 const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
 
 /**
@@ -57,9 +37,9 @@ const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
  */
 export function agentReachableBaseUrl(
   baseUrl: string,
-  executionMode: "workspace" | "no_workspace",
+  runtimeKind: "host" | "devcontainer" | "managed" | null,
 ): string {
-  if (executionMode === "no_workspace") return baseUrl;
+  if (runtimeKind === "host") return baseUrl;
   const url = new URL(baseUrl);
   if (!LOOPBACK_HOSTS.has(url.hostname)) return baseUrl;
   url.hostname = "host.docker.internal";
@@ -69,23 +49,22 @@ export function agentReachableBaseUrl(
 export async function launchRuntimeEnvironment(
   deps: ProcessProjectWorkDeps,
   input: {
-    /** See `TaskRuntimeEnvironmentOrchestrator.launch`'s field of the same name. */
+    /** See `LaunchedRuntimeOrchestrator.launch`'s field of the same name. */
     startAgent: boolean;
     /** The run's claim token; the agent's live work item reads carry it. */
     claimToken: string;
-    /** See `TaskRuntimeEnvironmentOrchestrator.launch`'s field of the same name. */
+    /** See `LaunchedRuntimeOrchestrator.launch`'s field of the same name. */
     onSecretValues?: ((values: readonly string[]) => void) | undefined;
     localRuntimeSessionId: UuidV7;
     workerContext: Awaited<ReturnType<typeof fetchWorkerContext>>;
     requestedByUserId: UuidV7;
     reporter: WorkReporter;
     taskRunId: string;
-    sourceBranch?: string | null | undefined;
-    /** See `TaskRuntimeEnvironmentOrchestrator.launch`'s field of the same name. */
+    /** See `LaunchedRuntimeOrchestrator.launch`'s field of the same name. */
     localEnvVars?: Readonly<Record<string, string>> | undefined;
     onDevcontainerLogLine?:
       ((line: string, level: "info" | "warn" | "error") => void) | undefined;
-    /** See `TaskRuntimeEnvironmentOrchestrator.launch`'s field of the same name. */
+    /** See `LaunchedRuntimeOrchestrator.launch`'s field of the same name. */
     onAgentLogReady?:
       | ((log: {
           logDirectory: string;
@@ -93,36 +72,50 @@ export async function launchRuntimeEnvironment(
           secretValues: readonly string[];
         }) => void)
       | undefined;
-    /** See `TaskRuntimeEnvironmentOrchestrator.launch`'s field of the same name. */
+    /** See `LaunchedRuntimeOrchestrator.launch`'s field of the same name. */
     fakeAiProviderOverride?: { baseUrl: string } | undefined;
-    /** See `TaskRuntimeEnvironmentOrchestrator.launch`'s field of the same name. */
+    /** See `LaunchedRuntimeOrchestrator.launch`'s field of the same name. */
     stepEnv?: Readonly<Record<string, string>> | undefined;
-    /** See `TaskRuntimeEnvironmentOrchestrator.launch`'s field of the same name. */
+    /** See `LaunchedRuntimeOrchestrator.launch`'s field of the same name. */
     setupEnv?: Readonly<Record<string, string>> | undefined;
-    /** See `TaskRuntimeEnvironmentOrchestrator.launch`'s field of the same name. */
+    /** See `LaunchedRuntimeOrchestrator.launch`'s field of the same name. */
     resolveMcpEnv?:
       ((refs: readonly McpEnvRef[]) => ResolvedStepEnv) | undefined;
-    /** See `TaskRuntimeEnvironmentOrchestrator.launch`'s field of the same name. */
+    resolveEnvironmentEnv?: Parameters<
+      LaunchedRuntimeOrchestrator["launch"]
+    >[0]["resolveEnvironmentEnv"];
+    /** See `LaunchedRuntimeOrchestrator.launch`'s field of the same name. */
     preserveRuntimeOnFailure?: boolean | undefined;
   },
 ) {
-  const { executionMode } = input.workerContext.runtime;
-  if (!input.startAgent && executionMode === "no_workspace") {
-    throw new Error(
-      `Step "${input.workerContext.task.key}" does not use an agent but has execution mode no_workspace; no_workspace steps run OpenCode on the host and require an agent.`,
-    );
-  }
   const repoContext = buildRepoContextLaunchInput(deps.workerClient, input);
-  if (repoContext && executionMode === "no_workspace") {
-    throw new Error(
-      "A conversation run needs a workspace to check out the repository; execution mode no_workspace is not supported.",
-    );
-  }
-  const orchestrator = resolveRuntimeEnvironmentOrchestrator(
-    deps,
-    executionMode,
-  );
-  return await orchestrator.launch({
+  return await deps.runtimeEnvironmentOrchestrator.launch({
+    environment: input.workerContext.runtime.environment,
+    taskKind: input.workerContext.task.kind,
+    resolveEnvironmentEnv: input.resolveEnvironmentEnv,
+    resolveCurrentExecutionInfo: (environment) => ({
+      taskRunId: input.workerContext.task.id,
+      resultSchemaJson: input.workerContext.task.resultSchemaJson,
+      turnsRemaining: input.workerContext.task.turnsRemaining ?? null,
+      workItemId: input.workerContext.task.workItemId,
+      grants: input.workerContext.task.grants,
+      api: deps.workerClient.apiBaseUrl
+        ? {
+            baseUrl: agentReachableBaseUrl(
+              deps.workerClient.apiBaseUrl,
+              environment.runtime.kind,
+            ),
+            claimToken: input.claimToken,
+          }
+        : undefined,
+      workItemLinks:
+        deps.workerClient.apiBaseUrl && input.workerContext.projectPath
+          ? {
+              appBaseUrl: deps.workerClient.apiBaseUrl,
+              projectPath: input.workerContext.projectPath,
+            }
+          : undefined,
+    }),
     startAgent: input.startAgent,
     sessionId: input.localRuntimeSessionId,
     projectId: parseUuidV7(input.workerContext.projectId),
@@ -133,7 +126,6 @@ export async function launchRuntimeEnvironment(
     baseWorkBranch: repoContext
       ? null
       : resolveBaseWorkBranch(input.workerContext.baseWorkBranch),
-    sourceBranch: repoContext ? null : input.sourceBranch,
     localEnvVars: input.localEnvVars,
     repoContext,
     stepKey: input.workerContext.task.key,
@@ -157,7 +149,7 @@ export async function launchRuntimeEnvironment(
         ? {
             baseUrl: agentReachableBaseUrl(
               deps.workerClient.apiBaseUrl,
-              executionMode,
+              "host",
             ),
             claimToken: input.claimToken,
           }
@@ -179,8 +171,6 @@ export async function launchRuntimeEnvironment(
     setupEnv: input.setupEnv,
     ...(input.resolveMcpEnv ? { resolveMcpEnv: input.resolveMcpEnv } : {}),
     preserveRuntimeOnFailure: input.preserveRuntimeOnFailure,
-    devcontainerConfigPath: input.workerContext.runtime.devcontainerConfigPath,
-    managedRuntime: input.workerContext.runtime.managedRuntime,
     repo: input.workerContext.runtime.repo,
     stepInputJson: input.workerContext.task.inputJson,
     loadCommitWorkItem: buildLoadCommitWorkItem(deps, input),

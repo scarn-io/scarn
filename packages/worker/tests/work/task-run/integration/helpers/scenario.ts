@@ -1,5 +1,10 @@
-import { resolveRepoConfig, type RepoConfigInput } from "@scarn/sdk/repo-config";
+import {
+  resolveRepoConfig,
+  type RepoConfigInput,
+} from "@scarn/sdk/repo-config";
 import type { UuidV7 } from "../../../../../src/common/contracts/uuid-v7";
+import type { ManagedRuntimeId } from "@scarn/sdk/managed-runtimes";
+import type { ResolvedEnvironmentRef } from "@scarn/sdk/environment";
 import type { TaskRunWorkerContextContract } from "../../../../../src/work/task-run/contracts/task-run-contracts";
 
 /**
@@ -43,8 +48,9 @@ export function buildSingleStepScenario(input: {
   findings: unknown;
   /** Repo-relative devcontainer config the step selects; `null` auto-detects. */
   devcontainerConfigPath?: string | null;
-  /** The managed runtime identifier a code step runs in; `null` is not managed. */
+  /** Includes deliberately invalid ids for runtime-validation regressions. */
   managedRuntime?: string | null;
+  environment?: ResolvedEnvironmentRef;
   /** The step's repo access, resolved for a workspace step; defaults to read-write. */
   repo?: RepoConfigInput;
   /** The task's additional input (the `{{input.…}}` token source). */
@@ -84,11 +90,27 @@ export function buildSingleStepScenario(input: {
       resultSchemaJson,
     },
     runtime: {
-      executionMode: "workspace",
-      devcontainerConfigPath: input.devcontainerConfigPath ?? null,
-      managedRuntime: input.managedRuntime ?? null,
-      repo: resolveRepoConfig("workspace", input.repo),
-      envJson: null,
+      environment:
+        input.environment !== undefined
+          ? input.environment
+          : input.managedRuntime
+            ? {
+                kind: "inline",
+                runtime: {
+                  kind: "managed",
+                  id: input.managedRuntime as ManagedRuntimeId,
+                },
+              }
+            : input.devcontainerConfigPath
+              ? {
+                  kind: "inline",
+                  runtime: {
+                    kind: "devcontainer",
+                    config: input.devcontainerConfigPath,
+                  },
+                }
+              : null,
+      repo: resolveRepoConfig(input.repo),
       healthChecksJson: null,
       opencodeMcpJson: null,
     },

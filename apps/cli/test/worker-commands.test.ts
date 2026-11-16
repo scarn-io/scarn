@@ -117,7 +117,6 @@ class FakeSupervisor implements ControlSupervisor {
             projectId: FAKE_PROJECT_ID,
             projectRef: "acme/app",
             repoDir: "/repos/app",
-            sourceBranch: "main",
             baseUrl: "https://scarn.test",
             addedByUserId: "user-1",
             concurrency: 2,

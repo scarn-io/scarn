@@ -91,7 +91,14 @@ export type EnvInherit<
   readonly applies: EnvVarApplies;
 };
 
-export type EnvEntry = string | EnvValue | EnvInherit;
+/** A project secret saved in Scarn, referenced by name. Always masked. */
+export type EnvSecret = {
+  readonly kind: "secret";
+  readonly secretName: string;
+  readonly applies: EnvVarApplies;
+};
+
+export type EnvEntry = string | EnvValue | EnvInherit | EnvSecret;
 export type EnvRecord = Record<string, EnvEntry>;
 
 /** Runs once at definition time, against the same input proxy `agentPrompt` uses. */
@@ -139,24 +146,36 @@ export type PromptEnv<TEnv extends EnvRecord> = {
 };
 
 /**
- * The prompt `env` type for a step: strict (`PromptEnv`) once
- * `environment.vars` is declared, today's loose record otherwise. Undeclared
- * `vars` leaves `TEnv` at its `EnvRecord` default, whose index signature is the
- * marker.
+ * The prompt `env` type for a step: a string record for an environment given
+ * by name, strict (`PromptEnv`) for an environment handle or once inline
+ * `environment.vars` is declared, and an optional string record otherwise.
+ * Undeclared `vars` leaves `TEnv` at its `EnvRecord` default, whose index
+ * signature is the marker; a handle typed as plain `EnvironmentHandle` (vars
+ * unknown) gets the string record. `TNamed` is the step's named environment,
+ * if any.
  */
-export type PromptEnvContext<TEnv extends EnvRecord> = string extends keyof TEnv
-  ? PromptInputProxy<Record<string, string | undefined>>
-  : PromptEnv<TEnv>;
+export type PromptEnvContext<
+  TEnv extends EnvRecord,
+  TNamed extends string | { readonly __env: EnvRecord } | undefined = undefined,
+> = [TNamed] extends [string]
+  ? Record<string, string>
+  : [TNamed] extends [{ readonly __env: infer THandleEnv extends EnvRecord }]
+    ? string extends keyof THandleEnv
+      ? Record<string, string>
+      : PromptEnv<THandleEnv>
+    : string extends keyof TEnv
+      ? PromptInputProxy<Record<string, string | undefined>>
+      : PromptEnv<TEnv>;
 
 /**
- * Entries produced by `Env.value`/`Env.inherit`. Anything else in the record
+ * Entries produced by `Env.value`/`Env.inherit`/`Env.secret`. Anything else in the record
  * is a bare value, which is usually an input-proxy object rather than a
  * primitive string, so it cannot be told apart by `typeof` or by shape (the
  * proxy answers every property read).
  */
 const helperEntries = new WeakSet();
 
-function brand<T extends EnvValue | EnvInherit>(entry: T): T {
+function brand<T extends EnvValue | EnvInherit | EnvSecret>(entry: T): T {
   helperEntries.add(entry);
   return entry;
 }
@@ -210,9 +229,27 @@ export const Env = {
       applies: opts?.applies ?? "agent",
     });
   },
+
+  /**
+   * Reads a project secret saved in Scarn, looked up by `secretName` at run
+   * time (the worker's `.scarn/.env` first, then Scarn; never `process.env`).
+   * The variable name comes from the key and may differ from the secret name.
+   *
+   * - Stored: only the secret's name.
+   * - Masked: always. A secret variable has no default.
+   */
+  secret(secretName: string, opts?: EnvAppliesOpt): EnvSecret {
+    return brand({
+      kind: "secret",
+      secretName,
+      applies: opts?.applies ?? "agent",
+    });
+  },
 } as const;
 
-function isHelperEntry(entry: EnvEntry): entry is EnvValue | EnvInherit {
+function isHelperEntry(
+  entry: EnvEntry,
+): entry is EnvValue | EnvInherit | EnvSecret {
   return typeof entry === "object" && helperEntries.has(entry);
 }
 
@@ -260,6 +297,14 @@ function toEnvVarSpec(name: string, entry: EnvEntry): EnvVarSpecInput {
       ...appliesField(entry.applies),
     };
   }
+  if (entry.kind === "secret") {
+    return {
+      name,
+      source: "secret",
+      secretName: entry.secretName,
+      ...appliesField(entry.applies),
+    };
+  }
   return {
     name,
     source: "inherit",
@@ -272,15 +317,18 @@ function toEnvVarSpec(name: string, entry: EnvEntry): EnvVarSpecInput {
 }
 
 /**
- * Runs the authored `environment.vars` function once and returns the wire
+ * Evaluates the authored `environment.vars` record or function once and returns the wire
  * shape, or `null` when the step declares no `vars` (or an empty record).
  * Throws on a static secret, or a static literal on a secret-looking name.
  */
 export function normalizeEnv<TInput>(
-  fn: EnvFn<TInput> | undefined,
+  fn: EnvFn<TInput> | EnvRecord | undefined,
 ): EnvVarsInput | null {
   if (!fn) return null;
-  const record = fn({ input: createPromptInputProxy<TInput>(["input"]) });
+  const record =
+    typeof fn === "function"
+      ? fn({ input: createPromptInputProxy<TInput>(["input"]) })
+      : fn;
   const specs = Object.entries(record).map(([name, entry]) =>
     toEnvVarSpec(name, entry),
   );

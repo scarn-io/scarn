@@ -7,6 +7,13 @@ server's; the worker only does the work and reports back.
 
 ## Language
 
+### Environments
+
+Environment, named environment, inline environment, repo default and runtime
+are defined in [Core](../core/CONTEXT.md#environments). The worker resolves
+the environment at run startup and launches its runtime; an environment is
+not a background worker instance.
+
 ### The background worker
 
 **Background worker**:

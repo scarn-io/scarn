@@ -70,7 +70,6 @@ export const workerProjectSettingsSchema = z.object({
   projectId: z.string(),
   projectRef: z.string(),
   repoDir: z.string(),
-  sourceBranch: z.string(),
   baseUrl: z.string(),
   addedByUserId: z.string(),
   concurrency: nonNegativeIntSchema.nullable(),
@@ -159,7 +158,6 @@ export const projectParamsSchema = z.object({ projectId: z.string().min(1) });
 export const putProjectBodySchema = z.object({
   projectRef: z.string().min(1),
   repoDir: z.string().min(1),
-  sourceBranch: z.string().min(1),
   baseUrl: z.string().min(1),
   addedByUserId: z.string().min(1),
   concurrency: nonNegativeIntSchema.nullable(),

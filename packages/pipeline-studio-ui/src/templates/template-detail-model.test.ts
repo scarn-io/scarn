@@ -8,6 +8,9 @@ import {
   detachedNodeId,
   detachedStepNotice,
   findTemplateStep,
+  formatRepoAccess,
+  formatRepoBranches,
+  formatRuntime,
   getUseButtonState,
   missingRequiredParameters,
   parameterValuesToSubmit,
@@ -41,11 +44,7 @@ function stepPreview(key: string): TemplateStepPreview {
     name: `${key} step`,
     description: null,
     prompt: `Do ${key}.`,
-    runtime: {
-      executionMode: "workspace",
-      devcontainerConfigPath: null,
-      managedRuntime: null,
-    },
+    environment: null,
     repo: { mode: "readOnly" },
     grants: [],
     maxTurns: null,
@@ -95,6 +94,62 @@ const param = (key: string, required: boolean): TemplateParameter => ({
   label: key,
   type: "textarea",
   required,
+});
+
+describe("runtime and repository labels", () => {
+  test.each([
+    [null, "Repository default"],
+    [{ kind: "inline" }, "Repository default"],
+    [{ kind: "inline", runtime: { kind: "devcontainer" } }, "Devcontainer"],
+    [
+      {
+        kind: "inline",
+        runtime: { kind: "devcontainer", config: ".devcontainer/test.json" },
+      },
+      "Devcontainer (.devcontainer/test.json)",
+    ],
+    [
+      { kind: "inline", runtime: { kind: "managed", id: "bun1" } },
+      "Managed container (bun1)",
+    ],
+    [{ kind: "inline", runtime: { kind: "host" } }, "Host"],
+    [{ kind: "named", name: "shared" }, "Named environment (shared)"],
+  ] as const)("formats %s runtime with its details", (environment, label) => {
+    expect(formatRuntime(environment)).toBe(label);
+  });
+
+  test("distinguishes the shared read-write default from explicit policies", () => {
+    expect(formatRepoAccess(null)).toBe("Read and write (default)");
+    expect(formatRepoAccess({ mode: "readOnly" })).toBe("Read-only");
+    expect(
+      formatRepoAccess({
+        mode: "readWrite",
+        message: null,
+        onPushFailure: "fail",
+      }),
+    ).toBe("Read and write");
+  });
+
+  test("formats repo branches with their defaults", () => {
+    expect(formatRepoBranches(null)).toBe(
+      "Base: previous step's branch, else project or remote default; commits to a new branch",
+    );
+    expect(
+      formatRepoBranches({
+        mode: "readOnly",
+        baseBranch: "develop",
+      }),
+    ).toBe("Base develop");
+    expect(
+      formatRepoBranches({
+        mode: "readWrite",
+        baseBranch: "ephemeral-{{env.TICKET}}",
+        workBranch: { kind: "base" },
+      }),
+    ).toBe(
+      "Base ephemeral-{{env.TICKET}}; commits onto the branch it started from",
+    );
+  });
 });
 
 describe("buildTemplateGraph", () => {

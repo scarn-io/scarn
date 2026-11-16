@@ -38,10 +38,8 @@ export type ToolState =
 
 export type FakeAgentScript = {
   /**
-   * `GET /api/mcp` — the warm-up poll `runHealthChecks` runs before any
-   * declared check. Defaults to a connected `fixture` server, which lets
-   * `pollMcpStatus`'s stability check settle after its second read for
-   * checks qualified with `mcp: "fixture"`.
+   * `GET /api/mcp` — what `pollMcpStatus` reads. Defaults to a connected
+   * `fixture` server.
    */
   mcpServers?: () => Array<{
     name: string;
@@ -141,7 +139,7 @@ function assistantMessage(
 
 /**
  * A minimal router over `globalThis.fetch` covering every v2 `/api/*` route
- * `runHealthChecks` touches: `GET /api/mcp` (the pre-checks warm-up poll),
+ * `runHealthChecks` touches: `GET /api/mcp` (MCP status),
  * the plugin's `POST /api/rpc/scarn/listTools` enumeration, and the session
  * lifecycle the forced-call verifiers drive (`POST /api/session`,
  * `POST /api/session/{id}/prompt`, `GET /api/session/{id}/message`,
@@ -262,7 +260,6 @@ export function installFakeAgent(script: FakeAgentScript = {}): {
 
 /** Small poll intervals so unit tests aren't paced by the 500ms production defaults. */
 export const FAST_HEALTH_CHECK_INTERVALS = {
-  mcpStatusIntervalMs: 5,
   healthCheckPollIntervalMs: 5,
 };
 

@@ -1,8 +1,8 @@
 /**
- * Both launch orchestrators write a steered rerun's previous-run findings and
+ * Both checkout runtimes write a steered rerun's previous-run findings and
  * transcript next to the current-execution metadata, and an unreadable
  * transcript does not fail the launch. Every external boundary is faked (see
- * `orchestrator-launch-fakes.ts` and `local-noworkspace-runtime-environment.test.ts`).
+ * `orchestrator-launch-fakes.ts`).
  * `writePreviousRunFiles` itself renders only the conversation stream and
  * still writes findings when the transcript is unavailable.
  */
@@ -13,7 +13,6 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import type { LogLine, TaskLogLinesResult } from "@scarn/shared-core";
 import { createUuidV7 } from "../../../../src/common/contracts/uuid-v7";
 import { DefaultLocalProjectRuntimeEnvironmentOrchestrator } from "../../../../src/work/task-run/infra/local-project-runtime-environment";
-import { DefaultLocalNoWorkspaceRuntimeEnvironmentOrchestrator } from "../../../../src/work/task-run/infra/local-noworkspace-runtime-environment";
 import {
   writePreviousRunFiles,
   type PreviousRunFilesInput,
@@ -142,26 +141,30 @@ describe("launch with a previousRun", () => {
     );
   });
 
-  test("the no-workspace launch writes the files into its temp working dir", async () => {
+  test("the host launch writes the files into its checkout", async () => {
     const fakes = buildOrchestratorFakeDeps({
       workspacePath,
       providerOutputDir,
       log: [],
     });
-    const orchestrator =
-      new DefaultLocalNoWorkspaceRuntimeEnvironmentOrchestrator(undefined, {
-        payloadProvisioner: fakes.payloadProvisioner,
-        providerAccessResolver: fakes.providerAccessResolver,
-        runtimeConfigMaterializer: fakes.runtimeConfigMaterializer,
+    const orchestrator = new DefaultLocalProjectRuntimeEnvironmentOrchestrator(
+      undefined,
+      {
+        ...fakes,
         hostOpencodeBootstrap: new FakeHostOpencodeBootstrap(),
-        loadCredentials: fakes.loadCredentials,
-      });
+      },
+    );
     const sessionId = createUuidV7();
 
     const env = await orchestrator.launch({
       ...buildLaunchInput(),
+      environment: { kind: "inline", runtime: { kind: "host" } },
       sessionId,
-      repo: { mode: "none" },
+      repo: {
+        mode: "readOnly",
+        gitCredentials: "none",
+        baseBranch: null,
+      },
       previousRun: previousRunInput(
         () => Promise.resolve({ lines: [], source: "live" }),
         null,

@@ -5,6 +5,7 @@
  * the tracker interface itself already describes.
  */
 import type { UuidV7 } from "../../../common/contracts/uuid-v7";
+import type { EnvironmentDiagnostics } from "../contracts/environment-diagnostics";
 import { buildRunningMetadata } from "./process-claimed-task-run-helpers";
 import type { TaskRunTracker } from "../contracts/process-project-work-types";
 
@@ -34,6 +35,7 @@ export async function markTrackedSessionRunning(
     devcontainerConfigPath: string;
     aiImage: string;
     networkName: string;
+    environmentDiagnostics?: EnvironmentDiagnostics | undefined;
   },
 ) {
   await tracker.markRunning({
@@ -46,6 +48,7 @@ export async function markTrackedSessionRunning(
       devcontainerConfigPath: input.devcontainerConfigPath,
       aiImage: input.aiImage,
       networkName: input.networkName,
+      environmentDiagnostics: input.environmentDiagnostics,
     }),
   });
 }

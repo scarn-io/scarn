@@ -7,6 +7,7 @@ import type {
   PostApiTaskRunsByTaskRunIdArtifactsData,
   PostApiTaskRunsByTaskRunIdBaseCommitData,
   PostApiTaskRunsByTaskRunIdCompletionsData,
+  PostApiTaskRunsByTaskRunIdEnvironmentData,
   PostApiTaskRunsByTaskRunIdLogFeedTokenData,
   PostApiTaskRunsByTaskRunIdLogsData,
   PostApiTaskRunsByTaskRunIdSessionUploadUrlData,
@@ -100,6 +101,14 @@ const buildTaskPlaneClient = (taskRuns: TaskRuns) => {
     }: TaskRunRef & PostApiTaskRunsByTaskRunIdBaseCommitData["body"]) =>
       unwrap(
         await taskRuns.reportTaskRunBaseCommit({ path: { taskRunId }, body }),
+      ),
+    /** Project secret values for a claimed run; values are never logged. */
+    resolveTaskRunEnvironment: async ({
+      taskRunId,
+      ...body
+    }: TaskRunRef & PostApiTaskRunsByTaskRunIdEnvironmentData["body"]) =>
+      unwrap(
+        await taskRuns.resolveTaskRunEnvironment({ path: { taskRunId }, body }),
       ),
     readTaskRunWorkItem: async ({
       taskRunId,

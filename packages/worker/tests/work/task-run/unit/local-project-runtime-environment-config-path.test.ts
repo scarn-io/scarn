@@ -69,7 +69,10 @@ describe("launch with a requested devcontainer config", () => {
 
     await orchestrator.launch({
       ...buildLaunchInput(),
-      devcontainerConfigPath: ALT_CONFIG_PATH,
+      environment: {
+        kind: "inline",
+        runtime: { kind: "devcontainer", config: ALT_CONFIG_PATH },
+      },
     });
 
     expect(deps.devcontainerLauncher.resolveConfigInputs).toEqual([
@@ -82,7 +85,10 @@ describe("launch with a requested devcontainer config", () => {
 
     const env = await orchestrator.launch({
       ...buildLaunchInput(),
-      devcontainerConfigPath: ALT_CONFIG_PATH,
+      environment: {
+        kind: "inline",
+        runtime: { kind: "devcontainer", config: ALT_CONFIG_PATH },
+      },
     });
 
     expect(
@@ -103,7 +109,10 @@ describe("launch with a requested devcontainer config", () => {
 
     const env = await orchestrator.launch({
       ...buildLaunchInput(),
-      devcontainerConfigPath: ALT_CONFIG_PATH,
+      environment: {
+        kind: "inline",
+        runtime: { kind: "devcontainer", config: ALT_CONFIG_PATH },
+      },
     });
 
     expect(env.workspaceFolder).toBe("/work/alt");
@@ -117,11 +126,11 @@ describe("launch with a requested devcontainer config", () => {
 
     const env = await orchestrator.launch({
       ...buildLaunchInput(),
-      devcontainerConfigPath: null,
+      environment: { kind: "inline", runtime: { kind: "devcontainer" } },
     });
 
     expect(deps.devcontainerLauncher.resolveConfigInputs).toEqual([
-      { workspacePath, configPath: null },
+      { workspacePath, configPath: DEVCONTAINER_CONFIG_PATH },
     ]);
     expect(env.devcontainerConfigPath).toBe(DEVCONTAINER_CONFIG_PATH);
   });
@@ -131,7 +140,7 @@ describe("launch with a requested devcontainer config", () => {
 
     const env = await orchestrator.launch({
       ...buildLaunchInput(),
-      devcontainerConfigPath: null,
+      environment: { kind: "inline", runtime: { kind: "devcontainer" } },
     });
 
     expect(env.workspaceFolder).toBe("/workspaces/repo");
@@ -155,7 +164,10 @@ describe("launch with a requested devcontainer config", () => {
         ...buildLaunchInput(),
         stepKey: "perf",
         baseWorkBranch: "scarn/prev-step",
-        devcontainerConfigPath: ALT_CONFIG_PATH,
+        environment: {
+          kind: "inline",
+          runtime: { kind: "devcontainer", config: ALT_CONFIG_PATH },
+        },
       });
     } catch (error) {
       caught = error;
@@ -180,7 +192,10 @@ describe("launch with a requested devcontainer config", () => {
       await orchestrator.launch({
         ...buildLaunchInput(),
         stepKey: "perf",
-        devcontainerConfigPath: ALT_CONFIG_PATH,
+        environment: {
+          kind: "inline",
+          runtime: { kind: "devcontainer", config: ALT_CONFIG_PATH },
+        },
       });
     } catch (error) {
       caught = error;
@@ -189,7 +204,7 @@ describe("launch with a requested devcontainer config", () => {
     expect((caught as Error).message).toBe('config missing (branch "main")');
   });
 
-  test("does not add branch context to an auto-detect failure", async () => {
+  test("adds lookup branch context to validation of a discovered config", async () => {
     const { deps, orchestrator } = setup();
     deps.devcontainerLauncher.resolveConfigPath = () =>
       Promise.reject(new Error("No devcontainer spec found"));
@@ -201,7 +216,9 @@ describe("launch with a requested devcontainer config", () => {
       caught = error;
     }
 
-    expect((caught as Error).message).toBe("No devcontainer spec found");
+    expect((caught as Error).message).toBe(
+      'No devcontainer spec found (branch "main")',
+    );
   });
 
   test("keeps the patched requested config out of the work-branch commit", async () => {
@@ -210,7 +227,10 @@ describe("launch with a requested devcontainer config", () => {
     const env = await orchestrator.launch({
       ...buildLaunchInput(),
       stepKey: "perf",
-      devcontainerConfigPath: ALT_CONFIG_PATH,
+      environment: {
+        kind: "inline",
+        runtime: { kind: "devcontainer", config: ALT_CONFIG_PATH },
+      },
     });
     await env.commitAndPushWorkBranch?.({ result: {} });
 

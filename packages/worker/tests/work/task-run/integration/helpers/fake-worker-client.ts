@@ -131,6 +131,33 @@ export class FakeTaskRunWorkerClient implements TaskRunWorkerClient {
     return Promise.resolve({ status: "running" });
   }
 
+  /** Project secrets the fake API holds, by name; empty unless a test sets them. */
+  readonly projectSecrets: Record<string, string> = {};
+  readonly resolveEnvironmentCalls: {
+    taskRunId: UuidV7;
+    claimToken: string;
+    secretNames: string[];
+  }[] = [];
+
+  resolveTaskRunEnvironment(input: {
+    taskRunId: UuidV7;
+    claimToken: string;
+    secretNames: string[];
+  }): Promise<{
+    secrets: Record<string, { value: string; expiresAt: string | null }>;
+    missing: string[];
+  }> {
+    this.resolveEnvironmentCalls.push({ ...input });
+    const secrets: Record<string, { value: string; expiresAt: null }> = {};
+    const missing: string[] = [];
+    for (const name of input.secretNames) {
+      const value = this.projectSecrets[name];
+      if (value === undefined) missing.push(name);
+      else secrets[name] = { value, expiresAt: null };
+    }
+    return Promise.resolve({ secrets, missing });
+  }
+
   /** First report wins, like the server. */
   reportTaskRunBaseCommit(input: {
     taskRunId: UuidV7;

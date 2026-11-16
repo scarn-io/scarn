@@ -1554,7 +1554,43 @@ export type GetApiStepDefinitionsResponses = {
         entrypointJson: {
             sourceFile: string;
         } | null;
-        executionMode: 'workspace' | 'no_workspace';
+        environment: {
+            kind: 'named';
+            name: string;
+        } | {
+            kind: 'inline';
+            runtime?: {
+                kind: 'devcontainer';
+                config?: string;
+            } | {
+                kind: 'managed';
+                id: 'bun1' | 'node24';
+            } | {
+                kind: 'host';
+            };
+            envJson?: Array<{
+                name: string;
+                source: 'value';
+                value: string;
+                secret: boolean;
+                applies: 'agent' | 'setup' | 'both';
+            } | {
+                name: string;
+                source: 'inherit';
+                from: string;
+                secret: boolean;
+                optional: boolean;
+                default?: string;
+                mcp?: string;
+                applies: 'agent' | 'setup' | 'both';
+            } | {
+                name: string;
+                source: 'secret';
+                secretName: string;
+                applies: 'agent' | 'setup' | 'both';
+            }> | null;
+            connectors?: Array<string>;
+        } | null;
         inputSchemaJson: {
             [key: string]: unknown;
         };
@@ -1618,6 +1654,16 @@ export type GetApiStepDefinitionsResponses = {
                     execution?: number;
                 };
                 protocol?: 'legacy' | 'auto' | '2026-07-28';
+                workerVars?: Array<{
+                    name: string;
+                    source: 'inherit';
+                    from: string;
+                    secret: boolean;
+                    optional: boolean;
+                    default?: string;
+                    mcp?: string;
+                    applies: 'agent';
+                }>;
             } | {
                 type: 'remote';
                 url: string;
@@ -1640,9 +1686,29 @@ export type GetApiStepDefinitionsResponses = {
                     execution?: number;
                 };
                 protocol?: 'legacy' | 'auto' | '2026-07-28';
+                workerVars?: Array<{
+                    name: string;
+                    source: 'inherit';
+                    from: string;
+                    secret: boolean;
+                    optional: boolean;
+                    default?: string;
+                    mcp?: string;
+                    applies: 'agent';
+                }>;
             } | {
                 type: 'ref';
                 name?: string;
+                workerVars?: Array<{
+                    name: string;
+                    source: 'inherit';
+                    from: string;
+                    secret: boolean;
+                    optional: boolean;
+                    default?: string;
+                    mcp?: string;
+                    applies: 'agent';
+                }>;
                 disabled?: boolean;
                 codemode?: boolean;
                 timeout?: {
@@ -1673,34 +1739,21 @@ export type GetApiStepDefinitionsResponses = {
             command: Array<string>;
             expectExitCode: number;
         }> | null;
-        envJson: Array<{
-            name: string;
-            source: 'value';
-            value: string;
-            secret: boolean;
-            applies: 'agent' | 'setup' | 'both';
-        } | {
-            name: string;
-            source: 'inherit';
-            from: string;
-            secret: boolean;
-            optional: boolean;
-            default?: string;
-            mcp?: string;
-            applies: 'agent' | 'setup' | 'both';
-        }> | null;
-        devcontainerConfigPath: string | null;
-        managedRuntime: 'bun1' | 'node24' | null;
         repo: {
-            mode: 'none';
-        } | {
             mode: 'readOnly';
             gitCredentials: 'auto' | 'none';
+            baseBranch: string | null;
         } | {
             mode: 'readWrite';
             message: string | null;
             onPushFailure: 'fail' | 'warn';
             gitCredentials: 'auto' | 'none';
+            baseBranch: string | null;
+            workBranch: {
+                kind: 'create';
+            } | {
+                kind: 'base';
+            };
         };
         status: 'draft' | 'active' | 'archived';
         createdAt: string;
@@ -1722,7 +1775,43 @@ export type PostApiStepDefinitionsData = {
         entrypointJson?: {
             sourceFile: string;
         } | null;
-        executionMode?: 'workspace' | 'no_workspace';
+        environment?: {
+            kind: 'named';
+            name: string;
+        } | {
+            kind: 'inline';
+            runtime?: {
+                kind: 'devcontainer';
+                config?: string;
+            } | {
+                kind: 'managed';
+                id: 'bun1' | 'node24';
+            } | {
+                kind: 'host';
+            };
+            envJson?: Array<{
+                name: string;
+                source: 'value';
+                value: string;
+                secret: boolean;
+                applies?: 'agent' | 'setup' | 'both';
+            } | {
+                name: string;
+                source: 'inherit';
+                from: string;
+                secret: boolean;
+                optional: boolean;
+                default?: string;
+                mcp?: string;
+                applies?: 'agent' | 'setup' | 'both';
+            } | {
+                name: string;
+                source: 'secret';
+                secretName: string;
+                applies?: 'agent' | 'setup' | 'both';
+            }> | null;
+            connectors?: Array<string>;
+        } | null;
         inputSchemaJson: {
             [key: string]: unknown;
         };
@@ -1786,6 +1875,16 @@ export type PostApiStepDefinitionsData = {
                     execution?: number;
                 };
                 protocol?: 'legacy' | 'auto' | '2026-07-28';
+                workerVars?: Array<{
+                    name: string;
+                    source: 'inherit';
+                    from: string;
+                    secret: boolean;
+                    optional: boolean;
+                    default?: string;
+                    mcp?: string;
+                    applies: 'agent';
+                }>;
             } | {
                 type: 'remote';
                 url: string;
@@ -1808,9 +1907,29 @@ export type PostApiStepDefinitionsData = {
                     execution?: number;
                 };
                 protocol?: 'legacy' | 'auto' | '2026-07-28';
+                workerVars?: Array<{
+                    name: string;
+                    source: 'inherit';
+                    from: string;
+                    secret: boolean;
+                    optional: boolean;
+                    default?: string;
+                    mcp?: string;
+                    applies: 'agent';
+                }>;
             } | {
                 type: 'ref';
                 name?: string;
+                workerVars?: Array<{
+                    name: string;
+                    source: 'inherit';
+                    from: string;
+                    secret: boolean;
+                    optional: boolean;
+                    default?: string;
+                    mcp?: string;
+                    applies: 'agent';
+                }>;
                 disabled?: boolean;
                 codemode?: boolean;
                 timeout?: {
@@ -1841,34 +1960,21 @@ export type PostApiStepDefinitionsData = {
             command: Array<string>;
             expectExitCode?: number;
         }> | null;
-        envJson?: Array<{
-            name: string;
-            source: 'value';
-            value: string;
-            secret: boolean;
-            applies?: 'agent' | 'setup' | 'both';
-        } | {
-            name: string;
-            source: 'inherit';
-            from: string;
-            secret: boolean;
-            optional: boolean;
-            default?: string;
-            mcp?: string;
-            applies?: 'agent' | 'setup' | 'both';
-        }> | null;
-        devcontainerConfigPath?: string | null;
-        managedRuntime?: 'bun1' | 'node24' | null;
         repo?: {
-            mode: 'none';
-        } | {
             mode: 'readOnly';
             gitCredentials?: 'auto' | 'none';
+            baseBranch?: string | null;
         } | {
             mode: 'readWrite';
             message?: string | null;
             onPushFailure?: 'fail' | 'warn';
             gitCredentials?: 'auto' | 'none';
+            baseBranch?: string | null;
+            workBranch?: {
+                kind: 'create';
+            } | {
+                kind: 'base';
+            };
         };
         status: 'draft' | 'active' | 'archived';
     };
@@ -2031,7 +2137,43 @@ export type PostApiStepDefinitionsResponses = {
         entrypointJson: {
             sourceFile: string;
         } | null;
-        executionMode: 'workspace' | 'no_workspace';
+        environment: {
+            kind: 'named';
+            name: string;
+        } | {
+            kind: 'inline';
+            runtime?: {
+                kind: 'devcontainer';
+                config?: string;
+            } | {
+                kind: 'managed';
+                id: 'bun1' | 'node24';
+            } | {
+                kind: 'host';
+            };
+            envJson?: Array<{
+                name: string;
+                source: 'value';
+                value: string;
+                secret: boolean;
+                applies: 'agent' | 'setup' | 'both';
+            } | {
+                name: string;
+                source: 'inherit';
+                from: string;
+                secret: boolean;
+                optional: boolean;
+                default?: string;
+                mcp?: string;
+                applies: 'agent' | 'setup' | 'both';
+            } | {
+                name: string;
+                source: 'secret';
+                secretName: string;
+                applies: 'agent' | 'setup' | 'both';
+            }> | null;
+            connectors?: Array<string>;
+        } | null;
         inputSchemaJson: {
             [key: string]: unknown;
         };
@@ -2095,6 +2237,16 @@ export type PostApiStepDefinitionsResponses = {
                     execution?: number;
                 };
                 protocol?: 'legacy' | 'auto' | '2026-07-28';
+                workerVars?: Array<{
+                    name: string;
+                    source: 'inherit';
+                    from: string;
+                    secret: boolean;
+                    optional: boolean;
+                    default?: string;
+                    mcp?: string;
+                    applies: 'agent';
+                }>;
             } | {
                 type: 'remote';
                 url: string;
@@ -2117,9 +2269,29 @@ export type PostApiStepDefinitionsResponses = {
                     execution?: number;
                 };
                 protocol?: 'legacy' | 'auto' | '2026-07-28';
+                workerVars?: Array<{
+                    name: string;
+                    source: 'inherit';
+                    from: string;
+                    secret: boolean;
+                    optional: boolean;
+                    default?: string;
+                    mcp?: string;
+                    applies: 'agent';
+                }>;
             } | {
                 type: 'ref';
                 name?: string;
+                workerVars?: Array<{
+                    name: string;
+                    source: 'inherit';
+                    from: string;
+                    secret: boolean;
+                    optional: boolean;
+                    default?: string;
+                    mcp?: string;
+                    applies: 'agent';
+                }>;
                 disabled?: boolean;
                 codemode?: boolean;
                 timeout?: {
@@ -2150,34 +2322,21 @@ export type PostApiStepDefinitionsResponses = {
             command: Array<string>;
             expectExitCode: number;
         }> | null;
-        envJson: Array<{
-            name: string;
-            source: 'value';
-            value: string;
-            secret: boolean;
-            applies: 'agent' | 'setup' | 'both';
-        } | {
-            name: string;
-            source: 'inherit';
-            from: string;
-            secret: boolean;
-            optional: boolean;
-            default?: string;
-            mcp?: string;
-            applies: 'agent' | 'setup' | 'both';
-        }> | null;
-        devcontainerConfigPath: string | null;
-        managedRuntime: 'bun1' | 'node24' | null;
         repo: {
-            mode: 'none';
-        } | {
             mode: 'readOnly';
             gitCredentials: 'auto' | 'none';
+            baseBranch: string | null;
         } | {
             mode: 'readWrite';
             message: string | null;
             onPushFailure: 'fail' | 'warn';
             gitCredentials: 'auto' | 'none';
+            baseBranch: string | null;
+            workBranch: {
+                kind: 'create';
+            } | {
+                kind: 'base';
+            };
         };
         status: 'draft' | 'active' | 'archived';
         createdAt: string;
@@ -2199,7 +2358,43 @@ export type PutApiStepDefinitionsData = {
         entrypointJson?: {
             sourceFile: string;
         } | null;
-        executionMode?: 'workspace' | 'no_workspace';
+        environment?: {
+            kind: 'named';
+            name: string;
+        } | {
+            kind: 'inline';
+            runtime?: {
+                kind: 'devcontainer';
+                config?: string;
+            } | {
+                kind: 'managed';
+                id: 'bun1' | 'node24';
+            } | {
+                kind: 'host';
+            };
+            envJson?: Array<{
+                name: string;
+                source: 'value';
+                value: string;
+                secret: boolean;
+                applies?: 'agent' | 'setup' | 'both';
+            } | {
+                name: string;
+                source: 'inherit';
+                from: string;
+                secret: boolean;
+                optional: boolean;
+                default?: string;
+                mcp?: string;
+                applies?: 'agent' | 'setup' | 'both';
+            } | {
+                name: string;
+                source: 'secret';
+                secretName: string;
+                applies?: 'agent' | 'setup' | 'both';
+            }> | null;
+            connectors?: Array<string>;
+        } | null;
         inputSchemaJson: {
             [key: string]: unknown;
         };
@@ -2263,6 +2458,16 @@ export type PutApiStepDefinitionsData = {
                     execution?: number;
                 };
                 protocol?: 'legacy' | 'auto' | '2026-07-28';
+                workerVars?: Array<{
+                    name: string;
+                    source: 'inherit';
+                    from: string;
+                    secret: boolean;
+                    optional: boolean;
+                    default?: string;
+                    mcp?: string;
+                    applies: 'agent';
+                }>;
             } | {
                 type: 'remote';
                 url: string;
@@ -2285,9 +2490,29 @@ export type PutApiStepDefinitionsData = {
                     execution?: number;
                 };
                 protocol?: 'legacy' | 'auto' | '2026-07-28';
+                workerVars?: Array<{
+                    name: string;
+                    source: 'inherit';
+                    from: string;
+                    secret: boolean;
+                    optional: boolean;
+                    default?: string;
+                    mcp?: string;
+                    applies: 'agent';
+                }>;
             } | {
                 type: 'ref';
                 name?: string;
+                workerVars?: Array<{
+                    name: string;
+                    source: 'inherit';
+                    from: string;
+                    secret: boolean;
+                    optional: boolean;
+                    default?: string;
+                    mcp?: string;
+                    applies: 'agent';
+                }>;
                 disabled?: boolean;
                 codemode?: boolean;
                 timeout?: {
@@ -2318,34 +2543,21 @@ export type PutApiStepDefinitionsData = {
             command: Array<string>;
             expectExitCode?: number;
         }> | null;
-        envJson?: Array<{
-            name: string;
-            source: 'value';
-            value: string;
-            secret: boolean;
-            applies?: 'agent' | 'setup' | 'both';
-        } | {
-            name: string;
-            source: 'inherit';
-            from: string;
-            secret: boolean;
-            optional: boolean;
-            default?: string;
-            mcp?: string;
-            applies?: 'agent' | 'setup' | 'both';
-        }> | null;
-        devcontainerConfigPath?: string | null;
-        managedRuntime?: 'bun1' | 'node24' | null;
         repo?: {
-            mode: 'none';
-        } | {
             mode: 'readOnly';
             gitCredentials?: 'auto' | 'none';
+            baseBranch?: string | null;
         } | {
             mode: 'readWrite';
             message?: string | null;
             onPushFailure?: 'fail' | 'warn';
             gitCredentials?: 'auto' | 'none';
+            baseBranch?: string | null;
+            workBranch?: {
+                kind: 'create';
+            } | {
+                kind: 'base';
+            };
         };
         status: 'draft' | 'active' | 'archived';
     };
@@ -2470,7 +2682,43 @@ export type PutApiStepDefinitionsResponses = {
         entrypointJson: {
             sourceFile: string;
         } | null;
-        executionMode: 'workspace' | 'no_workspace';
+        environment: {
+            kind: 'named';
+            name: string;
+        } | {
+            kind: 'inline';
+            runtime?: {
+                kind: 'devcontainer';
+                config?: string;
+            } | {
+                kind: 'managed';
+                id: 'bun1' | 'node24';
+            } | {
+                kind: 'host';
+            };
+            envJson?: Array<{
+                name: string;
+                source: 'value';
+                value: string;
+                secret: boolean;
+                applies: 'agent' | 'setup' | 'both';
+            } | {
+                name: string;
+                source: 'inherit';
+                from: string;
+                secret: boolean;
+                optional: boolean;
+                default?: string;
+                mcp?: string;
+                applies: 'agent' | 'setup' | 'both';
+            } | {
+                name: string;
+                source: 'secret';
+                secretName: string;
+                applies: 'agent' | 'setup' | 'both';
+            }> | null;
+            connectors?: Array<string>;
+        } | null;
         inputSchemaJson: {
             [key: string]: unknown;
         };
@@ -2534,6 +2782,16 @@ export type PutApiStepDefinitionsResponses = {
                     execution?: number;
                 };
                 protocol?: 'legacy' | 'auto' | '2026-07-28';
+                workerVars?: Array<{
+                    name: string;
+                    source: 'inherit';
+                    from: string;
+                    secret: boolean;
+                    optional: boolean;
+                    default?: string;
+                    mcp?: string;
+                    applies: 'agent';
+                }>;
             } | {
                 type: 'remote';
                 url: string;
@@ -2556,9 +2814,29 @@ export type PutApiStepDefinitionsResponses = {
                     execution?: number;
                 };
                 protocol?: 'legacy' | 'auto' | '2026-07-28';
+                workerVars?: Array<{
+                    name: string;
+                    source: 'inherit';
+                    from: string;
+                    secret: boolean;
+                    optional: boolean;
+                    default?: string;
+                    mcp?: string;
+                    applies: 'agent';
+                }>;
             } | {
                 type: 'ref';
                 name?: string;
+                workerVars?: Array<{
+                    name: string;
+                    source: 'inherit';
+                    from: string;
+                    secret: boolean;
+                    optional: boolean;
+                    default?: string;
+                    mcp?: string;
+                    applies: 'agent';
+                }>;
                 disabled?: boolean;
                 codemode?: boolean;
                 timeout?: {
@@ -2589,34 +2867,21 @@ export type PutApiStepDefinitionsResponses = {
             command: Array<string>;
             expectExitCode: number;
         }> | null;
-        envJson: Array<{
-            name: string;
-            source: 'value';
-            value: string;
-            secret: boolean;
-            applies: 'agent' | 'setup' | 'both';
-        } | {
-            name: string;
-            source: 'inherit';
-            from: string;
-            secret: boolean;
-            optional: boolean;
-            default?: string;
-            mcp?: string;
-            applies: 'agent' | 'setup' | 'both';
-        }> | null;
-        devcontainerConfigPath: string | null;
-        managedRuntime: 'bun1' | 'node24' | null;
         repo: {
-            mode: 'none';
-        } | {
             mode: 'readOnly';
             gitCredentials: 'auto' | 'none';
+            baseBranch: string | null;
         } | {
             mode: 'readWrite';
             message: string | null;
             onPushFailure: 'fail' | 'warn';
             gitCredentials: 'auto' | 'none';
+            baseBranch: string | null;
+            workBranch: {
+                kind: 'create';
+            } | {
+                kind: 'base';
+            };
         };
         status: 'draft' | 'active' | 'archived';
         createdAt: string;
@@ -2751,7 +3016,43 @@ export type GetApiStepDefinitionsByStepDefinitionIdResponses = {
         entrypointJson: {
             sourceFile: string;
         } | null;
-        executionMode: 'workspace' | 'no_workspace';
+        environment: {
+            kind: 'named';
+            name: string;
+        } | {
+            kind: 'inline';
+            runtime?: {
+                kind: 'devcontainer';
+                config?: string;
+            } | {
+                kind: 'managed';
+                id: 'bun1' | 'node24';
+            } | {
+                kind: 'host';
+            };
+            envJson?: Array<{
+                name: string;
+                source: 'value';
+                value: string;
+                secret: boolean;
+                applies: 'agent' | 'setup' | 'both';
+            } | {
+                name: string;
+                source: 'inherit';
+                from: string;
+                secret: boolean;
+                optional: boolean;
+                default?: string;
+                mcp?: string;
+                applies: 'agent' | 'setup' | 'both';
+            } | {
+                name: string;
+                source: 'secret';
+                secretName: string;
+                applies: 'agent' | 'setup' | 'both';
+            }> | null;
+            connectors?: Array<string>;
+        } | null;
         inputSchemaJson: {
             [key: string]: unknown;
         };
@@ -2815,6 +3116,16 @@ export type GetApiStepDefinitionsByStepDefinitionIdResponses = {
                     execution?: number;
                 };
                 protocol?: 'legacy' | 'auto' | '2026-07-28';
+                workerVars?: Array<{
+                    name: string;
+                    source: 'inherit';
+                    from: string;
+                    secret: boolean;
+                    optional: boolean;
+                    default?: string;
+                    mcp?: string;
+                    applies: 'agent';
+                }>;
             } | {
                 type: 'remote';
                 url: string;
@@ -2837,9 +3148,29 @@ export type GetApiStepDefinitionsByStepDefinitionIdResponses = {
                     execution?: number;
                 };
                 protocol?: 'legacy' | 'auto' | '2026-07-28';
+                workerVars?: Array<{
+                    name: string;
+                    source: 'inherit';
+                    from: string;
+                    secret: boolean;
+                    optional: boolean;
+                    default?: string;
+                    mcp?: string;
+                    applies: 'agent';
+                }>;
             } | {
                 type: 'ref';
                 name?: string;
+                workerVars?: Array<{
+                    name: string;
+                    source: 'inherit';
+                    from: string;
+                    secret: boolean;
+                    optional: boolean;
+                    default?: string;
+                    mcp?: string;
+                    applies: 'agent';
+                }>;
                 disabled?: boolean;
                 codemode?: boolean;
                 timeout?: {
@@ -2870,34 +3201,21 @@ export type GetApiStepDefinitionsByStepDefinitionIdResponses = {
             command: Array<string>;
             expectExitCode: number;
         }> | null;
-        envJson: Array<{
-            name: string;
-            source: 'value';
-            value: string;
-            secret: boolean;
-            applies: 'agent' | 'setup' | 'both';
-        } | {
-            name: string;
-            source: 'inherit';
-            from: string;
-            secret: boolean;
-            optional: boolean;
-            default?: string;
-            mcp?: string;
-            applies: 'agent' | 'setup' | 'both';
-        }> | null;
-        devcontainerConfigPath: string | null;
-        managedRuntime: 'bun1' | 'node24' | null;
         repo: {
-            mode: 'none';
-        } | {
             mode: 'readOnly';
             gitCredentials: 'auto' | 'none';
+            baseBranch: string | null;
         } | {
             mode: 'readWrite';
             message: string | null;
             onPushFailure: 'fail' | 'warn';
             gitCredentials: 'auto' | 'none';
+            baseBranch: string | null;
+            workBranch: {
+                kind: 'create';
+            } | {
+                kind: 'base';
+            };
         };
         status: 'draft' | 'active' | 'archived';
         createdAt: string;
@@ -3032,7 +3350,43 @@ export type PutApiStepDefinitionsByStepDefinitionIdArchiveResponses = {
         entrypointJson: {
             sourceFile: string;
         } | null;
-        executionMode: 'workspace' | 'no_workspace';
+        environment: {
+            kind: 'named';
+            name: string;
+        } | {
+            kind: 'inline';
+            runtime?: {
+                kind: 'devcontainer';
+                config?: string;
+            } | {
+                kind: 'managed';
+                id: 'bun1' | 'node24';
+            } | {
+                kind: 'host';
+            };
+            envJson?: Array<{
+                name: string;
+                source: 'value';
+                value: string;
+                secret: boolean;
+                applies: 'agent' | 'setup' | 'both';
+            } | {
+                name: string;
+                source: 'inherit';
+                from: string;
+                secret: boolean;
+                optional: boolean;
+                default?: string;
+                mcp?: string;
+                applies: 'agent' | 'setup' | 'both';
+            } | {
+                name: string;
+                source: 'secret';
+                secretName: string;
+                applies: 'agent' | 'setup' | 'both';
+            }> | null;
+            connectors?: Array<string>;
+        } | null;
         inputSchemaJson: {
             [key: string]: unknown;
         };
@@ -3096,6 +3450,16 @@ export type PutApiStepDefinitionsByStepDefinitionIdArchiveResponses = {
                     execution?: number;
                 };
                 protocol?: 'legacy' | 'auto' | '2026-07-28';
+                workerVars?: Array<{
+                    name: string;
+                    source: 'inherit';
+                    from: string;
+                    secret: boolean;
+                    optional: boolean;
+                    default?: string;
+                    mcp?: string;
+                    applies: 'agent';
+                }>;
             } | {
                 type: 'remote';
                 url: string;
@@ -3118,9 +3482,29 @@ export type PutApiStepDefinitionsByStepDefinitionIdArchiveResponses = {
                     execution?: number;
                 };
                 protocol?: 'legacy' | 'auto' | '2026-07-28';
+                workerVars?: Array<{
+                    name: string;
+                    source: 'inherit';
+                    from: string;
+                    secret: boolean;
+                    optional: boolean;
+                    default?: string;
+                    mcp?: string;
+                    applies: 'agent';
+                }>;
             } | {
                 type: 'ref';
                 name?: string;
+                workerVars?: Array<{
+                    name: string;
+                    source: 'inherit';
+                    from: string;
+                    secret: boolean;
+                    optional: boolean;
+                    default?: string;
+                    mcp?: string;
+                    applies: 'agent';
+                }>;
                 disabled?: boolean;
                 codemode?: boolean;
                 timeout?: {
@@ -3151,34 +3535,21 @@ export type PutApiStepDefinitionsByStepDefinitionIdArchiveResponses = {
             command: Array<string>;
             expectExitCode: number;
         }> | null;
-        envJson: Array<{
-            name: string;
-            source: 'value';
-            value: string;
-            secret: boolean;
-            applies: 'agent' | 'setup' | 'both';
-        } | {
-            name: string;
-            source: 'inherit';
-            from: string;
-            secret: boolean;
-            optional: boolean;
-            default?: string;
-            mcp?: string;
-            applies: 'agent' | 'setup' | 'both';
-        }> | null;
-        devcontainerConfigPath: string | null;
-        managedRuntime: 'bun1' | 'node24' | null;
         repo: {
-            mode: 'none';
-        } | {
             mode: 'readOnly';
             gitCredentials: 'auto' | 'none';
+            baseBranch: string | null;
         } | {
             mode: 'readWrite';
             message: string | null;
             onPushFailure: 'fail' | 'warn';
             gitCredentials: 'auto' | 'none';
+            baseBranch: string | null;
+            workBranch: {
+                kind: 'create';
+            } | {
+                kind: 'base';
+            };
         };
         status: 'draft' | 'active' | 'archived';
         createdAt: string;
@@ -4963,36 +5334,98 @@ export type PostApiTaskRunsByTaskRunIdWorkerContextResponses = {
             }>;
         };
         runtime: {
-            executionMode: 'workspace' | 'no_workspace';
-            devcontainerConfigPath: string | null;
-            managedRuntime: 'bun1' | 'node24' | null;
-            repo: {
-                mode: 'none';
+            environment: {
+                kind: 'inline';
+                runtime?: {
+                    kind: 'devcontainer';
+                    config?: string;
+                } | {
+                    kind: 'managed';
+                    id: 'bun1' | 'node24';
+                } | {
+                    kind: 'host';
+                };
+                envJson?: Array<{
+                    name: string;
+                    source: 'value';
+                    value: string;
+                    secret: boolean;
+                    applies: 'agent' | 'setup' | 'both';
+                } | {
+                    name: string;
+                    source: 'inherit';
+                    from: string;
+                    secret: boolean;
+                    optional: boolean;
+                    default?: string;
+                    mcp?: string;
+                    applies: 'agent' | 'setup' | 'both';
+                } | {
+                    name: string;
+                    source: 'secret';
+                    secretName: string;
+                    applies: 'agent' | 'setup' | 'both';
+                }> | null;
+                connectors?: Array<string>;
             } | {
+                kind: 'named';
+                name: string;
+                version: number;
+                content: {
+                    runtime?: {
+                        kind: 'devcontainer';
+                        config?: string;
+                    } | {
+                        kind: 'managed';
+                        id: 'bun1' | 'node24';
+                    } | {
+                        kind: 'host';
+                    };
+                    vars?: Array<{
+                        name: string;
+                        source: 'value';
+                        value: string;
+                        secret: boolean;
+                        applies: 'agent' | 'setup' | 'both';
+                    } | {
+                        name: string;
+                        source: 'inherit';
+                        from: string;
+                        secret: boolean;
+                        optional: boolean;
+                        default?: string;
+                        mcp?: string;
+                        applies: 'agent' | 'setup' | 'both';
+                    } | {
+                        name: string;
+                        source: 'secret';
+                        secretName: string;
+                        applies: 'agent' | 'setup' | 'both';
+                    }>;
+                    connectors?: Array<string>;
+                    description?: string;
+                };
+            } | {
+                kind: 'named';
+                name: string;
+                notFound: true;
+            } | null;
+            repo: {
                 mode: 'readOnly';
                 gitCredentials: 'auto' | 'none';
+                baseBranch: string | null;
             } | {
                 mode: 'readWrite';
                 message: string | null;
                 onPushFailure: 'fail' | 'warn';
                 gitCredentials: 'auto' | 'none';
+                baseBranch: string | null;
+                workBranch: {
+                    kind: 'create';
+                } | {
+                    kind: 'base';
+                };
             };
-            envJson: Array<{
-                name: string;
-                source: 'value';
-                value: string;
-                secret: boolean;
-                applies: 'agent' | 'setup' | 'both';
-            } | {
-                name: string;
-                source: 'inherit';
-                from: string;
-                secret: boolean;
-                optional: boolean;
-                default?: string;
-                mcp?: string;
-                applies: 'agent' | 'setup' | 'both';
-            }> | null;
             healthChecksJson: Array<{
                 name?: string;
                 severity: 'required' | 'warn';
@@ -5029,6 +5462,16 @@ export type PostApiTaskRunsByTaskRunIdWorkerContextResponses = {
                         execution?: number;
                     };
                     protocol?: 'legacy' | 'auto' | '2026-07-28';
+                    workerVars?: Array<{
+                        name: string;
+                        source: 'inherit';
+                        from: string;
+                        secret: boolean;
+                        optional: boolean;
+                        default?: string;
+                        mcp?: string;
+                        applies: 'agent';
+                    }>;
                 } | {
                     type: 'remote';
                     url: string;
@@ -5051,9 +5494,29 @@ export type PostApiTaskRunsByTaskRunIdWorkerContextResponses = {
                         execution?: number;
                     };
                     protocol?: 'legacy' | 'auto' | '2026-07-28';
+                    workerVars?: Array<{
+                        name: string;
+                        source: 'inherit';
+                        from: string;
+                        secret: boolean;
+                        optional: boolean;
+                        default?: string;
+                        mcp?: string;
+                        applies: 'agent';
+                    }>;
                 } | {
                     type: 'ref';
                     name?: string;
+                    workerVars?: Array<{
+                        name: string;
+                        source: 'inherit';
+                        from: string;
+                        secret: boolean;
+                        optional: boolean;
+                        default?: string;
+                        mcp?: string;
+                        applies: 'agent';
+                    }>;
                     disabled?: boolean;
                     codemode?: boolean;
                     timeout?: {
@@ -24652,3 +25115,1493 @@ export type DeleteApiMeSecretsBySecretIdUsesByIntegrationIdResponses = {
 };
 
 export type DeleteApiMeSecretsBySecretIdUsesByIntegrationIdResponse = DeleteApiMeSecretsBySecretIdUsesByIntegrationIdResponses[keyof DeleteApiMeSecretsBySecretIdUsesByIntegrationIdResponses];
+
+export type GetApiProjectsByProjectIdSecretsData = {
+    body?: never;
+    path: {
+        projectId: string;
+    };
+    query?: never;
+    url: '/api/projects/{projectId}/secrets';
+};
+
+export type GetApiProjectsByProjectIdSecretsErrors = {
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 404
+     */
+    404: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type GetApiProjectsByProjectIdSecretsError = GetApiProjectsByProjectIdSecretsErrors[keyof GetApiProjectsByProjectIdSecretsErrors];
+
+export type GetApiProjectsByProjectIdSecretsResponses = {
+    /**
+     * Response for status 200
+     */
+    200: Array<{
+        id: string;
+        projectId: string;
+        name: string;
+        lastFour: string;
+        updatedBy: {
+            userId: string;
+            username: string | null;
+        } | null;
+        lastUsedAt: string | null;
+        createdAt: string;
+        updatedAt: string;
+    }>;
+};
+
+export type GetApiProjectsByProjectIdSecretsResponse = GetApiProjectsByProjectIdSecretsResponses[keyof GetApiProjectsByProjectIdSecretsResponses];
+
+export type PostApiProjectsByProjectIdSecretsData = {
+    body: {
+        name: string;
+        value: string;
+    };
+    path: {
+        projectId: string;
+    };
+    query?: never;
+    url: '/api/projects/{projectId}/secrets';
+};
+
+export type PostApiProjectsByProjectIdSecretsErrors = {
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 404
+     */
+    404: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 409
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type PostApiProjectsByProjectIdSecretsError = PostApiProjectsByProjectIdSecretsErrors[keyof PostApiProjectsByProjectIdSecretsErrors];
+
+export type PostApiProjectsByProjectIdSecretsResponses = {
+    /**
+     * Response for status 201
+     */
+    201: {
+        id: string;
+        projectId: string;
+        name: string;
+        lastFour: string;
+        updatedBy: {
+            userId: string;
+            username: string | null;
+        } | null;
+        lastUsedAt: string | null;
+        createdAt: string;
+        updatedAt: string;
+    };
+};
+
+export type PostApiProjectsByProjectIdSecretsResponse = PostApiProjectsByProjectIdSecretsResponses[keyof PostApiProjectsByProjectIdSecretsResponses];
+
+export type DeleteApiProjectsByProjectIdSecretsBySecretIdData = {
+    body?: never;
+    path: {
+        projectId: string;
+        secretId: string;
+    };
+    query?: never;
+    url: '/api/projects/{projectId}/secrets/{secretId}';
+};
+
+export type DeleteApiProjectsByProjectIdSecretsBySecretIdErrors = {
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 404
+     */
+    404: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type DeleteApiProjectsByProjectIdSecretsBySecretIdError = DeleteApiProjectsByProjectIdSecretsBySecretIdErrors[keyof DeleteApiProjectsByProjectIdSecretsBySecretIdErrors];
+
+export type DeleteApiProjectsByProjectIdSecretsBySecretIdResponses = {
+    /**
+     * Response for status 200
+     */
+    200: {
+        deleted: true;
+    };
+};
+
+export type DeleteApiProjectsByProjectIdSecretsBySecretIdResponse = DeleteApiProjectsByProjectIdSecretsBySecretIdResponses[keyof DeleteApiProjectsByProjectIdSecretsBySecretIdResponses];
+
+export type PatchApiProjectsByProjectIdSecretsBySecretIdData = {
+    body: {
+        name?: string;
+        value?: string;
+    };
+    path: {
+        projectId: string;
+        secretId: string;
+    };
+    query?: never;
+    url: '/api/projects/{projectId}/secrets/{secretId}';
+};
+
+export type PatchApiProjectsByProjectIdSecretsBySecretIdErrors = {
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 404
+     */
+    404: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 409
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type PatchApiProjectsByProjectIdSecretsBySecretIdError = PatchApiProjectsByProjectIdSecretsBySecretIdErrors[keyof PatchApiProjectsByProjectIdSecretsBySecretIdErrors];
+
+export type PatchApiProjectsByProjectIdSecretsBySecretIdResponses = {
+    /**
+     * Response for status 200
+     */
+    200: {
+        id: string;
+        projectId: string;
+        name: string;
+        lastFour: string;
+        updatedBy: {
+            userId: string;
+            username: string | null;
+        } | null;
+        lastUsedAt: string | null;
+        createdAt: string;
+        updatedAt: string;
+    };
+};
+
+export type PatchApiProjectsByProjectIdSecretsBySecretIdResponse = PatchApiProjectsByProjectIdSecretsBySecretIdResponses[keyof PatchApiProjectsByProjectIdSecretsBySecretIdResponses];
+
+export type GetApiProjectsByProjectIdEnvironmentsData = {
+    body?: never;
+    path: {
+        projectId: string;
+    };
+    query?: never;
+    url: '/api/projects/{projectId}/environments';
+};
+
+export type GetApiProjectsByProjectIdEnvironmentsErrors = {
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 404
+     */
+    404: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type GetApiProjectsByProjectIdEnvironmentsError = GetApiProjectsByProjectIdEnvironmentsErrors[keyof GetApiProjectsByProjectIdEnvironmentsErrors];
+
+export type GetApiProjectsByProjectIdEnvironmentsResponses = {
+    /**
+     * Response for status 200
+     */
+    200: Array<{
+        id: string;
+        projectId: string;
+        name: string;
+        description: string | null;
+        latestVersion: number;
+        updatedBy: {
+            userId: string;
+            username: string | null;
+        };
+        updatedAt: string;
+    }>;
+};
+
+export type GetApiProjectsByProjectIdEnvironmentsResponse = GetApiProjectsByProjectIdEnvironmentsResponses[keyof GetApiProjectsByProjectIdEnvironmentsResponses];
+
+export type DeleteApiProjectsByProjectIdEnvironmentsByNameData = {
+    body?: never;
+    path: {
+        projectId: string;
+        name: string;
+    };
+    query?: never;
+    url: '/api/projects/{projectId}/environments/{name}';
+};
+
+export type DeleteApiProjectsByProjectIdEnvironmentsByNameErrors = {
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 404
+     */
+    404: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 409
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type DeleteApiProjectsByProjectIdEnvironmentsByNameError = DeleteApiProjectsByProjectIdEnvironmentsByNameErrors[keyof DeleteApiProjectsByProjectIdEnvironmentsByNameErrors];
+
+export type DeleteApiProjectsByProjectIdEnvironmentsByNameResponses = {
+    /**
+     * Response for status 200
+     */
+    200: {
+        deleted: true;
+    };
+};
+
+export type DeleteApiProjectsByProjectIdEnvironmentsByNameResponse = DeleteApiProjectsByProjectIdEnvironmentsByNameResponses[keyof DeleteApiProjectsByProjectIdEnvironmentsByNameResponses];
+
+export type GetApiProjectsByProjectIdEnvironmentsByNameData = {
+    body?: never;
+    path: {
+        projectId: string;
+        name: string;
+    };
+    query?: {
+        version?: number;
+    };
+    url: '/api/projects/{projectId}/environments/{name}';
+};
+
+export type GetApiProjectsByProjectIdEnvironmentsByNameErrors = {
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 404
+     */
+    404: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type GetApiProjectsByProjectIdEnvironmentsByNameError = GetApiProjectsByProjectIdEnvironmentsByNameErrors[keyof GetApiProjectsByProjectIdEnvironmentsByNameErrors];
+
+export type GetApiProjectsByProjectIdEnvironmentsByNameResponses = {
+    /**
+     * Response for status 200
+     */
+    200: {
+        environment: {
+            id: string;
+            projectId: string;
+            name: string;
+            description: string | null;
+            latestVersion: number;
+            updatedBy: {
+                userId: string;
+                username: string | null;
+            };
+            updatedAt: string;
+        };
+        version: {
+            id: string;
+            environmentId: string;
+            version: number;
+            content: {
+                runtime?: {
+                    kind: 'devcontainer';
+                    config?: string;
+                } | {
+                    kind: 'managed';
+                    id: 'bun1' | 'node24';
+                } | {
+                    kind: 'host';
+                };
+                vars?: Array<{
+                    name: string;
+                    source: 'value';
+                    value: string;
+                    secret: boolean;
+                    applies: 'agent' | 'setup' | 'both';
+                } | {
+                    name: string;
+                    source: 'inherit';
+                    from: string;
+                    secret: boolean;
+                    optional: boolean;
+                    default?: string;
+                    mcp?: string;
+                    applies: 'agent' | 'setup' | 'both';
+                } | {
+                    name: string;
+                    source: 'secret';
+                    secretName: string;
+                    applies: 'agent' | 'setup' | 'both';
+                }>;
+                connectors?: Array<string>;
+                description?: string;
+            };
+            contentHash: string;
+            createdBy: {
+                userId: string;
+                username: string | null;
+            };
+            createdAt: string;
+        };
+    };
+};
+
+export type GetApiProjectsByProjectIdEnvironmentsByNameResponse = GetApiProjectsByProjectIdEnvironmentsByNameResponses[keyof GetApiProjectsByProjectIdEnvironmentsByNameResponses];
+
+export type PutApiProjectsByProjectIdEnvironmentsByNameData = {
+    body: {
+        content: {
+            runtime?: {
+                kind: 'devcontainer';
+                config?: string;
+            } | {
+                kind: 'managed';
+                id: 'bun1' | 'node24';
+            } | {
+                kind: 'host';
+            };
+            vars?: Array<{
+                name: string;
+                source: 'value';
+                value: string;
+                secret: boolean;
+                applies?: 'agent' | 'setup' | 'both';
+            } | {
+                name: string;
+                source: 'inherit';
+                from: string;
+                secret: boolean;
+                optional: boolean;
+                default?: string;
+                mcp?: string;
+                applies?: 'agent' | 'setup' | 'both';
+            } | {
+                name: string;
+                source: 'secret';
+                secretName: string;
+                applies?: 'agent' | 'setup' | 'both';
+            }>;
+            connectors?: Array<string>;
+            description?: string;
+        };
+    };
+    path: {
+        projectId: string;
+        name: string;
+    };
+    query?: never;
+    url: '/api/projects/{projectId}/environments/{name}';
+};
+
+export type PutApiProjectsByProjectIdEnvironmentsByNameErrors = {
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 404
+     */
+    404: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type PutApiProjectsByProjectIdEnvironmentsByNameError = PutApiProjectsByProjectIdEnvironmentsByNameErrors[keyof PutApiProjectsByProjectIdEnvironmentsByNameErrors];
+
+export type PutApiProjectsByProjectIdEnvironmentsByNameResponses = {
+    /**
+     * Response for status 200
+     */
+    200: {
+        environment: {
+            id: string;
+            projectId: string;
+            name: string;
+            description: string | null;
+            latestVersion: number;
+            updatedBy: {
+                userId: string;
+                username: string | null;
+            };
+            updatedAt: string;
+        };
+        version: {
+            id: string;
+            environmentId: string;
+            version: number;
+            content: {
+                runtime?: {
+                    kind: 'devcontainer';
+                    config?: string;
+                } | {
+                    kind: 'managed';
+                    id: 'bun1' | 'node24';
+                } | {
+                    kind: 'host';
+                };
+                vars?: Array<{
+                    name: string;
+                    source: 'value';
+                    value: string;
+                    secret: boolean;
+                    applies: 'agent' | 'setup' | 'both';
+                } | {
+                    name: string;
+                    source: 'inherit';
+                    from: string;
+                    secret: boolean;
+                    optional: boolean;
+                    default?: string;
+                    mcp?: string;
+                    applies: 'agent' | 'setup' | 'both';
+                } | {
+                    name: string;
+                    source: 'secret';
+                    secretName: string;
+                    applies: 'agent' | 'setup' | 'both';
+                }>;
+                connectors?: Array<string>;
+                description?: string;
+            };
+            contentHash: string;
+            createdBy: {
+                userId: string;
+                username: string | null;
+            };
+            createdAt: string;
+        };
+        published: boolean;
+    };
+};
+
+export type PutApiProjectsByProjectIdEnvironmentsByNameResponse = PutApiProjectsByProjectIdEnvironmentsByNameResponses[keyof PutApiProjectsByProjectIdEnvironmentsByNameResponses];
+
+export type PostApiTaskRunsByTaskRunIdEnvironmentData = {
+    body: {
+        claimToken: string;
+        secretNames: Array<string>;
+    };
+    path: {
+        taskRunId: string;
+    };
+    query?: never;
+    url: '/api/task-runs/{taskRunId}/environment';
+};
+
+export type PostApiTaskRunsByTaskRunIdEnvironmentErrors = {
+    /**
+     * Response for status 400
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 404
+     */
+    404: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 409
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type PostApiTaskRunsByTaskRunIdEnvironmentError = PostApiTaskRunsByTaskRunIdEnvironmentErrors[keyof PostApiTaskRunsByTaskRunIdEnvironmentErrors];
+
+export type PostApiTaskRunsByTaskRunIdEnvironmentResponses = {
+    /**
+     * Response for status 200
+     */
+    200: {
+        secrets: {
+            [key: string]: {
+                value: string;
+                expiresAt: string | null;
+            };
+        };
+        missing: Array<string>;
+    };
+};
+
+export type PostApiTaskRunsByTaskRunIdEnvironmentResponse = PostApiTaskRunsByTaskRunIdEnvironmentResponses[keyof PostApiTaskRunsByTaskRunIdEnvironmentResponses];
+
+export type GetApiConnectorsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/connectors';
+};
+
+export type GetApiConnectorsErrors = {
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type GetApiConnectorsError = GetApiConnectorsErrors[keyof GetApiConnectorsErrors];
+
+export type GetApiConnectorsResponses = {
+    /**
+     * Response for status 200
+     */
+    200: Array<{
+        id: string;
+        name: string;
+        description: string;
+        auth: 'none' | 'apiKey';
+        requiredVars: Array<{
+            name: string;
+            description: string;
+        }>;
+    }>;
+};
+
+export type GetApiConnectorsResponse = GetApiConnectorsResponses[keyof GetApiConnectorsResponses];

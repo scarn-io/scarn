@@ -2,7 +2,7 @@
  * Integration test for `forceAndVerifyMcpHealthCheck`.
  *
  * Exercises the real thing end to end: a real OpenCode `opencode serve`
- * process spawned directly on the host (via the same `no_workspace`
+ * process spawned directly on the host (via the shared checkout
  * orchestrator the dry-run feature uses — no Docker needed for this path), a
  * real fake-LLM server (`FakeAiServer`, real HTTP, real Anthropic wire
  * format), and a REAL (not mocked) stdio MCP server
@@ -27,17 +27,11 @@
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { forceAndVerifyMcpHealthCheck } from "../../../../src/work/task-run/application/force-and-verify-mcp-health-check";
-import { pollMcpStatus } from "../../../../src/work/task-run/application/poll-mcp-status";
+import { checkMcpStartupGate } from "../../../../src/work/task-run/application/mcp-startup-gate";
 import { createUuidV7 } from "../../../../src/common/contracts/uuid-v7";
 import { FakeAiServer } from "../../../../src/work/task-run/infra/fake-ai/fake-ai-server";
-import { DefaultLocalNoWorkspaceRuntimeEnvironmentOrchestrator } from "../../../../src/work/task-run/infra/local-noworkspace-runtime-environment";
-import { OpencodeRuntimePayloadProvisioner } from "../../../../src/runtime/runtime-service/infra/opencode-runtime-payload-provisioner";
-import { HostOpencodeBootstrap } from "../../../../src/runtime/runtime-service/infra/host-opencode-bootstrap";
-import { SessionRuntimeConfigMaterializer } from "../../../../src/work/task-run/infra/provider-access/session-runtime-config-materializer";
-import { SafeProviderAccessResolver } from "../../../../src/work/task-run/infra/provider-access/safe-provider-access-resolver";
-import { DirectProviderAccessResolver } from "../../../../src/work/task-run/infra/provider-access/direct-provider-access-resolver";
-import { noopLogger, createLogger } from "@scarn/observability/logging/host";
-import type { TaskRuntimeEnvironment } from "../../../../src/work/task-run/contracts/process-project-work-types";
+import { buildHostCheckout } from "./helpers/build-host-checkout";
+import type { LaunchedRuntime } from "../../../../src/work/task-run/contracts/process-project-work-types";
 
 const integrationEnabled = process.env["SCARN_INTEGRATION"] === "true";
 const TEST_TIMEOUT_MS = 3 * 60 * 1000;
@@ -53,64 +47,45 @@ describe.skipIf(!integrationEnabled)(
   "forceAndVerifyMcpHealthCheck (integration)",
   () => {
     let fakeAiServer: FakeAiServer;
-    let environment: TaskRuntimeEnvironment | undefined;
+    let environment: LaunchedRuntime | undefined;
+    let checkout: Awaited<ReturnType<typeof buildHostCheckout>>;
 
-    beforeEach(() => {
+    beforeEach(async () => {
       fakeAiServer = new FakeAiServer({
         verbose: process.env["SCARN_INTEGRATION_VERBOSE"] === "true",
       });
+      checkout = await buildHostCheckout();
     });
 
     afterEach(async () => {
       await environment?.cleanup().catch(() => undefined);
       environment = undefined;
       await fakeAiServer.stop().catch(() => undefined);
+      await checkout.dispose();
     });
 
     test(
       "distinguishes a working MCP tool call from a genuinely broken one",
       async () => {
-        const logger = createLogger({
-          name: "@scarn/worker",
-          level:
-            process.env["SCARN_INTEGRATION_VERBOSE"] === "true"
-              ? "debug"
-              : "silent",
-        });
-
-        const orchestrator =
-          new DefaultLocalNoWorkspaceRuntimeEnvironmentOrchestrator(logger, {
-            payloadProvisioner: new OpencodeRuntimePayloadProvisioner(),
-            // No real AI provider credentials are needed — the health check
-            // function under test runs against a synthetic fake provider pointed
-            // at the fake-LLM server. A SafeProviderAccessResolver lets the host
-            // process start even with none resolved.
-            providerAccessResolver: new SafeProviderAccessResolver(
-              new DirectProviderAccessResolver({ logger: noopLogger }),
-            ),
-            runtimeConfigMaterializer: new SessionRuntimeConfigMaterializer({
-              outputBaseDir: path.join(
-                process.cwd(),
-                ".scarn-tmp-provider-config",
-              ),
-            }),
-            hostOpencodeBootstrap: new HostOpencodeBootstrap(),
-            loadCredentials: () => Promise.resolve([]),
-          });
-
         // The agent runs directly on the host, alongside the fake-LLM server —
         // no docker.internal indirection needed. Start the fake-LLM server
         // first so its URL can be baked into the agent's launch-time config.
         await fakeAiServer.start();
 
         const sessionId = createUuidV7();
-        environment = await orchestrator.launch({
+        environment = await checkout.orchestrator.launch({
+          environment: { kind: "inline", runtime: { kind: "host" } },
+          claimToken: "integration-claim-token",
           startAgent: true,
           sessionId,
           projectId: createUuidV7(),
           requestedByUserId: createUuidV7(),
-          gitUrl: "unused-for-no_workspace",
-          repo: { mode: "none" },
+          gitUrl: checkout.gitUrl,
+          repo: {
+            mode: "readOnly",
+            gitCredentials: "none",
+            baseBranch: null,
+          },
           opencodeMcpJson: {
             fixture: {
               type: "local",
@@ -131,17 +106,17 @@ describe.skipIf(!integrationEnabled)(
           throw new Error("Expected the launch to start an agent");
         }
 
-        // Same warm-up `runHealthChecks()` does: OpenCode 2.x connects MCP
+        // What the MCP startup gate does: OpenCode 2.x connects MCP
         // servers after readiness, so a call forced immediately can race the
         // catalog. Naming the expected server keeps an empty just-booted list
         // from counting as settled.
-        const mcpReport = await pollMcpStatus(
+        const mcpReport = await checkMcpStartupGate(
           {
             baseUrl: agent.baseUrl,
             password: agent.password,
             workspaceFolder: environment.workspaceFolder,
           },
-          { expectedServers: ["fixture"] },
+          ["fixture"],
         );
         expect(mcpReport.find(({ name }) => name === "fixture")?.status).toBe(
           "connected",

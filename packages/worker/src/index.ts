@@ -75,15 +75,6 @@ export {
 export { projectConfigRef } from "./project/project-config/domain/project-config";
 export type { ProjectConfig } from "./project/project-config/domain/project-config";
 export {
-  resolveSourceBranch,
-  SourceBranchVerificationError,
-} from "./project/source-branch/application/resolve-source-branch";
-export type {
-  ResolveSourceBranchInput,
-  SourceBranchGitPort,
-} from "./project/source-branch/application/resolve-source-branch";
-export { GitCliSourceBranchPort } from "./project/source-branch/infra/git-cli-source-branch-port";
-export {
   DEVCONTAINER_CONFIG_PATH,
   hasDevcontainer,
 } from "./project/project-setup/application/ensure-devcontainer";
@@ -270,10 +261,8 @@ export type {
   WorkReporter,
   WorkActivity,
 } from "./work/task-run/contracts/work-reporter";
-export {
-  runWorkDryRun,
-  listProjectStepDefinitionsForDryRun,
-} from "./work/task-run/application/run-work-dry-run";
+export { runWorkDryRun } from "./work/task-run/application/run-work-dry-run";
+export { listProjectStepDefinitionsForDryRun } from "./work/task-run/application/list-dry-run-step-definitions";
 export type {
   HealthCheckOutcome,
   HealthCheckReport,

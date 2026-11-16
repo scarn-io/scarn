@@ -17,9 +17,9 @@ import type { McpHandshakeReport } from "./poll-mcp-status";
  * - an environment that failed to launch, or came up with an unhealthy
  *   container or OpenCode, blocks every step it was launched for: a real run
  *   of that step would fail the same way, before any check;
- * - a `warn` check that did not pass, or an MCP handshake that is not
- *   `connected`, is shown but does not block. A server the step depends on
- *   has a `required` check, which fails on its own.
+ * - a step `mcps` server or connector that is not `connected` blocks: a
+ *   real run's MCP startup gate (`mcp-startup-gate.ts`) stops on it;
+ * - a `warn` check that did not pass is shown but does not block.
  */
 
 export type StepHealthCheckReport = {
@@ -32,9 +32,15 @@ export type StepHealthCheckReport = {
   launchError: string | null;
   /** Container/OpenCode problems in the launch this step shared. */
   environmentProblems: string[];
-  /** Handshakes of the servers this step declares, in the launch it shared. */
+  /** MCP startup gate result for this step's `mcps` servers and connectors, in the launch it shared. */
   mcpServers: McpHandshakeReport[];
   healthChecks: HealthCheckReport[];
+  /**
+   * Set when the step's `baseBranch` could not be rendered without a run
+   * (it uses `input` or `workItem` tokens), so the checks ran on the
+   * configured or remote default branch instead.
+   */
+  baseBranchNote?: string | null | undefined;
 };
 
 export type StepHealthCheckFinding = {
@@ -85,8 +91,21 @@ export function listStepHealthCheckFindings(
 ): StepHealthCheckFinding[] {
   return steps.flatMap((step) => {
     const where = { stepKey: step.stepKey, stepName: step.stepName };
+    const baseBranch = step.baseBranchNote
+      ? [
+          {
+            ...where,
+            checkName: "base branch",
+            severity: "warn" as const,
+            outcome: "skipped" as const,
+            message: step.baseBranchNote,
+            blocking: false,
+          },
+        ]
+      : [];
     if (step.launchError !== null) {
       return [
+        ...baseBranch,
         {
           ...where,
           checkName: "environment",
@@ -110,12 +129,13 @@ export function listStepHealthCheckFindings(
       .map((server) => ({
         ...where,
         checkName: `mcp ${server.name}`,
-        severity: "warn" as const,
+        severity: "required" as const,
         outcome: "failed" as const,
-        message: `handshake ${server.status}${server.error ? `: ${server.error}` : ""}`,
-        blocking: false,
+        message: `not connected (${server.status})${server.error ? `: ${server.error}` : ""}`,
+        blocking: true,
       }));
     return [
+      ...baseBranch,
       ...environment,
       ...handshakes,
       ...step.healthChecks.map((check) => checkFinding(step, check)),

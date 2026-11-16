@@ -1,3 +1,4 @@
+import { inlineEnvironment } from "./inline-environment";
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
 import { Env, Repo, Runtime, codeStep, defineStep } from "../src";
@@ -88,98 +89,84 @@ describe("managed runtime registry", () => {
 });
 
 describe("compileEnvironment", () => {
-  test("no environment defaults to a workspace with auto-detect", () => {
-    expect(compileEnvironment(undefined)).toEqual({
-      executionMode: "workspace",
-      devcontainerConfigPath: null,
-      managedRuntime: null,
-      envJson: null,
-      repo: undefined,
-    });
+  test("no environment uses the repository runtime", () => {
+    expect(compileEnvironment(undefined)).toBeNull();
   });
 
-  test("an empty environment defaults to a workspace with auto-detect", () => {
+  test("an empty environment uses the repository runtime", () => {
     expect(compileEnvironment({})).toEqual({
-      executionMode: "workspace",
-      devcontainerConfigPath: null,
-      managedRuntime: null,
+      kind: "inline",
       envJson: null,
-      repo: undefined,
     });
   });
 
-  test("host derives no_workspace and no config", () => {
+  test("host emits its kind and no config", () => {
     expect(compileEnvironment({ runtime: Runtime.host() })).toEqual({
-      executionMode: "no_workspace",
-      devcontainerConfigPath: null,
-      managedRuntime: null,
+      kind: "inline",
+      runtime: { kind: "host" },
       envJson: null,
-      repo: undefined,
     });
   });
 
-  test("devcontainer without config derives workspace and null", () => {
+  test("devcontainer without config stays explicit", () => {
     expect(compileEnvironment({ runtime: Runtime.devcontainer() })).toEqual({
-      executionMode: "workspace",
-      devcontainerConfigPath: null,
-      managedRuntime: null,
+      kind: "inline",
+      runtime: { kind: "devcontainer" },
       envJson: null,
-      repo: undefined,
     });
   });
 
-  test("devcontainer with config derives workspace and the path", () => {
+  test("devcontainer with config emits its kind and the path", () => {
     expect(
       compileEnvironment({
         runtime: Runtime.devcontainer({ config: "tools/devcontainer.json" }),
       }),
     ).toMatchObject({
-      executionMode: "workspace",
-      devcontainerConfigPath: "tools/devcontainer.json",
+      kind: "inline",
+      runtime: { kind: "devcontainer", config: "tools/devcontainer.json" },
     });
   });
 
-  test("managed derives workspace, the identifier and no config path", () => {
+  test("managed emits its kind, the identifier and no config path", () => {
     expect(
       compileEnvironment({
         runtime: Runtime.managed.node24(),
-        repo: Repo.readOnly(),
       }),
     ).toEqual({
-      executionMode: "workspace",
-      devcontainerConfigPath: null,
-      managedRuntime: "node24",
+      kind: "inline",
+      runtime: { kind: "managed", id: "node24" },
       envJson: null,
-      repo: { mode: "readOnly" },
     });
   });
 
   test("defaultRuntime applies only when no runtime is declared", () => {
     const defaultRuntime = Runtime.managed.bun1();
-    expect(
-      compileEnvironment(undefined, { defaultRuntime }).managedRuntime,
-    ).toBe("bun1");
-    expect(compileEnvironment({}, { defaultRuntime }).managedRuntime).toBe(
-      "bun1",
-    );
+    expect(compileEnvironment(undefined, { defaultRuntime })?.runtime).toEqual({
+      kind: "managed",
+      id: "bun1",
+    });
+    expect(compileEnvironment({}, { defaultRuntime })?.runtime).toEqual({
+      kind: "managed",
+      id: "bun1",
+    });
     expect(
       compileEnvironment(
         { runtime: Runtime.devcontainer() },
         { defaultRuntime },
-      ).managedRuntime,
-    ).toBeNull();
+      )?.runtime,
+    ).toEqual({ kind: "devcontainer" });
     expect(
       compileEnvironment(
         { runtime: Runtime.managed.node24() },
         { defaultRuntime },
-      ).managedRuntime,
-    ).toBe("node24");
+      )?.runtime,
+    ).toEqual({ kind: "managed", id: "node24" });
   });
 
   test("vars compile through normalizeEnv", () => {
     expect(
       compileEnvironment({ vars: () => ({ A: "x", B: Env.inherit() }) })
-        .envJson,
+        ?.envJson,
     ).toEqual([
       { name: "A", source: "value", value: "x", secret: false },
       {
@@ -196,51 +183,59 @@ describe("compileEnvironment", () => {
 describe("defineStep — runtime", () => {
   const base = { key: "s", name: "S", agentPrompt: "go" } as const;
 
-  test("defaults to workspace with a null config path", () => {
+  test("defaults to a null environment reference", () => {
     const spec = defineStep(base);
-    expect(spec.executionMode).toBe("workspace");
-    expect(spec.devcontainerConfigPath).toBeNull();
-    expect(spec.managedRuntime).toBeUndefined();
+    expect(spec.environment).toBeNull();
+    expect(spec).not.toHaveProperty("runtimeKind");
+    expect(spec).not.toHaveProperty("devcontainerConfigPath");
+    expect(spec).not.toHaveProperty("managedRuntime");
+    expect(spec).not.toHaveProperty("envJson");
   });
 
   test.each([
     ["readOnly", Repo.readOnly()],
     ["readWrite", Repo.readWrite()],
   ] as const)(
-    "a managed runtime with Repo.%s() emits workspace and passes validation",
+    "a managed runtime with Repo.%s() emits managed and passes validation",
     (mode, repo) => {
       const spec = defineStep({
         ...base,
-        environment: { runtime: Runtime.managed.bun1(), repo },
+        environment: { runtime: Runtime.managed.bun1() },
+        repo,
       });
-      expect(spec.executionMode).toBe("workspace");
-      expect(spec.devcontainerConfigPath).toBeNull();
-      expect(spec.managedRuntime).toBe("bun1");
+      expect(inlineEnvironment(spec.environment)?.runtime).toEqual({
+        kind: "managed",
+        id: "bun1",
+      });
       expect(spec.repo?.mode).toBe(mode);
       expect(validateDefinitionSpecs([spec])).toEqual([]);
     },
   );
 
-  test("a managed runtime with Repo.none() is a type error and throws", () => {
+  test("a managed runtime rejects the removed none repository mode", () => {
     expect(() =>
       defineStep({
         ...base,
-        // @ts-expect-error a managed runtime clones the repo, so it takes no Repo.none()
-        environment: { runtime: Runtime.managed.bun1(), repo: Repo.none() },
+        environment: {
+          runtime: Runtime.managed.bun1(),
+        },
+        // @ts-expect-error none is not a current repository mode
+        repo: { mode: "none" },
       }),
     ).toThrow();
   });
 
-  test("Runtime.host() emits no_workspace", () => {
+  test("Runtime.host() emits host", () => {
     const spec = defineStep({
       ...base,
       environment: { runtime: Runtime.host() },
     });
-    expect(spec.executionMode).toBe("no_workspace");
-    expect(spec.devcontainerConfigPath).toBeNull();
+    expect(inlineEnvironment(spec.environment)?.runtime).toEqual({
+      kind: "host",
+    });
   });
 
-  test("Runtime.devcontainer({ config }) emits workspace and the path", () => {
+  test("Runtime.devcontainer({ config }) emits devcontainer and the path", () => {
     const spec = defineStep({
       ...base,
       environment: {
@@ -249,31 +244,33 @@ describe("defineStep — runtime", () => {
         }),
       },
     });
-    expect(spec.executionMode).toBe("workspace");
-    expect(spec.devcontainerConfigPath).toBe(
-      ".devcontainer/frontend/devcontainer.json",
-    );
+    expect(inlineEnvironment(spec.environment)?.runtime).toEqual({
+      kind: "devcontainer",
+      config: ".devcontainer/frontend/devcontainer.json",
+    });
   });
 });
 
 describe("codeStep — runtime", () => {
   const base = { key: "c", name: "C", fn: () => ({}) } as const;
 
-  test("defaults to workspace on the default managed runtime", () => {
+  test("defaults to the default managed runtime", () => {
     const spec = codeStep(base);
-    expect(spec.executionMode).toBe("workspace");
-    expect(spec.devcontainerConfigPath).toBeNull();
-    expect(spec.managedRuntime).toBe(DEFAULT_CODE_STEP_RUNTIME_ID);
+    expect(inlineEnvironment(spec.environment)?.runtime).toEqual({
+      kind: "managed",
+      id: DEFAULT_CODE_STEP_RUNTIME_ID,
+    });
   });
 
-  test("Runtime.managed.<id>() emits workspace and the identifier", () => {
+  test("Runtime.managed.<id>() emits managed and the identifier", () => {
     const spec = codeStep({
       ...base,
       environment: { runtime: Runtime.managed.node24() },
     });
-    expect(spec.executionMode).toBe("workspace");
-    expect(spec.devcontainerConfigPath).toBeNull();
-    expect(spec.managedRuntime).toBe("node24");
+    expect(inlineEnvironment(spec.environment)?.runtime).toEqual({
+      kind: "managed",
+      id: "node24",
+    });
   });
 
   test("Runtime.devcontainer() opts out of the managed default", () => {
@@ -281,14 +278,15 @@ describe("codeStep — runtime", () => {
       ...base,
       environment: { runtime: Runtime.devcontainer() },
     });
-    expect(spec.executionMode).toBe("workspace");
-    expect(spec.managedRuntime).toBeNull();
+    expect(inlineEnvironment(spec.environment)?.runtime).toEqual({
+      kind: "devcontainer",
+    });
   });
 
   test("Runtime.host() is a type error and fails validation", () => {
     const spec = codeStep({
       ...base,
-      // @ts-expect-error code steps need a workspace, so host is unsupported
+      // @ts-expect-error code steps need a container, so host is unsupported
       environment: { runtime: Runtime.host() },
     });
     const issues = validateDefinitionSpecs([spec]);
@@ -297,7 +295,7 @@ describe("codeStep — runtime", () => {
     expect(issues[0]?.message).toContain("codeStep");
   });
 
-  test("Runtime.devcontainer({ config }) emits workspace and the path", () => {
+  test("Runtime.devcontainer({ config }) emits devcontainer and the path", () => {
     const spec = codeStep({
       ...base,
       inputSchema: z.object({}),
@@ -305,15 +303,17 @@ describe("codeStep — runtime", () => {
         runtime: Runtime.devcontainer({ config: "ci/devcontainer.json" }),
       },
     });
-    expect(spec.executionMode).toBe("workspace");
-    expect(spec.devcontainerConfigPath).toBe("ci/devcontainer.json");
-    expect(spec.managedRuntime).toBeNull();
+    expect(inlineEnvironment(spec.environment)?.runtime).toEqual({
+      kind: "devcontainer",
+      config: "ci/devcontainer.json",
+    });
   });
 
   test("a managed code step passes validation", () => {
     const spec = codeStep({
       ...base,
-      environment: { runtime: Runtime.managed.bun1(), repo: Repo.readOnly() },
+      environment: { runtime: Runtime.managed.bun1() },
+      repo: Repo.readOnly(),
     });
     expect(validateDefinitionSpecs([spec])).toEqual([]);
   });

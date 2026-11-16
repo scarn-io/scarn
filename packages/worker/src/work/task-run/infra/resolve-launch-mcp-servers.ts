@@ -2,6 +2,7 @@ import type {
   OpenCodeMcpServers,
   ResolvedOpenCodeMcpServers,
 } from "../../../common/contracts/opencode-mcp";
+import { mergeConnectorMcpServers } from "@scarn/sdk/connectors";
 import { discoverRepoAgentTools } from "../../../project/agent-tools/infra/discover-repo-agent-tools";
 import type {
   McpEnvRef,
@@ -24,11 +25,17 @@ export type StepMcpServerPlan = {
  * ref by key, source and type, plus the disabled and skipped server names —
  * never a definition, which can carry secrets.
  *
- * Throws `McpServerRefNotFoundError`, which the caller lets propagate so the
+ * The environment's `connectors` join under their ids (decision 9); their
+ * `{env:NAME}` placeholders read the step env, which the environment's
+ * `vars` already cover.
+ *
+ * Throws `McpServerRefNotFoundError`, or `ConnectorMcpCollision` when a step
+ * `mcps` key reuses a connector id; the caller lets both propagate so the
  * launch fails before anything starts.
  */
 export async function planStepMcpServers(input: {
   servers: OpenCodeMcpServers | null | undefined;
+  connectors?: readonly string[] | undefined;
   workspacePath: string;
   sessionId: string;
 }): Promise<StepMcpServerPlan> {
@@ -58,8 +65,19 @@ export async function planStepMcpServers(input: {
         .map(({ source, name, reason }) => ({ source, name, reason })),
     });
   }
+  const connectors = input.connectors ?? [];
+  if (connectors.length > 0) {
+    logWork("runtime", "Connectors added to the step's MCP servers", {
+      sessionId: input.sessionId,
+      connectors,
+    });
+  }
   return {
-    servers,
+    servers: mergeConnectorMcpServers(
+      connectors,
+      servers,
+      Object.keys(input.servers ?? {}),
+    ),
     refs: resolvedRefs.map(({ key, requiredEnv }) => ({ key, requiredEnv })),
   };
 }

@@ -1,4 +1,8 @@
 import type { ArtifactKind } from "@scarn/sdk/contracts/artifacts";
+import type {
+  ResolvedEnvironment,
+  ResolvedEnvironmentRefInput,
+} from "@scarn/sdk/environment";
 import type { RepoConfig } from "@scarn/sdk/repo-config";
 import type { WorkItemChange } from "@scarn/sdk/contracts/work-item-changes";
 import type { AnyJsonValue } from "../../../common/contracts/json";
@@ -22,12 +26,14 @@ import type {
   ResolvedStepEnv,
 } from "../application/resolve-step-env";
 import type { WorkReporter } from "./work-reporter";
+import type { McpStartupGateOptions } from "../application/mcp-startup-gate";
 import type { RunHandle, RunRegistry } from "../application/run-registry";
 import type * as Tokens from "./socket-token-types";
 import type { SlotPort } from "../../worker-host/contracts/slot-port";
 import type { OpencodeServerHandle } from "../../../runtime/runtime-service/infra/opencode-server-contract";
 import type { TaskAgentRunner } from "./task-agent-runner";
 import type { RepoContextLaunchInput } from "./repo-context-launch-input";
+import type { EnvironmentDiagnostics } from "./environment-diagnostics";
 
 export type { RepoContextLaunchInput };
 
@@ -71,7 +77,6 @@ export type ProcessProjectWorkInput = {
    * Defaults to `pollIntervalMs`, i.e. one poll per window.
    */
   missingFindingsGraceMs?: number | undefined;
-  sourceBranch?: string | null | undefined;
   /**
    * Reads the project's `.scarn/.env`. Called once per claim, so an edited
    * file applies to the next run. Its values override `process.env` in the
@@ -194,6 +199,21 @@ export type TaskRunWorkerClient = {
     claimToken: string;
     leaseDurationSeconds: number;
   }): Promise<Pick<TaskRunContract, "status">>;
+  /**
+   * Fetches the named project secrets for a claimed run (one call per run).
+   * Absent on clients with no API behind them; a run that needs a secret
+   * `.scarn/.env` lacks then fails.
+   */
+  resolveTaskRunEnvironment?:
+    | ((input: {
+        taskRunId: UuidV7;
+        claimToken: string;
+        secretNames: string[];
+      }) => Promise<{
+        secrets: Record<string, { value: string; expiresAt: string | null }>;
+        missing: string[];
+      }>)
+    | undefined;
   failTaskRun(input: {
     taskRunId: UuidV7;
     claimToken: string;
@@ -358,7 +378,7 @@ export type CommitAndPushWorkBranchContext =
 
 /**
  * The running OpenCode server a prompt-driven step talks to. Present on a
- * {@link TaskRuntimeEnvironment} only when the launch started one.
+ * {@link LaunchedRuntime} only when the launch started one.
  */
 export type AgentRuntime = {
   /** Runtime-neutral agent base URL (formerly `aiBaseUrl`). */
@@ -380,7 +400,9 @@ export type AgentRuntime = {
   hostLogPath?: string | null | undefined;
 };
 
-export type TaskRuntimeEnvironment = {
+export type LaunchedRuntime = {
+  environmentDiagnostics?: EnvironmentDiagnostics | undefined;
+  resolvedEnvironment: ResolvedEnvironment;
   workspacePath: string;
   /**
    * Absolute path to the resolved workspace folder inside the runtime
@@ -389,13 +411,13 @@ export type TaskRuntimeEnvironment = {
    * constant assumption.
    *
    * For `no_workspace` runs OpenCode runs directly on the host, so this is the
-   * host temp working directory (there is no container).
+   * host checkout directory (there is no container).
    */
   workspaceFolder: string;
   resolvedBranch: string;
   /**
    * The `scarn/...` branch the agent commits to, created off the checked-out
-   * base. `null` for `no_workspace` runs (no repo) or runs without a step key.
+   * base. `null` for read-only runs or runs without a step key.
    */
   workBranch: string | null;
   /**
@@ -408,7 +430,7 @@ export type TaskRuntimeEnvironment = {
    * Commit the agent's changes to {@link workBranch} and push it. Invoked while
    * the workspace still exists and the step is still `running` (before cleanup /
    * completion). Absent when there is no work branch (`readOnly` / `none` repo
-   * modes, no_workspace, or no step key). See
+   * modes or no step key). See
    * {@link CommitAndPushWorkBranchContext} for what the commit message is built
    * from. Throws when the push fails and the step's `onPushFailure` is
    * `"fail"`, which fails the step.
@@ -447,8 +469,22 @@ export type TaskRuntimeEnvironment = {
   cleanup(): Promise<void>;
 };
 
-export type TaskRuntimeEnvironmentOrchestrator = {
+export type LaunchedRuntimeOrchestrator = {
   launch(input: {
+    environment: ResolvedEnvironmentRefInput;
+    taskKind?: "agent" | "code" | undefined;
+    resolveEnvironmentEnv?:
+      | ((environment: ResolvedEnvironment) => Promise<{
+          resolved: ResolvedStepEnv;
+          resolveMcpEnv:
+            ((refs: readonly McpEnvRef[]) => ResolvedStepEnv) | undefined;
+          fakeAiProviderOverride?: { baseUrl: string } | undefined;
+        }>)
+      | undefined;
+    resolveFakeAiProviderOverride?:
+      ((environment: ResolvedEnvironment) => { baseUrl: string }) | undefined;
+    resolveCurrentExecutionInfo?:
+      ((environment: ResolvedEnvironment) => CurrentExecutionInfo) | undefined;
     /**
      * Whether to start the agent (OpenCode server) alongside the runtime.
      * Required so every caller states intent.
@@ -466,20 +502,17 @@ export type TaskRuntimeEnvironmentOrchestrator = {
      */
     onSecretValues?: ((values: readonly string[]) => void) | undefined;
     /**
-     * The branch a later step must be created off of, handed down by the server
-     * (the predecessor step's work branch). Takes precedence over any repo-local
-     * configured base branch. Null for the first step.
+     * The branch the run starts from, handed down by the server: the Task's
+     * continued branch, or the previous step's work branch when the step sets
+     * no `baseBranch`. Beats every other base. Null otherwise.
      */
     baseWorkBranch?: string | null | undefined;
     /**
-     * The CLI's resolved (or explicitly overridden) current local branch at
-     * `scarn work` invocation. Checked out immediately after clone for the
-     * FIRST step of a pipeline attempt only (i.e. when {@link baseWorkBranch}
-     * above is absent) — takes precedence over the repo-local configured base
-     * branch, which in turn falls back to the cloned default branch. Ignored
-     * entirely when {@link baseWorkBranch} is present (a later step).
+     * The step's `baseBranch` already rendered, for a dry run, which renders
+     * only `env` tokens itself (null: not rendered). Undefined renders
+     * `repo.baseBranch` after the environment is read (`renderBaseBranch`).
      */
-    sourceBranch?: string | null | undefined;
+    stepBaseBranch?: string | null | undefined;
     /**
      * The project's `.scarn/.env` values, read for this run. Baked into the
      * devcontainer's env and consulted for the configured base work branch
@@ -557,21 +590,6 @@ export type TaskRuntimeEnvironmentOrchestrator = {
      */
     preserveRuntimeOnFailure?: boolean | undefined;
     /**
-     * The step's requested devcontainer config (repo-relative path), launched
-     * with no fallback; the launch fails before the container starts if it is
-     * missing. Null or absent auto-detects the canonical config. Ignored by the
-     * no-workspace orchestrator.
-     */
-    devcontainerConfigPath?: string | null | undefined;
-    /**
-     * The step's managed runtime identifier. When set, the workspace
-     * orchestrator launches a synthesized config for it instead of resolving
-     * one from the clone, and fails the launch before cloning when the
-     * identifier is unknown to this worker. Ignored by the no-workspace
-     * orchestrator.
-     */
-    managedRuntime?: string | null | undefined;
-    /**
      * The step's resolved repository access. `readOnly` checks out the base but
      * creates no work branch and never commits or pushes; `readWrite` creates the
      * work branch and commits and pushes per its `message` / `onPushFailure`.
@@ -599,8 +617,8 @@ export type TaskRuntimeEnvironmentOrchestrator = {
     previousRun?: PreviousRunFilesInput | undefined;
     /**
      * Set for a chat run: the workspace is parked detached on the pinned
-     * commit instead of a branch, and {@link baseWorkBranch} /
-     * {@link sourceBranch} are ignored. Only the workspace orchestrator
+     * commit instead of a branch, and {@link baseWorkBranch} is ignored.
+     * Only the workspace orchestrator
      * supports it.
      */
     repoContext?: RepoContextLaunchInput | undefined;
@@ -610,7 +628,7 @@ export type TaskRuntimeEnvironmentOrchestrator = {
      * step's tee logger so they reach the shipped step log.
      */
     logger?: ProjectWorkLogger | undefined;
-  }): Promise<TaskRuntimeEnvironment>;
+  }): Promise<LaunchedRuntime>;
 };
 
 export type StartedClaimedTask = {
@@ -625,7 +643,7 @@ export type StartedClaimedTask = {
    * completion and on yield.
    */
   sessionRestored?: boolean | null | undefined;
-  environment: TaskRuntimeEnvironment;
+  environment: LaunchedRuntime;
   /**
    * True once the server said the run is gone or the claim was revoked (see
    * `TaskRunCancelledError`). Absent means never cancelled.
@@ -692,19 +710,9 @@ export type ProcessProjectWorkDeps = {
   workerClient: TaskRunWorkerClient;
   createRunTracker(): TaskRunTracker;
   /**
-   * Orchestrator for the default `workspace` execution mode: clones the repo,
-   * launches the devcontainer, and runs OpenCode inside it.
+   * Shared checkout orchestrator for host and container runtimes.
    */
-  runtimeEnvironmentOrchestrator: TaskRuntimeEnvironmentOrchestrator;
-  /**
-   * Orchestrator for `no_workspace` steps: runs OpenCode directly on the host
-   * against a throwaway temp working dir, with NO git clone and NO devcontainer.
-   * Optional — when a `no_workspace` step is claimed but this is omitted, the
-   * launch fails fast rather than silently cloning. Wired by default in
-   * `loadDefaultDeps`.
-   */
-  noWorkspaceRuntimeEnvironmentOrchestrator?:
-    TaskRuntimeEnvironmentOrchestrator | undefined;
+  runtimeEnvironmentOrchestrator: LaunchedRuntimeOrchestrator;
   agentRunner: TaskAgentRunner;
   artifactStore: ArtifactStore;
   /**
@@ -751,6 +759,11 @@ export type ProcessProjectWorkDeps = {
    * {@link runHealthChecks}. Defaults to `() => new FakeAiServer()`.
    */
   createFakeAiServer?: (() => FakeAiServer) | undefined;
+  /**
+   * Poll window/interval for the MCP startup gate (`mcp-startup-gate.ts`).
+   * Defaults to a 60s window; tests shorten it.
+   */
+  mcpStartupGate?: McpStartupGateOptions | undefined;
   /**
    * Injectable command-runner seam for `kind: "code"` task run
    * (`execute-code-step.ts`). Overridable so unit tests can assert on the

@@ -36,7 +36,10 @@ import path from "node:path";
 import { promisify } from "node:util";
 import { buildStepArtifactsDir } from "@scarn/sdk/contracts/step-artifact-submissions";
 import { createUuidV7 } from "../../../common/contracts/uuid-v7";
-import { buildDockerEnvFlags } from "../../../runtime/runtime-service/infra/docker-env-flags";
+import {
+  buildDockerEnvByName,
+  dockerProcessEnv,
+} from "../../../runtime/runtime-service/infra/docker-env-flags";
 import { CODE_STEP_RUNNER_SCRIPT_SOURCE } from "./code-step-runner-script";
 import { buildFindingsSubmissionPath } from "./process-project-work-findings";
 import { shQuote } from "./process-project-work-monitor-helpers";
@@ -118,16 +121,18 @@ function redactEnvValues(
 }
 
 /**
- * Default command runner: `docker exec [-e K=V ...] <containerId> sh -lc
- * "<cmd>"` for workspace mode, a plain `sh -lc "<cmd>"` on the host (with
- * `env` merged over `process.env`) for `no_workspace` mode. Normalizes a
- * non-zero exit into a result rather than throwing, since `execFile` throws on
- * non-zero exit but still carries `stdout`/`stderr` on the thrown error — the
- * same shape callers need to build a clear error message either way. The
- * thrown error's own message embeds the `docker exec -e K=V` argv, so `env`
- * values are redacted from it before it can reach a failure payload.
+ * Default command runner: `docker exec [-e NAME ...] <containerId> sh -lc
+ * "<cmd>"` for workspace mode, a plain `sh -lc "<cmd>"` on the host for
+ * `no_workspace` mode. Either way the values travel only in the child
+ * process's environment (`env` merged over `process.env`), never in argv.
+ * Normalizes a non-zero exit into a result rather than throwing, since
+ * `execFile` throws on non-zero exit but still carries `stdout`/`stderr` on the
+ * thrown error — the same shape callers need to build a clear error message
+ * either way. The thrown message embeds the shell command, so `env` values are
+ * still redacted from it before it can reach a failure payload.
  */
 export const defaultRunCodeStepCommand: RunCodeStepCommand = async (input) => {
+  const byName = buildDockerEnvByName(input.env);
   const [executable, args] =
     input.runtimeContainerId === null
       ? (["sh", ["-lc", input.shellCommand]] as const)
@@ -135,21 +140,17 @@ export const defaultRunCodeStepCommand: RunCodeStepCommand = async (input) => {
           "docker",
           [
             "exec",
-            ...buildDockerEnvFlags(input.env ?? {}),
+            ...byName.flags,
             input.runtimeContainerId,
             "sh",
             "-lc",
             input.shellCommand,
           ],
         ] as const);
-  const hostEnv =
-    input.runtimeContainerId === null && input.env
-      ? { ...process.env, ...input.env }
-      : undefined;
 
   try {
     const { stdout, stderr } = await execFileAsync(executable, [...args], {
-      ...(hostEnv ? { env: hostEnv } : {}),
+      env: dockerProcessEnv(byName),
     });
     return { exitCode: 0, stdout, stderr };
   } catch (error) {

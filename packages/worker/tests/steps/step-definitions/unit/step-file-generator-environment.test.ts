@@ -15,22 +15,58 @@ function makeStep(overrides: Partial<StepDefContract> = {}): StepDefContract {
     prompt: "Open the app.",
     version: 1,
     status: "active",
-    executionMode: "workspace",
-    devcontainerConfigPath: null,
-    repo: resolveRepoConfig(overrides.executionMode ?? "workspace"),
+    environment: null,
+    repo: resolveRepoConfig(),
     inputSchemaJson: null,
     resultSchemaJson: null,
     opencodeMcpJson: null,
     healthChecksJson: null,
-    envJson: null,
     ...overrides,
   };
 }
 
 describe("generateStepsFileContent environment", () => {
-  test("emits Runtime.host() and imports Runtime for a no_workspace step", () => {
+  test("preserves an empty inline environment distinct from null", () => {
     const content = generateStepsFileContent([
-      makeStep({ executionMode: "no_workspace" }),
+      makeStep({ environment: { kind: "inline" } }),
+    ]);
+    expect(content).toContain("environment: {");
+    expect(content).not.toContain("Runtime");
+  });
+
+  test("emits runtime and vars, and no branch", () => {
+    const content = generateStepsFileContent([
+      makeStep({
+        environment: {
+          kind: "inline",
+          runtime: { kind: "managed", id: "node24" },
+          envJson: [
+            {
+              name: "MODE",
+              source: "value",
+              value: "test",
+              secret: false,
+              applies: "agent",
+            },
+          ],
+        },
+      }),
+    ]);
+    expect(content).not.toContain("branch:");
+    expect(content).toContain("runtime: Runtime.managed.node24(),");
+    expect(content).toContain('MODE: "test",');
+  });
+
+  test("rejects named source generation until named SDK authoring is available", () => {
+    expect(() =>
+      generateStepsFileContent([
+        makeStep({ environment: { kind: "named", name: "shared" } }),
+      ]),
+    ).toThrow("Named environment source generation is not supported yet");
+  });
+  test("emits Runtime.host() and imports Runtime for a host step", () => {
+    const content = generateStepsFileContent([
+      makeStep({ environment: { kind: "inline", runtime: { kind: "host" } } }),
     ]);
 
     expect(content).toContain(
@@ -45,7 +81,13 @@ describe("generateStepsFileContent environment", () => {
   test("emits Runtime.devcontainer with the config for a workspace step with a config path", () => {
     const content = generateStepsFileContent([
       makeStep({
-        devcontainerConfigPath: ".devcontainer/frontend/devcontainer.json",
+        environment: {
+          kind: "inline",
+          runtime: {
+            kind: "devcontainer",
+            config: ".devcontainer/frontend/devcontainer.json",
+          },
+        },
       }),
     ]);
 
@@ -58,9 +100,7 @@ describe("generateStepsFileContent environment", () => {
   });
 
   test("omits environment and the Runtime import for a default workspace step", () => {
-    const content = generateStepsFileContent([
-      makeStep({ executionMode: "workspace", devcontainerConfigPath: null }),
-    ]);
+    const content = generateStepsFileContent([makeStep({ environment: null })]);
 
     expect(content).not.toContain("environment:");
     expect(content).not.toContain("executionMode");
@@ -70,17 +110,23 @@ describe("generateStepsFileContent environment", () => {
   test("groups runtime and vars in one environment object and imports Runtime and Env", () => {
     const content = generateStepsFileContent([
       makeStep({
-        devcontainerConfigPath: ".devcontainer/perf/devcontainer.json",
-        envJson: [
-          {
-            name: "PROFILER_TOKEN",
-            source: "inherit",
-            from: "PROFILER_TOKEN",
-            secret: true,
-            optional: false,
-            applies: "agent",
+        environment: {
+          kind: "inline",
+          runtime: {
+            kind: "devcontainer",
+            config: ".devcontainer/perf/devcontainer.json",
           },
-        ],
+          envJson: [
+            {
+              name: "PROFILER_TOKEN",
+              source: "inherit",
+              from: "PROFILER_TOKEN",
+              secret: true,
+              optional: false,
+              applies: "agent",
+            },
+          ],
+        },
       }),
     ]);
 
@@ -102,7 +148,10 @@ describe("generateStepsFileContent environment", () => {
   test("imports Runtime only when some step needs it", () => {
     const content = generateStepsFileContent([
       makeStep({ key: "plain" }),
-      makeStep({ key: "summarize", executionMode: "no_workspace" }),
+      makeStep({
+        key: "summarize",
+        environment: { kind: "inline", runtime: { kind: "host" } },
+      }),
     ]);
 
     expect(content).toContain(
@@ -111,31 +160,39 @@ describe("generateStepsFileContent environment", () => {
     expect(content.match(/Runtime\.host\(\)/g)).toHaveLength(1);
   });
 
-  test("a generated steps file round-trips executionMode and devcontainerConfigPath", async () => {
+  test("a generated steps file round-trips environment refs", async () => {
     const cases: Array<{
       key: string;
-      executionMode: StepDefContract["executionMode"];
-      devcontainerConfigPath: string | null;
+      environment: StepDefContract["environment"];
     }> = [
       {
         key: "default-step",
-        executionMode: "workspace",
-        devcontainerConfigPath: null,
+        environment: null,
       },
       {
         key: "alt-config-step",
-        executionMode: "workspace",
-        devcontainerConfigPath: ".devcontainer/alt/devcontainer.json",
+        environment: {
+          kind: "inline",
+          runtime: {
+            kind: "devcontainer",
+            config: ".devcontainer/alt/devcontainer.json",
+          },
+        },
       },
       {
         key: "root-config-step",
-        executionMode: "workspace",
-        devcontainerConfigPath: ".devcontainer.json",
+        environment: {
+          kind: "inline",
+          runtime: { kind: "devcontainer", config: ".devcontainer.json" },
+        },
       },
       {
         key: "host-step",
-        executionMode: "no_workspace",
-        devcontainerConfigPath: null,
+        environment: { kind: "inline", runtime: { kind: "host" } },
+      },
+      {
+        key: "pathless-devcontainer-step",
+        environment: { kind: "inline", runtime: { kind: "devcontainer" } },
       },
     ];
     const content = generateStepsFileContent(
@@ -148,13 +205,16 @@ describe("generateStepsFileContent environment", () => {
       await writeFile(file, content, "utf-8");
       const loaded = (await import(file)) as Record<
         string,
-        { executionMode: string; devcontainerConfigPath: string | null }
+        {
+          environment: StepDefContract["environment"];
+        }
       >;
 
       expect(loaded["defaultStep"]).toMatchObject(cases[0] ?? {});
       expect(loaded["altConfigStep"]).toMatchObject(cases[1] ?? {});
       expect(loaded["rootConfigStep"]).toMatchObject(cases[2] ?? {});
       expect(loaded["hostStep"]).toMatchObject(cases[3] ?? {});
+      expect(loaded["pathlessDevcontainerStep"]).toMatchObject(cases[4] ?? {});
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
@@ -164,8 +224,8 @@ describe("generateStepsFileContent environment", () => {
       makeStep({ key: "workspace-default" }),
       makeStep({
         key: "host-default",
-        executionMode: "no_workspace",
-        repo: { mode: "none" },
+        environment: { kind: "inline", runtime: { kind: "host" } },
+        repo: resolveRepoConfig(),
       }),
       makeStep({
         key: "explicit-default",
@@ -174,6 +234,8 @@ describe("generateStepsFileContent environment", () => {
           message: null,
           onPushFailure: "fail",
           gitCredentials: "auto",
+          baseBranch: null,
+          workBranch: { kind: "create" },
         },
       }),
     ]);
@@ -182,18 +244,23 @@ describe("generateStepsFileContent environment", () => {
     expect(content).not.toContain("Repo");
   });
 
-  test("emits Repo.readOnly() inside a minimal environment", () => {
+  test("emits Repo.readOnly() independently of environment", () => {
     const content = generateStepsFileContent([
-      makeStep({ repo: { mode: "readOnly", gitCredentials: "auto" } }),
+      makeStep({
+        repo: {
+          mode: "readOnly",
+          gitCredentials: "auto",
+          baseBranch: null,
+        },
+      }),
     ]);
 
-    expect(content).toContain(
-      "  environment: {\n    repo: Repo.readOnly(),\n  },",
-    );
+    expect(content).toContain("  repo: Repo.readOnly(),");
     expect(content).toContain(
       'import { defineStep, Repo } from "@scarn/sdk/definitions/steps";',
     );
     expect(content).not.toContain("Runtime");
+    expect(content).not.toContain("environment:");
   });
 
   test("emits the static form for a message without tokens", () => {
@@ -204,12 +271,14 @@ describe("generateStepsFileContent environment", () => {
           message: 'fix: "quoted"',
           onPushFailure: "fail",
           gitCredentials: "auto",
+          baseBranch: null,
+          workBranch: { kind: "create" },
         },
       }),
     ]);
 
     expect(content).toContain(
-      '    repo: Repo.readWrite({ message: "fix: \\"quoted\\"" }),',
+      '  repo: Repo.readWrite({ message: "fix: \\"quoted\\"" }),',
     );
   });
 
@@ -221,12 +290,14 @@ describe("generateStepsFileContent environment", () => {
           message: null,
           onPushFailure: "warn",
           gitCredentials: "auto",
+          baseBranch: null,
+          workBranch: { kind: "create" },
         },
       }),
     ]);
 
     expect(content).toContain(
-      '    repo: Repo.readWrite({ onPushFailure: "warn" }),',
+      '  repo: Repo.readWrite({ onPushFailure: "warn" }),',
     );
   });
 
@@ -239,6 +310,8 @@ describe("generateStepsFileContent environment", () => {
           message: "fix: {{result.summary}}",
           onPushFailure: "fail",
           gitCredentials: "auto",
+          baseBranch: null,
+          workBranch: { kind: "create" },
         },
       }),
       makeStep({
@@ -248,15 +321,17 @@ describe("generateStepsFileContent environment", () => {
           message: "{{result.summary}} for {{input.ticket-id}}",
           onPushFailure: "warn",
           gitCredentials: "auto",
+          baseBranch: null,
+          workBranch: { kind: "create" },
         },
       }),
     ]);
 
     expect(content).toContain(
-      "    repo: ({ result }) => Repo.readWrite({ message: `fix: ${result.summary}` }),",
+      "  repo: ({ result }) => Repo.readWrite({ message: `fix: ${result.summary}` }),",
     );
     expect(content).toContain(
-      '    repo: ({ input, result }) => Repo.readWrite({ message: `${result.summary} for ${input["ticket-id"]}`, onPushFailure: "warn" }),',
+      '  repo: ({ input, result }) => Repo.readWrite({ message: `${result.summary} for ${input["ticket-id"]}`, onPushFailure: "warn" }),',
     );
   });
 
@@ -268,6 +343,8 @@ describe("generateStepsFileContent environment", () => {
           message: "`a` ${b} \\ {{input.title}}",
           onPushFailure: "fail",
           gitCredentials: "auto",
+          baseBranch: null,
+          workBranch: { kind: "create" },
         },
       }),
     ]);
@@ -275,21 +352,31 @@ describe("generateStepsFileContent environment", () => {
     expect(content).toContain("message: `\\`a\\` \\${b} \\\\ ${input.title}`");
   });
 
-  test("places repo beside runtime and vars in one environment object", () => {
+  test("places repo outside the runtime and vars environment object", () => {
     const content = generateStepsFileContent([
       makeStep({
-        devcontainerConfigPath: ".devcontainer/perf/devcontainer.json",
-        repo: { mode: "readOnly", gitCredentials: "auto" },
-        envJson: [
-          {
-            name: "PROFILER_TOKEN",
-            source: "inherit",
-            from: "PROFILER_TOKEN",
-            secret: true,
-            optional: false,
-            applies: "agent",
+        repo: {
+          mode: "readOnly",
+          gitCredentials: "auto",
+          baseBranch: null,
+        },
+        environment: {
+          kind: "inline",
+          runtime: {
+            kind: "devcontainer",
+            config: ".devcontainer/perf/devcontainer.json",
           },
-        ],
+          envJson: [
+            {
+              name: "PROFILER_TOKEN",
+              source: "inherit",
+              from: "PROFILER_TOKEN",
+              secret: true,
+              optional: false,
+              applies: "agent",
+            },
+          ],
+        },
       }),
     ]);
 
@@ -300,8 +387,8 @@ describe("generateStepsFileContent environment", () => {
         "    vars: () => ({",
         "      PROFILER_TOKEN: Env.inherit({ secret: true }),",
         "    }),",
-        "    repo: Repo.readOnly(),",
         "  },",
+        "  repo: Repo.readOnly(),",
       ].join("\n"),
     );
     expect(content).toContain(

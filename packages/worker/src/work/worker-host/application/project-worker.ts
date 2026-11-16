@@ -31,7 +31,6 @@ const MAX_CLAIM_BATCH = 100;
 /** The settings whose change needs a fresh loop rather than an in-place update. */
 const RESTART_KEYS = [
   "repoDir",
-  "sourceBranch",
   "preserveRuntime",
   "baseUrl",
   "addedByUserId",
@@ -316,7 +315,6 @@ export class ProjectWorker {
       concurrency: settings.concurrency ?? 1,
       readWorkItemId: () => this.#settings.workItemId ?? undefined,
       preserveRuntimeOnComplete: settings.preserveRuntime,
-      sourceBranch: settings.sourceBranch,
       readLocalEnv: () => readLocalEnvVars(settings.repoDir),
       slots: this.#deps.slots,
       runRegistry: this.#deps.runRegistry,

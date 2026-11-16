@@ -224,7 +224,8 @@ describe.skipIf(!integrationEnabled)("step runtime (integration)", () => {
       expect(workerClient.completeCalls).toHaveLength(0);
       expect(workerClient.failCalls).toHaveLength(1);
       expect(workerClient.failCalls[0]?.errorJson).toMatchObject({
-        message: `Devcontainer config "${missing}" not found in the cloned repository (branch "main")`,
+        code: "SCARN_DEVCONTAINER_REFERENCE_BROKEN",
+        message: `Devcontainer config not found: ${missing} (branch "main")`,
       });
       expect(integration.devcontainerLauncher.launchedConfigPaths).toEqual([]);
     },
@@ -370,12 +371,10 @@ describe.skipIf(!integrationEnabled)("step runtime (integration)", () => {
 
       expect(workerClient.completeCalls).toHaveLength(0);
       expect(workerClient.failCalls).toHaveLength(1);
-      expect(workerClient.failCalls[0]?.errorJson).toMatchObject({
-        message:
-          'Managed runtime "bun9" is not supported by this worker. ' +
-          "Supported managed runtimes: bun1, node24. " +
-          "Upgrade the Scarn CLI to a version that supports it.",
-      });
+      const errorJson = JSON.stringify(workerClient.failCalls[0]?.errorJson);
+      expect(errorJson).toContain('"message":"Invalid environment reference:');
+      expect(errorJson).toContain("bun1");
+      expect(errorJson).toContain("node24");
       expect(integration.devcontainerLauncher.launchedConfigPaths).toEqual([]);
     },
     TEST_TIMEOUT_MS,

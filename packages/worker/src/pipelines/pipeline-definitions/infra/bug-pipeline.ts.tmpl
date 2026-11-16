@@ -175,7 +175,7 @@ export const investigateAndReproduce = defineStep({
   description:
     "Reproduce the bug, gather evidence from every available tool, and explain its cause.",
   status: "active",
-  environment: { repo: Repo.readOnly() },
+  repo: Repo.readOnly(),
 
   // Mount every server that helps the agent see what happened: the browser,
   // logs, the database (read-only), error tracking, internal APIs.
@@ -364,7 +364,7 @@ export const proposeFix = defineStep({
   name: "Propose Fix",
   description: "Propose a minimal fix for a human to approve before it is applied.",
   status: "active",
-  environment: { repo: Repo.readOnly() },
+  repo: Repo.readOnly(),
 
   agentPrompt: `
 Propose the smallest credible fix for the reported bug. You can read the code,

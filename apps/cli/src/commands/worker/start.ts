@@ -28,14 +28,12 @@ export type WorkerStartArguments = {
   concurrency: number | undefined;
   preserveRuntimeOnComplete: boolean;
   workItemId: string | undefined;
-  sourceBranch: string | undefined;
 };
 
 const ONCE_ONLY_FLAGS: ReadonlyArray<[keyof WorkerStartArguments, string]> = [
   ["project", "<project>"],
   ["concurrency", "--concurrency"],
   ["workItemId", "--work-item-id"],
-  ["sourceBranch", "--source-branch"],
 ];
 
 function assertValidCombination(arguments_: WorkerStartArguments): void {
@@ -134,7 +132,6 @@ async function runOnce(
         concurrency: arguments_.concurrency,
         preserveRuntimeOnComplete: arguments_.preserveRuntimeOnComplete,
         workItemId: arguments_.workItemId,
-        sourceBranch: arguments_.sourceBranch,
       },
       { ...deps.once, reporter, logger, dest },
     );
@@ -216,12 +213,6 @@ export function createWorkerStartCommand(
         .option("workItemId", {
           alias: "work-item-id",
           describe: "With --once: only process tasks for this work item ID",
-          type: "string",
-        })
-        .option("sourceBranch", {
-          alias: "source-branch",
-          describe:
-            "With --once: override the branch checked out for the first step of a run",
           type: "string",
         }),
     handler: (arguments_: ArgumentsCamelCase<WorkerStartArguments>) =>

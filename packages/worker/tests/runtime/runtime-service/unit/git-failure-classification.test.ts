@@ -4,7 +4,10 @@
  * everything else (network, auth, remote problems: never delete a mirror).
  */
 import { describe, expect, test } from "bun:test";
-import { isRepoCorruption } from "../../../../src/runtime/runtime-service/infra/git-failure";
+import {
+  isNonFastForwardRejection,
+  isRepoCorruption,
+} from "../../../../src/runtime/runtime-service/infra/git-failure";
 
 const CORRUPTION: Array<[string, string]> = [
   ["not a repository", "fatal: not a git repository: '/cache/ab12.git'"],
@@ -106,4 +109,20 @@ describe("isRepoCorruption", () => {
       expect(isRepoCorruption(stderr)).toBe(false);
     });
   }
+});
+
+describe("isNonFastForwardRejection", () => {
+  test.each([
+    " ! [rejected]        main -> main (fetch first)\nerror: failed to push some refs",
+    " ! [rejected]        main -> main (non-fast-forward)\nerror: failed to push some refs",
+  ])("matches a rejected push: %s", (stderr) => {
+    expect(isNonFastForwardRejection(stderr)).toBe(true);
+  });
+
+  test.each([
+    " ! [remote rejected] main -> main (pre-receive hook declined)",
+    "fatal: could not read from remote repository",
+  ])("does not match another push failure: %s", (stderr) => {
+    expect(isNonFastForwardRejection(stderr)).toBe(false);
+  });
 });

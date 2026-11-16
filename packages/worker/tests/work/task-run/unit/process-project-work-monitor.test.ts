@@ -11,54 +11,14 @@ import {
 import { monitorStartedClaimedTaskRun } from "../../../../src/work/task-run/application/process-project-work-monitor";
 import type {
   ProcessProjectWorkDeps,
-  ProcessProjectWorkInput,
-  StartedClaimedTask,
   TaskRunWorkerClient,
 } from "../../../../src/work/task-run/contracts/process-project-work-types";
 import { buildTestZip } from "../../../support/build-test-zip";
 import { createTracker, stopStub } from "./helpers/monitor-turn-end-harness";
-
-function createStartedTask(workspacePath: string): StartedClaimedTask {
-  return {
-    projectId: parseUuidV7("01966a2c-9494-7db5-aa46-0f8f5cbbe001"),
-    localRuntimeSessionId: parseUuidV7("01966a2c-9494-7db5-aa46-0f8f5cbbe002"),
-    taskRunId: parseUuidV7("01966a2c-9494-7db5-aa46-0f8f5cbbe003"),
-    claimToken: "claim-token",
-    agentSessionId: "agent-session-id",
-    environment: {
-      workspacePath,
-      workspaceFolder: "/workspaces/repo",
-      resolvedBranch: "main",
-      workBranch: null,
-      createdFromBranch: null,
-      devcontainerConfigPath: ".devcontainer/devcontainer.json",
-      runtimeContainerId: "runtime-container-id",
-      agent: {
-        baseUrl: "http://127.0.0.1:4096",
-        password: "test-password",
-        version: "0.0.0-test",
-        logDirectory: path.join(workspacePath, ".logs"),
-      },
-      aiImage: "opencode-runtime@0.0.0-test",
-      networkName: "",
-      secretValues: [],
-      cleanup: vi.fn(() => Promise.resolve()),
-    },
-  };
-}
-
-function createInput(startedTask: StartedClaimedTask): ProcessProjectWorkInput {
-  return {
-    projectId: startedTask.projectId,
-    batchSize: 1,
-    concurrency: 1,
-    pollIntervalMs: 0,
-    leaseDurationSeconds: 30,
-    workerId: "worker-1",
-    preserveRuntimeOnComplete: true,
-    once: true,
-  };
-}
+import {
+  createInput,
+  createStartedTask,
+} from "./helpers/process-project-work-monitor-artifacts-fixtures";
 
 function createWorkerClient(input: {
   status: "running" | "succeeded";

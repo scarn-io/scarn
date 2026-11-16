@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test, vi } from "bun:test";
 import { runAgentStepBranch } from "../../../../src/work/task-run/application/process-claimed-task-run-agent-branch";
 import type {
   ProcessProjectWorkDeps,
-  TaskRuntimeEnvironment,
+  LaunchedRuntime,
   TaskRunWorkerContext,
 } from "../../../../src/work/task-run/contracts/process-project-work-types";
 import { DefaultOpencodeStepRunner } from "../../../../src/work/task-run/infra/opencode-step-runner";
@@ -78,8 +78,14 @@ function installFakeOpencode(options: {
   return requests;
 }
 
-function environment(): TaskRuntimeEnvironment {
+function environment(): LaunchedRuntime {
   return {
+    resolvedEnvironment: {
+      source: "inline",
+      runtime: { kind: "host" },
+      envVars: [],
+      connectors: [],
+    },
     workspacePath: "/tmp/ws",
     workspaceFolder: WORKSPACE_FOLDER,
     resolvedBranch: "main",

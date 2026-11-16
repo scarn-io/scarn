@@ -1,3 +1,4 @@
+import { inlineEnvironment } from "./inline-environment";
 import { describe, expect, test } from "bun:test";
 import { Env, Runtime, defineMcp, defineStep } from "../src";
 import { validateDefinitionSpecs } from "../src/definitions/validation";
@@ -36,7 +37,47 @@ function step(overrides: Partial<Parameters<typeof defineStep>[0]> = {}) {
   });
 }
 
+const inherit = (name: string, optional: boolean, mcp: string) => ({
+  source: "inherit" as const,
+  name,
+  from: name,
+  secret: true,
+  optional,
+  mcp,
+  applies: "agent" as const,
+});
+
 describe("defineStep — mcps", () => {
+  test("a host step preserves repository MCP refs and their environment", () => {
+    const spec = step({
+      environment: { runtime: Runtime.host() },
+      mcps: { db: postgres },
+    });
+    expect(inlineEnvironment(spec.environment)?.runtime).toEqual({
+      kind: "host",
+    });
+    expect(spec.opencodeMcpJson).toEqual({
+      db: {
+        type: "ref",
+        name: "postgres",
+        workerVars: [
+          inherit("DATABASE_URL", false, "db"),
+          inherit("SHARED_TOKEN", false, "db"),
+        ],
+      },
+    });
+    expect(
+      spec.opencodeMcpJson?.db?.workerVars?.find(
+        (entry) => entry.name === "DATABASE_URL",
+      ),
+    ).toMatchObject({
+      name: "DATABASE_URL",
+      source: "inherit",
+      mcp: "db",
+    });
+    expect(validateDefinitionSpecs([spec])).toEqual([]);
+  });
+
   test("compiles servers, checks and env into the wire fields", () => {
     const spec = step({
       environment: {
@@ -56,9 +97,26 @@ describe("defineStep — mcps", () => {
     });
 
     expect(spec.opencodeMcpJson).toEqual({
-      db: { type: "ref", name: "postgres" },
-      datadog: { type: "ref" },
-      tch: { type: "ref" },
+      db: {
+        type: "ref",
+        name: "postgres",
+        workerVars: [
+          inherit("DATABASE_URL", false, "db"),
+          inherit("SHARED_TOKEN", false, "db"),
+        ],
+      },
+      datadog: {
+        type: "ref",
+        workerVars: [
+          inherit("DATADOG_API_KEY", false, "datadog"),
+          inherit("SHARED_TOKEN", true, "datadog"),
+          inherit("DATADOG_SITE", true, "datadog"),
+        ],
+      },
+      tch: {
+        type: "ref",
+        workerVars: [inherit("TICKET_NUMBER", false, "tch")],
+      },
     });
 
     expect(spec.healthChecksJson).toEqual([
@@ -100,20 +158,7 @@ describe("defineStep — mcps", () => {
       { kind: "cli", command: ["true"] },
     ]);
 
-    const inherit = (name: string, optional: boolean, mcp?: string) => ({
-      source: "inherit" as const,
-      name,
-      from: name,
-      secret: true,
-      optional,
-      ...(mcp ? { mcp } : {}),
-      applies: "agent" as const,
-    });
-    expect(spec.envJson).toEqual([
-      inherit("DATABASE_URL", false, "db"),
-      inherit("SHARED_TOKEN", false),
-      inherit("DATADOG_API_KEY", false, "datadog"),
-      inherit("DATADOG_SITE", true, "datadog"),
+    expect(inlineEnvironment(spec.environment)?.envJson).toEqual([
       {
         name: "TICKET_NUMBER",
         source: "value",
@@ -135,23 +180,29 @@ describe("defineStep — mcps", () => {
   test("a var optional on both servers stays optional", () => {
     const a = defineMcp({ type: "ref", name: "a", optionalEnv: ["X"] });
     const b = defineMcp({ type: "ref", name: "b", optionalEnv: ["X"] });
-    expect(step({ mcps: { a, b } }).envJson).toEqual([
-      {
-        source: "inherit",
-        name: "X",
-        from: "X",
-        secret: true,
-        optional: true,
-        applies: "agent",
-      },
+    const spec = step({ mcps: { a, b } });
+    expect(spec.environment).toBeNull();
+    expect(spec.opencodeMcpJson?.a?.workerVars).toEqual([
+      inherit("X", true, "a"),
+    ]);
+    expect(spec.opencodeMcpJson?.b?.workerVars).toEqual([
+      inherit("X", true, "b"),
     ]);
   });
 
   test("the same handle under two keys yields one server per key", () => {
     const spec = step({ mcps: { first: tch, second: tch.disableAllChecks() } });
     expect(spec.opencodeMcpJson).toEqual({
-      first: { type: "ref", name: "tch" },
-      second: { type: "ref", name: "tch" },
+      first: {
+        type: "ref",
+        name: "tch",
+        workerVars: [inherit("TICKET_NUMBER", false, "first")],
+      },
+      second: {
+        type: "ref",
+        name: "tch",
+        workerVars: [inherit("TICKET_NUMBER", false, "second")],
+      },
     });
     expect(spec.healthChecksJson?.map((check) => check.name)).toEqual([
       "first.creds",
@@ -163,7 +214,7 @@ describe("defineStep — mcps", () => {
     const spec = step({ mcps: {} });
     expect(spec.opencodeMcpJson).toBeNull();
     expect(spec.healthChecksJson).toBeNull();
-    expect(spec.envJson).toBeNull();
+    expect(spec.environment).toBeNull();
   });
 
   test("an MCP with every check disabled and no env adds only the server", () => {
@@ -175,7 +226,7 @@ describe("defineStep — mcps", () => {
     const spec = step({ mcps: { q: quiet.disableCheck("a") } });
     expect(spec.opencodeMcpJson).toEqual({ q: { type: "ref" } });
     expect(spec.healthChecksJson).toBeNull();
-    expect(spec.envJson).toBeNull();
+    expect(spec.environment).toBeNull();
   });
 
   test("a host step with inline servers compiles and validates", () => {
@@ -201,7 +252,9 @@ describe("defineStep — mcps", () => {
       mcps: { playwright, linear },
     });
 
-    expect(spec.executionMode).toBe("no_workspace");
+    expect(inlineEnvironment(spec.environment)?.runtime).toEqual({
+      kind: "host",
+    });
     expect(spec.opencodeMcpJson).toEqual({
       playwright: {
         type: "local",
@@ -209,33 +262,16 @@ describe("defineStep — mcps", () => {
         environment: {
           PLAYWRIGHT_BROWSERS_PATH: "{env:PLAYWRIGHT_BROWSERS_PATH}",
         },
+        workerVars: [inherit("PLAYWRIGHT_BROWSERS_PATH", false, "playwright")],
       },
       linear: {
         type: "remote",
         url: "https://mcp.linear.app/mcp",
         headers: { Authorization: "Bearer {env:LINEAR_API_KEY}" },
+        workerVars: [inherit("LINEAR_API_KEY", false, "linear")],
       },
     });
-    expect(spec.envJson).toEqual([
-      {
-        source: "inherit",
-        name: "PLAYWRIGHT_BROWSERS_PATH",
-        from: "PLAYWRIGHT_BROWSERS_PATH",
-        secret: true,
-        optional: false,
-        mcp: "playwright",
-        applies: "agent",
-      },
-      {
-        source: "inherit",
-        name: "LINEAR_API_KEY",
-        from: "LINEAR_API_KEY",
-        secret: true,
-        optional: false,
-        mcp: "linear",
-        applies: "agent",
-      },
-    ]);
+    expect(inlineEnvironment(spec.environment)?.envJson).toBeNull();
     expect(validateDefinitionSpecs([spec])).toEqual([]);
   });
 });

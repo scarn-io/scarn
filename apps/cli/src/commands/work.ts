@@ -46,7 +46,7 @@ export async function runWorkShortcut(
 ): Promise<void> {
   await withReporter("work-command", async ({ reporter }) => {
     const instance = resolveWorkerInstance();
-    const settings = await resolveProjectSettings(arguments_, reporter, deps);
+    const settings = await resolveProjectSettings(arguments_, deps);
     const { started, worker } = await ensureWorkerRunning(
       { instance, baseUrl: settings.baseUrl },
       deps,

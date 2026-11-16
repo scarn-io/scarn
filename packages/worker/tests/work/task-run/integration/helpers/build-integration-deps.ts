@@ -17,12 +17,14 @@ import type {
 import { GitCliSubmoduleService } from "../../../../../src/runtime/runtime-service/infra/git-cli-submodule-service";
 import { OpencodeRuntimePayloadProvisioner } from "../../../../../src/runtime/runtime-service/infra/opencode-runtime-payload-provisioner";
 import { DevcontainerOpencodeBootstrap } from "../../../../../src/runtime/runtime-service/infra/devcontainer-opencode-bootstrap";
+import { HostOpencodeBootstrap } from "../../../../../src/runtime/runtime-service/infra/host-opencode-bootstrap";
 import { DirectProviderAccessResolver } from "../../../../../src/work/task-run/infra/provider-access/direct-provider-access-resolver";
 import { SessionRuntimeConfigMaterializer } from "../../../../../src/work/task-run/infra/provider-access/session-runtime-config-materializer";
 import { listOpencodeAuthProviders } from "../../../../../src/work/task-run/infra/provider-access/opencode-credential-discovery";
 import { loadOpencodeCredentials } from "../../../../../src/runtime/runtime-service/infra/opencode-credential-source";
 import { FAKE_AI_PROVIDER_ENV } from "../../../../../src/work/task-run/infra/fake-ai";
 import os from "node:os";
+import { readGitCommit } from "../../../../../src/work/task-run/infra/git-commit";
 import type { ProcessProjectWorkDeps } from "../../../../../src/work/task-run/application/run-project-work";
 import { FakeGitRemote } from "./fake-git-remote";
 import {
@@ -114,8 +116,10 @@ class SeedingGitCloneService {
   constructor(
     private readonly seeds: ArtifactSeed[],
     remote: FakeGitRemote,
+    sourceRepoDir?: string,
+    afterClone?: (workspacePath: string) => Promise<void>,
   ) {
-    this.inner = new FakeGitCloneService(undefined, remote);
+    this.inner = new FakeGitCloneService(sourceRepoDir, remote, afterClone);
   }
 
   async cloneRepository(
@@ -181,6 +185,10 @@ export function buildIntegrationDeps(input: {
    * the agent to write files itself.
    */
   seedArtifacts?: ArtifactSeed[] | undefined;
+  /** Isolated fixture copied before the initial default-branch commit. */
+  sourceRepoDir?: string | undefined;
+  /** Prepare branches after origin/main is seeded, before production resolution. */
+  afterClone?: ((workspacePath: string) => Promise<void>) | undefined;
   /**
    * Override the artifact store. When provided, this store is used instead of
    * the default LocalArtifactStore under ~/.scarn/artifacts. Tests pass a
@@ -221,8 +229,13 @@ export function buildIntegrationDeps(input: {
 
   const gitCloneService =
     input.seedArtifacts && input.seedArtifacts.length > 0
-      ? new SeedingGitCloneService(input.seedArtifacts, remote)
-      : new FakeGitCloneService(undefined, remote);
+      ? new SeedingGitCloneService(
+          input.seedArtifacts,
+          remote,
+          input.sourceRepoDir,
+          input.afterClone,
+        )
+      : new FakeGitCloneService(input.sourceRepoDir, remote, input.afterClone);
 
   const devcontainerLauncher = new TestcontainersDevcontainerLauncher(
     containerRegistry,
@@ -240,6 +253,7 @@ export function buildIntegrationDeps(input: {
     {
       workspaceManager: new LocalWorkspaceManager(),
       gitCloneService,
+      readGitCommit,
       gitCommitPushService,
       repoContextGit: new GitCliRepoContext(),
       submoduleService: new GitCliSubmoduleService(logger),
@@ -249,6 +263,7 @@ export function buildIntegrationDeps(input: {
         homeDir: resolveIntegrationPayloadHome(),
       }),
       opencodeBootstrap: new DevcontainerOpencodeBootstrap(),
+      hostOpencodeBootstrap: new HostOpencodeBootstrap(),
       providerAccessResolver: new DirectProviderAccessResolver({
         listProviders: (listInput) =>
           listOpencodeAuthProviders({

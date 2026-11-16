@@ -71,6 +71,7 @@ function reportWith(input: {
     providerCredentials: { ok: true, detail: "resolved" },
     mcpServers: input.mcpServers ?? [],
     healthChecks: input.healthChecks ?? [],
+    secrets: [],
   };
 }
 
@@ -84,7 +85,74 @@ function render(input: {
 }
 
 describe("renderDryRunReport", () => {
-  test("per-server lines report handshake status only", () => {
+  test.each([
+    "environment ci (managed runtime node24)",
+    "environment ci (host)",
+    "repository default (devcontainer .devcontainer/devcontainer.json)",
+  ])("renders resolved runtime context: %s", (runtime) => {
+    const calls: string[] = [];
+    renderDryRunReport(
+      { ...reportWith({}), runtime },
+      createSpyReporter(calls),
+    );
+    expect(calls).toContain(`info:Runtime: ${runtime}`);
+  });
+
+  test("warns with the base branch note when the dry run could not render it", () => {
+    const calls: string[] = [];
+    renderDryRunReport(
+      {
+        ...reportWith({}),
+        baseBranchNote: "base branch depends on input; not checked",
+      },
+      createSpyReporter(calls),
+    );
+    expect(calls).toContain(
+      "warn:Base branch: base branch depends on input; not checked",
+    );
+  });
+
+  test("says nothing about the base branch without a note", () => {
+    expect(render({}).some((line) => line.includes("Base branch"))).toBe(false);
+  });
+
+  test("reports each secret's source without values", () => {
+    const calls: string[] = [];
+    renderDryRunReport(
+      {
+        ...reportWith({}),
+        secrets: [
+          { name: "DD_API_KEY", secretName: "DD_KEY", source: "scarn" },
+          { name: "TOKEN", secretName: "TOKEN", source: "worker" },
+        ],
+      },
+      createSpyReporter(calls),
+    );
+    expect(calls).toContain(
+      "info:Secret DD_API_KEY (DD_KEY): will request from Scarn",
+    );
+    expect(calls).toContain("info:Secret TOKEN: from .scarn/.env");
+  });
+
+  test("disabled and missing servers fail the MCP startup gate", () => {
+    const lines = render({
+      mcpServers: [
+        connected("db", { status: "disabled", healthy: false }),
+        connected("linear", {
+          status: "missing",
+          healthy: false,
+          error: "OpenCode never registered this server",
+        }),
+      ],
+    });
+
+    expect(lines).toContain("error:MCP db: disabled");
+    expect(lines).toContain(
+      "error:MCP linear: missing — OpenCode never registered this server",
+    );
+  });
+
+  test("per-server lines report the startup gate status only", () => {
     const lines = render({
       mcpServers: [
         connected("postgres"),
@@ -105,9 +173,11 @@ describe("renderDryRunReport", () => {
     ]);
   });
 
-  test("reports 'MCP servers: none configured' when there are none", () => {
+  test("reports no gated MCP servers when there are none", () => {
     const lines = render({});
-    expect(lines).toContain("info:MCP servers: none configured");
+    expect(lines).toContain(
+      "info:MCP servers: no connectors or step MCP servers",
+    );
   });
 
   test("renders a passed health check as success", () => {
@@ -255,7 +325,7 @@ describe("renderDryRunReport", () => {
     expect(lines).toEqual([
       "info:Scope: global-only — no step MCP overrides injected",
       "success:Provider credentials: resolved",
-      "info:MCP servers: none configured",
+      "info:MCP servers: no connectors or step MCP servers",
       'success:Health check "browser_navigate" (browser_navigate): passed',
       'error:Health check "gh --version" (gh --version): failed [nonzero-exit] — ' +
         "Command exited with 127, expected 0. Output: not found",

@@ -1,7 +1,7 @@
 /**
  * MCP server refs on both launch paths: the workspace orchestrator resolves
  * them against the cloned repo before the devcontainer starts, and the
- * no_workspace orchestrator resolves them before it builds the OpenCode
+ * host runtime resolves them before it builds the OpenCode
  * context. A missing ref fails the launch before any runtime is started, and
  * every repo server the step does not name reaches the overlay disabled. A
  * host launch whose inline server is missing a tagged variable fails before
@@ -22,7 +22,6 @@ import {
   type HostStartInput,
   type HostStartResult,
 } from "../../../../src/runtime/runtime-service/infra/host-opencode-bootstrap";
-import { DefaultLocalNoWorkspaceRuntimeEnvironmentOrchestrator } from "../../../../src/work/task-run/infra/local-noworkspace-runtime-environment";
 import { DefaultLocalProjectRuntimeEnvironmentOrchestrator } from "../../../../src/work/task-run/infra/local-project-runtime-environment";
 import { McpServerRefNotFoundError } from "../../../../src/work/task-run/infra/mcp-server-ref-resolver";
 import {
@@ -189,7 +188,7 @@ describe("workspace launch infers MCP ref env (D3)", () => {
       deps,
     );
     const { resolved, resolveMcpEnv } = planStepEnv({
-      envJson: null,
+      envVars: null,
       inputJson: {},
       workerEnv: { [SET_VAR]: "set-token-value-123" },
       opencodeMcpJson,
@@ -242,7 +241,7 @@ class FakeHostOpencodeBootstrap extends HostOpencodeBootstrap {
   override stop(): void {}
 }
 
-describe("no_workspace launch with an inline server missing a variable (S3)", () => {
+describe("host launch with an inline server missing a variable (S3)", () => {
   const MISSING_VAR = "MCP_HOST_LAUNCH_TEST_UNSET_TOKEN_7F3A";
   let providerOutputDir: string;
 
@@ -257,20 +256,20 @@ describe("no_workspace launch with an inline server missing a variable (S3)", ()
   });
 
   test("fails with MissingStepEnvError naming the MCP before OpenCode starts", async () => {
+    const log: CallLog = [];
     const workspaceDeps = buildOrchestratorFakeDeps({
       workspacePath: providerOutputDir,
       providerOutputDir,
-      log: [],
+      log,
     });
     const hostOpencodeBootstrap = new FakeHostOpencodeBootstrap();
-    const orchestrator =
-      new DefaultLocalNoWorkspaceRuntimeEnvironmentOrchestrator(undefined, {
-        payloadProvisioner: workspaceDeps.payloadProvisioner,
-        providerAccessResolver: workspaceDeps.providerAccessResolver,
-        runtimeConfigMaterializer: workspaceDeps.runtimeConfigMaterializer,
+    const orchestrator = new DefaultLocalProjectRuntimeEnvironmentOrchestrator(
+      undefined,
+      {
+        ...workspaceDeps,
         hostOpencodeBootstrap,
-        loadCredentials: workspaceDeps.loadCredentials,
-      });
+      },
+    );
     const opencodeMcpJson: OpenCodeMcpServers = {
       playwright: {
         type: "local",
@@ -280,33 +279,44 @@ describe("no_workspace launch with an inline server missing a variable (S3)", ()
     };
     const sessionId = createUuidV7();
 
+    const envVars = [
+      {
+        name: MISSING_VAR,
+        source: "inherit",
+        from: MISSING_VAR,
+        secret: true,
+        optional: false,
+        mcp: "playwright",
+        applies: "agent",
+      },
+    ] as const;
     const launchStep = async () => {
-      const { resolved, resolveMcpEnv } = planStepEnv({
-        envJson: [
-          {
-            name: MISSING_VAR,
-            source: "inherit",
-            from: MISSING_VAR,
-            secret: true,
-            optional: false,
-            mcp: "playwright",
-            applies: "agent",
-          },
-        ],
-        inputJson: {},
-        workerEnv: {},
-        opencodeMcpJson,
-      });
       return await orchestrator.launch({
+        ...buildLaunchInput(),
+        environment: {
+          kind: "inline",
+          runtime: { kind: "host" },
+          envJson: [...envVars],
+        },
         startAgent: true,
         sessionId,
         projectId: createUuidV7(),
         requestedByUserId: createUuidV7(),
-        gitUrl: "unused-for-no_workspace",
-        repo: { mode: "none" },
+        repo: {
+          mode: "readOnly",
+          gitCredentials: "none",
+          baseBranch: null,
+        },
         opencodeMcpJson,
-        stepEnv: resolved.stepEnv,
-        resolveMcpEnv,
+        resolveEnvironmentEnv: (environment) =>
+          Promise.resolve(
+            planStepEnv({
+              envVars: environment.envVars,
+              inputJson: {},
+              workerEnv: {},
+              opencodeMcpJson,
+            }),
+          ),
         currentExecutionInfo: {
           taskRunId: sessionId,
           resultSchemaJson: null,
@@ -320,34 +330,47 @@ describe("no_workspace launch with an inline server missing a variable (S3)", ()
     expect(error).toBeInstanceOf(MissingStepEnvError);
     expect(error.message).toContain(`${MISSING_VAR} (for MCP "playwright")`);
     expect(hostOpencodeBootstrap.startInputs).toEqual([]);
+    expect(log).toContain("clone");
   });
 });
 
-describe("no_workspace launch resolves MCP server refs", () => {
-  test("a ref fails before OpenCode is started: the temp working dir has no repo files", async () => {
+describe("host launch resolves MCP server refs", () => {
+  test("a missing ref fails before OpenCode starts and cleans up the checkout", async () => {
     const sessionId = createUuidV7();
-    const orchestrator =
-      new DefaultLocalNoWorkspaceRuntimeEnvironmentOrchestrator();
-
-    const error = await rejectionOf(
-      orchestrator.launch({
-        startAgent: true,
-        sessionId,
-        projectId: createUuidV7(),
-        requestedByUserId: createUuidV7(),
-        gitUrl: "unused-for-no_workspace",
-        repo: { mode: "none" },
-        opencodeMcpJson: { db: { type: "ref", name: REF_NAME } },
-        currentExecutionInfo: {
-          taskRunId: sessionId,
-          resultSchemaJson: null,
-          turnsRemaining: null,
-        },
-      }),
+    const workspacePath = await mkdtemp(
+      path.join(os.tmpdir(), "host-missing-ref-"),
     );
-
-    expect(error).toBeInstanceOf(McpServerRefNotFoundError);
-    expect(error.message).toContain(".opencode/opencode.json (not present)");
-    expect(error.message).not.toContain("global");
+    const deps = buildOrchestratorFakeDeps({
+      workspacePath,
+      providerOutputDir: workspacePath,
+      log: [],
+    });
+    const hostOpencodeBootstrap = new FakeHostOpencodeBootstrap();
+    const orchestrator = new DefaultLocalProjectRuntimeEnvironmentOrchestrator(
+      undefined,
+      { ...deps, hostOpencodeBootstrap },
+    );
+    try {
+      const error = await rejectionOf(
+        orchestrator.launch({
+          ...buildLaunchInput(),
+          environment: { kind: "inline", runtime: { kind: "host" } },
+          sessionId,
+          repo: {
+            mode: "readOnly",
+            gitCredentials: "none",
+            baseBranch: null,
+          },
+          opencodeMcpJson: { db: { type: "ref", name: REF_NAME } },
+        }),
+      );
+      expect(error).toBeInstanceOf(McpServerRefNotFoundError);
+      expect(error.message).toContain(".opencode/opencode.json (not present)");
+      expect(error.message).not.toContain("global");
+      expect(hostOpencodeBootstrap.startInputs).toEqual([]);
+      expect(deps.workspaceManager.removeCalls).toEqual([workspacePath]);
+    } finally {
+      await rm(workspacePath, { recursive: true, force: true });
+    }
   });
 });

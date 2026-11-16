@@ -1,4 +1,5 @@
 import { execFile } from "node:child_process";
+import { existsSync } from "node:fs";
 import { cp, mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -62,26 +63,37 @@ async function installCodeStepLookup(workspacePath: string): Promise<void> {
  * initializes a real local git repo (so resolveBranchName and any downstream
  * git expectations are satisfied). No network access required. When given a
  * {@link FakeGitRemote}, the clone's `origin` points at that local bare repo so
- * the work-branch push is real.
+ * the work-branch push is real. Sources with Git history are cloned locally
+ * instead, preserving their committed main revision across fresh workspaces.
  */
 export class FakeGitCloneService implements GitCloneService {
   constructor(
     private readonly sourceRepoDir: string = DUMMY_REPO_DIR,
     private readonly remote?: FakeGitRemote,
+    private readonly afterClone?: (workspacePath: string) => Promise<void>,
   ) {}
 
   async cloneRepository(
     input: CloneRepositoryInput,
   ): Promise<CloneRepositoryResult> {
-    // The workspace directory already exists (created by the workspace
-    // manager); copy the fixture contents into it.
-    await cp(this.sourceRepoDir, input.workspacePath, {
-      recursive: true,
-      force: true,
-    });
-    await installCodeStepLookup(input.workspacePath);
-
-    await this.git(input.workspacePath, ["init", "-b", DEFAULT_BRANCH]);
+    const committedSource = existsSync(path.join(this.sourceRepoDir, ".git"));
+    if (committedSource) {
+      await execFileAsync("git", [
+        "clone",
+        "--local",
+        "--branch",
+        DEFAULT_BRANCH,
+        this.sourceRepoDir,
+        input.workspacePath,
+      ]);
+      await this.git(input.workspacePath, ["remote", "remove", "origin"]);
+    } else {
+      await cp(this.sourceRepoDir, input.workspacePath, {
+        recursive: true,
+        force: true,
+      });
+      await this.git(input.workspacePath, ["init", "-b", DEFAULT_BRANCH]);
+    }
     await this.git(input.workspacePath, [
       "config",
       "user.email",
@@ -92,15 +104,19 @@ export class FakeGitCloneService implements GitCloneService {
       "user.name",
       "Scarn Integration",
     ]);
-    await this.git(input.workspacePath, ["add", "-A"]);
-    await this.git(input.workspacePath, [
-      "commit",
-      "--no-gpg-sign",
-      "-m",
-      "Initial dummy commit",
-    ]);
+    await installCodeStepLookup(input.workspacePath);
+    if (!committedSource) {
+      await this.git(input.workspacePath, ["add", "-A"]);
+      await this.git(input.workspacePath, [
+        "commit",
+        "--no-gpg-sign",
+        "-m",
+        "Initial dummy commit",
+      ]);
+    }
 
     await this.remote?.attach(input.workspacePath);
+    await this.afterClone?.(input.workspacePath);
 
     return { resolvedBranch: DEFAULT_BRANCH };
   }

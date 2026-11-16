@@ -1,12 +1,12 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test, vi } from "bun:test";
 import {
   runInDryRunEnvironment,
   type DryRunEnvironmentHealth,
   type DryRunLaunchInput,
 } from "../../../../src/work/task-run/application/dry-run-environment";
 import type {
-  TaskRuntimeEnvironment,
-  TaskRuntimeEnvironmentOrchestrator,
+  LaunchedRuntime,
+  LaunchedRuntimeOrchestrator,
 } from "../../../../src/work/task-run/contracts/process-project-work-types";
 
 /**
@@ -22,10 +22,21 @@ const HEALTHY: DryRunEnvironmentHealth = {
 };
 
 function fakeOrchestrator(
-  options: { launchError?: string; noAgent?: boolean } = {},
+  options: {
+    launchError?: string;
+    noAgent?: boolean;
+    connectors?: string[];
+  } = {},
 ) {
   const state = { cleanups: 0 };
   const environment = {
+    resolvedEnvironment: {
+      source: "named",
+      name: "ci",
+      runtime: { kind: "managed", id: "node24" },
+      envVars: [],
+      connectors: options.connectors ?? [],
+    },
     workspacePath: "/tmp/ws",
     workspaceFolder: "/workspace",
     runtimeContainerId: "container-1",
@@ -36,8 +47,8 @@ function fakeOrchestrator(
       state.cleanups += 1;
       return Promise.resolve();
     },
-  } as unknown as TaskRuntimeEnvironment;
-  const orchestrator: TaskRuntimeEnvironmentOrchestrator = {
+  } as unknown as LaunchedRuntime;
+  const orchestrator: LaunchedRuntimeOrchestrator = {
     launch: () =>
       options.launchError
         ? Promise.reject(new Error(options.launchError))
@@ -72,8 +83,30 @@ describe("runInDryRunEnvironment", () => {
       kind: "ran",
       result: "/workspace",
       kept: false,
+      resolvedEnvironment: {
+        source: "named",
+        name: "ci",
+        runtime: { kind: "managed", id: "node24" },
+      },
     });
     expect(state.cleanups).toBe(1);
+  });
+
+  test("probes the MCP startup gate's servers: step mcps keys plus connectors", async () => {
+    const { orchestrator } = fakeOrchestrator({ connectors: ["playwright"] });
+    const gateProbe = vi.fn(() => Promise.resolve(HEALTHY));
+    await runInDryRunEnvironment({
+      orchestrator,
+      launchInput: {
+        opencodeMcpJson: { db: { type: "ref" } },
+      } as unknown as DryRunLaunchInput,
+      keep: false,
+      probe: gateProbe,
+      run: () => Promise.resolve(null),
+    });
+    expect(gateProbe).toHaveBeenCalledWith(
+      expect.objectContaining({ mcpServerNames: ["db", "playwright"] }),
+    );
   });
 
   test("a launch failure is an outcome, not a throw, and there is nothing to tear down", async () => {

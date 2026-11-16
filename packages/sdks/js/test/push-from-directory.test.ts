@@ -129,6 +129,8 @@ describe("pushFromDirectory publishing built pipelines", () => {
     const result = await push();
 
     expect(result).toEqual({
+      publishedEnvironments: [],
+      unchangedEnvironments: [],
       pushedSteps: 1,
       publishedPipelines: ["escalate", "triage"],
       unchangedPipelines: [],

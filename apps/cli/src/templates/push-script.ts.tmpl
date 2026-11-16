@@ -34,6 +34,16 @@ const result = await pushFromDirectory(dir, {
   accessToken: defaults.accessToken,
 });
 
+if (
+  result.publishedEnvironments.length > 0 ||
+  result.unchangedEnvironments.length > 0
+) {
+  console.log(
+    `Published ${String(result.publishedEnvironments.length)} environment(s), ` +
+      `${String(result.unchangedEnvironments.length)} unchanged.`,
+  );
+}
+
 console.log(
   `Pushed ${String(result.pushedSteps)} step(s); published ` +
     `${String(result.publishedPipelines.length)} pipeline(s), ` +

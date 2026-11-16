@@ -20,9 +20,8 @@ function makeStep(envJson: EnvVarSpec[]): StepDefContract {
     prompt: "Install the private packages.",
     version: 1,
     status: "active",
-    executionMode: "workspace",
-    devcontainerConfigPath: null,
-    repo: resolveRepoConfig("workspace"),
+    environment: { kind: "inline", envJson },
+    repo: resolveRepoConfig(),
     inputSchemaJson: {
       type: "object",
       properties: { tenant: { type: "string" } },
@@ -31,7 +30,6 @@ function makeStep(envJson: EnvVarSpec[]): StepDefContract {
     resultSchemaJson: null,
     opencodeMcpJson: null,
     healthChecksJson: null,
-    envJson,
   };
 }
 
@@ -91,10 +89,12 @@ describe("generateStepsFileContent env applies", () => {
       const file = path.join(dir, "steps.ts");
       await writeFile(file, content, "utf-8");
       const loaded = (await import(file)) as {
-        setupEnv: { envJson: EnvVarsInput | null };
+        setupEnv: { environment: { envJson: EnvVarsInput | null } };
       };
 
-      expect(envVarsSchema.parse(loaded.setupEnv.envJson)).toEqual(ENV_JSON);
+      expect(envVarsSchema.parse(loaded.setupEnv.environment.envJson)).toEqual(
+        ENV_JSON,
+      );
     } finally {
       await rm(dir, { recursive: true, force: true });
     }

@@ -546,6 +546,7 @@ scans **this directory only** — not subdirectories.
 | `<pipeline-key>.ts`              | One pipeline. Must `export default definePipeline({ ... })`.          |
 | `<pipeline-key>.json`            | Written by `scarn pipelines build` from the `.ts`. Never edit by hand; rebuild it. |
 | `steps.ts`                       | Shared steps as **named** exports. Optional; steps may live inline.   |
+| `environments.ts`                | Named environments (`defineEnvironment`) as **named** exports. Optional. |
 | `default.ts`                     | The project automation (`key: "default"`). Starts a pipeline when a work item is ready (§5). |
 | `push.ts`                        | Generated on every push. Never edit. Skipped by the scanner and by the typecheck. |
 | `package.json`, `tsconfig.json`  | Scaffolded. `@scarn/sdk` + `zod` are the only deps; import `z` from the SDK, not from `zod`. |
@@ -574,6 +575,7 @@ import {
   equal,
 } from "@scarn/sdk/pipelines";
 import { defineAutomation, onEvent } from "@scarn/sdk/automations";
+import { defineEnvironment } from "@scarn/sdk/definitions/environments";
 ```
 
 ## 1. Steps — `defineStep`
@@ -664,7 +666,8 @@ The read-only database is at ${env.READONLY_DB_URL}.
 - **`features`** — `Features.notifications()` adds the `$scarn_notifications_v1`
   result field and the matching prompt section. Use it instead of
   hand-writing a notification schema.
-- **`environment`** — `{ runtime?, vars?, repo? }`, how the step runs. Declare `vars`
+- **`environment`** — `{ runtime?, vars?, repo? }` inline, or a named
+  environment (see "Named environments" below), how the step runs. Declare `vars`
   before `agentPrompt` so its keys are typed into the prompt's `env`.
   - `runtime`: `Runtime.devcontainer()` (default) clones the repo and runs inside
     the project devcontainer. `Runtime.devcontainer({ config: ".devcontainer/alt/devcontainer.json" })`
@@ -704,6 +707,20 @@ The read-only database is at ${env.READONLY_DB_URL}.
     shouldn't see the credential, write
     `Repo.readOnly({ gitCredentials: "none" })` or
     `Repo.readWrite({ gitCredentials: "none" })`.
+    **Branches** are repo settings too; environments and workers have none.
+    `baseBranch` is the branch to start from, a one-line template with
+    `input`, `env` (a non-secret var declared in the step's environment's
+    `vars`) and `workItem.platformKey`, never `result`. A set `baseBranch`
+    always wins; unset, the step starts from the previous step's work branch,
+    else the worker's or project's base, else the remote default.
+    `workBranch: WorkBranch.base()` (readWrite only; `WorkBranch` is exported
+    next to `Repo`) commits onto the branch the step started from
+    instead of a new `scarn/<key>-<id>` branch; it needs an explicit
+    `baseBranch` or a previous step's branch, never forces a push, and steps
+    sharing a branch shouldn't run at once. Declare `environment` before `repo`
+    so `env` is typed:
+    ``repo: ({ env }) => Repo.readWrite({ baseBranch: `ephemeral-${env.TICKET_NUMBER}`, workBranch: WorkBranch.base() })``.
+    Only set these when the user asks for a specific branch.
     `Runtime.host()` has no clone, so it takes only `Repo.none()`, which is its
     default and never needs writing. Omit `repo` unless a step needs one of these.
 - **Repo config first, step config second.** A step already runs with the
@@ -724,6 +741,32 @@ The read-only database is at ${env.READONLY_DB_URL}.
   step either: every skill under `.claude/skills/`, `.agents/skills/`,
   `.opencode/skill/` or `.opencode/skills/` in the repository is available to
   every `workspace` step.
+
+### Named environments — `defineEnvironment`
+
+The runtime, `vars` and connectors several steps share. Export it
+from a file here (usually `environments.ts`); `push` uploads it before the
+steps.
+
+```ts
+import { defineEnvironment, Env, Runtime } from "@scarn/sdk/definitions/environments";
+
+export const frontend = defineEnvironment({
+  name: "frontend", // [a-z0-9][a-z0-9-]*, unique in the project
+  runtime: Runtime.devcontainer({ config: ".devcontainer/frontend/devcontainer.json" }),
+  connectors: ["playwright"],
+  vars: { NODE_ENV: "development", NPM_TOKEN: Env.secret("NPM_TOKEN") },
+});
+```
+
+- `vars` is a record only: no `({ input }) => …`, no `{{input.…}}`.
+- A step references it by handle (`environment: frontend`) or by name
+  (`environment: "frontend"`). Prefer the handle: it types the prompt's `env`
+  and catches conflicts early. Use the name only for an environment already
+  in Scarn and not defined here.
+- Choose named when several steps share the setup, or the user wants to
+  change it later without re-publishing: new runs use the latest pushed
+  version. Choose inline when it belongs to one step or a var uses `input`.
 
 ### MCP servers — `defineMcp`
 
@@ -1565,7 +1608,7 @@ export const investigateAndReproduce = defineStep({
   description:
     "Reproduce the bug, gather evidence from every available tool, and explain its cause.",
   status: "active",
-  environment: { repo: Repo.readOnly() },
+  repo: Repo.readOnly(),
 
   // Mount every server that helps the agent see what happened: the browser,
   // logs, the database (read-only), error tracking, internal APIs.
@@ -1754,7 +1797,7 @@ export const proposeFix = defineStep({
   name: "Propose Fix",
   description: "Propose a minimal fix for a human to approve before it is applied.",
   status: "active",
-  environment: { repo: Repo.readOnly() },
+  repo: Repo.readOnly(),
 
   agentPrompt: `
 Propose the smallest credible fix for the reported bug. You can read the code,
@@ -2014,7 +2057,7 @@ cd ../.. && "$SCARN_CLI" pipelines publish .scarn/pipeline-builder/bug-pipeline.
 `$SCARN_CLI` is the absolute path to the running CLI. If it is unset, fall
 back to plain `scarn pipelines ...`.
 
-- `push` sends steps, then publishes every built `<key>.json`: pipelines,
+- `push` uploads named environments, sends steps, then publishes every built `<key>.json`: pipelines,
   then automations such as `default.json`.
 - `build` writes `<key>.json` next to each pipeline file and validates it. A
   build error names the `.ts` line and the JSON path; fix the `.ts` and build

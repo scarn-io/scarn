@@ -386,15 +386,26 @@ After pulling, run `npm install` or `bun install` inside `.scarn/pipeline-builde
 
 Push `.scarn/pipeline-builder/` to the server, in order:
 
-1. Upsert every step definition.
-2. Publish every built `<key>.json` pipeline document, as [`publish`](#scarn-pipelines-publish-file) would. A new key creates the pipeline; a document identical to its latest version publishes nothing. Run [`build`](#scarn-pipelines-build-file) first, or push publishes stale JSON.
-3. Publish every built automation document (`<key>.json` with `"kind": "automation"`), work-item automations before project ones, since a project automation can only attach automations that exist. A new automation starts disabled; turn it on with [`scarn automations enable`](#scarn-automations). A document identical to its latest version publishes nothing.
+1. Publish every environment defined with `defineEnvironment`: each exported one, and each one a step uses even if it isn't exported. Content identical to the latest version publishes nothing. Two different environments with the same name fail the push.
+2. Upsert every step definition.
+3. Publish every built `<key>.json` pipeline document, as [`publish`](#scarn-pipelines-publish-file) would. A new key creates the pipeline; a document identical to its latest version publishes nothing. Run [`build`](#scarn-pipelines-build-file) first, or push publishes stale JSON.
+4. Publish every built automation document (`<key>.json` with `"kind": "automation"`), work-item automations before project ones, since a project automation can only attach automations that exist. A new automation starts disabled; turn it on with [`scarn automations enable`](#scarn-automations). A document identical to its latest version publishes nothing.
 
 Every file is read and the steps are validated before the first write. Other `.json` files (`package.json`, `tsconfig.json`, any without `nodes` or `"kind": "automation"`) are skipped. Absent files are ignored; they do not clear server configuration, and deleting an automation's source doesn't unpublish it.
+
+A step that names an environment by string (`environment: "frontend"`) must name one defined in the directory or already on the server; otherwise the push fails before uploading anything. Removing an environment's definition doesn't delete it from the server. See [Environments](/scarn/guides/environments/#push-and-versions).
 
 ```bash
 scarn pipelines push
 scarn pipelines push <owner/slug>
+```
+
+Each upload prints one line:
+
+```text
+Found 1 environment(s), 4 step(s), 1 pipeline document(s) and 0 automation document(s).
+✓ environment frontend v3 → published (environments.ts)
+✓ pipeline bugs v5 → unchanged (bugs.json)
 ```
 
 | Flag               | Description                 |
@@ -892,7 +903,7 @@ doesn't stop it. Follow it with `scarn worker status` and `scarn worker logs -f`
 `scarn pipelines design` again and tell the agent what happened (see [The run offer](#the-run-offer)).
 
 Running it again for a project already on the worker updates that project's settings. Run it from inside the
-project's git repository: the worker remembers the repository root and the source branch, and saves the
+project's git repository: the worker remembers the repository root, and saves the
 project's limit, `--work-item-id` filter and `-k`, so the project comes back when the worker restarts. Only
 `--work-item-id` filters what the worker claims. With `--dry-run` the command runs in the foreground instead and
 only reports on the environment; nothing is added to the worker. To claim once in this terminal and exit, use
@@ -904,17 +915,16 @@ scarn work <owner/slug>
 scarn work --dry-run
 ```
 
-| Flag                             | Alias | Default                   | Description                                                                                                  |
-| -------------------------------- | ----- | ------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `--base-url <url>`               | —     | `https://app.scarn.io`    | Override the API server URL                                                                                  |
-| `--concurrency <n>`              | `-c`  | no project limit          | Max runs of this project at a time, within the worker's machine-wide limit                                   |
-| `--work-item-id <id>`            | —     | —                         | Only process tasks for this work item ID                                                                     |
-| `--source-branch <branch>`       | —     | your current local branch | Branch checked out for the run's first step — see [Source branch](#source-branch)                            |
-| `--preserve-runtime-on-complete` | `-k`  | `false`                   | Keep runtime containers and workspace after each run (or, with `--dry-run`, after the report) for debugging  |
-| `--dry-run`                      | —     | `false`                   | Rehearse a real step's environment (devcontainer + OpenCode + MCP servers) and report its health instead     |
-| `--step-id <id>`                 | —     | —                         | Dry run only: fetch this step definition's real MCP servers to test                                          |
-| `--global-only`                  | —     | `false`                   | Dry run only: skip step-specific MCP injection and test whatever is already configured                       |
-| `--pipeline-id <id>`             | —     | —                         | Dry run only: test this pipeline definition's first step — see [What a dry run tests](#what-a-dry-run-tests) |
+| Flag                             | Alias | Default                | Description                                                                                                  |
+| -------------------------------- | ----- | ---------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `--base-url <url>`               | —     | `https://app.scarn.io` | Override the API server URL                                                                                  |
+| `--concurrency <n>`              | `-c`  | no project limit       | Max runs of this project at a time, within the worker's machine-wide limit                                   |
+| `--work-item-id <id>`            | —     | —                      | Only process tasks for this work item ID                                                                     |
+| `--preserve-runtime-on-complete` | `-k`  | `false`                | Keep runtime containers and workspace after each run (or, with `--dry-run`, after the report) for debugging  |
+| `--dry-run`                      | —     | `false`                | Resolve a real step's environment, launch its runtime and OpenCode/MCP servers, and report health instead    |
+| `--step-id <id>`                 | —     | —                      | Dry run only: fetch this step definition's real MCP servers to test                                          |
+| `--global-only`                  | —     | `false`                | Dry run only: skip step-specific MCP injection and test whatever is already configured                       |
+| `--pipeline-id <id>`             | —     | —                      | Dry run only: test this pipeline definition's first step — see [What a dry run tests](#what-a-dry-run-tests) |
 
 The project's `.scarn/.env` is read again for every claim, so edits to it apply to the next run without a
 restart. The worker's claim loop is tuned with environment variables set when the worker starts:
@@ -936,11 +946,12 @@ While work is being claimed, the worker still polls every `SCARN_WORK_POLL_INTER
 drops, the backoff returns to `SCARN_WORK_MAX_POLL_INTERVAL_MS` at once, and a longer sleep already under way
 is cut short to match. Each (re)connect also triggers an immediate poll.
 
-#### Source branch
+#### Which branch a run uses
 
-The default — your current local branch — must exist on `origin` and be in exact sync with it; push it first
-if it isn't. A `--source-branch` override only needs to exist on `origin`. Later steps use their own work
-branches — see [Base branch](/scarn/guides/workers/#base-branch).
+`scarn work` doesn't use your checked-out branch. A step's repo settings, then `SCARN_BASE_WORK_BRANCH`, then
+`baseWorkBranch` in `.scarn/scarn.jsonc`, then the remote's default pick it — see
+[Base branch](/scarn/guides/workers/#base-branch). To run against a local branch, push it and name it in one of
+those.
 
 #### What a dry run tests
 
@@ -948,6 +959,30 @@ branches — see [Base branch](/scarn/guides/workers/#base-branch).
 over `--step-id` and `--global-only`. With none of the three, a project with no step definitions yet is
 tested as `--global-only`; otherwise an interactive terminal picks a step, and a non-interactive one errors
 with the available step ids.
+
+The report prints `Runtime: <resolved description>` for the runtime actually
+selected, rather than assuming a devcontainer. Named environments are read from
+Scarn. The dry run checks out the same base branch as execution, from rules 3–6 of
+[Base branch](/scarn/guides/workers/#base-branch). It renders the step's
+`baseBranch` only when it uses just `{{env.…}}` tokens; otherwise it warns
+`base branch depends on input; not checked` and carries on. The dry run tests
+environment startup and health, not the step's prompt.
+
+It never fetches project secrets. For each `secret` variable it prints where
+the value would come from, and for each connector and step MCP server its
+startup status:
+
+```
+Secret DB_PASSWORD (STAGING_DB_PASSWORD): will request from Scarn
+Secret DD_API_KEY: from .scarn/.env
+MCP datadog: connected
+MCP playwright: failed — <OpenCode's error>
+```
+
+A server that isn't `connected` is an error line; in a real run it fails with
+`SCARN_CONNECTOR_UNAVAILABLE` (see
+[Failure codes](/scarn/guides/environments/#failure-codes)). With no connectors
+or step MCP servers it prints `MCP servers: no connectors or step MCP servers`.
 
 ---
 
@@ -993,7 +1028,6 @@ scarn worker start --foreground --once acme/app --work-item-id 0196a000-0000-700
 | `--once`                         | —     | `false`                            | With `--foreground`: claim once for one project and exit                                                  |
 | `--concurrency <n>`              | `-c`  | `SCARN_WORK_CONCURRENCY`, else `1` | With `--once`: max runs at a time                                                                         |
 | `--work-item-id <id>`            | —     | —                                  | With `--once`: only process tasks for this work item ID                                                   |
-| `--source-branch <branch>`       | —     | your current local branch          | With `--once`: branch checked out for the run's first step — see [Source branch](#source-branch)          |
 | `--preserve-runtime-on-complete` | `-k`  | `false`                            | With `--once`: keep runtime containers and workspace after each run                                       |
 
 `[project]` only applies with `--once`; it defaults to `project` in `.scarn/scarn.jsonc`. With no saved limit,
@@ -1217,4 +1251,8 @@ unless noted above.
 | `unknown`                        | Anything not classified above                                                                           |
 
 These are the CLI's own failures. A Task run the worker aborts has its own error code on the server: a run
-aborted by [`scarn worker stop --force`](#scarn-worker-stop) fails with `WORKER_STOPPED`.
+aborted by [`scarn worker stop --force`](#scarn-worker-stop) fails with `WORKER_STOPPED`. A run whose base
+branch isn't on `origin` fails with `SCARN_REPO_BRANCH_NOT_FOUND`; one whose `baseBranch` renders empty or to an
+invalid branch name, names a secret variable, or uses `WorkBranch.base()` on a base the step didn't name fails
+with `SCARN_REPO_BRANCH_INVALID` — see [Base branch](/scarn/guides/workers/#base-branch). The environment codes
+are in [Failure codes](/scarn/guides/environments/#failure-codes).

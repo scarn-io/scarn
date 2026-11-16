@@ -1,6 +1,7 @@
 import {
   appliesToAgent,
   appliesToSetup,
+  isMaskedEnvVar,
   isUninheritableWorkerEnvVarName,
   type EnvVarSpec,
 } from "@scarn/sdk/env-vars";
@@ -8,7 +9,7 @@ import { renderPromptTemplate } from "@scarn/sdk/definitions/steps";
 import type { OpenCodeMcpServers } from "../../../common/contracts/opencode-mcp";
 
 /**
- * Resolves a step's declared `envJson` against a run's input and the worker's
+ * Resolves an environment's declared vars against a run's input and the worker's
  * environment. Pure: the worker host's env (`.scarn/.env` over `process.env`)
  * is passed in as `workerEnv`, never read here.
  *
@@ -45,18 +46,31 @@ export type ResolvedStepEnv = {
 export class MissingStepEnvError extends Error {
   readonly missing: readonly string[];
 
-  constructor(missing: readonly string[]) {
+  constructor(
+    missing: readonly string[],
+    options: { includesSecrets?: boolean } = {},
+  ) {
     super(
       `Step declares required environment variables that are not set on the worker: ${missing.join(", ")}. ` +
-        "Set them in .scarn/.env or the worker's environment, or mark them optional.",
+        "Set them in .scarn/.env or the worker's environment, or mark them optional." +
+        (options.includesSecrets
+          ? " For a project secret, set it in .scarn/.env or save it as a project secret."
+          : ""),
     );
     this.name = "MissingStepEnvError";
     this.missing = missing;
   }
 }
 
+function describeMissingSecret(
+  entry: Extract<ResolvableEnvVar, { source: "secret" }>,
+): string {
+  const owner = entry.secretName === entry.name ? "" : ` for ${entry.name}`;
+  return `${entry.secretName} (project secret${owner})`;
+}
+
 function describeMissing(
-  entry: Extract<EnvVarSpec, { source: "inherit" }>,
+  entry: Extract<ResolvableEnvVar, { source: "inherit" }>,
 ): string {
   const owners = [
     ...(entry.from === entry.name ? [] : [entry.name]),
@@ -67,46 +81,104 @@ function describeMissing(
     : entry.from;
 }
 
-export function resolveStepEnv(input: {
-  envJson: readonly EnvVarSpec[] | null | undefined;
+/** Where one var's value comes from: the run's input, the worker, project secrets. */
+export type StepEnvSources = {
   inputJson: unknown;
   workerEnv: Readonly<Record<string, string | undefined>>;
-}): ResolvedStepEnv {
+  /** Project secret values by secret name (see `resolveSecretEnv`); never `workerEnv`. */
+  projectSecrets?: Readonly<Record<string, string>> | undefined;
+};
+
+/** The parts of a declared var {@link resolveEnvVarValue} reads. */
+export type ResolvableEnvVar =
+  | { name: string; source: "value"; value: string }
+  | {
+      name: string;
+      source: "inherit";
+      from: string;
+      optional?: boolean | undefined;
+      default?: string | undefined;
+      mcp?: string | undefined;
+    }
+  | { name: string; source: "secret"; secretName: string };
+
+export type ResolvedEnvVarValue =
+  | { kind: "resolved"; value: string }
+  | { kind: "omitted" }
+  | { kind: "missing"; description: string; secret: boolean };
+
+/**
+ * One declared var's value, as the agent would get it. `omitted`: an
+ * optional `inherit` var the worker doesn't set. `missing`: a required one,
+ * or a project secret that wasn't supplied.
+ */
+export function resolveEnvVarValue(
+  entry: ResolvableEnvVar,
+  sources: StepEnvSources,
+): ResolvedEnvVarValue {
+  if (entry.source === "secret") {
+    const value = sources.projectSecrets?.[entry.secretName];
+    return value === undefined
+      ? {
+          kind: "missing",
+          description: describeMissingSecret(entry),
+          secret: true,
+        }
+      : { kind: "resolved", value };
+  }
+  if (entry.source === "value") {
+    return {
+      kind: "resolved",
+      value: renderPromptTemplate(entry.value, { input: sources.inputJson }),
+    };
+  }
+  if (isUninheritableWorkerEnvVarName(entry.from)) {
+    throw new Error(
+      `Step env "${entry.name}" cannot inherit worker variable "${entry.from}": SCARN_* variables are reserved for the worker.`,
+    );
+  }
+  const value = sources.workerEnv[entry.from] ?? entry.default;
+  if (value !== undefined) return { kind: "resolved", value };
+  return entry.optional
+    ? { kind: "omitted" }
+    : { kind: "missing", description: describeMissing(entry), secret: false };
+}
+
+export function resolveStepEnv(
+  input: StepEnvSources & {
+    envVars: readonly EnvVarSpec[] | null | undefined;
+  },
+): ResolvedStepEnv {
   const stepEnv: Record<string, string> = {};
   const setupEnv: Record<string, string> = {};
   const promptEnv: Record<string, string> = {};
   const secretValues: string[] = [];
   const missing: string[] = [];
+  let missingSecret = false;
 
-  for (const entry of input.envJson ?? []) {
-    let resolved: string | undefined;
-
-    if (entry.source === "value") {
-      resolved = renderPromptTemplate(entry.value, { input: input.inputJson });
-    } else {
-      if (isUninheritableWorkerEnvVarName(entry.from)) {
-        throw new Error(
-          `Step env "${entry.name}" cannot inherit worker variable "${entry.from}": SCARN_* variables are reserved for the worker.`,
-        );
-      }
-      resolved = input.workerEnv[entry.from] ?? entry.default;
-      if (resolved === undefined) {
-        if (!entry.optional) missing.push(describeMissing(entry));
-        continue;
-      }
+  for (const entry of input.envVars ?? []) {
+    const outcome = resolveEnvVarValue(entry, input);
+    if (outcome.kind === "omitted") continue;
+    if (outcome.kind === "missing") {
+      missing.push(outcome.description);
+      missingSecret ||= outcome.secret;
+      continue;
     }
+    const resolved = outcome.value;
 
     const toAgent = appliesToAgent(entry.applies);
     if (toAgent) stepEnv[entry.name] = resolved;
     if (appliesToSetup(entry.applies)) setupEnv[entry.name] = resolved;
-    if (entry.secret) {
+    if (isMaskedEnvVar(entry)) {
       if (resolved.length > 0) secretValues.push(resolved);
     } else if (toAgent) {
       promptEnv[entry.name] = resolved;
     }
   }
 
-  if (missing.length > 0) throw new MissingStepEnvError(missing);
+  if (missing.length > 0) {
+    throw new MissingStepEnvError(missing, { includesSecrets: missingSecret });
+  }
 
   return { stepEnv, setupEnv, promptEnv, secretValues };
 }
@@ -116,36 +188,61 @@ export function resolveStepEnv(input: {
  * secret, inherited variable of that MCP, unless the step already declares
  * `X` itself for the agent (D4: the step's own entry wins; a setup-only entry
  * does not reach the agent, so the MCP still gets its own). A name read by
- * several refs is tagged with the first of them.
+ * several servers is unowned. Explicit declarations suppress inference only
+ * on their own server; across servers, required and secret win.
  */
 export function withInferredMcpEnv(
   envJson: readonly EnvVarSpec[] | null | undefined,
   refs: readonly McpEnvRef[],
+  servers?: OpenCodeMcpServers | null,
 ): EnvVarSpec[] {
   const declared = new Set(
     (envJson ?? [])
       .filter((entry) => appliesToAgent(entry.applies))
       .map((entry) => entry.name),
   );
-  const owner = new Map<string, McpEnvRef>();
-  for (const ref of refs) {
-    for (const name of ref.requiredEnv) {
-      if (declared.has(name) || owner.has(name)) continue;
-      owner.set(name, ref);
+  type Inherited = Extract<EnvVarSpec, { source: "inherit" }>;
+  const entries = new Map<string, Inherited>();
+  const keys = new Set([
+    ...Object.keys(servers ?? {}),
+    ...refs.map((ref) => ref.key),
+  ]);
+  for (const key of keys) {
+    const serverEntries = new Map<string, Inherited>(
+      (servers?.[key]?.workerVars ?? []).map((entry) => [
+        entry.name,
+        { ...entry, mcp: key, applies: "agent" },
+      ]),
+    );
+    for (const name of refs.find((ref) => ref.key === key)?.requiredEnv ?? []) {
+      if (serverEntries.has(name)) continue;
+      serverEntries.set(name, {
+        source: "inherit",
+        name,
+        from: name,
+        secret: true,
+        optional: false,
+        mcp: key,
+        applies: "agent",
+      });
+    }
+    for (const [name, entry] of serverEntries) {
+      if (declared.has(name)) continue;
+      const existing = entries.get(name);
+      if (!existing) {
+        entries.set(name, entry);
+        continue;
+      }
+      const shared = { ...existing };
+      delete shared.mcp;
+      entries.set(name, {
+        ...shared,
+        secret: existing.secret || entry.secret,
+        optional: existing.optional && entry.optional,
+      });
     }
   }
-  return [
-    ...(envJson ?? []),
-    ...[...owner].map(([name, ref]): EnvVarSpec => ({
-      source: "inherit",
-      name,
-      from: name,
-      secret: true,
-      optional: false,
-      mcp: ref.key,
-      applies: "agent",
-    })),
-  ];
+  return [...(envJson ?? []), ...entries.values()];
 }
 
 function hasMcpRefs(servers: OpenCodeMcpServers | null | undefined): boolean {
@@ -153,30 +250,43 @@ function hasMcpRefs(servers: OpenCodeMcpServers | null | undefined): boolean {
 }
 
 /**
- * Resolves a step's env before launch, and — when the step names MCP server
+ * Resolves a step's env after environment resolution, and — when the step names MCP server
  * refs — a resolver the launch calls once it has discovered the refs, adding
- * each ref's inferred variables (D3). A step without refs gets no resolver,
- * so its launch is unchanged.
+ * each ref's inferred variables (D3). Declarations from every server are
+ * included even when no repository discovery is needed.
  */
 export function planStepEnv(input: {
-  envJson: readonly EnvVarSpec[] | null | undefined;
+  envVars: readonly EnvVarSpec[] | null | undefined;
   inputJson: unknown;
   workerEnv: Readonly<Record<string, string | undefined>>;
+  projectSecrets?: Readonly<Record<string, string>> | undefined;
   opencodeMcpJson: OpenCodeMcpServers | null | undefined;
 }): {
   resolved: ResolvedStepEnv;
   resolveMcpEnv: ((refs: readonly McpEnvRef[]) => ResolvedStepEnv) | undefined;
 } {
-  const resolve = (envJson: readonly EnvVarSpec[] | null | undefined) =>
+  const resolve = (envVars: readonly EnvVarSpec[] | null | undefined) =>
     resolveStepEnv({
-      envJson,
+      envVars,
       inputJson: input.inputJson,
       workerEnv: input.workerEnv,
+      projectSecrets: input.projectSecrets,
     });
+  const needsDiscovery = hasMcpRefs(input.opencodeMcpJson);
+  const declared = withInferredMcpEnv(input.envVars, [], input.opencodeMcpJson);
   return {
-    resolved: resolve(input.envJson),
-    resolveMcpEnv: hasMcpRefs(input.opencodeMcpJson)
-      ? (refs) => resolve(withInferredMcpEnv(input.envJson, refs))
+    resolved: resolve(
+      needsDiscovery
+        ? declared.map((entry) =>
+            entry.source === "inherit" ? { ...entry, optional: true } : entry,
+          )
+        : declared,
+    ),
+    resolveMcpEnv: needsDiscovery
+      ? (refs) =>
+          resolve(
+            withInferredMcpEnv(input.envVars, refs, input.opencodeMcpJson),
+          )
       : undefined,
   };
 }

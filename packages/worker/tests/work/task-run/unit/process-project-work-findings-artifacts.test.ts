@@ -51,6 +51,15 @@ function createStartedTask(
     claimToken: "claim-token",
     agentSessionId: mode === "agent" ? "agent-session-id" : null,
     environment: {
+      resolvedEnvironment: {
+        source: "repo-default",
+        runtime: {
+          kind: "devcontainer",
+          config: ".devcontainer/devcontainer.json",
+        },
+        envVars: [],
+        connectors: [],
+      },
       workspacePath,
       workspaceFolder: "/workspaces/repo",
       resolvedBranch: "main",

@@ -41,8 +41,7 @@ import {
 } from "../infra/opencode-client";
 import { forceAndVerifyCliHealthCheck } from "./force-and-verify-cli-health-check";
 import { forceAndVerifyMcpHealthCheck } from "./force-and-verify-mcp-health-check";
-import { pollMcpStatus } from "./poll-mcp-status";
-import { logWork, logWorkError } from "./work-logger";
+import { logWorkError } from "./work-logger";
 import type { OpencodeServerHandle } from "../../../runtime/runtime-service/infra/opencode-server-contract";
 
 /**
@@ -103,8 +102,6 @@ export type RunHealthChecksInput = {
   healthChecks: HealthCheck[];
   /** Already started; shared across every check this call runs. */
   fakeAiServer: FakeAiServer;
-  /** Interval for the MCP status warm-up poll. Defaults to 500ms. */
-  mcpStatusIntervalMs?: number | undefined;
   /** Interval for polling each forced call's result. Defaults to 500ms. */
   healthCheckPollIntervalMs?: number | undefined;
 };
@@ -492,30 +489,6 @@ export async function runHealthChecks(
   if (healthChecks.length === 0) {
     return [];
   }
-
-  // Warm-up: give slow-starting MCP servers (e.g. an `npx`-installed one, or
-  // a cold-starting browser like Playwright/Chromium) a chance to finish
-  // connecting before the first declared check forces a tool call. Without
-  // this, a real (non-dry-run) run could spuriously time out a health check
-  // against a server that just hadn't finished starting yet — the dry-run
-  // path already does this same poll before its checks run (in
-  // `run-work-dry-run.ts`), so this brings real execution to parity with it.
-  // Runs regardless of whether any declared check is `mcp`-qualified,
-  // matching the dry-run's existing unconditional behavior. Purely a warm-up
-  // side effect for v1 — its report isn't used to gate anything here.
-  const report = await pollMcpStatus(server, {
-    expectedServers: [
-      ...new Set(
-        healthChecks.flatMap((check) =>
-          check.kind === "tool" && check.mcp ? [check.mcp] : [],
-        ),
-      ),
-    ],
-    intervalMs: input.mcpStatusIntervalMs,
-  });
-  logWork("health-check", "MCP servers ready before health checks", {
-    report,
-  });
 
   const enumeration = new ToolEnumeration(
     createScarnOpencodeClient(server),

@@ -17,6 +17,7 @@ import { buildPipelineDocuments } from "../../../../src/pipelines/pipeline-defin
 import { scaffoldPipelineBuilderDirectory } from "../../../../src/pipelines/pipeline-definitions/infra/pipeline-builder-scaffolder";
 import { listPipelineTemplates } from "../../../../src/pipelines/pipeline-templates/application/list-pipeline-templates";
 import { renderPipelineTemplate } from "../../../../src/pipelines/pipeline-templates/application/render-pipeline-template";
+import { buildPipelineTemplatePreview } from "../../../../src/pipelines/pipeline-templates/application/build-pipeline-template-preview";
 
 const WORKER_NODE_MODULES = resolve(
   import.meta.dir,
@@ -48,6 +49,41 @@ type BuiltAutomation = {
 };
 
 describe("pipeline templates build", () => {
+  test("wayfinder preview keeps inline runtime and top-level repository policies", async () => {
+    const dir = makeBuilderDir();
+    try {
+      const template = listPipelineTemplates().find(
+        (entry) => entry.key === "wayfinder",
+      );
+      if (!template) throw new Error("No wayfinder template");
+      const preview = await buildPipelineTemplatePreview(template, {
+        builderDir: dir,
+        cliVersion: "0.0.0",
+      });
+      expect(preview.errors).toEqual([]);
+      expect(preview.steps).toHaveLength(4);
+      for (const step of preview.steps) {
+        expect(step.environment).toMatchObject({
+          kind: "inline",
+          runtime: { kind: "devcontainer" },
+        });
+        expect(step).not.toHaveProperty("runtime");
+        expect(step.environment).not.toHaveProperty("repo");
+        expect(step.repo?.mode).toBe(
+          step.key === "prototype" ? "readWrite" : "readOnly",
+        );
+      }
+      expect(
+        preview.steps.find((step) => step.key === "prototype")?.repo,
+      ).toMatchObject({
+        message: "wayfinder prototype: {{workItem.title}}",
+        onPushFailure: "warn",
+      });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }, 30_000);
+
   for (const template of listPipelineTemplates()) {
     test(`"${template.key}" renders with defaults and builds with no errors`, async () => {
       const dir = makeBuilderDir();

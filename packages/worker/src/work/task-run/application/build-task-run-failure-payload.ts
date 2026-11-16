@@ -1,8 +1,26 @@
 import {
+  EnvironmentNotFound,
+  EnvironmentInvalid,
+  BrokenDevcontainerReference,
+} from "@scarn/sdk/environment";
+import {
+  ConnectorMcpCollision,
+  ConnectorVarsMissing,
+} from "@scarn/sdk/connectors";
+import { MissingStepEnvError } from "./resolve-step-env";
+import { ProjectSecretsRequestError } from "./resolve-secret-env";
+import { RepoBranchNotFoundError } from "./repo-branch-not-found-error";
+import { RepoBranchInvalidError } from "./repo-branch-invalid-error";
+import {
   HEALTH_CHECK_FAILED_ERROR_CODE,
   HEALTH_CHECK_FAILED_ERROR_NAME,
   HealthCheckFailedError,
 } from "./health-check-failed-error";
+import {
+  CONNECTOR_UNAVAILABLE_ERROR_CODE,
+  CONNECTOR_UNAVAILABLE_ERROR_NAME,
+  ConnectorUnavailableError,
+} from "./connector-unavailable-error";
 import {
   REPO_CONTEXT_COMMIT_UNAVAILABLE_ERROR_CODE,
   REPO_CONTEXT_COMMIT_UNAVAILABLE_ERROR_NAME,
@@ -56,6 +74,38 @@ function failureIdentity(error: TaskRunFailureInputError): {
     return {
       name: HEALTH_CHECK_FAILED_ERROR_NAME,
       code: HEALTH_CHECK_FAILED_ERROR_CODE,
+    };
+  }
+  if (error instanceof ConnectorUnavailableError) {
+    return {
+      name: CONNECTOR_UNAVAILABLE_ERROR_NAME,
+      code: CONNECTOR_UNAVAILABLE_ERROR_CODE,
+    };
+  }
+  if (
+    error instanceof EnvironmentNotFound ||
+    error instanceof EnvironmentInvalid ||
+    error instanceof BrokenDevcontainerReference ||
+    error instanceof ConnectorVarsMissing
+  ) {
+    return { name: `Scarn.${error.kind}`, code: error.code };
+  }
+  if (error instanceof ConnectorMcpCollision) {
+    return { name: "Scarn.EnvironmentInvalid", code: error.code };
+  }
+  if (
+    error instanceof RepoBranchNotFoundError ||
+    error instanceof RepoBranchInvalidError
+  ) {
+    return { name: error.name, code: error.code };
+  }
+  if (
+    error instanceof MissingStepEnvError ||
+    error instanceof ProjectSecretsRequestError
+  ) {
+    return {
+      name: "Scarn.EnvironmentUnresolved",
+      code: "SCARN_ENVIRONMENT_UNRESOLVED",
     };
   }
   if (error instanceof RepoContextCommitUnavailableError) {

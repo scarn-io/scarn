@@ -11,6 +11,12 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "bun:test";
 import type { RepoConfig } from "@scarn/sdk/repo-config";
 import { buildTaskRunFailurePayload } from "../../../../src/work/task-run/application/build-task-run-failure-payload";
 import { DefaultLocalProjectRuntimeEnvironmentOrchestrator } from "../../../../src/work/task-run/infra/local-project-runtime-environment";
+import { GitCliRepoContext } from "../../../../src/work/task-run/infra/git-cli-repo-context";
+import { EnvironmentNotFound } from "@scarn/sdk/environment";
+import {
+  environmentLaunchFixture,
+  namedEnvironment,
+} from "./helpers/environment-launch-fixture";
 import {
   buildLaunchInput,
   buildOrchestratorFakeDeps,
@@ -23,6 +29,7 @@ import {
 const CHAT_REPO: RepoConfig = {
   mode: "readOnly",
   gitCredentials: "none",
+  baseBranch: null,
 };
 const COMMIT_A = "a".repeat(40);
 const COMMIT_B = "b".repeat(40);
@@ -74,7 +81,7 @@ describe("launch with a repo context (chat run)", () => {
     );
   }
 
-  test("first run: pins the configured baseWorkBranch, ignoring the source branch and env override, and checks out the stored commit", async () => {
+  test("first run: pins the configured baseWorkBranch, ignoring the handed-in base and env override, and checks out the stored commit", async () => {
     await writeProjectConfig({ baseWorkBranch: "develop" });
     const { log, commitPush, repoContextGit, orchestrator } = setup({
       SCARN_BASE_WORK_BRANCH: "env-branch",
@@ -86,7 +93,6 @@ describe("launch with a repo context (chat run)", () => {
       ...buildLaunchInput(),
       repo: CHAT_REPO,
       stepKey: "chat",
-      sourceBranch: "worker-local-branch",
       baseWorkBranch: "ignored-base",
       repoContext: { baseCommit: null, pinBaseCommit },
     });
@@ -123,6 +129,28 @@ describe("launch with a repo context (chat run)", () => {
     expect(pinBaseCommit).toHaveBeenCalledWith({
       baseCommit: COMMIT_A,
       baseBranch: "main",
+    });
+    expect(repoContextGit.checkoutCalls).toEqual([COMMIT_A]);
+  });
+
+  test("first run: an environment does not change the pinned branch", async () => {
+    await writeProjectConfig({ baseWorkBranch: "develop" });
+    const { repoContextGit, orchestrator } = setup();
+    repoContextGit.branchCommits.set("develop", COMMIT_A);
+    const pinBaseCommit = vi.fn(() => Promise.resolve(COMMIT_A));
+    await orchestrator.launch({
+      ...buildLaunchInput(),
+      repo: CHAT_REPO,
+      environment: {
+        kind: "inline",
+        runtime: { kind: "managed", id: "bun1" },
+      },
+      repoContext: { baseCommit: null, pinBaseCommit },
+    });
+    expect(repoContextGit.resolveCalls).toEqual(["develop"]);
+    expect(pinBaseCommit).toHaveBeenCalledWith({
+      baseCommit: COMMIT_A,
+      baseBranch: "develop",
     });
     expect(repoContextGit.checkoutCalls).toEqual([COMMIT_A]);
   });
@@ -179,5 +207,69 @@ describe("launch with a repo context (chat run)", () => {
 
     expect(log).not.toContain("openGitCredentialRelay");
     expect(deps.gitCredentialRelay.openInputs).toEqual([]);
+  });
+});
+
+describe("named conversation environments", () => {
+  const { setup, initRepo, gitCommand, commitFile } = environmentLaunchFixture(
+    () => {},
+  );
+
+  test("first conversation with a named environment pins the default branch", async () => {
+    await initRepo();
+    const pinned = await commitFile("default base");
+    const { orchestrator, input, deps } = setup();
+    const contextGit = new GitCliRepoContext();
+    deps.repoContextGit.resolveRemoteBranchCommit = ({ branch }) => {
+      expect(branch).toBe("main");
+      return Promise.resolve(pinned);
+    };
+    deps.repoContextGit.checkoutCommit = (checkout) =>
+      contextGit.checkoutCommit(checkout);
+    const pinBaseCommit = vi.fn((pin: { baseCommit: string }) =>
+      Promise.resolve(pin.baseCommit),
+    );
+    const launched = await orchestrator.launch({
+      ...input,
+      repo: CHAT_REPO,
+      environment: namedEnvironment({
+        runtime: { kind: "managed", id: "bun1" },
+      }),
+      repoContext: { baseCommit: null, pinBaseCommit },
+    });
+    expect(pinBaseCommit).toHaveBeenCalledWith({
+      baseCommit: pinned,
+      baseBranch: "main",
+    });
+    expect(launched.resolvedEnvironment.runtime).toEqual({
+      kind: "managed",
+      id: "bun1",
+    });
+    expect((await gitCommand("rev-parse", "HEAD")).trim()).toBe(pinned);
+  });
+
+  test("a continuation whose environment was deleted fails rather than reading a committed file", async () => {
+    const pinned = await initRepo(
+      '{"runtime":{"managed":"bun1"}}',
+      ".scarn/environments/local.jsonc",
+    );
+    const { orchestrator, input, deps } = setup();
+    const contextGit = new GitCliRepoContext();
+    deps.repoContextGit.checkoutCommit = (checkout) =>
+      contextGit.checkoutCommit(checkout);
+    const error = await rejectionOf(
+      orchestrator.launch({
+        ...input,
+        environment: { kind: "named", name: "local", notFound: true },
+        repoContext: {
+          baseCommit: pinned,
+          pinBaseCommit: () => {
+            throw new Error("must not repin");
+          },
+        },
+      }),
+    );
+    expect(error).toBeInstanceOf(EnvironmentNotFound);
+    expect(deps.devcontainerLauncher.launchInputs).toEqual([]);
   });
 });
