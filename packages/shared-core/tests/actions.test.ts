@@ -18,6 +18,7 @@ const visit = (
   nodeId,
   nodeKind,
   status,
+  routing: null,
   tasks: [],
   createdAt,
   completedAt: null,
@@ -28,6 +29,7 @@ const run: RunWithVisits = {
   workItemId: "wi-1",
   workItemTitle: "Fix login",
   pipelineDefinitionId: "pd-1",
+  pipelineDefinitionVersionId: "pdv-1",
   status: "failed",
   visits: [
     visit("b2", "build", "failed", "2026-01-02"),

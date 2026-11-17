@@ -209,4 +209,69 @@ describe("next routes", () => {
       },
     });
   });
+
+  test("label and overridable compile on routes, otherwise and next", () => {
+    const pipeline = definePipeline({
+      key: "k",
+      start: classify,
+      flow: [
+        classify.next({
+          routes: [
+            {
+              when: (r) => equal(r.result.severity, "critical"),
+              to: pageOncall,
+              label: "Page on-call",
+              overridable: true,
+            },
+          ],
+          otherwise: { to: fileTicket, label: "File a ticket" },
+          overridable: true,
+        }),
+        pageOncall.next(done),
+        fileTicket.next(done),
+      ],
+    });
+    expect(pipeline.document.nodes["classify-step"]).toEqual({
+      kind: "step",
+      step: "classify-step",
+      next: {
+        routes: [
+          {
+            when: { path: "result.severity", op: "equal", value: "critical" },
+            to: "page-oncall-step",
+            label: "Page on-call",
+            overridable: true,
+          },
+        ],
+        otherwise: { to: "file-ticket-step", label: "File a ticket" },
+        overridable: true,
+      },
+    });
+  });
+
+  test("an overridable otherwise in object form", () => {
+    const pipeline = definePipeline({
+      key: "k",
+      start: classify,
+      flow: [
+        classify.next({
+          routes: [
+            {
+              when: (r) => equal(r.result.severity, "critical"),
+              to: pageOncall,
+            },
+          ],
+          otherwise: { to: fileTicket, overridable: true },
+        }),
+        pageOncall.next(done),
+        fileTicket.next(done),
+      ],
+    });
+    expect(pipeline.document.nodes["classify-step"]).toMatchObject({
+      next: { otherwise: { to: "file-ticket-step", overridable: true } },
+    });
+    expect(pipeline.document.nodes["classify-step"]).not.toHaveProperty(
+      "next.overridable",
+    );
+  });
 });

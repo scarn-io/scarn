@@ -12,6 +12,7 @@ import {
   type NextData,
   type NodeDef,
   type NodeSettings,
+  type OtherwiseData,
   type TargetSpec,
 } from "./model";
 import { chainOf, eachOf, nodeOf, registerChain, targetOf } from "./registry";
@@ -19,10 +20,17 @@ import { captureSite } from "./source";
 
 type When = (r: object) => object;
 
+interface RouteOptions {
+  to?: TargetSpec;
+  label?: string;
+  overridable?: boolean;
+}
+
 interface NextOptions {
   match?: string;
-  routes?: readonly { when?: When; to?: TargetSpec }[];
-  otherwise?: TargetSpec;
+  routes?: readonly (RouteOptions & { when?: When })[];
+  otherwise?: TargetSpec | RouteOptions;
+  overridable?: boolean;
 }
 
 function next(data: ChainData, change: Partial<ChainData>): object {
@@ -47,13 +55,57 @@ function isTargetSpec(value: object): boolean {
   );
 }
 
+function overridableOf(
+  id: string,
+  value: boolean | undefined,
+): true | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (!value) {
+    throw new AuthoringError(
+      `.next() for "${id}": "overridable" can only be true; leave it out instead`,
+    );
+  }
+  return true;
+}
+
+function otherwiseData(
+  id: string,
+  otherwise: TargetSpec | RouteOptions | undefined,
+): OtherwiseData | undefined {
+  if (otherwise === undefined) {
+    return undefined;
+  }
+  if (isTargetSpec(otherwise)) {
+    return { target: otherwise, label: undefined, overridable: undefined };
+  }
+  const options = otherwise as RouteOptions;
+  if (options.to === undefined) {
+    throw new AuthoringError(`.next() for "${id}": "otherwise" has no "to"`);
+  }
+  return {
+    target: options.to,
+    label: options.label,
+    overridable: overridableOf(id, options.overridable),
+  };
+}
+
 function nextData(id: string, arg: object): NextData {
   const site = captureSite();
   if (isTargetSpec(arg) || !("routes" in arg)) {
     return {
       match: undefined,
-      routes: [{ when: undefined, target: arg }],
+      routes: [
+        {
+          when: undefined,
+          target: arg,
+          label: undefined,
+          overridable: undefined,
+        },
+      ],
       otherwise: undefined,
+      overridable: undefined,
       site,
     };
   }
@@ -78,12 +130,18 @@ function nextData(id: string, arg: object): NextData {
         `.next() for "${id}": route ${String(index)} has no "to"`,
       );
     }
-    return { when: route.when, target: route.to };
+    return {
+      when: route.when,
+      target: route.to,
+      label: route.label,
+      overridable: overridableOf(id, route.overridable),
+    };
   });
   return {
     match: options.match === "all" ? "all" : undefined,
     routes,
-    otherwise: options.otherwise,
+    otherwise: otherwiseData(id, options.otherwise),
+    overridable: overridableOf(id, options.overridable),
     site,
   };
 }

@@ -69,6 +69,7 @@ export type {
   NextOptions,
   NextRoute,
   NodeHandle,
+  OtherwiseRoute,
   PartialTarget,
   PipelineStep,
   ReplyInput,

@@ -34,7 +34,12 @@ import {
 } from "./json-schema";
 import { describeSchema } from "./schema-relations";
 import { analyzeSplits, type Merge } from "./splits";
-import { checkDecisionActions, checkNotInV1, parseDocument } from "./structure";
+import {
+  checkDecisionActions,
+  checkNotInV1,
+  checkRouteOverrides,
+  parseDocument,
+} from "./structure";
 import { closest, quoteList } from "./suggest";
 import type { ValidationError } from "./types";
 
@@ -304,6 +309,7 @@ export function validatePipeline(
   const errors: ValidationError[] = [
     ...checkNotInV1(document),
     ...checkDecisionActions(document),
+    ...checkRouteOverrides(document),
     ...checkTargets(document, allTargets(document)),
   ];
   const graph = buildGraph(document);

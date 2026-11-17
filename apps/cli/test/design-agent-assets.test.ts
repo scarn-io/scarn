@@ -180,13 +180,15 @@ describe("composed prompt size", () => {
   // brought it down to ~92,900, and replacing `approval` with `decision`
   // (actions, body, a revise loop in §4, and the template's actions) took it
   // to ~96,000, and documenting `gitCredentials` on `Repo` took it to ~98,500,
-  // and named environments (`defineEnvironment` in §1 and `push`) to ~100,900
+  // and named environments (`defineEnvironment` in §1 and `push`) to ~100,900,
+  // and route labels and overrules (§4's "Labels and overrules", §7, phase 6
+  // and the template's labels and `overridable` marks) to ~105,700
   // — the lower bound is set just under the current value so any further
   // growth is a deliberate decision rather than a drift.
   test("stays within the expected envelope", () => {
     const length = buildPipelineDesignerPrompt().length;
-    expect(length).toBeGreaterThan(100_500);
-    expect(length).toBeLessThan(103_000);
+    expect(length).toBeGreaterThan(105_300);
+    expect(length).toBeLessThan(108_000);
   });
 
   test("survives a round trip through the injected TUI config", () => {

@@ -127,6 +127,75 @@ export function checkDecisionActions(
   return errors;
 }
 
+/**
+ * Route labels are unique within a `next`, since people pick routes by
+ * label. `overridable` is rejected on a wait's routes (the person already
+ * chose) and on unconditional `match: "all"` routes (they always run).
+ */
+export function checkRouteOverrides(
+  document: PipelineDocument,
+): ValidationError[] {
+  const errors: ValidationError[] = [];
+  for (const [id, node] of Object.entries(document.nodes)) {
+    if (
+      (node.kind !== "step" && node.kind !== "wait") ||
+      node.next === undefined
+    ) {
+      continue;
+    }
+    const next = node.next;
+    const labels = new Set<string>();
+    for (const entry of routeEntries(next)) {
+      const pointer = ["nodes", id, "next", ...entry.pointer];
+      const { label, overridable } = entry.route;
+      if (label !== undefined) {
+        if (labels.has(label)) {
+          errors.push({
+            code: "schema",
+            path: jsonPointer([...pointer, "label"]),
+            message: `"${id}" has more than one route labelled "${label}"`,
+            hint: "Give each route a unique label",
+          });
+        }
+        labels.add(label);
+      }
+      if (overridable === undefined) {
+        continue;
+      }
+      if (node.kind === "wait") {
+        errors.push({
+          code: "schema",
+          path: jsonPointer([...pointer, "overridable"]),
+          message: `wait "${id}" can't have overridable routes; the person already chose`,
+          hint: 'Remove "overridable"',
+        });
+        continue;
+      }
+      if (
+        next.match === "all" &&
+        entry.kind === "route" &&
+        next.routes[entry.index]?.when === undefined
+      ) {
+        errors.push({
+          code: "schema",
+          path: jsonPointer([...pointer, "overridable"]),
+          message: `"${id}" matches "all", so a route without "when" always runs and can't be overridable`,
+          hint: 'Add a "when", or remove "overridable"',
+        });
+      }
+    }
+    if (node.kind === "wait" && next.overridable !== undefined) {
+      errors.push({
+        code: "schema",
+        path: jsonPointer(["nodes", id, "next", "overridable"]),
+        message: `wait "${id}" can't have overridable routes; the person already chose`,
+        hint: 'Remove "overridable"',
+      });
+    }
+  }
+  return errors;
+}
+
 /** Rejects retry delays, wait and pipeline timeouts, event/timer waits and routing to another pipeline. */
 export function checkNotInV1(document: PipelineDocument): ValidationError[] {
   const errors: ValidationError[] = [];

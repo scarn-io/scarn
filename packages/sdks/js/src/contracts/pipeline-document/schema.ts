@@ -205,6 +205,10 @@ const routeShape = {
   each: eachSchema.optional(),
   /** Ends the lane by contributing these args to the merge at `to`. */
   partial: z.literal(true).optional(),
+  /** Names the route for the people and tools that pick it. Unique within a `next`. */
+  label: z.string().min(1).max(80).optional(),
+  /** Lets a person overrule the visit onto this route. */
+  overridable: z.literal(true).optional(),
 };
 
 function noPartialWithEach(
@@ -230,8 +234,10 @@ export const otherwiseSchema = z
   .omit({ when: true })
   .superRefine(noPartialWithEach);
 
-/** The pipeline's first route. It can't split or merge. */
-export const startSchema = z.strictObject(routeShape).omit({ partial: true });
+/** The pipeline's first route. It can't split or merge, and has no visit to overrule. */
+export const startSchema = z
+  .strictObject(routeShape)
+  .omit({ partial: true, label: true, overridable: true });
 
 /**
  * How a node picks its routes: `"first"` (the default) takes the first
@@ -243,6 +249,8 @@ export const nextSchema = z.strictObject({
   match: z.enum(MATCH_MODES).optional(),
   routes: z.array(routeSchema).min(1),
   otherwise: otherwiseSchema.optional(),
+  /** Makes every route of this `next` overridable, except unconditional routes under `match: "all"`. */
+  overridable: z.literal(true).optional(),
 });
 
 export const retrySchema = z.strictObject({

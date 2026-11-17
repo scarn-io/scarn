@@ -529,16 +529,16 @@ scarn runs message 0196a000-0000-7000-8000-0000000000bb --step investigate --bod
 
 - Text output ends with `→ scarn …` lines: the next command to run, with its ids filled in.
 - `--json` on any read prints exactly one JSON document on stdout and nothing else.
-- `rerun` and `cancel` need `--yes` when there is no terminal to confirm in; otherwise they fail with `confirmation_required`.
+- `rerun`, `route` and `cancel` need `--yes` when there is no terminal to confirm in; otherwise they fail with `confirmation_required`.
 - A failed action is classified as `action_not_found`, `action_forbidden`, `action_conflict`, `action_rejected` or `action_failed` — see [Failure codes](#failure-codes).
 
 ---
 
 ## `scarn runs`
 
-List pipeline runs, read their steps' message threads, and rerun, message or cancel them. Every subcommand prints text by default and ends with the next command to run; `--json` prints the API response as one JSON document and nothing else on stdout.
+List pipeline runs, read their steps' message threads, and rerun, message, reroute or cancel them. Every subcommand prints text by default and ends with the next command to run; `--json` prints the API response as one JSON document and nothing else on stdout.
 
-The actions (`rerun`, `message`, `cancel`) are explicit verbs, never flags on a read. Each prints what it did, with the resulting ids, and the read command to follow up with. `rerun` and `cancel` ask for confirmation on a terminal and need `--yes` when there is none (they fail with `confirmation_required` otherwise); `message` doesn't ask.
+The actions (`rerun`, `message`, `route`, `cancel`) are explicit verbs, never flags on a read. Each prints what it did, with the resulting ids, and the read command to follow up with. `rerun`, `route` and `cancel` ask for confirmation on a terminal and need `--yes` when there is none (they fail with `confirmation_required` otherwise); `message` doesn't ask.
 
 ### `scarn runs list`
 
@@ -611,6 +611,38 @@ git diff | scarn runs message 0196a000-0000-7000-8000-0000000000bb --step review
 | `--body <text\|@file\|->` | —       | Required. The message, `@path` to read a file, `-` for stdin |
 | `--json`                  | `false` | Print the API response (`message`, `pipelineExecution`)      |
 | `--base-url <url>`        | —       | Override the API server URL                                  |
+
+### `scarn runs route <runId>`
+
+Show or overrule the routes a step took. Without a choice, it lists the routes the step's visit took, why (each `when` it checked, with the value it saw), and every route of the step's node with its label, target and whether it's overridable.
+
+With a choice and a `--reason`, it overrules the routes of a succeeded step visit. The visit keeps its result; only the routes taken change, and only routes the pipeline marks `overridable` can be turned on or off. The flags depend on the node's `next.match`:
+
+- **`match: "first"`:** pick the one route to take with `--to <node>`, `--label <label>` or `--otherwise`.
+- **`match: "all"`:** change the set with `--add` and `--remove` (each a label or target node, repeatable). The CLI builds the full set from the routes taken, keeps the routes without a `when`, and works out `otherwise`.
+
+The wrong flags for the node's mode fail with `invalid_usage`, naming the right ones. Before applying, it previews the overrule and asks with the summary: the nodes it starts, the visits superseded, the Tasks cancelled, the lanes started and cancelled and the merges that run again (`match: "all"`), and whether the run reopens. When a route's args resolve to nothing, it fails, lists the missing args, and prints the command to run again with `--accept-missing`. When a route isn't overridable, it names the route and points to `scarn runs rerun`. Ends with `scarn runs thread` for each route's target.
+
+```bash
+scarn runs route 0196a000-0000-7000-8000-0000000000bb --step review
+scarn runs route 0196a000-0000-7000-8000-0000000000bb --step review --to fix --reason "The diff does break the API"
+scarn runs route 0196a000-0000-7000-8000-0000000000bb --step triage --add docs --remove lint --reason @why.md --yes
+```
+
+| Flag                        | Default | Description                                                              |
+| --------------------------- | ------- | ------------------------------------------------------------------------ |
+| `--step <key>`              | —       | Required. The step whose routes to show or overrule                      |
+| `--attempt <n>`             | latest  | Which visit to the step, `1` for the first                               |
+| `--to <node>`               | —       | `match: "first"`: take the route to this node                            |
+| `--label <label>`           | —       | `match: "first"`: take the route with this label                         |
+| `--otherwise`               | `false` | `match: "first"`: take the `otherwise` route                             |
+| `--add <label\|node>`       | —       | `match: "all"`: also take this route; repeatable                         |
+| `--remove <label\|node>`    | —       | `match: "all"`: stop taking this route; repeatable                       |
+| `--reason <text\|@file\|->` | —       | Required to overrule. Why, `@path` to read a file, `-` for stdin         |
+| `--accept-missing`          | `false` | Start the routes even when some args resolve to nothing (not code steps) |
+| `--yes`, `-y`               | `false` | Skip the confirmation (required when not on a terminal)                  |
+| `--json`                    | `false` | Print the visit's `routing` when listing, else the pipeline run          |
+| `--base-url <url>`          | —       | Override the API server URL                                              |
 
 ### `scarn runs cancel <runId>`
 

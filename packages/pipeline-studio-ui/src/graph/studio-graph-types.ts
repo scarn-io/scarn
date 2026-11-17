@@ -112,6 +112,13 @@ export type StudioEdgeData = {
    * and lone routes.
    */
   order: number | null;
+  /** Whether a person may overrule a visit that took this route (see `isRouteOverridable`). */
+  overridable?: boolean;
+  /**
+   * The route's condition description when the edge's label is the route's
+   * own `label` instead; shown in the label's tooltip.
+   */
+  condition?: string;
   issues: StudioIssue[];
   /** Set by the layout; absent on an edge that was never laid out. */
   route?: StudioEdgeRoute;

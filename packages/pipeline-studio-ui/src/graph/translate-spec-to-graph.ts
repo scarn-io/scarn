@@ -9,6 +9,7 @@
 // DOM dependency, used by `graph-layout.ts`) is a real runtime dependency here.
 import {
   CONVERSATION_RESULT_SCHEMA,
+  isRouteOverridable,
   routeAt,
   type JsonSchema,
   type PipelineDocument,
@@ -76,22 +77,41 @@ function edgePointer(edge: DocumentEdge): string {
   return `/${edge.pointer.map(String).join("/")}`;
 }
 
-function edgeLabel(
-  document: PipelineDocument,
-  edge: DocumentEdge,
-): string | undefined {
-  if (edge.from === null) return describeRoute(document.start, "start");
+type EdgeText = {
+  label: string | undefined;
+  condition?: string;
+  overridable?: boolean;
+};
+
+/**
+ * An edge's label, plus for a `next` route its overridability and — when the
+ * route has its own `label`, which then names the edge — its condition.
+ */
+function edgeText(document: PipelineDocument, edge: DocumentEdge): EdgeText {
+  if (edge.from === null)
+    return { label: describeRoute(document.start, "start") };
   const node = document.nodes[edge.from];
-  if (!node || (node.kind !== "step" && node.kind !== "wait")) return undefined;
+  if (!node || (node.kind !== "step" && node.kind !== "wait"))
+    return { label: undefined };
   if (edge.kind === "catch") {
     const entry = node.kind === "step" ? node.catch?.[edge.index] : undefined;
-    return entry ? describeCatch(entry) : "catch";
+    return { label: entry ? describeCatch(entry) : "catch" };
   }
-  if (edge.kind === "start") return undefined;
+  if (edge.kind === "start") return { label: undefined };
   const route = routeAt(node.next, edge.kind, edge.index);
-  return route
-    ? describeRoute(route, edge.kind, node.next?.match ?? "first")
-    : undefined;
+  if (!route) return { label: undefined };
+  const condition = describeRoute(
+    route,
+    edge.kind,
+    node.next?.match ?? "first",
+  );
+  const overridable = isRouteOverridable(node.next, {
+    kind: edge.kind,
+    index: edge.index,
+  });
+  return route.label === undefined
+    ? { label: condition, overridable }
+    : { label: route.label, condition, overridable };
 }
 
 function nodeMatch(node: PipelineNode): "first" | "all" | undefined {
@@ -212,19 +232,24 @@ function buildRawGraph(
     })),
   ];
 
-  const edges: StudioEdge[] = graph.edges.map((edge) => ({
-    id: edgeId(edge),
-    source: edge.from ?? START_NODE_ID,
-    target: edge.to,
-    label: edgeLabel(document, edge),
-    data: {
-      kind: edge.kind,
-      index: edge.index,
-      lane: edge.lane,
-      order: routeOrder(document, edge),
-      issues: byEdge.get(edgeId(edge)) ?? [],
-    },
-  }));
+  const edges: StudioEdge[] = graph.edges.map((edge) => {
+    const { label, condition, overridable } = edgeText(document, edge);
+    return {
+      id: edgeId(edge),
+      source: edge.from ?? START_NODE_ID,
+      target: edge.to,
+      label,
+      data: {
+        kind: edge.kind,
+        index: edge.index,
+        lane: edge.lane,
+        order: routeOrder(document, edge),
+        ...(overridable ? { overridable } : {}),
+        ...(condition === undefined ? {} : { condition }),
+        issues: byEdge.get(edgeId(edge)) ?? [],
+      },
+    };
+  });
 
   return { nodes, edges };
 }
@@ -233,8 +258,9 @@ function buildRawGraph(
  * Translates one pipeline document into a React Flow graph: a synthetic
  * start node, one node per document node, and one edge per `start`
  * transition, `next` route (`otherwise` included) and `catch` handler
- * (labelled with its condition, `always`, `otherwise`, `each`/`partial` lane
- * marker or caught error names). Step and wait nodes carry their `match`
+ * (labelled with the route's own `label`, else its condition, `always`,
+ * `otherwise`, `each`/`partial` lane marker or caught error names; routes a
+ * person may overrule are flagged `overridable`). Step and wait nodes carry their `match`
  * mode, merge nodes the sources of their `partial` routes, and routes of a
  * `first` node with several routes their check order. Every issue is
  * attached to the edge or node its JSON pointer names. Positions are always

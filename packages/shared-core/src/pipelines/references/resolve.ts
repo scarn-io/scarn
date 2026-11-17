@@ -155,17 +155,57 @@ export function resolveArg(
   return resolveScalar(arg, context);
 }
 
+/** An arg whose reference resolved to nothing. */
+export interface MissingArg {
+  /** The arg name, with an index for a `list` element (`files[2]`). */
+  arg: string;
+  /** The reference string as written in the arg, e.g. `nodes.failing-test.result`. */
+  reference: string;
+}
+
+export interface ReportedArgs {
+  resolved: Record<string, JsonValue>;
+  missing: MissingArg[];
+}
+
+/**
+ * Resolves transition args like {@link resolveArgs}, also reporting every
+ * reference that resolved to nothing. Literals are never missing.
+ */
+export function resolveArgsReporting(
+  args: Readonly<Record<string, Arg>> | undefined,
+  context: ReferenceContext,
+): ReportedArgs {
+  const resolved: Record<string, JsonValue> = {};
+  const missing: MissingArg[] = [];
+  for (const [name, arg] of Object.entries(args ?? {})) {
+    if (typeof arg === "object" && "list" in arg) {
+      const values: JsonValue[] = [];
+      for (const [index, element] of arg.list.entries()) {
+        const value = resolveScalar(element, context);
+        if (value !== undefined) {
+          values.push(value);
+        } else if (typeof element === "string") {
+          missing.push({ arg: `${name}[${String(index)}]`, reference: element });
+        }
+      }
+      resolved[name] = values;
+      continue;
+    }
+    const value = resolveScalar(arg, context);
+    if (value !== undefined) {
+      resolved[name] = value;
+    } else if (typeof arg === "string") {
+      missing.push({ arg: name, reference: arg });
+    }
+  }
+  return { resolved, missing };
+}
+
 /** Resolves transition args: references are read from the context, `{ value }` literals are copied, `{ list }` builds an array. */
 export function resolveArgs(
   args: Readonly<Record<string, Arg>> | undefined,
   context: ReferenceContext,
 ): Record<string, JsonValue> {
-  const resolved: Record<string, JsonValue> = {};
-  for (const [name, arg] of Object.entries(args ?? {})) {
-    const value = resolveArg(arg, context);
-    if (value !== undefined) {
-      resolved[name] = value;
-    }
-  }
-  return resolved;
+  return resolveArgsReporting(args, context).resolved;
 }

@@ -12,12 +12,15 @@ import { palette, tint, TONE_COLOR } from "./graph-palette";
 import type { StudioEdgeData } from "./studio-graph-types";
 import {
   edgeDashArray,
+  edgeLabelTooltip,
   edgeTone,
   orderedEdgeLabel,
 } from "./studio-graph-visuals";
 
 /** An edge's data with its host app's decoration resolved onto it (see `PipelineGraphView`). */
-export type GraphEdgeData = Partial<StudioEdgeData> & { decoration: EdgeDecoration };
+export type GraphEdgeData = Partial<StudioEdgeData> & {
+  decoration: EdgeDecoration;
+};
 export type GraphEdgeType = Edge<GraphEdgeData>;
 
 /**
@@ -28,11 +31,14 @@ export type GraphEdgeType = Edge<GraphEdgeData>;
  *
  * Catch edges are dashed red, loop edges purple with a replay icon on their
  * label, and `each` lanes dotted, so each kind of transition reads at a
- * glance. The host's `EdgeDecoration` can recolor an edge and emphasize it
- * (a traversed edge in a run, an edge with validation issues).
+ * glance. A route a person may overrule carries a person icon on its label.
+ * The host's `EdgeDecoration` can recolor an edge and emphasize it (a
+ * traversed edge in a run, an edge with validation issues), dash it, add the
+ * person icon, and extend the tooltip (a route a person overruled).
  *
  * The label is an HTML pill in React Flow's label layer, centred on the slot
- * the layout reserved for it, with the full text in its tooltip. Routes of a
+ * the layout reserved for it, with the full text (and, for a route with its
+ * own `label`, its condition) in its tooltip. Routes of a
  * `first` node are numbered in check order (see `orderedEdgeLabel`).
  */
 export function GraphEdge({
@@ -59,6 +65,11 @@ export function GraphEdge({
     typeof label === "string" ? label : undefined,
     data?.order ?? null,
   );
+  const person = data?.overridable === true || decoration.person === true;
+  const baseTooltip = edgeLabelTooltip(text, data);
+  const tooltip = decoration.tooltip
+    ? [baseTooltip, decoration.tooltip].filter(Boolean).join("\n")
+    : baseTooltip;
 
   return (
     <>
@@ -69,14 +80,14 @@ export function GraphEdge({
         style={{
           stroke,
           strokeWidth: emphasized ? 2 : 1.5,
-          strokeDasharray: edgeDashArray(data),
+          strokeDasharray: decoration.dashArray ?? edgeDashArray(data),
         }}
       />
-      {text ? (
+      {text || person || decoration.tooltip ? (
         <EdgeLabelRenderer>
           <div
             className="nodrag nopan"
-            title={text}
+            title={tooltip}
             style={{
               position: "absolute",
               transform: `translate(-50%, -50%) translate(${String(labelX)}px, ${String(labelY)}px)`,
@@ -100,9 +111,14 @@ export function GraphEdge({
             {tone === "loop" ? (
               <GraphIcon name="loop" size={12} color="currentColor" />
             ) : null}
-            <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
-              {text}
-            </span>
+            {text ? (
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
+                {text}
+              </span>
+            ) : null}
+            {person ? (
+              <GraphIcon name="person" size={12} color="currentColor" />
+            ) : null}
           </div>
         </EdgeLabelRenderer>
       ) : null}

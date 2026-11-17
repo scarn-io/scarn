@@ -123,6 +123,17 @@ export type TargetArg<C, T> = T | ((r: C) => T);
 export interface NextRoute<C> {
   when?: (r: C) => Condition;
   to: TargetArg<C, NextTarget>;
+  /** Names the route for the people and tools that pick it; unique within one `.next(...)`. */
+  label?: string;
+  /** Lets a person overrule a visit onto this route. */
+  overridable?: true;
+}
+
+/** `otherwise` with a `label` or `overridable`. */
+export interface OtherwiseRoute<C> {
+  to: TargetArg<C, NextTarget>;
+  label?: string;
+  overridable?: true;
 }
 
 /**
@@ -134,7 +145,9 @@ export interface NextOptions<C> {
   match?: "first" | "all";
   routes: readonly [NextRoute<C>, ...NextRoute<C>[]];
   /** Taken when no route with a `when` matched. With nothing taken, the path ends there. */
-  otherwise?: TargetArg<C, NextTarget>;
+  otherwise?: TargetArg<C, NextTarget> | OtherwiseRoute<C>;
+  /** Makes every route overridable, except routes without `when` in `"all"` mode. */
+  overridable?: true;
 }
 
 export interface Routable<C, Out> {

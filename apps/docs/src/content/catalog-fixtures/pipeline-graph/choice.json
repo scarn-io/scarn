@@ -16,10 +16,12 @@
               "op": "equal",
               "value": "critical"
             },
-            "to": "pageOncall"
+            "to": "pageOncall",
+            "label": "Critical"
           }
         ],
-        "otherwise": { "to": "fileTicket" }
+        "otherwise": { "to": "fileTicket", "label": "Not critical" },
+        "overridable": true
       }
     },
     "pageOncall": {

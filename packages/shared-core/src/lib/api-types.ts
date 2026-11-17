@@ -19,6 +19,9 @@ export type ApiErrorBody = {
   status: number;
   title?: string;
   detail?: string;
+  /** The machine-readable refusal, e.g. `PIPELINE_RUN_ROUTE_ARGS_MISSING`. */
+  code?: string;
+  meta?: Record<string, unknown>;
 };
 
 export type TaskStatus =

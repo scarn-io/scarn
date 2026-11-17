@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import type { StudioIssue, StudioNodeShape } from "./studio-graph-types";
 import {
   edgeDashArray,
+  edgeLabelTooltip,
   edgeLegendKinds,
   edgeTone,
   forkMarker,
@@ -287,5 +288,25 @@ describe("edgeLegendKinds", () => {
         { data: { route: { kind: "loop", laneX: 0 } } },
       ]),
     ).toEqual(["flow", "loop", "catch", "each"]);
+  });
+
+  test("lists overridable routes when the graph has one", () => {
+    expect(edgeLegendKinds([{ data: { overridable: true } }])).toEqual([
+      "flow",
+      "overridable",
+    ]);
+  });
+});
+
+describe("edgeLabelTooltip", () => {
+  test("adds the condition and the overrule note to the label", () => {
+    expect(
+      edgeLabelTooltip("Looks good", {
+        condition: "result.ok == true",
+        overridable: true,
+      }),
+    ).toBe("Looks good\nresult.ok == true\nA person can overrule this route");
+    expect(edgeLabelTooltip("x > 3", {})).toBe("x > 3");
+    expect(edgeLabelTooltip(undefined, undefined)).toBeUndefined();
   });
 });

@@ -48,6 +48,7 @@ function fakeDependencies(calls: Calls): RunReadDependencies {
           workItemId: WORK_ITEM_ID,
           workItemTitle: "Fix login",
           pipelineDefinitionId: PIPELINE_ID,
+          pipelineDefinitionVersionId: "pipeline-version-1",
           status: "waiting",
           visits: [
             {
@@ -55,6 +56,7 @@ function fakeDependencies(calls: Calls): RunReadDependencies {
               nodeId: "build",
               nodeKind: "step",
               status: "waiting",
+              routing: null,
               tasks: [],
               createdAt: "2026-01-02T00:00:00.000Z",
               completedAt: null,

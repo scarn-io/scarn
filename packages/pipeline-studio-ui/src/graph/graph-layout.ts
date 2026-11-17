@@ -3,7 +3,7 @@
 import dagre from "dagre";
 import {
   EDGE_LABEL_HEIGHT,
-  edgeLabelWidth,
+  edgeLabelSlotWidth,
   FLOW_SOURCE_HANDLE,
   FLOW_TARGET_HANDLE,
   LOOP_SOURCE_HANDLE,
@@ -15,7 +15,7 @@ import type {
   StudioNode,
   StudioPoint,
 } from "./studio-graph-types";
-import { nodeLayoutSize, orderedEdgeLabel } from "./studio-graph-visuals";
+import { nodeLayoutSize } from "./studio-graph-visuals";
 
 const LOOP_LANE_GAP = 36;
 
@@ -120,20 +120,15 @@ export function layoutGraph(
       ...(sizes.get(node.id) ?? { width: 0, height: 0 }),
     });
   }
-  const labelText = (edge: StudioEdge) =>
-    orderedEdgeLabel(
-      typeof edge.label === "string" ? edge.label : undefined,
-      edge.data?.order ?? null,
-    );
   for (const edge of edges) {
     if (backEdges.has(edge.id)) continue;
-    const text = labelText(edge);
+    const labelWidth = edgeLabelSlotWidth(edge);
     graph.setEdge(
       edge.source,
       edge.target,
-      text
+      labelWidth > 0
         ? {
-            width: edgeLabelWidth(text),
+            width: labelWidth,
             height: EDGE_LABEL_HEIGHT,
             labelpos: "c",
           }
@@ -185,7 +180,6 @@ export function layoutGraph(
     const source = centers.get(edge.source);
     const target = centers.get(edge.target);
     if (!source || !target) return [];
-    const text = labelText(edge);
     const halfHeight = (id: string) => (sizes.get(id)?.height ?? 0) / 2;
     return [
       {
@@ -198,7 +192,7 @@ export function layoutGraph(
           source.y + halfHeight(edge.source),
           target.y + halfHeight(edge.target),
         ),
-        labelWidth: text ? edgeLabelWidth(text) : 0,
+        labelWidth: edgeLabelSlotWidth(edge),
       },
     ];
   });

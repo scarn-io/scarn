@@ -11382,6 +11382,309 @@ export type PostApiPipelineExecutionsByPipelineExecutionIdVisitsByVisitIdRerunRe
 
 export type PostApiPipelineExecutionsByPipelineExecutionIdVisitsByVisitIdRerunResponse = PostApiPipelineExecutionsByPipelineExecutionIdVisitsByVisitIdRerunResponses[keyof PostApiPipelineExecutionsByPipelineExecutionIdVisitsByVisitIdRerunResponses];
 
+export type PostApiPipelineExecutionsByPipelineExecutionIdVisitsByVisitIdRouteData = {
+    body: {
+        routes: Array<{
+            kind: 'route';
+            index: number;
+        } | {
+            kind: 'otherwise';
+        } | {
+            to: string;
+        } | {
+            label: string;
+        }>;
+        reason: string;
+        acceptMissing?: boolean;
+        preview?: boolean;
+    };
+    path: {
+        pipelineExecutionId: string;
+        visitId: string;
+    };
+    query?: never;
+    url: '/api/pipeline-executions/{pipelineExecutionId}/visits/{visitId}/route';
+};
+
+export type PostApiPipelineExecutionsByPipelineExecutionIdVisitsByVisitIdRouteErrors = {
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 404
+     */
+    404: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 409
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type PostApiPipelineExecutionsByPipelineExecutionIdVisitsByVisitIdRouteError = PostApiPipelineExecutionsByPipelineExecutionIdVisitsByVisitIdRouteErrors[keyof PostApiPipelineExecutionsByPipelineExecutionIdVisitsByVisitIdRouteErrors];
+
+export type PostApiPipelineExecutionsByPipelineExecutionIdVisitsByVisitIdRouteResponses = {
+    /**
+     * Response for status 200
+     */
+    200: {
+        id: string;
+        projectId: string;
+        workItemId: string;
+        workItemTitle: string;
+        pipelineDefinitionId: string;
+        pipelineDefinitionVersionId: string;
+        runStatus: 'active' | 'waiting' | 'succeeded' | 'failed' | 'cancelled';
+        status: 'queued' | 'running' | 'waiting' | 'succeeded' | 'failed' | 'cancelled';
+        waitingFor: 'decision' | 'reply' | null;
+        endNodeId: string | null;
+        error: {
+            name: string;
+            message: string;
+            cause?: unknown;
+        } | null;
+        triggeredByUserId: string | null;
+        startedBy: {
+            kind: 'user';
+            userId: string;
+            username: string | null;
+        } | {
+            kind: 'automation';
+            automationId: string;
+            key: string;
+            title: string | null;
+        } | {
+            kind: 'system';
+        };
+        cancelledByUserId: string | null;
+        startedAt: string | null;
+        completedAt: string | null;
+        createdAt: string;
+        updatedAt: string;
+        visits: Array<{
+            id: string;
+            nodeId: string;
+            nodeKind: 'step' | 'wait' | 'succeed' | 'fail';
+            laneId: string | null;
+            fromVisitId: string | null;
+            fromLaneGroupId: string | null;
+            transition: {
+                kind: 'start' | 'route' | 'otherwise' | 'catch' | 'merge';
+                index: number;
+            };
+            routing: {
+                [key: string]: unknown;
+            } | null;
+            status: 'active' | 'waiting' | 'succeeded' | 'failed' | 'cancelled' | 'superseded';
+            waitFor: 'decision' | 'reply' | null;
+            actions: Array<{
+                key: string;
+                label: string;
+                body: 'optional' | 'required';
+            }> | null;
+            input: {
+                [key: string]: unknown;
+            };
+            result: unknown | null;
+            resultTaskId: string | null;
+            error: {
+                name: string;
+                message: string;
+                cause?: unknown;
+            } | null;
+            tasks: Array<{
+                taskId: string;
+                attemptNumber: number;
+                status: 'pending' | 'queued' | 'running' | 'succeeded' | 'failed' | 'timeout' | 'abandoned' | 'cancelled' | 'skipped' | 'yielded';
+                startedAt: string | null;
+                completedAt: string | null;
+                workBranch: string | null;
+            }>;
+            questions: Array<{
+                questionId: string;
+                commentId: string;
+                status: 'open' | 'answered' | 'not_needed';
+            }>;
+            conversationId: string | null;
+            createdByUserId: string | null;
+            resolvedByUserId: string | null;
+            resolvedAt: string | null;
+            createdAt: string;
+            completedAt: string | null;
+        }>;
+        laneGroups: Array<{
+            id: string;
+            parentLaneId: string | null;
+            spawnedByVisitId: string;
+            kind: 'each' | 'all';
+            laneCount: number;
+            maxConcurrency: number | null;
+            toleratedFailures: {
+                count: number;
+            } | {
+                percent: number;
+            };
+            status: 'open' | 'merged' | 'failed';
+        }>;
+        lanes: Array<{
+            id: string;
+            laneGroupId: string;
+            index: number;
+            item: unknown | null;
+            route: {
+                kind: 'start' | 'route' | 'otherwise' | 'catch' | 'merge';
+                index: number;
+            };
+            origin: 'split' | 'merge';
+            status: 'pending' | 'active' | 'arrived' | 'ended' | 'failed' | 'cancelled';
+            arrivedAtNodeId: string | null;
+            arrivalArgs: {
+                [key: string]: unknown;
+            } | null;
+            arrivedFromVisitId: string | null;
+            arrivalTransition: {
+                kind: 'start' | 'route' | 'otherwise' | 'catch' | 'merge';
+                index: number;
+            } | null;
+            mergedIntoVisitId: string | null;
+        }>;
+    } | {
+        preview: {
+            superseded: Array<{
+                visitId: string;
+                nodeId: string;
+                status: 'active' | 'waiting' | 'succeeded' | 'failed' | 'cancelled' | 'superseded';
+            }>;
+            cancelledTasks: number;
+            lanesAdded: Array<{
+                route: {
+                    kind: 'start' | 'route' | 'otherwise' | 'catch' | 'merge';
+                    index: number;
+                };
+                label?: string;
+            }>;
+            lanesRemoved: Array<{
+                route: {
+                    kind: 'start' | 'route' | 'otherwise' | 'catch' | 'merge';
+                    index: number;
+                };
+                label?: string;
+            }>;
+            mergesRerun: Array<string>;
+            started: Array<string>;
+            reopensRun: boolean;
+            missing: Array<{
+                arg: string;
+                reference: string;
+            }>;
+        };
+    };
+};
+
+export type PostApiPipelineExecutionsByPipelineExecutionIdVisitsByVisitIdRouteResponse = PostApiPipelineExecutionsByPipelineExecutionIdVisitsByVisitIdRouteResponses[keyof PostApiPipelineExecutionsByPipelineExecutionIdVisitsByVisitIdRouteResponses];
+
 export type PostApiPipelineExecutionsByPipelineExecutionIdQuestionsByQuestionIdAnswerData = {
     body: {
         body: string;

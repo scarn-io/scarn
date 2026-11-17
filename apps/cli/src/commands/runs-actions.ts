@@ -23,10 +23,12 @@ import { withConfirmOption } from "../lib/confirm-action";
 import { withBaseUrlOption } from "../lib/connect-project";
 import { nextHint, writeJson, writeText } from "../lib/output";
 import { readBody } from "../lib/read-body";
+import { routeCommand } from "./runs-route";
 
 /**
  * `scarn runs rerun`, `runs message` and `runs cancel`: the safe actions on a
- * pipeline run. Rerun and cancel ask first; message does not.
+ * pipeline run. Rerun and cancel ask first; message does not. `runs route`
+ * lives in `./runs-route`.
  */
 
 type ActionConnection = {
@@ -262,4 +264,5 @@ export const withRunActionCommands = (
   argv
     .command(rerunCommand(deps))
     .command(messageCommand(deps))
+    .command(routeCommand(deps))
     .command(cancelCommand(deps));

@@ -40,7 +40,7 @@ export const routesAllGraph = translateDocumentToGraph(
 
 This is the graph view that `scarn pipelines studio` renders locally. Here it runs over static fixtures instead of a live directory. Each fixture is written in TypeScript with `@scarn/sdk/pipelines`, and `scarn pipelines build` compiles it to the JSON document that `scarn pipelines publish` sends (see [Building Pipelines](/scarn/guides/pipelines/)). Open "View source" under any example to compare the two. The steps the examples use are listed [at the end of the page](#steps-used-by-these-examples).
 
-At build time, `translateDocumentToGraph` (the `"."` export of `@scarn/pipeline-studio-ui`) turns each document into `{nodes, edges}`. The graph has a synthetic **Start** node for the `start` transition and one edge for each `next` and `catch` entry. Edges are labelled with their condition, `otherwise`, an `each` or `partial` marker, or the errors they catch. The same `PipelineGraphView` component the studio uses (its `"./view"` export) renders it in the browser. Drag to pan, scroll to zoom, and use the controls in the bottom-left corner to fit or reset the view.
+At build time, `translateDocumentToGraph` (the `"."` export of `@scarn/pipeline-studio-ui`) turns each document into `{nodes, edges}`. The graph has a synthetic **Start** node for the `start` transition and one edge for each `next` and `catch` entry. Edges are labelled with the route's own `label` when it has one, else with their condition, `otherwise`, an `each` or `partial` marker, or the errors they catch. A route marked `overridable` shows a person icon next to its label: someone can [overrule it](/scarn/guides/pipelines/#when-a-person-disagrees-with-a-rule) on a run. The same `PipelineGraphView` component the studio uses (its `"./view"` export) renders it in the browser. Drag to pan, scroll to zoom, and use the controls in the bottom-left corner to fit or reset the view.
 
 ## Linear chain
 
@@ -68,7 +68,7 @@ The simplest shape: a sequence of steps with no branching, ending in a `succeed`
 
 ## Conditional next
 
-A step's `next` list is checked in order. The first transition whose `when` condition matches is taken, and the last entry, which has no `when`, is the fallback.
+A step's `next` list is checked in order. The first transition whose `when` condition matches is taken, and `otherwise` is the fallback. Both routes have a `label`, which names the edge, and `overridable: true` on `next` marks both as a judgement call a person can overrule, so each edge shows the person icon.
 
 <CatalogExample
   title="Route an incident by severity"

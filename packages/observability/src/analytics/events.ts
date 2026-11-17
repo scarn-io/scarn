@@ -16,6 +16,7 @@ export const AnalyticsEvents = {
   ProjectCreated: "project_created",
   PipelineCreated: "pipeline_created",
   PipelineRunCompleted: "pipeline_run_completed",
+  PipelineRouteOverruled: "pipeline_route_overruled",
   ArtifactProduced: "artifact_produced",
   InvestigationReportProduced: "investigation_report_produced",
   InviteAccepted: "invite_accepted",
@@ -80,8 +81,7 @@ export type PipelineCreatedProperties = {
   via: "push" | "web";
 };
 
-export type PipelineRunCompletedStatus =
-  "succeeded" | "failed" | "cancelled";
+export type PipelineRunCompletedStatus = "succeeded" | "failed" | "cancelled";
 
 export type PipelineRunCompletedProperties = {
   project_id: string;
@@ -89,6 +89,21 @@ export type PipelineRunCompletedProperties = {
   status: PipelineRunCompletedStatus;
   trigger: "user" | "system";
   duration_ms: number;
+};
+
+/**
+ * A person overruled the routes a visit took. `from` and `to` are the routes
+ * as `route:<index>` or `otherwise`; `accepted_missing` is whether the person
+ * accepted args that resolved to nothing.
+ */
+export type PipelineRouteOverruledProperties = {
+  project_id: string;
+  pipeline_run_id: string;
+  node_id: string;
+  match: "first" | "all";
+  from: string[];
+  to: string[];
+  accepted_missing: boolean;
 };
 
 /**
@@ -253,6 +268,7 @@ export type AnalyticsEventProperties = {
   project_created: ProjectCreatedProperties;
   pipeline_created: PipelineCreatedProperties;
   pipeline_run_completed: PipelineRunCompletedProperties;
+  pipeline_route_overruled: PipelineRouteOverruledProperties;
   artifact_produced: ArtifactProducedProperties;
   investigation_report_produced: InvestigationReportProducedProperties;
   invite_accepted: InviteAcceptedProperties;

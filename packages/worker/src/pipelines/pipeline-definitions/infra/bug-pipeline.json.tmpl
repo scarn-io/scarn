@@ -24,7 +24,8 @@
             "to": "request-details",
             "args": {
               "evaluate": "result"
-            }
+            },
+            "label": "Too little detail"
           }
         ],
         "otherwise": {
@@ -36,8 +37,10 @@
             "title": "input.title",
             "description": "input.description",
             "evaluate": "result"
-          }
-        }
+          },
+          "label": "Investigate"
+        },
+        "overridable": true
       }
     },
     "request-details": {
@@ -73,7 +76,8 @@
             "to": "report-reproduction",
             "args": {
               "investigateAndReproduce": "result"
-            }
+            },
+            "label": "Reproduced, with a recording"
           },
           {
             "when": {
@@ -85,12 +89,15 @@
             "args": {
               "evaluate": "input.evaluate",
               "investigateAndReproduce": "result"
-            }
+            },
+            "label": "Reproduced"
           }
         ],
         "otherwise": {
-          "to": "not-reproduced"
-        }
+          "to": "not-reproduced",
+          "label": "Not reproduced"
+        },
+        "overridable": true
       }
     },
     "report-reproduction": {
@@ -167,11 +174,13 @@
               "investigateAndReproduce": "nodes.propose-fix.input.investigateAndReproduce",
               "failingTest": "nodes.propose-fix.input.failingTest",
               "proposeFix": "nodes.propose-fix.result"
-            }
+            },
+            "label": "Approved"
           }
         ],
         "otherwise": {
-          "to": "fix-rejected"
+          "to": "fix-rejected",
+          "label": "Rejected"
         }
       }
     },

@@ -71,16 +71,16 @@ scarn pipelines push                                   # push the steps, publish
 scarn pipelines run code-quality-pipeline --work-item-id <work-item-id>
 ```
 
-| Command                                   | What it does                                                                                                                                                                      |
-| ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pipelines build [file]`                  | Compiles each pipeline `.ts` file to `<key>.json` and validates it against the local steps. `--check` writes nothing and fails on a missing or stale JSON                         |
-| `pipelines push`                          | Upserts the steps, then publishes every built `<key>.json` in the directory like `publish` does, then every automation document. Unchanged documents publish nothing                |
-| `pipelines validate <file>`               | Runs the same validator the server runs on publish, against the project's active step definitions. Changes nothing                                                                |
-| `pipelines publish <file>`                | Creates the pipeline if its `key` is new, otherwise publishes the next version and makes it active. Publishing content identical to the latest version does nothing               |
-| `pipelines activate <key> <version>`      | Makes an earlier version active again, to roll back                                                                                                                               |
-| `pipelines run <key> --work-item-id <id>` | Queues a run on a work item. `--version <n>` runs a specific version instead of the active one                                                                                    |
-| `pipelines pull --key <key>`              | Writes the active version (or `--version <n>`) to `<key>.json`, or to `--out <file>`                                                                                              |
-| `pipelines pull`                          | Writes every pipeline's active version as JSON, plus the step files, into `.scarn/pipeline-builder/`. It doesn't write TypeScript pipelines                                     |
+| Command                                   | What it does                                                                                                                                                         |
+| ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pipelines build [file]`                  | Compiles each pipeline `.ts` file to `<key>.json` and validates it against the local steps. `--check` writes nothing and fails on a missing or stale JSON            |
+| `pipelines push`                          | Upserts the steps, then publishes every built `<key>.json` in the directory like `publish` does, then every automation document. Unchanged documents publish nothing |
+| `pipelines validate <file>`               | Runs the same validator the server runs on publish, against the project's active step definitions. Changes nothing                                                   |
+| `pipelines publish <file>`                | Creates the pipeline if its `key` is new, otherwise publishes the next version and makes it active. Publishing content identical to the latest version does nothing  |
+| `pipelines activate <key> <version>`      | Makes an earlier version active again, to roll back                                                                                                                  |
+| `pipelines run <key> --work-item-id <id>` | Queues a run on a work item. `--version <n>` runs a specific version instead of the active one                                                                       |
+| `pipelines pull --key <key>`              | Writes the active version (or `--version <n>`) to `<key>.json`, or to `--out <file>`                                                                                 |
+| `pipelines pull`                          | Writes every pipeline's active version as JSON, plus the step files, into `.scarn/pipeline-builder/`. It doesn't write TypeScript pipelines                          |
 
 ### Versions pin their steps
 
@@ -141,17 +141,17 @@ fix
 </TabItem>
 </Tabs>
 
-| Field              | Type      | Required | Description                                                                                                                                                                        |
-| ------------------ | --------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `step`             | `string`  | Yes      | The step definition key                                                                                                                                                            |
-| `next`             | `next`    | No       | Where to go when the step succeeds. Without it, the path ends. See [Transitions](#transitions)                                                                                     |
-| `catch`            | catch[]   | No       | Where to go when the step fails. See [Errors, retries and timeouts](#errors-retries-and-timeouts)                                                                                  |
-| `retry`            | retry[]   | No       | Which errors to retry, and how many times                                                                                                                                          |
+| Field              | Type      | Required | Description                                                                                                                                                                      |
+| ------------------ | --------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `step`             | `string`  | Yes      | The step definition key                                                                                                                                                          |
+| `next`             | `next`    | No       | Where to go when the step succeeds. Without it, the path ends. See [Transitions](#transitions)                                                                                   |
+| `catch`            | catch[]   | No       | Where to go when the step fails. See [Errors, retries and timeouts](#errors-retries-and-timeouts)                                                                                |
+| `retry`            | retry[]   | No       | Which errors to retry, and how many times                                                                                                                                        |
 | `timeoutSeconds`   | `integer` | No       | How long a worker may spend on the step, counted from when it's claimed. Raises `Scarn.Timeout`                                                                                  |
 | `heartbeatSeconds` | `integer` | No       | How often a running step must report progress. Raises `Scarn.HeartbeatTimeout` when the worker goes quiet                                                                        |
 | `maxRuns`          | `integer` | No       | Caps how many times this node runs in one lane, which guards loops. Raises `Scarn.MaxRunsExceeded`                                                                               |
 | `maxTurns`         | `integer` | No       | How many times the step may hand the conversation to a person in one run of the node. Defaults to 2; 0 turns hand-offs off. Handing over past it raises `Scarn.MaxTurnsExceeded` |
-| `title`            | `string`  | No       | Display name in the graph and run view                                                                                                                                             |
+| `title`            | `string`  | No       | Display name in the graph and run view                                                                                                                                           |
 
 ### `succeed` / `fail`
 
@@ -221,21 +221,26 @@ triage.next({
 
 In TypeScript, `.next(target)` compiles to a single route with no `when`, and `.next({ match, routes, otherwise })` writes the object directly. `match` is left out of the JSON when it's `"first"`.
 
-| Field       | Type                 | Required | Description                                                                                                                                                             |
-| ----------- | -------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `match`     | `"first" \| "all"`   | No       | `"first"` (the default) takes the first route that matches. `"all"` takes every route that matches, each as a lane                                                      |
-| `routes`    | route[]              | Yes      | At least one. In `"first"` mode a route may leave out `when` only when it is the only route. In `"all"` mode a route with no `when` is allowed anywhere and always runs |
-| `otherwise` | route without `when` | No       | Taken when no route _with_ a `when` matched. In `"all"` mode, routes without `when` don't count, so `otherwise` can run alongside them                                  |
+| Field         | Type                 | Required | Description                                                                                                                                                                                     |
+| ------------- | -------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `match`       | `"first" \| "all"`   | No       | `"first"` (the default) takes the first route that matches. `"all"` takes every route that matches, each as a lane                                                                              |
+| `routes`      | route[]              | Yes      | At least one. In `"first"` mode a route may leave out `when` only when it is the only route. In `"all"` mode a route with no `when` is allowed anywhere and always runs                         |
+| `otherwise`   | route without `when` | No       | Taken when no route _with_ a `when` matched. In `"all"` mode, routes without `when` don't count, so `otherwise` can run alongside them                                                          |
+| `overridable` | `true`               | No       | Marks every route, and `otherwise`, as one a person can overrule, except routes without `when` in `"all"` mode. See [When a person disagrees with a rule](#when-a-person-disagrees-with-a-rule) |
 
 Each route, and `otherwise`, has these fields:
 
-| Field     | Type                                                     | Required | Description                                                                                                 |
-| --------- | -------------------------------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------- |
-| `to`      | `string`                                                 | Yes      | The node to run next                                                                                        |
-| `args`    | `Record<name, ref \| { "value": … } \| { "list": […] }>` | No       | The target node's inputs. See [Args and references](#args-and-references)                                   |
-| `when`    | condition                                                | No       | Take this route only if the condition matches. Not allowed on `otherwise`                                   |
-| `each`    | `{ over, maxConcurrency?, toleratedFailures? }`          | No       | Start one lane per item. See [Routes, splits and merges](#routes-splits-and-merges)                         |
-| `partial` | `true`                                                   | No       | Arrive at the merge `to` with this lane's share of its args. Not with `each`. See [Merges](#merges-partial) |
+| Field         | Type                                                     | Required | Description                                                                                                                              |
+| ------------- | -------------------------------------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `to`          | `string`                                                 | Yes      | The node to run next                                                                                                                     |
+| `args`        | `Record<name, ref \| { "value": … } \| { "list": […] }>` | No       | The target node's inputs. See [Args and references](#args-and-references)                                                                |
+| `when`        | condition                                                | No       | Take this route only if the condition matches. Not allowed on `otherwise`                                                                |
+| `each`        | `{ over, maxConcurrency?, toleratedFailures? }`          | No       | Start one lane per item. See [Routes, splits and merges](#routes-splits-and-merges)                                                      |
+| `partial`     | `true`                                                   | No       | Arrive at the merge `to` with this lane's share of its args. Not with `each`. See [Merges](#merges-partial)                              |
+| `label`       | `string`                                                 | No       | A name for the route, up to 80 characters and unique within one `next`. Shown on the run page and accepted by `scarn runs route --label` |
+| `overridable` | `true`                                                   | No       | A person can overrule this route. Not allowed on a route without `when` in `"all"` mode, or anywhere in a `wait` node's `next`           |
+
+In TypeScript, `otherwise` takes a target, or `{ to, label?, overridable? }` when it needs a label or a mark.
 
 A transition can point back at the node it leaves from (`fix → fix`). Each pass is a separate run of the node with its own args and result. Set `maxRuns` to bound the loop.
 
@@ -508,20 +513,20 @@ reproduce
 
 A retry queues a new attempt straight away, and the next worker poll picks it up. `maxAttempts` is the number of extra attempts. The step's Task owns its retries: the run only moves on, through `catch` or by failing, once the Task stops retrying. A `catch` entry is a transition without `when`, `each` or `partial`, and its args can use `error` and `input`.
 
-| Built-in error             | Raised when                                                                              |
-| -------------------------- | ---------------------------------------------------------------------------------------- |
-| `Scarn.All`              | Matches every error. Use it as a catch-all                                               |
-| `Scarn.StepFailed`       | The step failed and reported no error name of its own                                    |
-| `Scarn.HealthCheckFailed` | A `required` health check failed before the agent was prompted                          |
-| `Scarn.Timeout`          | The step ran past `timeoutSeconds`                                                       |
-| `Scarn.HeartbeatTimeout` | The worker stopped heartbeating, for example because it died                             |
-| `Scarn.MaxRunsExceeded`  | The node would run more than `maxRuns` times in the same lane                            |
-| `Scarn.MaxTurnsExceeded` | The step handed over more than `maxTurns` times in one run of the node. It isn't retried |
-| `Scarn.ConcurrencyGroupFull` | The step's [concurrency group](/scarn/guides/steps/#concurrency-groups) on the work item had no place and no room to wait, so no Task was created |
-| `Scarn.ConditionError`   | A computed value had no inputs (`avg`, `min` or `max` of an empty array)                 |
-| `Scarn.LogArchiveFailed` | The step changed work items but its log archive couldn't be written, so nothing was applied |
-| `Scarn.WorkItemChangesInvalid` | One of the step's work item changes was invalid (permissions, limits, ids or a stale `descriptionVersion`), so nothing was applied |
-| `Scarn.WorkItemNotNative` | The step tried to change a work item synced from GitHub, Jira or Bitbucket            |
+| Built-in error                 | Raised when                                                                                                                                       |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Scarn.All`                    | Matches every error. Use it as a catch-all                                                                                                        |
+| `Scarn.StepFailed`             | The step failed and reported no error name of its own                                                                                             |
+| `Scarn.HealthCheckFailed`      | A `required` health check failed before the agent was prompted                                                                                    |
+| `Scarn.Timeout`                | The step ran past `timeoutSeconds`                                                                                                                |
+| `Scarn.HeartbeatTimeout`       | The worker stopped heartbeating, for example because it died                                                                                      |
+| `Scarn.MaxRunsExceeded`        | The node would run more than `maxRuns` times in the same lane                                                                                     |
+| `Scarn.MaxTurnsExceeded`       | The step handed over more than `maxTurns` times in one run of the node. It isn't retried                                                          |
+| `Scarn.ConcurrencyGroupFull`   | The step's [concurrency group](/scarn/guides/steps/#concurrency-groups) on the work item had no place and no room to wait, so no Task was created |
+| `Scarn.ConditionError`         | A computed value had no inputs (`avg`, `min` or `max` of an empty array)                                                                          |
+| `Scarn.LogArchiveFailed`       | The step changed work items but its log archive couldn't be written, so nothing was applied                                                       |
+| `Scarn.WorkItemChangesInvalid` | One of the step's work item changes was invalid (permissions, limits, ids or a stale `descriptionVersion`), so nothing was applied                |
+| `Scarn.WorkItemNotNative`      | The step tried to change a work item synced from GitHub, Jira or Bitbucket                                                                        |
 
 Names in `on` must be built-in or declared in the step's `errors`; anything else is a validation error, and in TypeScript a type error.
 
@@ -834,6 +839,125 @@ These are part of the format, but the validator rejects them for now, and the Ty
 ## Reruns
 
 From the run view, any finished step can be rerun, optionally with a message to the agent. The rerun replaces that visit and everything after it. Its args are resolved again from the current history, and work in unaffected lanes keeps running. Rerunning a step inside a lane after its merge reopens the group; when the lane arrives again, the merge fires again with the other lanes' stored args.
+
+## When a person disagrees with a rule
+
+Rules over an agent's result decide where a run goes. Sometimes a person who reads the trace disagrees: the agent reported a reproduction confidence of 0.78, the rule wants 0.8, and the run failed even though the bug clearly reproduced. If the author marked that rule as a judgement call, the person can **overrule** it: on the step visit the rule routed, they choose which routes the run takes instead and give a reason, and the run carries on from there. The step's result isn't changed and the agent isn't run again. Every later rule still runs against the agent's real output.
+
+### Marking judgement calls
+
+Rules are binding by default. A person can change whether a route is taken only if the author marked it with `overridable: true`, on the route, on `otherwise`, or on `next` to mark every route of the node. That way an approval gate or a "tests must pass" check can't be routed around, and when an author forgets to mark a judgement call, a run gets stuck rather than a safeguard becoming skippable.
+
+Mark thresholds over an agent's judgement (a confidence, quality, severity or risk score). Leave policy unmarked. Give every route a `label`: it's what a person sees on the run page and what they pick with `scarn runs route --label`.
+
+<Tabs syncKey="pipeline-format">
+<TabItem label="TypeScript">
+
+```ts
+// A judgement call: both routes can be overruled.
+reportReproduction.next({
+  overridable: true,
+  routes: [
+    {
+      label: "Reproduced",
+      when: (r) => greaterThanInclusive(r.input.investigate.reproductionConfidence, 0.8),
+      to: (r) => failingTest({ investigate: r.input.investigate }),
+    },
+  ],
+  otherwise: { label: "Not reproduced", to: notReproduced },
+}),
+
+// Policy: nothing is marked, so nobody can route around the approval.
+proposeFix.next({
+  routes: [
+    {
+      label: "Needs approval",
+      when: (r) => equal(r.result.requiresHumanApproval, true),
+      to: (r) => approveFix({ request: r.result }),
+    },
+  ],
+  otherwise: (r) => fix({ plan: r.result }),
+}),
+```
+
+</TabItem>
+<TabItem label="JSON">
+
+```json
+"report-reproduction": {
+  "kind": "step",
+  "step": "report-reproduction",
+  "next": {
+    "overridable": true,
+    "routes": [
+      {
+        "label": "Reproduced",
+        "when": { "path": "input.investigate.reproductionConfidence", "op": "greaterThanInclusive", "value": 0.8 },
+        "to": "failing-test",
+        "args": { "investigate": "input.investigate" }
+      }
+    ],
+    "otherwise": { "to": "not-reproduced", "label": "Not reproduced" }
+  }
+}
+```
+
+</TabItem>
+</Tabs>
+
+You can only choose among the node's own routes; an overrule can't jump to an arbitrary node. Only a step visit that succeeded can be overruled, and not the items of an `each` route, because that list is the agent's result.
+
+### `"match": "first"`
+
+The person picks the one route to take instead. Both the route that was taken and the chosen one must be overridable; if no route was taken (the path ended), only the chosen one must be. Every visit after the overruled one is superseded and its open Tasks are cancelled, as in a [rerun](#reruns), and the run continues along the chosen route.
+
+```bash
+scarn runs route 0196a000-0000-7000-8000-0000000000bb --step report-reproduction --to failing-test \
+  --reason "Reviewed the trace; the repro is clear despite 0.78"
+```
+
+### `"match": "all"`
+
+Each conditional route is its own judgement, so mark it on the route. The person adds or removes routes, and each route that changes must be overridable. `otherwise` is worked out from the new set (it's taken when no route with a `when` is), and must be overridable too if it would change. A route without `when` always runs and merges rely on it, so it can't be overridable: the validator rejects the mark, and `next.overridable` skips it.
+
+```ts
+triage.next({
+  match: "all",
+  routes: [
+    { label: "Reproduce", to: (r) => reproduceBug({ summary: r.result.summary }) },
+    {
+      label: "Security",
+      when: (r) => greaterThan(r.result.securityRisk, 0.5),
+      to: (r) => notifySecurity({ summary: r.result.summary }),
+      overridable: true,
+    },
+  ],
+}),
+```
+
+```bash
+scarn runs route 0196a000-0000-7000-8000-0000000000bb --step triage --add Security \
+  --reason "Touches session handling; security should look"
+```
+
+Only what changed is touched:
+
+- Lanes whose route didn't change keep running and keep their results.
+- A removed lane is cancelled and its visits are superseded.
+- An added lane joins the same group and starts.
+- A merge whose input changes (it took in a removed lane, or an added lane can reach it) is superseded with everything after it, and fires again once its lanes are ready. Removing the last lane a merge was waiting on lets it fire straight away.
+
+Either way, a run that had finished goes back to active.
+
+### Preview, reason and missing args
+
+The run page and `scarn runs route` show a preview before anything changes: the visits superseded, the Tasks cancelled, the lanes added and removed, the merges that fire again, and whether the run reopens. A reason is required, and each overrule is recorded on the visit with who made it, when, and the routes taken before and after.
+
+A route the run didn't take may have args that resolve to nothing (a field the agent left empty, say). The overrule lists them and stops; the person can accept them (`--accept-missing` on the CLI) and the target runs without them. That isn't allowed when a target is a code step. See [`scarn runs route`](/scarn/reference/cli/#scarn-runs-route-runid) for every flag.
+
+### Overrule or decision?
+
+An overrule happens after the rule has routed the run, and only when someone goes looking. When you want the run to **stop and ask** a person before it goes on, use a [decision](#decisions) instead. A decision's `next` can't be marked `overridable`; the person already picks the route there, and changing it means rerunning the decision.
 
 ## Plugins in pipeline steps
 

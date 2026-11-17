@@ -17,7 +17,13 @@ import {
 } from "./compile-state";
 import { makeContext, makeItem } from "./context";
 import { AuthoringError } from "./errors";
-import type { ChainData, EachData, TargetData, TargetSpec } from "./model";
+import type {
+  ChainData,
+  EachData,
+  OtherwiseData,
+  TargetData,
+  TargetSpec,
+} from "./model";
 import { chainOf, eachOf, nodeOf, targetOf } from "./registry";
 import { useRef, withOwners } from "./refs";
 import type { SourceSite } from "./source";
@@ -260,12 +266,12 @@ function wireBody(state: CompileState, chain: ChainData, json: Json): void {
   }
   const context = makeContext(chain.node, "next");
   const compileRoute = (
-    when: ((r: object) => object) | undefined,
-    target: TargetSpec,
+    route: OtherwiseData & { when?: ((r: object) => object) | undefined },
     pointer: Segment[],
   ): Json => {
     mapSource(state, pointer, next.site);
     const entry: Json = {};
+    const { when, target, label, overridable } = route;
     if (when !== undefined) {
       const compiled = attempt(state, [...pointer, "when"], next.site, () =>
         withOwners([context], () =>
@@ -284,7 +290,12 @@ function wireBody(state: CompileState, chain: ChainData, json: Json): void {
       next.site,
       "next",
     );
-    return { ...entry, ...compiled };
+    return {
+      ...entry,
+      ...compiled,
+      ...(label === undefined ? {} : { label }),
+      ...(overridable === undefined ? {} : { overridable }),
+    };
   };
   const out: Json = {};
   if (next.match === "all") {
@@ -302,21 +313,18 @@ function wireBody(state: CompileState, chain: ChainData, json: Json): void {
     });
   }
   out["routes"] = next.routes.map((route, index) =>
-    compileRoute(route.when, route.target, [
-      "nodes",
-      id,
-      "next",
-      "routes",
-      index,
-    ]),
+    compileRoute(route, ["nodes", id, "next", "routes", index]),
   );
   if (next.otherwise !== undefined) {
-    out["otherwise"] = compileRoute(undefined, next.otherwise, [
+    out["otherwise"] = compileRoute(next.otherwise, [
       "nodes",
       id,
       "next",
       "otherwise",
     ]);
+  }
+  if (next.overridable !== undefined) {
+    out["overridable"] = next.overridable;
   }
   json["next"] = out;
 }

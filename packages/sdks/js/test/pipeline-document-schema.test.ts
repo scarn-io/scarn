@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+  isRouteOverridable,
   pipelineDocumentJsonSchema,
   pipelineDocumentSchema,
 } from "../src/contracts/pipeline-document";
@@ -149,6 +150,106 @@ describe("partial, each and list args", () => {
       expect(withRoute({ to: "m", join: {} }).success).toBe(false);
     },
   );
+});
+
+describe("label and overridable", () => {
+  const withNext = (next: object, start: object = { to: "s" }) => {
+    const document = clone(minimal());
+    document["start"] = start;
+    document.nodes["s"] = { kind: "step", step: "s", next };
+    return pipelineDocumentSchema.safeParse(document);
+  };
+
+  test.concurrent("accepts them on routes, otherwise and next", () => {
+    expect(
+      withNext({
+        routes: [
+          {
+            when: { path: "result.a", op: "exists" },
+            to: "done",
+            label: "Ship it",
+            overridable: true,
+          },
+        ],
+        otherwise: { to: "done", label: "Hold", overridable: true },
+        overridable: true,
+      }).success,
+    ).toBe(true);
+  });
+
+  test.concurrent("rejects bad labels and a false overridable", () => {
+    expect(withNext({ routes: [{ to: "done", label: "" }] }).success).toBe(
+      false,
+    );
+    expect(
+      withNext({ routes: [{ to: "done", label: "x".repeat(81) }] }).success,
+    ).toBe(false);
+    expect(
+      withNext({ routes: [{ to: "done", overridable: false }] }).success,
+    ).toBe(false);
+    expect(
+      withNext({ routes: [{ to: "done" }], overridable: false }).success,
+    ).toBe(false);
+  });
+
+  test.concurrent("rejects them on start", () => {
+    const next = { routes: [{ to: "done" }] };
+    expect(withNext(next, { to: "s", label: "Go" }).success).toBe(false);
+    expect(withNext(next, { to: "s", overridable: true }).success).toBe(false);
+  });
+});
+
+describe("isRouteOverridable", () => {
+  const when = { path: "result.a", op: "exists" } as const;
+
+  test.concurrent("reads the route's own flag before next's", () => {
+    const next = {
+      routes: [{ when, to: "a", overridable: true as const }, { to: "b" }],
+      otherwise: { to: "c" },
+    };
+    expect(isRouteOverridable(next, { kind: "route", index: 0 })).toBe(true);
+    expect(isRouteOverridable(next, { kind: "route", index: 1 })).toBe(false);
+    expect(isRouteOverridable(next, { kind: "otherwise", index: 0 })).toBe(
+      false,
+    );
+  });
+
+  test.concurrent("falls back to next.overridable", () => {
+    const next = {
+      routes: [{ when, to: "a" }],
+      otherwise: { to: "c" },
+      overridable: true as const,
+    };
+    expect(isRouteOverridable(next, { kind: "route", index: 0 })).toBe(true);
+    expect(isRouteOverridable(next, { kind: "otherwise", index: 0 })).toBe(
+      true,
+    );
+  });
+
+  test.concurrent('skips unconditional routes under match "all"', () => {
+    const next = {
+      match: "all" as const,
+      routes: [{ to: "a" }, { when, to: "b" }],
+      otherwise: { to: "c" },
+      overridable: true as const,
+    };
+    expect(isRouteOverridable(next, { kind: "route", index: 0 })).toBe(false);
+    expect(isRouteOverridable(next, { kind: "route", index: 1 })).toBe(true);
+    expect(isRouteOverridable(next, { kind: "otherwise", index: 0 })).toBe(
+      true,
+    );
+  });
+
+  test.concurrent("is false for an unknown route or no next", () => {
+    const next = { routes: [{ to: "a" }], overridable: true as const };
+    expect(isRouteOverridable(next, { kind: "route", index: 3 })).toBe(false);
+    expect(isRouteOverridable(next, { kind: "otherwise", index: 0 })).toBe(
+      false,
+    );
+    expect(isRouteOverridable(undefined, { kind: "route", index: 0 })).toBe(
+      false,
+    );
+  });
 });
 
 describe("pipelineDocumentJsonSchema", () => {

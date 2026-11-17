@@ -95,16 +95,23 @@ export interface CatchData {
   readonly site: SourceSite | null;
 }
 
-export interface RouteData {
-  readonly when: ((r: object) => object) | undefined;
+/** A route's target with its `label` and `overridable` flag. */
+export interface OtherwiseData {
   readonly target: TargetSpec;
+  readonly label: string | undefined;
+  readonly overridable: true | undefined;
 }
 
-/** The `.next(...)` call: its routes, `otherwise`, and match mode. */
+export interface RouteData extends OtherwiseData {
+  readonly when: ((r: object) => object) | undefined;
+}
+
+/** The `.next(...)` call: its routes, `otherwise`, match mode and `overridable`. */
 export interface NextData {
   readonly match: "first" | "all" | undefined;
   readonly routes: readonly RouteData[];
-  readonly otherwise: TargetSpec | undefined;
+  readonly otherwise: OtherwiseData | undefined;
+  readonly overridable: true | undefined;
   readonly site: SourceSite | null;
 }
 

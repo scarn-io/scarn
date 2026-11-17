@@ -27,6 +27,7 @@ function visit(overrides: Partial<RunVisit>): RunVisit {
     nodeId: "build",
     nodeKind: "step",
     status: "succeeded",
+    routing: null,
     tasks: [],
     createdAt: "2026-01-02T00:00:00.000Z",
     completedAt: null,
@@ -39,6 +40,7 @@ const run: RunWithVisits = {
   workItemId: "work-item-1",
   workItemTitle: "Fix login",
   pipelineDefinitionId: PIPELINE_ID,
+  pipelineDefinitionVersionId: "pipeline-version-1",
   status: "waiting",
   visits: [
     visit({ id: "visit-2", createdAt: "2026-01-02T00:02:00.000Z" }),

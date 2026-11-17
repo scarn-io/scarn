@@ -1,4 +1,5 @@
 import { Panel } from "@xyflow/react";
+import { GraphIcon } from "./graph-icons";
 import { palette, TONE_COLOR } from "./graph-palette";
 import type { StudioEdge } from "./studio-graph-types";
 import {
@@ -8,23 +9,25 @@ import {
   type EdgeLegendKind,
 } from "./studio-graph-visuals";
 
-const LEGEND_STROKE: Record<EdgeLegendKind, { color: string; dash?: string }> =
-  {
-    flow: { color: TONE_COLOR.flow },
-    loop: { color: TONE_COLOR.loop },
-    catch: {
-      color: TONE_COLOR.catch,
-      dash: edgeDashArray({ kind: "catch", lane: null }),
-    },
-    each: {
-      color: TONE_COLOR.flow,
-      dash: edgeDashArray({ kind: "route", lane: "each" }),
-    },
-  };
+const LEGEND_STROKE: Record<
+  Exclude<EdgeLegendKind, "overridable">,
+  { color: string; dash?: string }
+> = {
+  flow: { color: TONE_COLOR.flow },
+  loop: { color: TONE_COLOR.loop },
+  catch: {
+    color: TONE_COLOR.catch,
+    dash: edgeDashArray({ kind: "catch", lane: null }),
+  },
+  each: {
+    color: TONE_COLOR.flow,
+    dash: edgeDashArray({ kind: "route", lane: "each" }),
+  },
+};
 
 /**
- * A compact key for the edge styles in the graph, pinned to the top-right
- * corner. Hidden when the graph only has plain "next" edges.
+ * A compact key for the edge styles in the graph (and the person icon on
+ * routes that can be overruled), pinned to the top-right corner. Hidden when the graph only has plain "next" edges.
  */
 export function GraphLegend({ edges }: { edges: readonly StudioEdge[] }) {
   const kinds = edgeLegendKinds(edges);
@@ -48,17 +51,21 @@ export function GraphLegend({ edges }: { edges: readonly StudioEdge[] }) {
             key={kind}
             style={{ display: "flex", alignItems: "center", gap: 6 }}
           >
-            <svg width="22" height="6" aria-hidden>
-              <line
-                x1="0"
-                y1="3"
-                x2="22"
-                y2="3"
-                stroke={LEGEND_STROKE[kind].color}
-                strokeWidth="1.5"
-                strokeDasharray={LEGEND_STROKE[kind].dash}
-              />
-            </svg>
+            {kind === "overridable" ? (
+              <GraphIcon name="person" size={12} color={palette.textMuted} />
+            ) : (
+              <svg width="22" height="6" aria-hidden>
+                <line
+                  x1="0"
+                  y1="3"
+                  x2="22"
+                  y2="3"
+                  stroke={LEGEND_STROKE[kind].color}
+                  strokeWidth="1.5"
+                  strokeDasharray={LEGEND_STROKE[kind].dash}
+                />
+              </svg>
+            )}
             {EDGE_LEGEND_LABEL[kind]}
           </span>
         ))}

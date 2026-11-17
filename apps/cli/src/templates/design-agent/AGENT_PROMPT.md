@@ -413,7 +413,14 @@ Use `status: "active"`. The default pipeline has two stops:
 confident, and `approveFix` waits for a human to approve the proposal before
 `fix` runs. Keep both unless the user asks otherwise, and add no other
 `decision` nodes unless they ask for one: each step reports what it could not
-do, and the next one works from that.
+do, and the next one works from that. A decision is only for where the run
+should stop and ask before it goes on.
+
+Label every route. Mark each threshold over an agent's judgement (a
+confidence, quality or severity score) `overridable: true`, usually on the
+whole `next`, so a person who disagrees can overrule it after the fact without
+stopping every run. Never mark a policy gate (an approval, "tests must
+pass"). See "Labels and overrules" in the reference's §4.
 
 Every time you change a pipeline's `.ts`, rebuild its JSON (section 9 of the
 reference). A build error names the `.ts` line; fix it there.

@@ -1,4 +1,6 @@
 import type { ApiResult, AuthHeaders } from "./api-result";
+import type { PipelineVersion } from "./pipeline-api-types";
+import type { OverrulePreview, OverruleRequest } from "./route-api-types";
 import type { RunWithVisits } from "./run-api-types";
 import type { TaskDetail, TaskRunDetail } from "./task-api-types";
 import type { WorkItemComment, WorkItemQuestion } from "./work-item-api-types";
@@ -38,6 +40,21 @@ export type RunActionClient = {
       path: RunPath;
       headers: AuthHeaders;
     }) => Promise<ApiResult<RunWithVisits>>;
+    overrulePipelineExecutionRoute: (options: {
+      path: VisitPath;
+      body: OverruleRequest;
+      headers: AuthHeaders;
+    }) => Promise<ApiResult<RunWithVisits | { preview: OverrulePreview }>>;
+  };
+  pipelineDefinitions: {
+    listPipelineDefinitionVersions: (options: {
+      path: { pipelineDefinitionId: string };
+      headers: AuthHeaders;
+    }) => Promise<ApiResult<Omit<PipelineVersion, "definition" | "steps">[]>>;
+    getPipelineDefinitionVersion: (options: {
+      path: { pipelineDefinitionId: string; version: number };
+      headers: AuthHeaders;
+    }) => Promise<ApiResult<PipelineVersion>>;
   };
 };
 

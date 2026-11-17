@@ -41,7 +41,8 @@ export type TargetVisit = {
   attemptNumber: number;
 };
 
-function resolveTarget(
+/** {@link resolveStepVisit}, failing with a `not_found` {@link ActionError}. */
+export function resolveTarget(
   run: RunWithVisits,
   stepKey: string,
   attempt: number | undefined,

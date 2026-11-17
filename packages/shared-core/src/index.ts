@@ -215,6 +215,33 @@ export {
   type TargetVisit,
 } from "./run-actions";
 export {
+  describeRouteOption,
+  loadRouteContext,
+  overruleRoute,
+  planOverrule,
+  previewOverrule,
+  RouteRefusal,
+  type RouteChoice,
+  type RouteContext,
+  type RouteOption,
+} from "./run-route";
+export {
+  describeCondition,
+  describeTransitions,
+  formatOverrulePreview,
+  formatRouteContext,
+} from "./format-run-route";
+export type {
+  CheckedTransition,
+  MissingArg as RouteMissingArg,
+  OverrulePreview,
+  OverruleRequest,
+  RouteOverrule,
+  RouteSelector,
+  VisitRouting,
+  VisitTransition,
+} from "./lib/route-api-types";
+export {
   cancelTask,
   loadTask,
   retryTask,

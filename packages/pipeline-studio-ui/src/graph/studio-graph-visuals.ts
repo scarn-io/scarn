@@ -144,13 +144,14 @@ export function edgeTone(
   return "flow";
 }
 
-export type EdgeLegendKind = "flow" | "loop" | "catch" | "each";
+export type EdgeLegendKind = "flow" | "loop" | "catch" | "each" | "overridable";
 
 export const EDGE_LEGEND_LABEL: Record<EdgeLegendKind, string> = {
   flow: "Next",
   loop: "Loop back",
   catch: "On error",
   each: "Each item",
+  overridable: "Can be overruled",
 };
 
 /**
@@ -159,7 +160,9 @@ export const EDGE_LEGEND_LABEL: Record<EdgeLegendKind, string> = {
  */
 export function edgeLegendKinds(
   edges: readonly {
-    data?: Partial<Pick<StudioEdgeData, "kind" | "lane" | "route">>;
+    data?: Partial<
+      Pick<StudioEdgeData, "kind" | "lane" | "route" | "overridable">
+    >;
   }[],
 ): EdgeLegendKind[] {
   const kinds: EdgeLegendKind[] = ["flow"];
@@ -167,7 +170,25 @@ export function edgeLegendKinds(
     kinds.push("loop");
   if (edges.some((edge) => edge.data?.kind === "catch")) kinds.push("catch");
   if (edges.some((edge) => edge.data?.lane === "each")) kinds.push("each");
+  if (edges.some((edge) => edge.data?.overridable === true))
+    kinds.push("overridable");
   return kinds;
+}
+
+/**
+ * An edge label's tooltip: the shown text, then the route's condition when
+ * the route's own `label` names the edge, then a note on an overridable route.
+ */
+export function edgeLabelTooltip(
+  text: string | undefined,
+  data: Partial<Pick<StudioEdgeData, "condition" | "overridable">> | undefined,
+): string | undefined {
+  const lines = [
+    text,
+    data?.condition,
+    data?.overridable === true ? "A person can overrule this route" : undefined,
+  ].filter((line): line is string => line !== undefined);
+  return lines.length > 0 ? lines.join("\n") : undefined;
 }
 
 /**

@@ -470,30 +470,41 @@ export default definePipeline({
     description: workItem.description,
   }),
   flow: [
+    // `quality` is the agent's judgement, so a person can overrule it from
+    // the run page or `scarn runs route`.
     evaluate.next({
+      overridable: true,
       routes: [
         {
+          label: "Too little detail",
           when: (r) => lessThan(r.result.quality, 0.1),
           to: (r) => requestDetails({ evaluate: r.result }),
         },
       ],
-      otherwise: (r) =>
-        investigateAndReproduce({
-          appUrl: APP_URL,
-          title: r.input.title,
-          description: r.input.description,
-          evaluate: r.result,
-        }),
+      otherwise: {
+        label: "Investigate",
+        to: (r) =>
+          investigateAndReproduce({
+            appUrl: APP_URL,
+            title: r.input.title,
+            description: r.input.description,
+            evaluate: r.result,
+          }),
+      },
     }),
 
     requestDetails.next(insufficientDetail),
 
     // Only a confident reproduction goes on. Anything less stops here, with
     // the investigation report as the run's result. Only a run that recorded
-    // the failure has anything to show the reporter.
+    // the failure has anything to show the reporter. `reproductionConfidence`
+    // is the agent's judgement, so a person who reads the trace can overrule
+    // it either way.
     investigateAndReproduce.next({
+      overridable: true,
       routes: [
         {
+          label: "Reproduced, with a recording",
           when: (r) =>
             all(
               greaterThanInclusive(r.result.reproductionConfidence, 0.8),
@@ -502,6 +513,7 @@ export default definePipeline({
           to: (r) => reportReproduction({ investigateAndReproduce: r.result }),
         },
         {
+          label: "Reproduced",
           when: (r) =>
             greaterThanInclusive(r.result.reproductionConfidence, 0.8),
           to: (r) =>
@@ -511,7 +523,7 @@ export default definePipeline({
             }),
         },
       ],
-      otherwise: notReproduced,
+      otherwise: { label: "Not reproduced", to: notReproduced },
     }),
 
     reportReproduction.next((r) =>
@@ -531,9 +543,12 @@ export default definePipeline({
 
     proposeFix.next((r) => approveFix({ proposal: r.result })),
 
+    // Policy: nothing is marked overridable, so no one can route around the
+    // approval.
     approveFix.next({
       routes: [
         {
+          label: "Approved",
           when: (r) => equal(r.result.action, "approve"),
           to: (r) =>
             fix({
@@ -545,7 +560,7 @@ export default definePipeline({
             }),
         },
       ],
-      otherwise: fixRejected,
+      otherwise: { label: "Rejected", to: fixRejected },
     }),
 
     fix.next(done),

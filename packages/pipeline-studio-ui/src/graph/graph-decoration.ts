@@ -40,6 +40,12 @@ export type EdgeDecoration = {
   emphasized?: boolean;
   /** The label's text color; defaults to muted text for plain edges, else the stroke. */
   labelColor?: string | null;
+  /** Replaces the kind-based dash pattern, e.g. for a route no longer taken. */
+  dashArray?: string | null;
+  /** Shows the person icon on the label, e.g. for a route a person chose. */
+  person?: boolean;
+  /** Appended to the label's tooltip; shows the label even when it has no text. */
+  tooltip?: string | null;
 };
 
 export type DecorateNode = (node: StudioNode) => NodeDecoration;

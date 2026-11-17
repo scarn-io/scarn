@@ -1,3 +1,5 @@
+import type { VisitRouting } from "./route-api-types";
+
 /**
  * Minimal, nullable-correct mirrors of the pipeline-run response bodies
  * the `runs list` / `runs thread` commands read (see
@@ -53,6 +55,8 @@ export type RunVisit = {
   nodeId: string;
   nodeKind: "step" | "wait" | "succeed" | "fail";
   status: string;
+  /** The conditions checked and routes taken; null until the visit routes. */
+  routing: VisitRouting | null;
   tasks: RunVisitTask[];
   createdAt: string;
   completedAt: string | null;
@@ -64,6 +68,8 @@ export type RunWithVisits = {
   workItemId: string;
   workItemTitle: string;
   pipelineDefinitionId: string;
+  /** The published version the run pinned. */
+  pipelineDefinitionVersionId: string;
   status: RunDisplayStatus;
   visits: RunVisit[];
 };

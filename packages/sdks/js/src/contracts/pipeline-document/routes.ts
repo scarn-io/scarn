@@ -46,3 +46,26 @@ export function routeAt(
   }
   return kind === "otherwise" ? next.otherwise : next.routes[index];
 }
+
+/**
+ * Whether a person may overrule a visit that took this route: the route's own
+ * `overridable`, else `next.overridable`. Under `match: "all"` a route without
+ * `when` always runs, so it is never overridable.
+ */
+export function isRouteOverridable(
+  next: Next | undefined,
+  transition: { kind: RouteKind; index: number },
+): boolean {
+  const route = routeAt(next, transition.kind, transition.index);
+  if (next === undefined || route === undefined) {
+    return false;
+  }
+  if (
+    transition.kind === "route" &&
+    next.match === "all" &&
+    next.routes[transition.index]?.when === undefined
+  ) {
+    return false;
+  }
+  return route.overridable ?? next.overridable ?? false;
+}

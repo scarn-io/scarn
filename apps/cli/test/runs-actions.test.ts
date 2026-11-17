@@ -26,6 +26,7 @@ const visit = (
   nodeId,
   nodeKind: "step" as const,
   status,
+  routing: null,
   tasks: [],
   createdAt,
   completedAt: null,
@@ -36,6 +37,7 @@ const baseRun: RunWithVisits = {
   workItemId: "0196a000-0000-7000-8000-0000000000aa",
   workItemTitle: "Fix login",
   pipelineDefinitionId: "0196a000-0000-7000-8000-0000000000d1",
+  pipelineDefinitionVersionId: "0196a000-0000-7000-8000-0000000000d2",
   status: "failed",
   visits: [
     visit("v-build-1", "build", "failed", "2026-01-01T00:00:00.000Z"),
@@ -84,7 +86,15 @@ function setup(io: FakeIo, overrides: Overrides = {}) {
         calls.cancels.push(path.pipelineExecutionId);
         return ok({ ...baseRun, status: "cancelled" });
       },
+      overrulePipelineExecutionRoute: () =>
+        Promise.reject(new Error("overrule is not under test")),
       ...overrides,
+    },
+    pipelineDefinitions: {
+      listPipelineDefinitionVersions: () =>
+        Promise.reject(new Error("pipeline reads are not under test")),
+      getPipelineDefinitionVersion: () =>
+        Promise.reject(new Error("pipeline reads are not under test")),
     },
   };
   const command = createRunsCommand(unusedReads, {

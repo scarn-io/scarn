@@ -68,7 +68,8 @@ scaffold already wrote it, verbatim, to
 \`.scarn/pipeline-builder/bug-pipeline.ts\`. Edit that file in place as
 described above: configure \`investigateAndReproduce\` for what the agent can
 reach, and rewrite every prompt for this user's repository and vocabulary.
-Never author the \`flow\` from scratch, and never leave its prompts
+Keep its route labels and its \`overridable\` marks on the quality and
+confidence checks, and leave \`approveFix\`'s routes unmarked. Never author the \`flow\` from scratch, and never leave its prompts
 unrewritten — prompt text is where a pipeline's quality lives, and these are
 written for a generic project. The scaffold also wrote
 \`bug-pipeline.json\`, its build; \`scarn pipelines build\` rewrites it.`;

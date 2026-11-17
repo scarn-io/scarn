@@ -554,12 +554,20 @@ export default definePipeline({
 evaluate.next({
   routes: [
     {
+      label: "Too little detail",
       when: (r) => lessThan(r.result.quality, 0.1),
       to: (r) => requestDetails({ evaluate: r.result }),
     },
-    { when: (r) => equal(r.result.severity, "critical"), to: pageOncall },
+    {
+      label: "Critical",
+      when: (r) => equal(r.result.severity, "critical"),
+      to: pageOncall,
+    },
   ],
-  otherwise: (r) => investigate({ evaluate: r.result }),
+  otherwise: {
+    label: "Investigate",
+    to: (r) => investigate({ evaluate: r.result }),
+  },
 }),
 ```
 
@@ -590,6 +598,48 @@ all(
   exists(r.result.reproVideo),
 )
 ```
+
+### Labels and overrules — `label`, `overridable`
+
+**Label every route.** `label` (at most 80 characters, unique within one
+`next`) is what a person sees on the run page and passes to `scarn runs
+route --label`. To label `otherwise`, write it as `{ to, label }`.
+
+A route is **binding** unless it's marked `overridable: true`. A person can
+**overrule** an overridable route on a step visit it routed: they pick the
+routes the run should take instead and give a reason. The step's result is
+kept and the agent isn't run again; the run carries on from the new route.
+
+- **Mark a threshold over an agent's judgement** — a confidence, quality,
+  severity or risk score. A person who reads the trace may disagree with the
+  number. Usually mark the whole `next` (`next.overridable`), so the person
+  can move the run either way, `otherwise` included. To mark one route only,
+  put `overridable: true` on it, or on `otherwise` written as an object.
+- **Never mark a policy gate**: an approval, "tests must pass", a
+  permission or budget check. Those rules exist so no one routes around
+  them; that's why rules are binding by default.
+- **Under `match: "all"`**, each conditional route is its own judgement, so
+  mark it on the route. A route without `when` always runs and can't be
+  overridable (the build rejects it; `next.overridable` skips it).
+- **Never on a decision's `next`.** A person already picks the route there;
+  the build rejects `overridable` on a wait.
+
+```ts fragment
+investigate.next({
+  overridable: true,
+  routes: [
+    {
+      label: "Reproduced",
+      when: (r) => greaterThanInclusive(r.result.confidence, 0.8),
+      to: (r) => failingTest({ investigate: r.result }),
+    },
+  ],
+  otherwise: { label: "Not reproduced", to: notReproduced },
+}),
+```
+
+An overrule happens after the run has gone on. Where the run should **stop
+and ask** before it goes on, add a `decision` node instead — and only there.
 
 ### Decisions — `decision`
 
@@ -836,6 +886,13 @@ How it is wired, and why:
   proposal; rejecting it ends the run at `fixRejected`. Keep it unless the
   user asks to remove it; add a `revise` action that loops back to
   `proposeFix` only if they ask for one.
+- **Judgement calls can be overruled; policy can't.** Every route is
+  labelled. `evaluate`'s quality check and `investigateAndReproduce`'s
+  confidence routes (with their `otherwise`) are `overridable: true` on the
+  whole `next`: a person who reads the trace can send a 0.78 run on to
+  `failingTest`, or stop a confident one. `approveFix` is a decision and is
+  never marked. Keep the marks when you adapt the file, and mark any new
+  threshold over an agent's score the same way.
 - **Whole results, passed forward.** Each step gets every earlier result it
   can use as an arg named after the step that produced it, and declares those
   fields in its `input` schema with the producer's schema. Each chain reads

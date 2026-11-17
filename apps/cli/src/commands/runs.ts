@@ -228,7 +228,7 @@ export function createRunsCommand(
   return {
     command: "runs <command>",
     describe:
-      "List pipeline runs, read their steps' threads, and rerun, message or cancel them",
+      "List pipeline runs, read their steps' threads, and rerun, message, reroute or cancel them",
     builder: (argv) =>
       withRunActionCommands(
         argv.command(runListCommand(deps)).command(runThreadCommand(deps)),

@@ -31,9 +31,30 @@ const LABEL_CHAR_WIDTH = 6.8;
 const LABEL_PADDING_X = 18;
 export const EDGE_LABEL_HEIGHT = 22;
 
+/** Width of a 12px icon plus the gap after it, inside an edge label pill. */
+const LABEL_ICON_WIDTH = 16;
+
 /** Approximate rendered width of an edge label pill (11px monospace). */
-export function edgeLabelWidth(text: string): number {
+function edgeLabelWidth(text: string): number {
   return Math.ceil(text.length * LABEL_CHAR_WIDTH + LABEL_PADDING_X);
+}
+
+/**
+ * Approximate rendered width of an edge's label pill — its ordered label
+ * text plus the overrule icon on an overridable route — or 0 when the edge
+ * draws no pill.
+ */
+export function edgeLabelSlotWidth(edge: {
+  label?: unknown;
+  data?: { order?: number | null; overridable?: boolean };
+}): number {
+  const text = orderedEdgeLabel(
+    typeof edge.label === "string" ? edge.label : undefined,
+    edge.data?.order ?? null,
+  );
+  const icon = edge.data?.overridable === true ? LABEL_ICON_WIDTH : 0;
+  if (text) return edgeLabelWidth(text) + icon;
+  return icon > 0 ? icon + LABEL_PADDING_X : 0;
 }
 
 function distance(a: StudioPoint, b: StudioPoint): number {
@@ -162,7 +183,11 @@ export function graphBounds(
   }[],
   edges: readonly {
     label?: unknown;
-    data?: { route?: StudioEdgeRoute; order?: number | null };
+    data?: {
+      route?: StudioEdgeRoute;
+      order?: number | null;
+      overridable?: boolean;
+    };
   }[],
 ): { x: number; y: number; width: number; height: number } | null {
   let left = Infinity;
@@ -187,11 +212,7 @@ export function graphBounds(
   for (const edge of edges) {
     const route = edge.data?.route;
     if (!route) continue;
-    const text = orderedEdgeLabel(
-      typeof edge.label === "string" ? edge.label : undefined,
-      edge.data?.order ?? null,
-    );
-    const halfLabel = text ? edgeLabelWidth(text) / 2 : 0;
+    const halfLabel = edgeLabelSlotWidth(edge) / 2;
     if (route.kind === "loop") {
       include(route.laneX - halfLabel, top, route.laneX + halfLabel, top);
     } else if (route.label) {

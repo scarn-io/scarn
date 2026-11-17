@@ -11,10 +11,15 @@ export default definePipeline({
   start: classify,
   flow: [
     classify.settings({ title: "Classify severity" }).next({
+      overridable: true,
       routes: [
-        { when: (r) => equal(r.result.severity, "critical"), to: pageOncall },
+        {
+          label: "Critical",
+          when: (r) => equal(r.result.severity, "critical"),
+          to: pageOncall,
+        },
       ],
-      otherwise: fileTicket,
+      otherwise: { label: "Not critical", to: fileTicket },
     }),
     pageOncall.settings({ title: "Page on-call" }).next(succeed("paged")),
     fileTicket.settings({ title: "File a ticket" }).next(succeed("ticketed")),

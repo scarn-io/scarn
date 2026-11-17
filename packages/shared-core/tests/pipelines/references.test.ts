@@ -5,6 +5,7 @@ import {
   readPath,
   ReferenceError,
   resolveArgs,
+  resolveArgsReporting,
   resolveReferenceString,
   type ReferenceContext,
 } from "../../src/pipelines";
@@ -216,4 +217,64 @@ describe("resolveArgs", () => {
       expect(args).toEqual({ reviews: [{ ok: true }, { ok: false }] });
     },
   );
+});
+
+describe("resolveArgsReporting", () => {
+  test.concurrent(
+    "reports references that resolve to nothing, as written",
+    () => {
+      const report = resolveArgsReporting(
+        {
+          plan: "result",
+          retries: { value: 3 },
+          failingTest: "nodes.failing-test.result",
+        },
+        { result: { summary: "s" }, nodes: {} },
+      );
+      expect(report).toEqual({
+        resolved: { plan: { summary: "s" }, retries: 3 },
+        missing: [
+          { arg: "failingTest", reference: "nodes.failing-test.result" },
+        ],
+      });
+    },
+  );
+
+  test.concurrent("reports missing list elements with their index", () => {
+    const report = resolveArgsReporting(
+      {
+        files: {
+          list: ["result.a", { value: "b" }, "result.nope", "result.c"],
+        },
+      },
+      { result: { a: "a", c: "c" } },
+    );
+    expect(report).toEqual({
+      resolved: { files: ["a", "b", "c"] },
+      missing: [{ arg: "files[2]", reference: "result.nope" }],
+    });
+  });
+
+  test.concurrent("never reports literals, even a null one", () => {
+    const report = resolveArgsReporting(
+      { a: { value: null }, b: { list: [{ value: null }] } },
+      {},
+    );
+    expect(report).toEqual({ resolved: { a: null, b: [null] }, missing: [] });
+  });
+
+  test.concurrent("reports nothing when there are no args", () => {
+    expect(resolveArgsReporting(undefined, {})).toEqual({
+      resolved: {},
+      missing: [],
+    });
+  });
+
+  test.concurrent("does not report a reference that resolves to null", () => {
+    const report = resolveArgsReporting(
+      { x: "result.x" },
+      { result: { x: null } },
+    );
+    expect(report).toEqual({ resolved: { x: null }, missing: [] });
+  });
 });
