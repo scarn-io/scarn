@@ -3,49 +3,49 @@
 exports[`renderManagedRuntimeConfig renders every (identifier, lockfile) pair 1`] = `
 {
   "bun1 / bun.lock": {
-    "image": "oven/bun:1.4.0-debian",
+    "image": "oven/bun:1.4.4-debian",
     "name": "scarn-managed-bun1",
     "onCreateCommand": "cd .scarn/pipeline-builder && bun install --production",
     "remoteUser": "bun",
   },
   "bun1 / bun.lockb": {
-    "image": "oven/bun:1.4.0-debian",
+    "image": "oven/bun:1.4.4-debian",
     "name": "scarn-managed-bun1",
     "onCreateCommand": "cd .scarn/pipeline-builder && bun install --production && rm -f bun.lock",
     "remoteUser": "bun",
   },
   "bun1 / deno.json": {
-    "image": "oven/bun:1.4.0-debian",
+    "image": "oven/bun:1.4.4-debian",
     "name": "scarn-managed-bun1",
     "onCreateCommand": "cd .scarn/pipeline-builder && bun install --production && rm -f bun.lock",
     "remoteUser": "bun",
   },
   "bun1 / deno.lock": {
-    "image": "oven/bun:1.4.0-debian",
+    "image": "oven/bun:1.4.4-debian",
     "name": "scarn-managed-bun1",
     "onCreateCommand": "cd .scarn/pipeline-builder && bun install --production && rm -f bun.lock",
     "remoteUser": "bun",
   },
   "bun1 / no lockfile": {
-    "image": "oven/bun:1.4.0-debian",
+    "image": "oven/bun:1.4.4-debian",
     "name": "scarn-managed-bun1",
     "onCreateCommand": "cd .scarn/pipeline-builder && bun install --production && rm -f bun.lock",
     "remoteUser": "bun",
   },
   "bun1 / package-lock.json": {
-    "image": "oven/bun:1.4.0-debian",
+    "image": "oven/bun:1.4.4-debian",
     "name": "scarn-managed-bun1",
     "onCreateCommand": "cd .scarn/pipeline-builder && bun install --production && rm -f bun.lock",
     "remoteUser": "bun",
   },
   "bun1 / pnpm-lock.yaml": {
-    "image": "oven/bun:1.4.0-debian",
+    "image": "oven/bun:1.4.4-debian",
     "name": "scarn-managed-bun1",
     "onCreateCommand": "cd .scarn/pipeline-builder && bun install --production && rm -f bun.lock",
     "remoteUser": "bun",
   },
   "bun1 / yarn.lock": {
-    "image": "oven/bun:1.4.0-debian",
+    "image": "oven/bun:1.4.4-debian",
     "name": "scarn-managed-bun1",
     "onCreateCommand": "cd .scarn/pipeline-builder && bun install --production && rm -f bun.lock",
     "remoteUser": "bun",

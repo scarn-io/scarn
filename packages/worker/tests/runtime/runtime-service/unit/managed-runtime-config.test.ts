@@ -131,7 +131,7 @@ describe("writeManagedRuntimeConfig", () => {
       await readFile(path.join(workspacePath, relativePath), "utf8"),
     ) as { image: string; remoteUser: string };
     expect(written).toMatchObject({
-      image: "oven/bun:1.4.0-debian",
+      image: "oven/bun:1.4.4-debian",
       remoteUser: "bun",
     });
   });
@@ -200,6 +200,6 @@ describe("writeManagedRuntimeConfig", () => {
       await readFile(path.join(workspacePath, relativePath), "utf8"),
     ) as { containerEnv: Record<string, string>; image: string };
     expect(patched.containerEnv).toEqual({ API_KEY: "k" });
-    expect(patched.image).toBe("oven/bun:1.4.0-debian");
+    expect(patched.image).toBe("oven/bun:1.4.4-debian");
   });
 });

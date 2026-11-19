@@ -24,7 +24,7 @@ export type ManagedRuntimeDefinition = {
 export const MANAGED_RUNTIMES = {
   bun1: {
     runtime: "bun",
-    image: "oven/bun:1.4.0-debian",
+    image: "oven/bun:1.4.4-debian",
     remoteUser: "bun",
   },
   node24: {

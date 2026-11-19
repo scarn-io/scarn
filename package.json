@@ -6,7 +6,7 @@
     "packages/*",
     "packages/sdks/*"
   ],
-  "packageManager": "bun@1.4.0",
+  "packageManager": "bun@1.4.4",
   "catalog": {
     "@scarn/sdk": "workspace:*",
     "@devcontainers/cli": "0.86.0",

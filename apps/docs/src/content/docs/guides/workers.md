@@ -85,7 +85,7 @@ The worker patches the config it launches (mounts, ports, and `containerEnv`), a
 
 A [code step](/scarn/guides/steps/#code-steps) runs in a managed runtime (`Runtime.managed.<id>()`, default `bun1`) unless it opts into `Runtime.devcontainer()`. An agent step can opt into one explicitly (see [Managed runtimes for agent steps](/scarn/guides/steps/#managed-runtimes-for-agent-steps)). The worker still clones your repository, but it launches its own container instead of your devcontainer config. For each run it:
 
-1. Looks up the identifier in its registry for the image (`oven/bun:1.4.0-debian` for `bun1`, `node:24-bookworm-slim` for `node24`).
+1. Looks up the identifier in its registry for the image (`oven/bun:1.4.4-debian` for `bun1`, `node:24-bookworm-slim` for `node24`).
 2. For a code step, picks the dependency install from the lockfile in the clone's `.scarn/pipeline-builder` (see [Runtime for code steps](/scarn/guides/steps/#runtime-for-code-steps)). An agent step gets no install; instead the worker mounts the OpenCode runtime payload and runs the agent inside the container, as it does for a devcontainer.
 3. Writes a generated `devcontainer.json` to `.scarn/managed-devcontainers/<id>/devcontainer.json` **inside the clone**, and launches from it.
 
