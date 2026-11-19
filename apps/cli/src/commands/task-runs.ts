@@ -40,10 +40,9 @@ const taskRunViewCommand = (
       }),
   handler: (args: ArgumentsCamelCase<ViewArguments>) =>
     withReporter("task-runs-view", async () => {
-      const { client, headers } = await deps.connect(args);
+      const { client } = await deps.connect(args);
       const gathered = await gatherTaskRunView({
         client,
-        headers,
         taskRunId: args.taskRunId,
       });
       if (args.json) writeJson(gathered);

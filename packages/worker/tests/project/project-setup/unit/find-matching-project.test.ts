@@ -11,7 +11,6 @@ import { localConfigSetup } from "../../../../src/project/project-setup/applicat
 import { git } from "../../../runtime/runtime-service/unit/git-test-fixtures";
 import { concurrentTest } from "../../../utils";
 
-const headers = { Authorization: "Bearer test-token" };
 const LOCAL_SSH_REMOTE = "git@github.com:Acme/My-Repo.git";
 
 type ProjectRow = {
@@ -60,7 +59,6 @@ describe("findMatchingProject", () => {
 
       const result = await findMatchingProject({
         client,
-        headers,
         gitUrl: "git@github.com:acme/my-repo.git",
       });
 
@@ -79,7 +77,6 @@ describe("findMatchingProject", () => {
 
       const result = await findMatchingProject({
         client,
-        headers,
         gitUrl: LOCAL_SSH_REMOTE,
       });
 
@@ -111,7 +108,6 @@ describe("findMatchingProject", () => {
 
       const result = await findMatchingProject({
         client,
-        headers,
         gitUrl: LOCAL_SSH_REMOTE,
       });
 
@@ -131,7 +127,6 @@ describe("findMatchingProject", () => {
 
       const result = await findMatchingProject({
         client,
-        headers,
         gitUrl: "/srv/git/my-repo.git",
       });
 
@@ -146,7 +141,6 @@ describe("findMatchingProject", () => {
 
     const result = await findMatchingProject({
       client,
-      headers,
       gitUrl: LOCAL_SSH_REMOTE,
     });
 
@@ -160,7 +154,6 @@ describe("findMatchingProject", () => {
 
     const result = await findMatchingProject({
       client,
-      headers,
       gitUrl: LOCAL_SSH_REMOTE,
     });
 
@@ -185,7 +178,6 @@ describe("findMatchingProject", () => {
       try {
         await findMatchingProject({
           client,
-          headers,
           gitUrl: LOCAL_SSH_REMOTE,
         });
       } catch (error) {
@@ -217,7 +209,6 @@ describe("localConfigSetup", () => {
 
     const result = await localConfigSetup({
       client: fakeClient([]),
-      headers,
       rootDir: repo,
     });
 
@@ -238,7 +229,7 @@ describe("localConfigSetup", () => {
       }),
     ]);
 
-    const result = await localConfigSetup({ client, headers, rootDir: repo });
+    const result = await localConfigSetup({ client, rootDir: repo });
 
     expect(result).toEqual({
       status: "matched",
@@ -261,7 +252,7 @@ describe("localConfigSetup", () => {
       },
     } as unknown as ReturnType<typeof createScarnClient>;
 
-    const result = await localConfigSetup({ client, headers, rootDir: repo });
+    const result = await localConfigSetup({ client, rootDir: repo });
 
     expect(result).toEqual({
       status: "handoff-required",

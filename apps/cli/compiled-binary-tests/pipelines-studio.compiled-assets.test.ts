@@ -67,6 +67,22 @@ type StudioSnapshotLike =
 
 const repoRoot = resolve(import.meta.dir, "../../..");
 const pipelineStudioUiDir = resolve(repoRoot, "packages/pipeline-studio-ui");
+
+/**
+ * Turns a `catalog:` specifier into the root catalog's range, since a
+ * fixture installed outside this workspace has no catalog to resolve it.
+ */
+function resolveCatalogVersion(name: string, specifier: string): string {
+  if (specifier !== "catalog:") return specifier;
+  const rootPackage = JSON.parse(
+    readFileSync(resolve(repoRoot, "package.json"), "utf8"),
+  ) as { catalog?: Record<string, string> };
+  const version = rootPackage.catalog?.[name];
+  if (!version) {
+    throw new Error(`${name} is not in the root package.json catalog.`);
+  }
+  return version;
+}
 const pipelineStudioUiDistDir = resolve(pipelineStudioUiDir, "dist");
 
 /** The throwaway compiled entrypoint's source. Reads `builderDir` from argv,
@@ -223,11 +239,17 @@ describe("scarn pipelines studio — compiled binary asset embedding", () => {
  * copy failing to resolve from inside a compiled binary).
  */
 describe("scarn pipelines studio — compiled binary resolving a real, external @scarn/sdk", () => {
-  const zodVersion = (
-    JSON.parse(
-      readFileSync(resolve(repoRoot, "packages/sdks/js/package.json"), "utf8"),
-    ) as { devDependencies: { zod: string } }
-  ).devDependencies.zod;
+  const zodVersion = resolveCatalogVersion(
+    "zod",
+    (
+      JSON.parse(
+        readFileSync(
+          resolve(repoRoot, "packages/sdks/js/package.json"),
+          "utf8",
+        ),
+      ) as { devDependencies: { zod: string } }
+    ).devDependencies.zod,
+  );
 
   const STEP_SOURCE = `import { defineStep } from "@scarn/sdk/definitions/steps";
 

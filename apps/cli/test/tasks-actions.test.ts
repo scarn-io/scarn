@@ -52,7 +52,7 @@ function setup(io: FakeIo, overrides: Partial<TaskActionClient["tasks"]> = {}) {
   };
   const command = createTasksCommand(unusedReads, {
     connect: () =>
-      Promise.resolve({ client, headers: { Authorization: "Bearer t" } }),
+      Promise.resolve({ client }),
     io,
   });
   return {

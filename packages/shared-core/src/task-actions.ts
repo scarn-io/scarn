@@ -1,6 +1,5 @@
 import { ActionError, unwrapAction } from "./lib/action-error";
 import type { TaskActionClient } from "./lib/action-clients";
-import type { AuthHeaders } from "./lib/api-result";
 import type { TaskDetail, TaskRunDetail } from "./lib/task-api-types";
 
 /**
@@ -11,15 +10,14 @@ import type { TaskDetail, TaskRunDetail } from "./lib/task-api-types";
 
 type TaskActionOptions = {
   client: TaskActionClient;
-  headers: AuthHeaders;
   taskId: string;
 };
 
 export async function loadTask(
   options: TaskActionOptions,
 ): Promise<TaskDetail> {
-  const { client, headers, taskId } = options;
-  const result = await client.tasks.getTask({ path: { taskId }, headers });
+  const { client, taskId } = options;
+  const result = await client.tasks.getTask({ path: { taskId } });
   if (result.error?.status === 404) {
     throw new ActionError("not_found", `Task ${taskId} not found.`);
   }
@@ -47,7 +45,7 @@ export type RetriedTask = {
 export async function retryTask(
   options: TaskActionOptions,
 ): Promise<RetriedTask> {
-  const { client, headers, taskId } = options;
+  const { client, taskId } = options;
   const task = await loadTask(options);
   if (task.pipelineRunId !== null) {
     const step = task.nodeId ?? "<step>";
@@ -58,7 +56,7 @@ export async function retryTask(
   }
   const runs = unwrapAction(
     `load the runs of Task ${taskId}`,
-    await client.tasks.getTaskRuns({ path: { taskId }, headers }),
+    await client.tasks.getTaskRuns({ path: { taskId } }),
   );
   const previousRunId = latestRun(runs)?.id ?? null;
   const retried = unwrapAction(
@@ -66,7 +64,6 @@ export async function retryTask(
     await client.tasks.retryTask({
       path: { taskId },
       body: { expectedLatestRunId: previousRunId },
-      headers,
     }),
   );
   return { ...retried, previousRunId };
@@ -75,9 +72,9 @@ export async function retryTask(
 export async function cancelTask(
   options: TaskActionOptions,
 ): Promise<{ taskId: string }> {
-  const { client, headers, taskId } = options;
+  const { client, taskId } = options;
   return unwrapAction(
     `cancel Task ${taskId}`,
-    await client.tasks.cancelTask({ path: { taskId }, headers }),
+    await client.tasks.cancelTask({ path: { taskId } }),
   );
 }

@@ -30,7 +30,8 @@ type Logger = {
 export interface PullPipelineDefinitionsOptions {
   projectId: string;
   baseUrl: string;
-  headers: { Authorization: string };
+  /** Authenticates every request, e.g. one from `createAuthenticatedFetch`. */
+  fetch: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
   logger: Logger;
   dir: string;
   sdkVersion: string;
@@ -86,18 +87,19 @@ export function serializePipelineDocument(
 export async function pullPipelineDefinitions(
   options: PullPipelineDefinitionsOptions,
 ): Promise<PullPipelineDefinitionsResult> {
-  const { projectId, baseUrl, headers, logger, dir, sdkVersion } = options;
+  const { projectId, baseUrl, fetch, logger, dir, sdkVersion } = options;
 
-  const stepDefsClient = createStepDefinitionsClient(baseUrl);
-  const pipelineDefsClient = createPipelineDefinitionsClient(baseUrl);
-  const scarnClient = createScarnClient(baseUrl);
+  const stepDefsClient = createStepDefinitionsClient(baseUrl, { fetch });
+  const pipelineDefsClient = createPipelineDefinitionsClient(baseUrl, {
+    fetch,
+  });
+  const scarnClient = createScarnClient(baseUrl, { fetch });
 
   const [rawSteps, pipelines, fieldOptionsResult] = (await Promise.all([
-    stepDefsClient.listByProjectId(projectId, { headers }),
-    pipelineDefsClient.listByProjectId(projectId, { headers }),
+    stepDefsClient.listByProjectId(projectId),
+    pipelineDefsClient.listByProjectId(projectId),
     scarnClient.projects.listProjectWorkItemFieldOptions({
       path: { projectId },
-      headers,
     }),
   ])) as unknown as [
     StepDefContract[],

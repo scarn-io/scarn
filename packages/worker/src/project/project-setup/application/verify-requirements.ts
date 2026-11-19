@@ -1,5 +1,6 @@
-import { createScarnClient } from "@scarn/sdk";
+import type { createScarnClient } from "@scarn/sdk";
 import { loadAuthenticatedSession } from "../../../auth/session/application/load-authenticated-session";
+import { createAuthenticatedScarnClient } from "../../../auth/session/infra/authenticated-scarn-client";
 import { ConfigurationError, SetupErrorCodes } from "../../../lib/errors";
 import {
   findGitRoot,
@@ -7,7 +8,6 @@ import {
 } from "./resolve-git-repository";
 
 export async function verifyRequirements(input: { baseUrl: string }): Promise<{
-  headers: { Authorization: string };
   client: ReturnType<typeof createScarnClient>;
 }> {
   let session: Awaited<ReturnType<typeof loadAuthenticatedSession>>;
@@ -37,7 +37,9 @@ export async function verifyRequirements(input: { baseUrl: string }): Promise<{
   }
 
   return {
-    headers: { Authorization: `Bearer ${session.profile.accessToken}` },
-    client: createScarnClient(input.baseUrl),
+    client: createAuthenticatedScarnClient(
+      input.baseUrl,
+      session.profile.accessToken,
+    ),
   };
 }

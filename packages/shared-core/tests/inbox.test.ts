@@ -10,7 +10,6 @@ import {
 } from "./task-fixtures";
 
 const QUESTION_ID = "0196a000-0000-7000-8000-0000000000f1";
-const headers = { Authorization: "Bearer test" };
 const ok = <T>(data: T) => Promise.resolve({ data, error: undefined });
 
 const workItem = {
@@ -119,7 +118,6 @@ describe("inbox", () => {
     const calls: Calls = { taskQueries: [] };
     const gathered = await gatherInbox({
       client: fakeClient(calls),
-      headers,
       projectId: PROJECT_ID,
       limit: 20,
     });
@@ -184,7 +182,6 @@ describe("inbox", () => {
     client.userNotifications.listUserNotifications = () => ok([]);
     const gathered = await gatherInbox({
       client,
-      headers,
       projectId: PROJECT_ID,
       limit: 20,
     });
@@ -203,7 +200,7 @@ describe("inbox", () => {
 
     expect(
       await rejectionMessage(
-        gatherInbox({ client, headers, projectId: PROJECT_ID, limit: 20 }),
+        gatherInbox({ client, projectId: PROJECT_ID, limit: 20 }),
       ),
     ).toBe("Could not load the inbox: Members only.");
   });

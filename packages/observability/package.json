@@ -28,6 +28,11 @@
       "bun": "./src/logging/index.ts",
       "default": "./src/logging/index.ts"
     },
+    "./logging/console": {
+      "types": "./src/logging/console.ts",
+      "bun": "./src/logging/console.ts",
+      "default": "./src/logging/console.ts"
+    },
     "./logging/host": {
       "types": "./src/logging/host.ts",
       "bun": "./src/logging/host.ts",

@@ -6,16 +6,17 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { pullPipelineDefinitions } from "../../../../src/pipelines/pipeline-definitions/application/pull-pipeline-definitions";
 
 /**
- * Mocks the three GET requests `pullPipelineDefinitions` issues via
- * `globalThis.fetch` (the underlying transport for every generated SDK
- * client), keyed by URL substring — mirroring the mocking style used by
- * `remote-artifact-store.test.ts`.
+ * A fake for the `fetch` `pullPipelineDefinitions` hands to every SDK client,
+ * answering its three GET requests keyed by URL substring.
  */
 function mockFetch(responses: {
   steps?: unknown[];
   pipelines?: unknown[];
   fieldOptions?: unknown[];
-}): { calls: string[] } {
+}): {
+  calls: string[];
+  fetch: (input: RequestInfo | URL) => Promise<Response>;
+} {
   const calls: string[] = [];
   // eslint-disable-next-line local/no-unknown-parameter-type -- test helper serializes arbitrary JSON fixtures
   const json = (body: unknown) =>
@@ -26,8 +27,13 @@ function mockFetch(responses: {
       }),
     );
 
-  globalThis.fetch = ((input: Request | string) => {
-    const url = typeof input === "string" ? input : input.url;
+  const fetch = (input: RequestInfo | URL) => {
+    const url =
+      input instanceof Request
+        ? input.url
+        : typeof input === "string"
+          ? input
+          : input.href;
     calls.push(url);
     if (url.includes("/work-item-field-options")) {
       return json(responses.fieldOptions ?? []);
@@ -36,15 +42,14 @@ function mockFetch(responses: {
       return json(responses.steps ?? []);
     }
     return json(responses.pipelines ?? []);
-  }) as unknown as typeof fetch;
+  };
 
-  return { calls };
+  return { calls, fetch };
 }
 
 const noopLogger = { info: () => undefined, warn: () => undefined };
 
 describe("pullPipelineDefinitions / work-item-fields.ts", () => {
-  const previousFetch = globalThis.fetch;
   let dir: string;
 
   beforeEach(async () => {
@@ -52,12 +57,11 @@ describe("pullPipelineDefinitions / work-item-fields.ts", () => {
   });
 
   afterEach(async () => {
-    globalThis.fetch = previousFetch;
     await rm(dir, { recursive: true, force: true }).catch(() => undefined);
   });
 
   test("fetches /work-item-field-options and writes work-item-fields.ts", async () => {
-    const { calls } = mockFetch({
+    const { calls, fetch } = mockFetch({
       steps: [
         {
           id: "step-1",
@@ -90,7 +94,7 @@ describe("pullPipelineDefinitions / work-item-fields.ts", () => {
     const result = await pullPipelineDefinitions({
       projectId: "project-1",
       baseUrl: "https://api.test",
-      headers: { Authorization: "Bearer token" },
+      fetch,
       logger: noopLogger,
       dir,
       sdkVersion: "0.0.0",
@@ -117,7 +121,7 @@ describe("pullPipelineDefinitions / work-item-fields.ts", () => {
     // pipeline or step definitions found" in the implementation) — that
     // early-return is orthogonal to field-options and covered separately by
     // `result.workItemFieldsFile` being `false` in that case.
-    mockFetch({
+    const { fetch } = mockFetch({
       steps: [
         {
           id: "step-1",
@@ -147,7 +151,7 @@ describe("pullPipelineDefinitions / work-item-fields.ts", () => {
     const result = await pullPipelineDefinitions({
       projectId: "project-1",
       baseUrl: "https://api.test",
-      headers: { Authorization: "Bearer token" },
+      fetch,
       logger: noopLogger,
       dir,
       sdkVersion: "0.0.0",
@@ -162,7 +166,7 @@ describe("pullPipelineDefinitions / work-item-fields.ts", () => {
   });
 
   test("does not fetch or write work-item-fields.ts when there are no steps or pipelines at all", async () => {
-    const { calls } = mockFetch({
+    const { calls, fetch } = mockFetch({
       steps: [],
       pipelines: [],
       fieldOptions: [{ key: "issueType", values: ["bug"], truncated: false }],
@@ -171,7 +175,7 @@ describe("pullPipelineDefinitions / work-item-fields.ts", () => {
     const result = await pullPipelineDefinitions({
       projectId: "project-1",
       baseUrl: "https://api.test",
-      headers: { Authorization: "Bearer token" },
+      fetch,
       logger: noopLogger,
       dir,
       sdkVersion: "0.0.0",

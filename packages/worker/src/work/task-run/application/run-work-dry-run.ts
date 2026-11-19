@@ -1,5 +1,5 @@
 import type { DestinationStream } from "pino";
-import { createScarnClient } from "@scarn/sdk";
+import type { createScarnClient } from "@scarn/sdk";
 import type {
   EnvironmentRef,
   ResolvedEnvironment,
@@ -12,6 +12,7 @@ import { ConfigurationError } from "../../../lib/errors";
 import { createLogger } from "@scarn/observability/logging/host";
 import { resolveScarnBaseUrl } from "../../../auth/session/infra/auth-config";
 import { loadAuthenticatedSession } from "../../../auth/session/application/load-authenticated-session";
+import { createAuthenticatedScarnClient } from "../../../auth/session/infra/authenticated-scarn-client";
 import { DirectProviderAccessResolver } from "../infra/provider-access/direct-provider-access-resolver";
 import { SafeProviderAccessResolver } from "../infra/provider-access/safe-provider-access-resolver";
 import { logWork, logWorkError } from "./work-logger";
@@ -169,18 +170,12 @@ export function buildWorkDryRunScope(
   };
 }
 
-export function buildAuthHeaders(accessToken: string) {
-  return { Authorization: `Bearer ${accessToken}` };
-}
-
 export async function fetchProjectGitUrl(
   client: ReturnType<typeof createScarnClient>,
-  headers: { Authorization: string },
   projectId: string,
 ): Promise<string> {
   const result = await client.projects.getProject({
     path: { projectId },
-    headers,
   });
   const gitUrl = (result.data as { gitUrl?: string } | undefined)?.gitUrl;
   if (!gitUrl) {
@@ -193,12 +188,10 @@ export async function fetchProjectGitUrl(
 
 export async function fetchStepDefinition(
   client: ReturnType<typeof createScarnClient>,
-  headers: { Authorization: string },
   stepDefinitionId: string,
 ): Promise<StepDefinitionForDryRun> {
   const result = await client.stepDefinitions.getStepDefinition({
     path: { stepDefinitionId },
-    headers,
   });
   const data = result.data as StepDefinitionForDryRun | undefined;
   if (!data) {
@@ -244,20 +237,22 @@ export async function runWorkDryRun(
   if (!authenticated) {
     throw new ConfigurationError(`Not signed in to ${baseUrl}.`);
   }
-  const headers = buildAuthHeaders(authenticated.profile.accessToken);
   const requestedByUserId = parseUuidV7(authenticated.session.user.id);
   const projectId = parseUuidV7(options.projectId);
 
-  const client = createScarnClient(baseUrl);
-  const gitUrl = await fetchProjectGitUrl(client, headers, options.projectId);
+  const client = createAuthenticatedScarnClient(
+    baseUrl,
+    authenticated.profile.accessToken,
+  );
+  const gitUrl = await fetchProjectGitUrl(client, options.projectId);
 
   const stepDefinition = options.stepDefinitionId
-    ? await fetchStepDefinition(client, headers, options.stepDefinitionId)
+    ? await fetchStepDefinition(client, options.stepDefinitionId)
     : null;
   const launchStep = stepDefinition && {
     environment: await resolveStepEnvironmentRef(
       stepDefinition.environment,
-      createLatestEnvironmentFetcher(client, headers, options.projectId),
+      createLatestEnvironmentFetcher(client, options.projectId),
     ),
     repo: stepDefinition.repo,
   };

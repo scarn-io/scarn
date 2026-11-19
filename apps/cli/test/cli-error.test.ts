@@ -1,11 +1,13 @@
 import { describe, expect, test } from "bun:test";
-import {
-  ConfigurationError,
-  CoreError,
-  SetupErrorCodes,
-} from "@scarn/worker";
+import { ConfigurationError, CoreError, SetupErrorCodes } from "@scarn/worker";
+import { ApiTokenAuthError } from "@scarn/sdk/auth";
+import { createScarnClient } from "@scarn/sdk/client";
 import { ProjectRefError } from "@scarn/sdk/defaults";
-import { CliError, classifyCliError } from "../src/lib/cli-error";
+import {
+  CliError,
+  classifyCliError,
+  toReportedCliError,
+} from "../src/lib/cli-error";
 
 describe("classifyCliError", () => {
   test("returns a CliError's own code", () => {
@@ -69,5 +71,46 @@ describe("classifyCliError", () => {
     expect(classifyCliError(new ConfigurationError("generic"))).toBe("unknown");
     expect(classifyCliError("a string")).toBe("unknown");
     expect(classifyCliError(undefined)).toBe("unknown");
+  });
+});
+
+describe("toReportedCliError", () => {
+  test("turns a rejected session into a session_invalid CliError naming the fix", async () => {
+    const baseUrl = "https://scarn.example";
+    const client = createScarnClient(baseUrl, {
+      fetch: () =>
+        Promise.reject(new ApiTokenAuthError("rejected", baseUrl, 401)),
+    });
+
+    let caught: unknown;
+    try {
+      await client.projects.listProjects();
+    } catch (error) {
+      caught = error;
+    }
+    expect(caught).toBeInstanceOf(ApiTokenAuthError);
+    const reported = toReportedCliError(caught);
+
+    expect(reported).toBeInstanceOf(CliError);
+    expect((reported as CliError).code).toBe("session_invalid");
+    expect((reported as CliError).message).toBe(
+      "Your session for https://scarn.example is no longer valid. Run `scarn auth login`.",
+    );
+    expect(classifyCliError(reported)).toBe("session_invalid");
+  });
+
+  test("finds a rejected session behind a wrapping error", () => {
+    const wrapped = new Error("Could not list projects", {
+      cause: new ApiTokenAuthError("rejected", "https://scarn.example", 401),
+    });
+    expect((toReportedCliError(wrapped) as CliError).code).toBe(
+      "session_invalid",
+    );
+  });
+
+  test("returns any other error as is", () => {
+    const error = new Error("boom");
+    expect(toReportedCliError(error)).toBe(error);
+    expect(toReportedCliError("a string")).toBe("a string");
   });
 });

@@ -37,8 +37,6 @@ async function rejection(promise: Promise<unknown>): Promise<Error> {
   throw new Error("expected the promise to reject");
 }
 
-const headers = { Authorization: "Bearer test" };
-
 const ok = <T>(data: T): Promise<ApiResult<T>> =>
   Promise.resolve({ data, error: undefined });
 const fail = <T>(status: number): Promise<ApiResult<T>> =>
@@ -80,7 +78,7 @@ function buildClient(
 describe("resolveTaskRun", () => {
   test("returns the Task run when the id is a Task run id", async () => {
     const client = buildClient({ getTaskRun: () => ok(makeTaskRun()) });
-    const run = await resolveTaskRun({ client, headers, id: TASK_RUN_ID });
+    const run = await resolveTaskRun({ client, id: TASK_RUN_ID });
     expect(run.id).toBe(TASK_RUN_ID);
   });
 
@@ -90,18 +88,13 @@ describe("resolveTaskRun", () => {
       makeTaskRun({ id: "run-1", number: 1 }),
     ];
     const client = buildClient({}, () => ok(runs));
-    expect((await resolveTaskRun({ client, headers, id: TASK_ID })).id).toBe(
-      "run-2",
-    );
+    expect((await resolveTaskRun({ client, id: TASK_ID })).id).toBe("run-2");
     expect(
-      (await resolveTaskRun({ client, headers, id: TASK_ID, runNumber: 1 })).id,
+      (await resolveTaskRun({ client, id: TASK_ID, runNumber: 1 })).id,
     ).toBe("run-1");
     expect(
-      (
-        await rejection(
-          resolveTaskRun({ client, headers, id: TASK_ID, runNumber: 5 }),
-        )
-      ).message,
+      (await rejection(resolveTaskRun({ client, id: TASK_ID, runNumber: 5 })))
+        .message,
     ).toContain("has no run #5 (runs: 1, 2)");
   });
 
@@ -109,7 +102,7 @@ describe("resolveTaskRun", () => {
     expect(
       (
         await rejection(
-          resolveTaskRun({ client: buildClient(), headers, id: "missing" }),
+          resolveTaskRun({ client: buildClient(), id: "missing" }),
         )
       ).message,
     ).toContain("No Task run or Task with id missing.");
@@ -140,7 +133,6 @@ describe("gatherTaskRunLogs", () => {
     });
     const gathered = await gatherTaskRunLogs({
       client,
-      headers,
       run: makeTaskRun({ completedAt: null, status: "running" }),
       stream: "ai-server",
     });
@@ -159,7 +151,6 @@ describe("gatherTaskRunLogs", () => {
     });
     const gathered = await gatherTaskRunLogs({
       client,
-      headers,
       run: makeTaskRun(),
       stream: "all",
     });
@@ -173,7 +164,6 @@ describe("gatherTaskRunLogs", () => {
         await rejection(
           gatherTaskRunLogs({
             client: buildClient(),
-            headers,
             run: makeTaskRun(),
             stream: "all",
           }),
@@ -198,7 +188,6 @@ describe("followTaskRunLogs", () => {
     });
     const followed = await followTaskRunLogs({
       client,
-      headers,
       taskRunId: TASK_RUN_ID,
       stream: "all",
       from: 3,
@@ -297,7 +286,6 @@ describe("artifacts", () => {
     });
     const gathered = await gatherArtifacts({
       client,
-      headers,
       taskRunId: TASK_RUN_ID,
       failures: true,
     });
@@ -330,7 +318,6 @@ describe("artifacts", () => {
   test("resolves the presigned URL and rejects a missing one", async () => {
     const resolved = await resolveArtifactDownload({
       client: buildClient(),
-      headers,
       taskRunId: TASK_RUN_ID,
       ref: "report.md",
     });
@@ -348,7 +335,6 @@ describe("artifacts", () => {
                   relativeStorePath: "report.md",
                 }),
             }),
-            headers,
             taskRunId: TASK_RUN_ID,
             ref: "report.md",
           }),

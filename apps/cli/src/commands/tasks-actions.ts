@@ -24,7 +24,6 @@ import { nextHint, writeJson, writeText } from "../lib/output";
 
 type ActionConnection = {
   client: TaskActionClient;
-  headers: { Authorization: string };
 };
 
 export interface TaskActionDependencies {
@@ -39,7 +38,7 @@ const asActionClient = (client: AuthenticatedApi["client"]) =>
 export const realTaskActionDependencies: TaskActionDependencies = {
   async connect(args) {
     const api = await connectApi(resolveScarnBaseUrl(args.baseUrl));
-    return { client: asActionClient(api.client), headers: api.headers };
+    return { client: asActionClient(api.client) };
   },
   io: realActionIo,
 };
@@ -73,10 +72,9 @@ const retryCommand = (
   handler: (args: ArgumentsCamelCase<TaskArguments>) =>
     withReporter("tasks-retry", () =>
       asCliAction(async () => {
-        const { client, headers } = await deps.connect(args);
+        const { client } = await deps.connect(args);
         const retried = await retryTask({
           client,
-          headers,
           taskId: args.taskId,
         });
         if (args.json) {
@@ -110,8 +108,8 @@ const cancelCommand = (
   handler: (args: ArgumentsCamelCase<CancelArguments>) =>
     withReporter("tasks-cancel", ({ reporter }) =>
       asCliAction(async () => {
-        const { client, headers } = await deps.connect(args);
-        const connection = { client, headers, taskId: args.taskId };
+        const { client } = await deps.connect(args);
+        const connection = { client, taskId: args.taskId };
         const task = await loadTask(connection);
         const question =
           task.pipelineRunId === null

@@ -93,9 +93,7 @@ describe("scarn CLI", () => {
     // The machine-readable URL is written directly to stdout as a raw line.
     const urlLine = result.stdout
       .split("\n")
-      .find((line) =>
-        line.includes("github.com/scarn-io/scarn/issues/new"),
-      );
+      .find((line) => line.includes("github.com/scarn-io/scarn/issues/new"));
     expect(urlLine).toBeDefined();
     const url = urlLine ?? "";
     expect(url).toContain("title=scarn+crashes+on+init");
@@ -264,9 +262,29 @@ describe("scarn CLI", () => {
     const scarnDir = resolve(fakeHome, ".scarn");
     const authFile = resolve(scarnDir, "auth.jsonc");
     const configFile = resolve(scarnDir, "config.jsonc");
+    const apiTokensFile = resolve(scarnDir, "api-tokens.jsonc");
+    const otherApiToken = {
+      sessionHash: "other-hash",
+      token: "other-jwt",
+      expiresAt: 4_102_444_800_000,
+    };
 
     try {
       mkdirSync(scarnDir, { recursive: true });
+      writeFileSync(
+        apiTokensFile,
+        `${JSON.stringify({
+          tokens: {
+            "https://example.com": {
+              sessionHash: "hash",
+              token: "jwt-123",
+              expiresAt: 4_102_444_800_000,
+            },
+            "https://other.example.com": otherApiToken,
+          },
+        })}\n`,
+        "utf8",
+      );
       writeFileSync(
         authFile,
         `${JSON.stringify({
@@ -297,6 +315,9 @@ describe("scarn CLI", () => {
       expect(
         hasReporterLine(result.stderr, "Signed out of https://example.com"),
       ).toBe(true);
+      expect(JSON.parse(readFileSync(apiTokensFile, "utf8"))).toEqual({
+        tokens: { "https://other.example.com": otherApiToken },
+      });
 
       const statusResult = await runCli(
         ["auth", "status", "--base-url", "https://example.com"],

@@ -1,5 +1,5 @@
 import { describeApiError } from "./lib/api-errors";
-import type { ApiResult, AuthHeaders } from "./lib/api-result";
+import type { ApiResult } from "./lib/api-result";
 import type {
   PipelineDefinitionWithVersion,
   PipelineVersion,
@@ -26,7 +26,6 @@ export type PinnedStepDefinition =
 
 export type GatherPipelineShowOptions = {
   client: PipelineReadClient;
-  headers: AuthHeaders;
   projectId: string;
   /** A pipeline key or id. */
   pipeline: string;
@@ -55,14 +54,12 @@ function unwrap<T>(what: string, result: ApiResult<T>): T {
 
 async function pinnedStep(
   client: PipelineReadClient,
-  headers: AuthHeaders,
   stepKey: string,
   stepDefinitionId: string,
 ): Promise<PinnedStepDefinition> {
   try {
     const result = await client.stepDefinitions.getStepDefinition({
       path: { stepDefinitionId },
-      headers,
     });
     return result.error === undefined
       ? { status: "loaded", stepKey, definition: result.data }
@@ -86,13 +83,12 @@ async function pinnedStep(
 export async function gatherPipelineShow(
   options: GatherPipelineShowOptions,
 ): Promise<GatheredPipelineShow> {
-  const { client, headers, projectId } = options;
+  const { client, projectId } = options;
   const definitions = unwrap(
     "pipelines",
     await client.pipelineDefinitions.listPipelineDefinitions({
       path: { projectId },
       query: { includeArchived: true },
-      headers,
     }),
   );
   const pipeline = findPipelineDefinition(definitions, options.pipeline);
@@ -106,7 +102,6 @@ export async function gatherPipelineShow(
               pipelineDefinitionId: pipeline.id,
               version: options.version,
             },
-            headers,
           }),
         );
   if (version === null) {
@@ -116,7 +111,7 @@ export async function gatherPipelineShow(
   }
   const steps = await Promise.all(
     version.steps.map((step) =>
-      pinnedStep(client, headers, step.stepKey, step.stepDefinitionId),
+      pinnedStep(client, step.stepKey, step.stepDefinitionId),
     ),
   );
   return {

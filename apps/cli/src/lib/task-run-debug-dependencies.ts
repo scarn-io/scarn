@@ -11,7 +11,6 @@ import { createFullLogSaver } from "./task-log-cache";
 export interface TaskRunDebugDependencies {
   connect(args: { baseUrl: string | undefined }): Promise<{
     client: TaskRunDebugClient;
-    headers: { Authorization: string };
   }>;
   saveFullLog: FullLogSaver;
   sleep(ms: number): Promise<void>;
@@ -59,7 +58,7 @@ export async function downloadToNewFile(
 export const realTaskRunDebugDependencies: TaskRunDebugDependencies = {
   async connect(args) {
     const api = await connectApi(resolveScarnBaseUrl(args.baseUrl));
-    return { client: asDebugClient(api.client), headers: api.headers };
+    return { client: asDebugClient(api.client) };
   },
   saveFullLog: createFullLogSaver(),
   sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),

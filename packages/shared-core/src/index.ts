@@ -42,7 +42,7 @@ export {
   type GatheredArtifacts,
 } from "./task-run-artifacts";
 export type { TaskRunDebugClient } from "./lib/task-run-debug-client";
-export type { ApiResult, AuthHeaders } from "./lib/api-result";
+export type { ApiResult } from "./lib/api-result";
 export type { FullLogSaver } from "./lib/full-log-saver";
 export { describeApiError } from "./lib/api-errors";
 export {

@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { createClient } from "../../generated/client";
+import type { ScarnClientOptions } from "../../client";
+import { createApiClient } from "../../create-api-client";
 import { Automations } from "../../generated/sdk.gen";
 import type { PutApiProjectsByProjectIdAutomationsByKeyResponses } from "../../generated/types.gen";
 
@@ -61,8 +62,9 @@ function unwrap<T>(result: { data?: T; error?: unknown }): T {
 
 export function createAutomationsClient(
   baseUrl: string,
+  options?: ScarnClientOptions,
 ): ReturnType<typeof buildAutomationsClient> {
-  const client = createClient({ baseUrl });
+  const client = createApiClient(baseUrl, { fetch: options?.fetch });
   return buildAutomationsClient(new Automations({ client }));
 }
 

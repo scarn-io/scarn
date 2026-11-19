@@ -1,5 +1,4 @@
 import { describeApiError } from "./lib/api-errors";
-import type { AuthHeaders } from "./lib/api-result";
 import type { ArtifactDownloadUrl } from "./lib/api-types";
 import type {
   TaskRunArtifact,
@@ -22,17 +21,15 @@ export type GatheredArtifacts = {
 
 export async function gatherArtifacts(options: {
   client: TaskRunDebugClient;
-  headers: AuthHeaders;
   taskRunId: string;
   failures: boolean;
 }): Promise<GatheredArtifacts> {
-  const { client, headers, taskRunId } = options;
+  const { client, taskRunId } = options;
   const [artifacts, failures] = await Promise.all([
-    client.taskRuns.listTaskArtifacts({ path: { taskRunId }, headers }),
+    client.taskRuns.listTaskArtifacts({ path: { taskRunId } }),
     options.failures
       ? client.taskRuns.listTaskArtifactFailures({
           path: { taskRunId },
-          headers,
         })
       : undefined,
   ]);
@@ -129,7 +126,6 @@ export function findArtifact(
 /** Resolves `ref` to an artifact and its presigned download URL. */
 export async function resolveArtifactDownload(options: {
   client: TaskRunDebugClient;
-  headers: AuthHeaders;
   taskRunId: string;
   ref: string;
 }): Promise<{
@@ -137,17 +133,15 @@ export async function resolveArtifactDownload(options: {
   url: string;
   download: ArtifactDownloadUrl;
 }> {
-  const { client, headers, taskRunId, ref } = options;
+  const { client, taskRunId, ref } = options;
   const { artifacts } = await gatherArtifacts({
     client,
-    headers,
     taskRunId,
     failures: false,
   });
   const artifact = findArtifact(artifacts, ref);
   const result = await client.taskRuns.getArtifactDownloadUrl({
     path: { taskRunId, artifactId: artifact.id },
-    headers,
   });
   if (result.error !== undefined) {
     throw new Error(

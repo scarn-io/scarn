@@ -33,25 +33,22 @@ import { PROJECT_ACTIONS } from "../lib/resolve-project-ref";
  * resolves the project from `--project` or `.scarn/scarn.jsonc`.
  */
 
+type PipelinesClient = ReturnType<typeof createPipelineDefinitionsClient>;
+
 async function findPipeline(
-  baseUrl: string,
-  headers: { Authorization: string },
+  pipelines: PipelinesClient,
   projectId: string,
   key: string,
 ) {
-  const pipelines = await createPipelineDefinitionsClient(
-    baseUrl,
-  ).listByProjectId(projectId, { headers });
-  return findPipelineByKey(pipelines, key);
+  return findPipelineByKey(await pipelines.listByProjectId(projectId), key);
 }
 
 async function requirePipeline(
-  baseUrl: string,
-  headers: { Authorization: string },
+  pipelines: PipelinesClient,
   projectId: string,
   key: string,
 ) {
-  const pipeline = await findPipeline(baseUrl, headers, projectId, key);
+  const pipeline = await findPipeline(pipelines, projectId, key);
   if (!pipeline) {
     throw new CliError(
       "pipeline_not_found",
@@ -84,7 +81,7 @@ interface ValidateArguments extends ProjectArguments {
 const runValidate = (args: ArgumentsCamelCase<ValidateArguments>) =>
   withReporter("pipelines-validate", async ({ reporter }) => {
     const { document, key } = readPipelineDocumentFile(args.file);
-    const { client, headers, projectId } = await connectProject(
+    const { client, projectId } = await connectProject(
       args,
       PROJECT_ACTIONS.validate,
     );
@@ -92,7 +89,6 @@ const runValidate = (args: ArgumentsCamelCase<ValidateArguments>) =>
     const { data: steps, error } =
       await client.stepDefinitions.listStepDefinitions({
         query: { projectId },
-        headers,
       });
     if (error !== undefined) {
       throw new Error(
@@ -132,19 +128,21 @@ interface PublishArguments extends ProjectArguments {
 const runPublish = (args: ArgumentsCamelCase<PublishArguments>) =>
   withReporter("pipelines-publish", async ({ reporter }) => {
     const { document, key, title } = readPipelineDocumentFile(args.file);
-    const { baseUrl, headers, projectId } = await connectProject(
+    const { baseUrl, fetch, projectId } = await connectProject(
       args,
       PROJECT_ACTIONS.publish,
     );
-    const pipelines = createPipelineDefinitionsClient(baseUrl);
+    const pipelines = createPipelineDefinitionsClient(baseUrl, { fetch });
 
     try {
-      const existing = await findPipeline(baseUrl, headers, projectId, key);
+      const existing = await findPipeline(pipelines, projectId, key);
       if (!existing) {
-        const created = await pipelines.create(
-          { projectId, key, name: args.name ?? title ?? key, document },
-          { headers },
-        );
+        const created = await pipelines.create({
+          projectId,
+          key,
+          name: args.name ?? title ?? key,
+          document,
+        });
         const version = activeVersionOf(created)?.version ?? 1;
         reporter.success(
           `Created pipeline "${key}" and published version ${String(version)}.`,
@@ -152,9 +150,7 @@ const runPublish = (args: ArgumentsCamelCase<PublishArguments>) =>
         return;
       }
 
-      const result = await pipelines.publishVersion(existing.id, document, {
-        headers,
-      });
+      const result = await pipelines.publishVersion(existing.id, document);
       reporter.success(
         result.published
           ? `Published "${key}" version ${String(result.version.version)}; it is now active.`
@@ -205,21 +201,13 @@ interface ActivateArguments extends ProjectArguments {
 
 const runActivate = (args: ArgumentsCamelCase<ActivateArguments>) =>
   withReporter("pipelines-activate", async ({ reporter }) => {
-    const { baseUrl, headers, projectId } = await connectProject(
+    const { baseUrl, fetch, projectId } = await connectProject(
       args,
       PROJECT_ACTIONS.activate,
     );
-    const pipeline = await requirePipeline(
-      baseUrl,
-      headers,
-      projectId,
-      args.key,
-    );
-    await createPipelineDefinitionsClient(baseUrl).activateVersion(
-      pipeline.id,
-      args.version,
-      { headers },
-    );
+    const pipelines = createPipelineDefinitionsClient(baseUrl, { fetch });
+    const pipeline = await requirePipeline(pipelines, projectId, args.key);
+    await pipelines.activateVersion(pipeline.id, args.version);
     reporter.success(
       `"${args.key}" version ${String(args.version)} is now active. New runs use it.`,
     );
@@ -256,13 +244,12 @@ interface RunArguments extends ProjectArguments {
 
 const runRun = (args: ArgumentsCamelCase<RunArguments>) =>
   withReporter("pipelines-run", async ({ reporter }) => {
-    const { baseUrl, client, headers, projectId } = await connectProject(
+    const { baseUrl, client, fetch, projectId } = await connectProject(
       args,
       PROJECT_ACTIONS.run,
     );
     const pipeline = await requirePipeline(
-      baseUrl,
-      headers,
+      createPipelineDefinitionsClient(baseUrl, { fetch }),
       projectId,
       args.key,
     );
@@ -275,7 +262,6 @@ const runRun = (args: ArgumentsCamelCase<RunArguments>) =>
           pipelineDefinitionId: pipeline.id,
           ...(args.version === undefined ? {} : { version: args.version }),
         },
-        headers,
       });
     if (error !== undefined) {
       throw new CliError(
@@ -332,25 +318,17 @@ export interface PullDocumentArguments extends ProjectArguments {
 /** `pull --key`: write one pipeline's document (active or `--version`) to a file. */
 export const runPullDocument = (args: PullDocumentArguments) =>
   withReporter("pipelines-pull", async ({ reporter }) => {
-    const { baseUrl, headers, projectId } = await connectProject(
+    const { baseUrl, fetch, projectId } = await connectProject(
       args,
       PROJECT_ACTIONS.pull,
     );
-    const pipeline = await requirePipeline(
-      baseUrl,
-      headers,
-      projectId,
-      args.key,
-    );
+    const pipelines = createPipelineDefinitionsClient(baseUrl, { fetch });
+    const pipeline = await requirePipeline(pipelines, projectId, args.key);
 
     const document =
       args.version === undefined
         ? activeVersionOf(pipeline)
-        : await createPipelineDefinitionsClient(baseUrl).getVersion(
-            pipeline.id,
-            args.version,
-            { headers },
-          );
+        : await pipelines.getVersion(pipeline.id, args.version);
     if (!document) {
       throw new CliError(
         "pipeline_not_found",

@@ -5,8 +5,6 @@ import {
 } from "../src/load-task-log-lines";
 import type { LogLine } from "../src/lib/api-types";
 
-const headers = { Authorization: "Bearer test-token" };
-
 const archivedLine: LogLine = {
   seq: 0,
   stream: "conversation",
@@ -58,7 +56,7 @@ function buildClient(
 
 describe("loadTaskLogLines", () => {
   test.concurrent("reads the archive for a completed task", async () => {
-    const result = await loadTaskLogLines(buildClient(), headers, {
+    const result = await loadTaskLogLines(buildClient(), {
       id: "task-1",
       completedAt: "2026-01-01T00:05:00.000Z",
     });
@@ -67,7 +65,7 @@ describe("loadTaskLogLines", () => {
   });
 
   test.concurrent("reads the live feed for a running task", async () => {
-    const result = await loadTaskLogLines(buildClient(), headers, {
+    const result = await loadTaskLogLines(buildClient(), {
       id: "task-1",
       completedAt: null,
     });
@@ -86,7 +84,7 @@ describe("loadTaskLogLines", () => {
           }),
       });
 
-      const result = await loadTaskLogLines(client, headers, {
+      const result = await loadTaskLogLines(client, {
         id: "task-1",
         completedAt: "2026-01-01T00:05:00.000Z",
       });
@@ -110,7 +108,7 @@ describe("loadTaskLogLines", () => {
           }),
       });
 
-      const result = await loadTaskLogLines(client, headers, {
+      const result = await loadTaskLogLines(client, {
         id: "task-1",
         completedAt: "2026-01-01T00:05:00.000Z",
       });
@@ -132,7 +130,7 @@ describe("loadTaskLogLines", () => {
         }),
     });
 
-    const result = await loadTaskLogLines(client, headers, {
+    const result = await loadTaskLogLines(client, {
       id: "task-1",
       completedAt: null,
     });

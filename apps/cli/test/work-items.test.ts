@@ -109,11 +109,10 @@ function fakeDependencies(calls: Calls): WorkItemsDependencies {
         }),
     },
   };
-  const headers = { Authorization: "Bearer test" };
   return {
-    connect: () => Promise.resolve({ client, headers }),
+    connect: () => Promise.resolve({ client }),
     connectProject: () =>
-      Promise.resolve({ client, headers, projectId: PROJECT_ID }),
+      Promise.resolve({ client, projectId: PROJECT_ID }),
     resolveRef: (ref) => {
       calls.resolvedRefs.push(ref);
       if (ref === "acme/app#404") {

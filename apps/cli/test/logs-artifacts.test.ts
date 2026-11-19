@@ -122,7 +122,7 @@ function fakeDependencies(calls: Calls): TaskRunDebugDependencies {
   };
   return {
     connect: () =>
-      Promise.resolve({ client, headers: { Authorization: "Bearer test" } }),
+      Promise.resolve({ client }),
     saveFullLog: createFullLogSaver(tempDir),
     sleep: (ms) => {
       calls.sleeps.push(ms);

@@ -75,11 +75,10 @@ export async function resolveAssignedPipeline(input: {
   baseUrl: string;
   projectId: string;
 }): Promise<string | undefined> {
-  const { client, headers } = await connectApi(input.baseUrl);
+  const { client } = await connectApi(input.baseUrl);
 
   const automations = await client.automations.listAutomations({
     path: { projectId: input.projectId },
-    headers,
   });
   if (automations.error !== undefined) {
     throw new Error(
@@ -96,7 +95,6 @@ export async function resolveAssignedPipeline(input: {
 
   const pipelines = await client.pipelineDefinitions.listPipelineDefinitions({
     path: { projectId: input.projectId },
-    headers,
   });
   if (pipelines.error !== undefined) {
     throw new Error(
@@ -150,11 +148,10 @@ export async function pipelineNeedsProjectDevcontainer(input: {
   baseUrl: string;
   pipelineDefinitionId: string;
 }): Promise<boolean> {
-  const { client, headers } = await connectApi(input.baseUrl);
+  const { client } = await connectApi(input.baseUrl);
 
   const pipeline = await client.pipelineDefinitions.getPipelineDefinition({
     path: { pipelineDefinitionId: input.pipelineDefinitionId },
-    headers,
   });
   if (pipeline.error !== undefined) {
     throw new Error(
@@ -170,7 +167,6 @@ export async function pipelineNeedsProjectDevcontainer(input: {
     stepDefinitionIds.map(async (stepDefinitionId) => {
       const step = await client.stepDefinitions.getStepDefinition({
         path: { stepDefinitionId },
-        headers,
       });
       if (step.error !== undefined) {
         throw new Error(
@@ -200,7 +196,7 @@ export async function queueDesignRun(input: {
   workItemId: string;
   pipelineDefinitionId: string;
 }): Promise<void> {
-  const { client, headers } = await connectApi(input.baseUrl);
+  const { client } = await connectApi(input.baseUrl);
 
   const { error } = await client.pipelineExecutions.createPipelineExecution({
     body: {
@@ -208,7 +204,6 @@ export async function queueDesignRun(input: {
       workItemId: input.workItemId,
       pipelineDefinitionId: input.pipelineDefinitionId,
     },
-    headers,
   });
 
   if (error !== undefined) {

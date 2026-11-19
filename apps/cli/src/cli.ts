@@ -26,7 +26,12 @@ import { workItemsCommand } from "./commands/work-items";
 import { workerCommand } from "./commands/worker";
 import { createCliLogger } from "./lib/logger";
 import { AnalyticsEvents } from "@scarn/observability/analytics/events";
-import { classifyCliError, CliError, CliUsageError } from "./lib/cli-error";
+import {
+  classifyCliError,
+  CliError,
+  CliUsageError,
+  toReportedCliError,
+} from "./lib/cli-error";
 import { captureMilestone, shutdownTelemetry } from "./lib/telemetry";
 import { version as CLI_VERSION } from "../package.json";
 const logger = createCliLogger("cli");
@@ -118,7 +123,8 @@ export async function run(
       command = resolved;
     }).parseAsync();
     return 0;
-  } catch (error) {
+  } catch (caught) {
+    const error = toReportedCliError(caught);
     captureMilestone(AnalyticsEvents.CliCommandFailed, {
       command: error instanceof CliUsageError ? error.command : command,
       code: classifyCliError(error),

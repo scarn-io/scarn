@@ -153,16 +153,14 @@ const buildLogsCommand = (
         sinceLine: args.sinceLine,
       };
       const stream = args.stream ?? "all";
-      const { client, headers } = await deps.connect(args);
+      const { client } = await deps.connect(args);
       const run = await resolveTaskRun({
         client,
-        headers,
         id: args.id,
         runNumber: args.run,
       });
       const gathered = await gatherTaskRunLogs({
         client,
-        headers,
         run,
         stream,
       });
@@ -183,7 +181,6 @@ const buildLogsCommand = (
         reporter.info("Following new lines until the run is archived…");
         const followed = await followTaskRunLogs({
           client,
-          headers,
           taskRunId: run.id,
           stream,
           from: gathered.nextOffset,

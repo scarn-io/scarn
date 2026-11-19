@@ -5,7 +5,7 @@ import type {
   PipelineDefinitionSummary,
   VisitThread,
 } from "./run-api-types";
-import type { ApiResult, AuthHeaders } from "./api-result";
+import type { ApiResult } from "./api-result";
 
 /**
  * The slice of the generated `ScarnClient` that `runs list` and
@@ -26,22 +26,18 @@ export type RunReadClient = {
         page?: number;
         pageSize?: number;
       };
-      headers: AuthHeaders;
     }) => Promise<ApiResult<RunListPage>>;
     getPipelineExecution: (options: {
       path: { pipelineExecutionId: string };
-      headers: AuthHeaders;
     }) => Promise<ApiResult<RunWithVisits>>;
     getVisitThread: (options: {
       path: { pipelineExecutionId: string; visitId: string };
-      headers: AuthHeaders;
     }) => Promise<ApiResult<VisitThread>>;
   };
   pipelineDefinitions: {
     listPipelineDefinitions: (options: {
       path: { projectId: string };
       query: { includeArchived?: boolean };
-      headers: AuthHeaders;
     }) => Promise<ApiResult<PipelineDefinitionSummary[]>>;
   };
 };

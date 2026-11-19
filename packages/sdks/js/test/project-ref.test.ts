@@ -6,7 +6,6 @@ import {
 } from "../src/defaults/project-ref";
 
 const BASE_URL = "https://scarn.example.com";
-const headers = { Authorization: "Bearer token" };
 const previousFetch = globalThis.fetch;
 
 function respondWith(status: number, body: object): string[] {
@@ -42,7 +41,6 @@ describe("resolveProjectRef", () => {
     const resolved = await resolveProjectRef(
       createScarnClient(BASE_URL),
       "acme/web-app",
-      { headers },
     );
 
     expect(resolved).toEqual({
@@ -59,7 +57,7 @@ describe("resolveProjectRef", () => {
     const requested = respondWith(200, { id: "project-uuid" });
 
     const error = await captureError(
-      resolveProjectRef(createScarnClient(BASE_URL), "web-app", { headers }),
+      resolveProjectRef(createScarnClient(BASE_URL), "web-app"),
     );
 
     expect(error.kind).toBe("invalid");
@@ -76,9 +74,7 @@ describe("resolveProjectRef", () => {
     });
 
     const error = await captureError(
-      resolveProjectRef(createScarnClient(BASE_URL), "acme/web-app", {
-        headers,
-      }),
+      resolveProjectRef(createScarnClient(BASE_URL), "acme/web-app"),
     );
 
     expect(error.kind).toBe("not_found");
@@ -92,7 +88,6 @@ describe("resolveProjectRef", () => {
 
     const error = await captureError(
       resolveProjectRef(createScarnClient(BASE_URL), "acme/web-app", {
-        headers,
         action: "run work for",
       }),
     );
@@ -107,9 +102,7 @@ describe("resolveProjectRef", () => {
     respondWith(403, { type: "x", title: "Forbidden", status: 403 });
 
     const error = await captureError(
-      resolveProjectRef(createScarnClient(BASE_URL), "acme/web-app", {
-        headers,
-      }),
+      resolveProjectRef(createScarnClient(BASE_URL), "acme/web-app"),
     );
 
     expect(error.message).toBe(

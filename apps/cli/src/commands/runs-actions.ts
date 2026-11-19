@@ -33,7 +33,6 @@ import { routeCommand } from "./runs-route";
 
 type ActionConnection = {
   client: RunActionClient;
-  headers: { Authorization: string };
 };
 
 /** What the action verbs reach the API and the terminal through. */
@@ -49,7 +48,7 @@ const asActionClient = (client: AuthenticatedApi["client"]) =>
 export const realRunActionDependencies: RunActionDependencies = {
   async connect(args) {
     const api = await connectApi(resolveScarnBaseUrl(args.baseUrl));
-    return { client: asActionClient(api.client), headers: api.headers };
+    return { client: asActionClient(api.client) };
   },
   io: realActionIo,
 };
@@ -136,8 +135,8 @@ const rerunCommand = (
           );
         }
         const attempt = parseAttempt(args.attempt);
-        const { client, headers } = await deps.connect(args);
-        const connection = { client, headers, runId: args.runId };
+        const { client } = await deps.connect(args);
+        const connection = { client, runId: args.runId };
         const run = await loadRun(connection);
         const targets = planRerun(
           run,
@@ -197,10 +196,9 @@ const messageCommand = (
       asCliAction(async () => {
         const attempt = parseAttempt(args.attempt);
         const body = await readBody(args.body, deps.io.body);
-        const { client, headers } = await deps.connect(args);
+        const { client } = await deps.connect(args);
         const { target, sent } = await messageStep({
           client,
-          headers,
           runId: args.runId,
           stepKey: args.step,
           attempt,
@@ -235,8 +233,8 @@ const cancelCommand = (
   handler: (args: ArgumentsCamelCase<CancelArguments>) =>
     withReporter("runs-cancel", ({ reporter }) =>
       asCliAction(async () => {
-        const { client, headers } = await deps.connect(args);
-        const connection = { client, headers, runId: args.runId };
+        const { client } = await deps.connect(args);
+        const connection = { client, runId: args.runId };
         const run = await loadRun(connection);
         const question = `Cancel pipeline run ${run.id} (${run.status}) of "${run.workItemTitle}"?`;
         if (!(await deps.io.confirm(question, args.yes))) {

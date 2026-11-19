@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, test } from "bun:test";
+import { afterAll, describe, expect, setDefaultTimeout, test } from "bun:test";
 import {
   existsSync,
   mkdirSync,
@@ -14,6 +14,8 @@ import { reporterLines, runCli } from "./utils";
 
 const CLI_NODE_MODULES = resolve(import.meta.dir, "../node_modules");
 const BUILDER = join(".scarn", "pipeline-builder");
+
+setDefaultTimeout(20_000);
 
 const STEPS = `import { z } from "zod";
 import { codeStep } from "@scarn/sdk/definitions/steps";

@@ -1,4 +1,4 @@
-import type { ApiResult, AuthHeaders } from "./api-result";
+import type { ApiResult } from "./api-result";
 import type {
   PipelineDefinitionWithVersion,
   PipelineVersion,
@@ -16,17 +16,14 @@ export type PipelineReadClient = {
     listPipelineDefinitions: (options: {
       path: { projectId: string };
       query: { includeArchived?: boolean };
-      headers: AuthHeaders;
     }) => Promise<ApiResult<PipelineDefinitionWithVersion[]>>;
     getPipelineDefinitionVersion: (options: {
       path: { pipelineDefinitionId: string; version: number };
-      headers: AuthHeaders;
     }) => Promise<ApiResult<PipelineVersion>>;
   };
   stepDefinitions: {
     getStepDefinition: (options: {
       path: { stepDefinitionId: string };
-      headers: AuthHeaders;
     }) => Promise<ApiResult<StepDefinitionSummary>>;
   };
 };

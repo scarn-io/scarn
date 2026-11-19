@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { createClient } from "../../generated/client";
+import type { ScarnClientOptions } from "../../client";
+import { createApiClient } from "../../create-api-client";
 import { Environments } from "../../generated/sdk.gen";
 import type {
   GetApiProjectsByProjectIdEnvironmentsByNameResponses,
@@ -71,8 +72,11 @@ function unwrap<T>(result: { data?: T; error?: unknown }): T {
 
 export type EnvironmentsClient = ReturnType<typeof buildEnvironmentsClient>;
 
-export function createEnvironmentsClient(baseUrl: string): EnvironmentsClient {
-  const client = createClient({ baseUrl });
+export function createEnvironmentsClient(
+  baseUrl: string,
+  options?: ScarnClientOptions,
+): EnvironmentsClient {
+  const client = createApiClient(baseUrl, { fetch: options?.fetch });
   return buildEnvironmentsClient(new Environments({ client }));
 }
 

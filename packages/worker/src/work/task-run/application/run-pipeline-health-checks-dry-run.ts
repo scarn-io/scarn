@@ -1,5 +1,4 @@
 import type { DestinationStream } from "pino";
-import { createScarnClient } from "@scarn/sdk";
 import { resolveRepoConfig, type RepoConfig } from "@scarn/sdk/repo-config";
 import type { ResolvedEnvironment } from "@scarn/sdk/environment";
 import { createLogger } from "@scarn/observability/logging/host";
@@ -7,6 +6,7 @@ import { createUuidV7, parseUuidV7 } from "../../../common/contracts/uuid-v7";
 import { ConfigurationError } from "../../../lib/errors";
 import { resolveScarnBaseUrl } from "../../../auth/session/infra/auth-config";
 import { loadAuthenticatedSession } from "../../../auth/session/application/load-authenticated-session";
+import { createAuthenticatedScarnClient } from "../../../auth/session/infra/authenticated-scarn-client";
 import { DirectProviderAccessResolver } from "../infra/provider-access/direct-provider-access-resolver";
 import { SafeProviderAccessResolver } from "../infra/provider-access/safe-provider-access-resolver";
 import type { LaunchedRuntimeOrchestrator } from "../contracts/process-project-work-types";
@@ -21,11 +21,7 @@ import {
 } from "./dry-run-environment";
 import { runHealthChecks, type HealthCheckReport } from "./run-health-checks";
 import { planDryRunStepEnv } from "./plan-step-env-with-secrets";
-import {
-  buildAuthHeaders,
-  fetchProjectGitUrl,
-  fetchStepDefinition,
-} from "./run-work-dry-run";
+import { fetchProjectGitUrl, fetchStepDefinition } from "./run-work-dry-run";
 import {
   describeHealthCheckRuntime,
   planHealthCheckLaunches,
@@ -229,14 +225,15 @@ export async function runPipelineHealthChecksDryRun(
   if (!authenticated) {
     throw new ConfigurationError(`Not signed in to ${baseUrl}.`);
   }
-  const headers = buildAuthHeaders(authenticated.profile.accessToken);
   const requestedByUserId = parseUuidV7(authenticated.session.user.id);
   const projectId = parseUuidV7(options.projectId);
-  const client = createScarnClient(baseUrl);
+  const client = createAuthenticatedScarnClient(
+    baseUrl,
+    authenticated.profile.accessToken,
+  );
 
   const pipeline = await client.pipelineDefinitions.getPipelineDefinition({
     path: { pipelineDefinitionId: options.pipelineDefinitionId },
-    headers,
   });
   const activeVersion = readActivePipelineVersion(
     options.pipelineDefinitionId,
@@ -244,12 +241,11 @@ export async function runPipelineHealthChecksDryRun(
   );
   const stepDefinitions = await Promise.all(
     listPinnedStepDefinitionIds(activeVersion).map((id) =>
-      fetchStepDefinition(client, headers, id),
+      fetchStepDefinition(client, id),
     ),
   );
   const fetchLatestEnvironment = createLatestEnvironmentFetcher(
     client,
-    headers,
     options.projectId,
   );
   const localEnvVars = options.localEnvVars ?? {};
@@ -291,7 +287,7 @@ export async function runPipelineHealthChecksDryRun(
     providerAccessResolver,
   );
 
-  const gitUrl = await fetchProjectGitUrl(client, headers, options.projectId);
+  const gitUrl = await fetchProjectGitUrl(client, options.projectId);
 
   // One fake provider for every launch: it has to be baked into each agent's
   // launch-time config before any forced tool call can run.

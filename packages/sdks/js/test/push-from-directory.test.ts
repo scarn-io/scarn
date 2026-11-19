@@ -10,6 +10,7 @@ import {
   STEP_AND_PIPELINE_JS,
   PIPELINE_DOCUMENT,
   type CapturedRequest,
+  viaGlobalFetch,
 } from "./push-from-directory-fixtures";
 
 const isPipelineWrite = (r: CapturedRequest) =>
@@ -39,7 +40,7 @@ describe("pushFromDirectory", () => {
     const result = await pushFromDirectory(dir, {
       baseUrl: BASE_URL,
       projectId: "proj-1",
-      accessToken: "abc123",
+      fetch: viaGlobalFetch,
       log: () => undefined,
     });
 
@@ -78,7 +79,7 @@ describe("pushFromDirectory", () => {
       const result = await pushFromDirectory(dir2, {
         baseUrl: BASE_URL,
         projectId: "proj-2",
-        accessToken: "tok",
+        fetch: viaGlobalFetch,
         log: () => undefined,
       });
       expect(result.pushedSteps).toBe(1);
@@ -121,7 +122,7 @@ describe("pushFromDirectory publishing built pipelines", () => {
     pushFromDirectory(dir, {
       baseUrl: BASE_URL,
       projectId: "proj-5",
-      accessToken: "tok",
+      fetch: viaGlobalFetch,
       log: () => undefined,
     });
 
@@ -231,7 +232,7 @@ describe("pushFromDirectory offline validation", () => {
       await pushFromDirectory(dir, {
         baseUrl: BASE_URL,
         projectId: "proj-4",
-        accessToken: "tok",
+        fetch: viaGlobalFetch,
         log: () => undefined,
       });
     } catch (err) {
@@ -262,7 +263,7 @@ describe("pushFromDirectory offline validation", () => {
         await pushFromDirectory(badDir, {
           baseUrl: BASE_URL,
           projectId: "proj-6",
-          accessToken: "tok",
+          fetch: viaGlobalFetch,
           log: () => undefined,
         });
       } catch (err) {

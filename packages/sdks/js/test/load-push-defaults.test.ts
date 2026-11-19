@@ -2,7 +2,14 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { setHomeDirForTests } from "../src/defaults/home-dir";
 import { loadPushDefaults } from "../src/defaults/load-push-defaults";
+
+const API_TOKEN = [
+  "header",
+  Buffer.from(JSON.stringify({ exp: 4_102_444_800 })).toString("base64url"),
+  "signature",
+].join(".");
 
 describe("loadPushDefaults", () => {
   const savedEnv = {
@@ -11,13 +18,19 @@ describe("loadPushDefaults", () => {
     SCARN_ACCESS_TOKEN: process.env["SCARN_ACCESS_TOKEN"],
   };
 
+  let home: string;
+
   beforeEach(() => {
+    home = mkdtempSync(join(tmpdir(), "scarn-defaults-home-"));
+    setHomeDirForTests(home);
     delete process.env["SCARN_BASE_URL"];
     delete process.env["SCARN_PROJECT_ID"];
     delete process.env["SCARN_ACCESS_TOKEN"];
   });
 
   afterEach(() => {
+    setHomeDirForTests(undefined);
+    rmSync(home, { recursive: true, force: true });
     if (savedEnv.SCARN_BASE_URL === undefined) {
       delete process.env["SCARN_BASE_URL"];
     } else {
@@ -45,7 +58,7 @@ describe("loadPushDefaults", () => {
       const result = await loadPushDefaults({ dir });
       expect(result.baseUrl).toBe("https://override.example.com");
       expect(result.projectId).toBe("env-proj");
-      expect(result.accessToken).toBe("env-token");
+      expect(result.fetch).toBeDefined();
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -64,19 +77,29 @@ describe("loadPushDefaults", () => {
     process.env["SCARN_BASE_URL"] = "https://scarn.example.com";
     process.env["SCARN_ACCESS_TOKEN"] = "env-token";
 
-    const requested: string[] = [];
+    const requested: Array<[string, string | null]> = [];
     const previousFetch = globalThis.fetch;
-    globalThis.fetch = ((input: string | URL | Request) => {
-      const request = input instanceof Request ? input : new Request(input);
-      requested.push(request.url);
-      return Promise.resolve(Response.json({ id: "walked-proj" }));
+    globalThis.fetch = ((input: string | URL | Request, init?: RequestInit) => {
+      const request = new Request(input, init);
+      requested.push([request.url, request.headers.get("Authorization")]);
+      return Promise.resolve(
+        Response.json(
+          request.url.endsWith("/api/auth/token")
+            ? { token: API_TOKEN }
+            : { id: "walked-proj" },
+        ),
+      );
     }) as unknown as typeof globalThis.fetch;
 
     try {
       const result = await loadPushDefaults({ dir: childDir });
       expect(result.projectId).toBe("walked-proj");
       expect(requested).toEqual([
-        "https://scarn.example.com/api/projects/resolve?username=acme&slug=web-app",
+        ["https://scarn.example.com/api/auth/token", "Bearer env-token"],
+        [
+          "https://scarn.example.com/api/projects/resolve?username=acme&slug=web-app",
+          `Bearer ${API_TOKEN}`,
+        ],
       ]);
     } finally {
       globalThis.fetch = previousFetch;
@@ -94,13 +117,17 @@ describe("loadPushDefaults", () => {
     process.env["SCARN_ACCESS_TOKEN"] = "env-token";
 
     const previousFetch = globalThis.fetch;
-    globalThis.fetch = (() =>
-      Promise.resolve(
-        Response.json(
-          { type: "x", title: "Forbidden", status: 403 },
-          { status: 403 },
-        ),
-      )) as unknown as typeof globalThis.fetch;
+    globalThis.fetch = ((input: string | URL | Request) => {
+      const request = input instanceof Request ? input : new Request(input);
+      return Promise.resolve(
+        request.url.endsWith("/api/auth/token")
+          ? Response.json({ token: API_TOKEN })
+          : Response.json(
+              { type: "x", title: "Forbidden", status: 403 },
+              { status: 403 },
+            ),
+      );
+    }) as unknown as typeof globalThis.fetch;
 
     try {
       let message = "";

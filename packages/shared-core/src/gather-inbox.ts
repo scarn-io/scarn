@@ -1,5 +1,5 @@
 import { describeApiError } from "./lib/api-errors";
-import type { ApiResult, AuthHeaders } from "./lib/api-result";
+import type { ApiResult } from "./lib/api-result";
 import type {
   InboxDraftWorkItemPage,
   InboxNotification,
@@ -31,7 +31,6 @@ export type GatheredInbox = {
 
 export type GatherInboxOptions = {
   client: InboxReadClient;
-  headers: AuthHeaders;
   projectId: string;
   /** How many entries each list shows. */
   limit: number;
@@ -58,18 +57,17 @@ async function section<T>(
 export async function gatherInbox(
   options: GatherInboxOptions,
 ): Promise<GatheredInbox> {
-  const { client, headers, projectId, limit } = options;
+  const { client, projectId, limit } = options;
   const path = { projectId };
 
   const [summary, waits, tasksWaitingOnMe, failedTasks, drafts, notifications] =
     await Promise.all([
-      client.inbox.getProjectInboxSummary({ path, headers }),
-      section(() => client.inbox.listProjectInboxWaits({ path, headers })),
+      client.inbox.getProjectInboxSummary({ path }),
+      section(() => client.inbox.listProjectInboxWaits({ path })),
       section(() =>
         client.tasks.listProjectTasks({
           path,
           query: { waitingOnMe: true, excludeEndedChats: true, limit },
-          headers,
         }),
       ),
       section(() =>
@@ -81,21 +79,18 @@ export async function gatherInbox(
             excludeEndedChats: true,
             limit,
           },
-          headers,
         }),
       ),
       section(() =>
         client.projects.listProjectWorkItems({
           path,
           query: { awaitingApproval: "true", pageSize: limit },
-          headers,
         }),
       ),
       section(() =>
         client.userNotifications.listUserNotifications({
           path,
           query: {},
-          headers,
         }),
       ),
     ]);

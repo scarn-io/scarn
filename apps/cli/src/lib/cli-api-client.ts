@@ -1,3 +1,8 @@
+import {
+  createApiTokenSource,
+  createAuthenticatedFetch,
+  type FetchLike,
+} from "@scarn/sdk/auth";
 import { createScarnClient } from "@scarn/sdk/client";
 import { loadAuthenticatedSession } from "@scarn/worker";
 
@@ -5,19 +10,20 @@ import { loadAuthenticatedSession } from "@scarn/worker";
  * The two things a CLI adapter that talks to the API needs: an authenticated
  * client, and a way to turn the server's error body into a sentence.
  *
- * Kept separate from the adapters themselves so they stay thin. Commands that
- * only need an access token — `pipelines push`, `pipelines pull`, `auth` — still
- * call `loadAuthenticatedSession` directly rather than build a client they will
- * not use.
+ * Requests carry short-lived API tokens minted from the profile's session token
+ * (see `@scarn/sdk/auth`), so callers pass no `Authorization` header. Kept
+ * separate from the adapters themselves so they stay thin. `pipelines push`
+ * (which hands the session token to its push script) and `auth` (which reports
+ * the session itself) call `loadAuthenticatedSession` directly.
  */
 
 export type AuthenticatedApi = {
   client: ReturnType<typeof createScarnClient>;
   /**
-   * Passed per call, as a sibling of `path`/`query`/`body` — the generated
-   * client does not bind headers to the instance.
+   * The fetch behind `client`, for the SDK's hand-written clients
+   * (`createPipelineDefinitionsClient`, `createAutomationsClient`).
    */
-  headers: { Authorization: string };
+  fetch: FetchLike;
 };
 
 /** An authenticated client for `baseUrl`, or a throw naming the fix. */
@@ -28,10 +34,13 @@ export async function connectApi(baseUrl: string): Promise<AuthenticatedApi> {
       `Not signed in to ${baseUrl}. Run \`scarn auth login\` first.`,
     );
   }
-  return {
-    client: createScarnClient(baseUrl),
-    headers: { Authorization: `Bearer ${authenticated.profile.accessToken}` },
-  };
+  const fetch = createAuthenticatedFetch(
+    createApiTokenSource({
+      baseUrl,
+      getSessionToken: () => authenticated.profile.accessToken,
+    }),
+  );
+  return { client: createScarnClient(baseUrl, { fetch }), fetch };
 }
 
 /**

@@ -52,9 +52,8 @@ export async function resolveCliProjectRef(input: {
   ref: string;
   action: ProjectAction;
 }): Promise<ResolvedProjectRef> {
-  const { client, headers } = await connectApi(input.baseUrl);
+  const { client } = await connectApi(input.baseUrl);
   return resolveProjectRef(client, input.ref, {
-    headers,
     action: input.action,
   });
 }

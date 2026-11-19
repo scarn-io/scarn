@@ -25,7 +25,6 @@ async function rejection(promise: Promise<unknown>): Promise<Error> {
 }
 
 const ok = <T>(data: T) => Promise.resolve({ data, error: undefined });
-const headers = { Authorization: "Bearer t" };
 
 const document = (next: Record<string, unknown>) => ({
   schemaVersion: 1,
@@ -156,7 +155,6 @@ function client(
 const load = (actionClient: RunActionClient) =>
   loadRouteContext({
     client: actionClient,
-    headers,
     runId: "run-1",
     stepKey: "check",
     attempt: undefined,
@@ -281,7 +279,6 @@ describe("previewOverrule and overruleRoute", () => {
     const context = await load(actionClient);
     const options = {
       client: actionClient,
-      headers,
       runId: "run-1",
       visitId: "v-check",
       stepKey: "check",
@@ -327,7 +324,6 @@ describe("previewOverrule and overruleRoute", () => {
     const error = await rejection(
       previewOverrule({
         client: actionClient,
-        headers,
         runId: "run-1",
         visitId: "v-check",
         stepKey: "check",

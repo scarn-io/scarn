@@ -75,7 +75,7 @@ function setup(
   };
   const command = createWorkItemsCommand(unusedReads, {
     connect: () =>
-      Promise.resolve({ client, headers: { Authorization: "Bearer t" } }),
+      Promise.resolve({ client }),
     resolveRef: (ref) => {
       calls.refs.push(ref);
       return Promise.resolve({

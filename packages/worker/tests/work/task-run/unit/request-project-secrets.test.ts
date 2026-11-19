@@ -29,6 +29,13 @@ import { createTaskPlaneWorkerClient } from "../../../../src/work/task-run/infra
 const USER_ID = "01966a2c-9494-7db5-aa46-0f8f5cbbe0a1";
 const TASK_ID = parseUuidV7("01966a2c-9494-7db5-aa46-0f8f5cbbe003");
 const claim = { task: { id: TASK_ID }, claimToken: "claim-token" };
+const API_TOKEN = [
+  { alg: "EdDSA" },
+  { exp: Math.floor(Date.now() / 1000) + 3600 },
+]
+  .map((part) => Buffer.from(JSON.stringify(part)).toString("base64url"))
+  .concat("sig")
+  .join(".");
 
 let server: ReturnType<typeof Bun.serve>;
 let baseUrl: string;
@@ -41,10 +48,11 @@ beforeAll(() => {
   server = Bun.serve({
     port: 0,
     async fetch(request) {
-      requests.push({
-        path: new URL(request.url).pathname,
-        body: await request.json(),
-      });
+      const path = new URL(request.url).pathname;
+      if (path === "/api/auth/token") {
+        return Response.json({ token: API_TOKEN });
+      }
+      requests.push({ path, body: await request.json() });
       return Response.json(responseBody, { status: responseStatus });
     },
   });

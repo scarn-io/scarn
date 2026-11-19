@@ -1,4 +1,4 @@
-import type { ApiResult, AuthHeaders } from "./api-result";
+import type { ApiResult } from "./api-result";
 import type {
   ProjectTaskPage,
   WorkItemActivityEntry,
@@ -33,50 +33,41 @@ export type WorkItemReadClient = {
         labels?: string[];
         sort?: string;
       };
-      headers: AuthHeaders;
     }) => Promise<ApiResult<WorkItemListPage>>;
   };
   tasks: {
     listProjectTasks: (options: {
       path: { projectId: string };
       query: { workItemId: string; limit: number };
-      headers: AuthHeaders;
     }) => Promise<ApiResult<ProjectTaskPage>>;
   };
   workItems: {
     getWorkItem: (options: {
       path: { workItemId: string };
-      headers: AuthHeaders;
     }) => Promise<ApiResult<WorkItemDetail>>;
     listWorkItemChildren: (options: {
       path: { workItemId: string };
-      headers: AuthHeaders;
     }) => Promise<ApiResult<WorkItemChild[]>>;
     listWorkItemQuestions: (options: {
       path: { workItemId: string };
-      headers: AuthHeaders;
     }) => Promise<ApiResult<WorkItemQuestion[]>>;
     listWorkItemActivity: (options: {
       path: { workItemId: string };
-      headers: AuthHeaders;
     }) => Promise<ApiResult<WorkItemActivityEntry[]>>;
   };
   workItemBlocks: {
     listWorkItemBlocks: (options: {
       query: { workItemId: string };
-      headers: AuthHeaders;
     }) => Promise<ApiResult<WorkItemBlocks>>;
   };
   workItemComments: {
     listWorkItemComments: (options: {
       query: { workItemId: string };
-      headers: AuthHeaders;
     }) => Promise<ApiResult<WorkItemComment[]>>;
   };
   workItemCommentDrafts: {
     listPendingCommentDrafts: (options: {
       query: { workItemId: string };
-      headers: AuthHeaders;
     }) => Promise<ApiResult<WorkItemCommentDraft[]>>;
   };
   pipelineExecutions: {
@@ -87,7 +78,6 @@ export type WorkItemReadClient = {
         sort: "newest";
         pageSize: number;
       };
-      headers: AuthHeaders;
     }) => Promise<ApiResult<WorkItemRunPage>>;
   };
 };

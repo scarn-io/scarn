@@ -7,7 +7,6 @@ import { completeProjectHandoff } from "../../../../src/project/project-setup/ap
 import { readProjectConfig } from "../../../../src/project/project-config/application/read-project-config";
 import { concurrentTest } from "../../../utils";
 
-const headers = { Authorization: "Bearer test-token" };
 const gitUrl = "git@github.com:acme/my-repo.git";
 
 function fakeClient(projects: Array<{ id: string; gitUrl: string }>) {
@@ -42,7 +41,6 @@ describe("completeProjectHandoff", () => {
 
         const result = await completeProjectHandoff({
           client,
-          headers,
           gitUrl,
           rootDir: tmpDir,
         });
@@ -70,7 +68,6 @@ describe("completeProjectHandoff", () => {
         expect(
           await completeProjectHandoff({
             client,
-            headers,
             gitUrl,
             rootDir: tmpDir,
           }),
@@ -97,7 +94,6 @@ describe("completeProjectHandoff", () => {
 
         const result = await completeProjectHandoff({
           client,
-          headers,
           gitUrl,
           rootDir: tmpDir,
         });
@@ -135,7 +131,6 @@ describe("completeProjectHandoff", () => {
         try {
           await completeProjectHandoff({
             client,
-            headers,
             gitUrl,
             rootDir: tmpDir,
           });
@@ -163,7 +158,6 @@ describe("completeProjectHandoff", () => {
       expect(
         await completeProjectHandoff({
           client,
-          headers,
           gitUrl,
           rootDir: tmpDir,
         }),

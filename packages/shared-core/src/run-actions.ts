@@ -1,6 +1,5 @@
 import { ActionError, unwrapAction } from "./lib/action-error";
 import type { RunActionClient, SentVisitMessage } from "./lib/action-clients";
-import type { AuthHeaders } from "./lib/api-result";
 import type { RunVisit, RunWithVisits } from "./lib/run-api-types";
 import {
   resolveStepVisit,
@@ -16,17 +15,15 @@ import {
 
 type RunActionOptions = {
   client: RunActionClient;
-  headers: AuthHeaders;
   runId: string;
 };
 
 export async function loadRun(
   options: RunActionOptions,
 ): Promise<RunWithVisits> {
-  const { client, headers, runId } = options;
+  const { client, runId } = options;
   const result = await client.pipelineExecutions.getPipelineExecution({
     path: { pipelineExecutionId: runId },
-    headers,
   });
   if (result.error?.status === 404) {
     throw new ActionError("not_found", `Pipeline run ${runId} not found.`);
@@ -119,7 +116,7 @@ function latestVisitId(run: RunWithVisits, stepKey: string): string | null {
 export async function rerunVisits(
   options: RunActionOptions & { run: RunWithVisits; targets: TargetVisit[] },
 ): Promise<RerunResult> {
-  const { client, headers, runId } = options;
+  const { client, runId } = options;
   let run = options.run;
   const outcomes: RerunOutcome[] = [];
   for (const target of options.targets) {
@@ -136,7 +133,6 @@ export async function rerunVisits(
       `rerun step "${target.stepKey}" (visit ${target.visit.id})`,
       await client.pipelineExecutions.rerunPipelineExecutionVisit({
         path: { pipelineExecutionId: runId, visitId: target.visit.id },
-        headers,
       }),
     );
     outcomes.push({
@@ -156,7 +152,7 @@ export async function messageStep(
     body: string;
   },
 ): Promise<{ target: TargetVisit; sent: SentVisitMessage }> {
-  const { client, headers, runId, stepKey } = options;
+  const { client, runId, stepKey } = options;
   const run = await loadRun(options);
   const resolved = resolveTarget(run, stepKey, options.attempt);
   if (resolved.visit.nodeKind !== "step") {
@@ -170,7 +166,6 @@ export async function messageStep(
     await client.pipelineExecutions.sendVisitMessage({
       path: { pipelineExecutionId: runId, visitId: resolved.visit.id },
       body: { body: options.body },
-      headers,
     }),
   );
   return {
@@ -186,12 +181,11 @@ export async function messageStep(
 export async function cancelRun(
   options: RunActionOptions,
 ): Promise<RunWithVisits> {
-  const { client, headers, runId } = options;
+  const { client, runId } = options;
   return unwrapAction(
     `cancel pipeline run ${runId}`,
     await client.pipelineExecutions.cancelPipelineExecution({
       path: { pipelineExecutionId: runId },
-      headers,
     }),
   );
 }

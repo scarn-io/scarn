@@ -232,14 +232,13 @@ function httpReason(
 /** Wire the autocreate ports to the SDK, a `clack` confirm, and the repo root. */
 export function buildProjectAutocreatePorts(input: {
   client: ScarnClient;
-  headers: { Authorization: string };
   repoRoot: string;
 }): ProjectAutocreatePorts {
-  const { client, headers, repoRoot } = input;
+  const { client, repoRoot } = input;
   return {
     listRepos: async () => {
       const { data, error, response } =
-        await client.gitHubIntegrations.listMyGitHubRepos({ headers });
+        await client.gitHubIntegrations.listMyGitHubRepos();
       if (error !== undefined) {
         if (error.code === "GITHUB_APP_NOT_CONFIGURED") {
           return { status: "github-app-not-configured" };
@@ -258,7 +257,6 @@ export function buildProjectAutocreatePorts(input: {
       const { data, error } =
         await client.gitHubIntegrations.refreshGitHubInstallationRepos({
           path: { installationId },
-          headers,
         });
       if (error !== undefined) {
         return undefined;
@@ -278,7 +276,6 @@ export function buildProjectAutocreatePorts(input: {
           origin: "cli_api",
           issueTracker: { type: "github_app", installationId },
         },
-        headers,
       });
       if (error !== undefined) {
         return { status: "failed", reason: httpReason(response.status, error) };

@@ -1,4 +1,4 @@
-import { createClient } from "./generated/client";
+import { createApiClient } from "./create-api-client";
 import { TaskRuns } from "./generated/sdk.gen";
 import type {
   GetApiTaskRunsByTaskRunIdLogsData,
@@ -30,6 +30,14 @@ export type TaskPlaneClientOptions = {
     | undefined;
   /** Sees every response before it is parsed; throwing fails the call. */
   onResponse?: ((response: Response) => Promise<void> | void) | undefined;
+  /**
+   * Replaces `fetch` for every request, e.g. one from `createAuthenticatedFetch`.
+   * An error it throws (a failed token mint, a network error) fails the call
+   * as is.
+   */
+  fetch?:
+    | ((input: RequestInfo | URL, init?: RequestInit) => Promise<Response>)
+    | undefined;
 };
 
 function unwrap<T>(result: { data?: T; error?: unknown }): T {
@@ -47,7 +55,10 @@ export function createTaskPlaneClient(
   baseUrl: string,
   options?: TaskPlaneClientOptions,
 ): ReturnType<typeof buildTaskPlaneClient> {
-  const client = createClient({ baseUrl, headers: options?.headers });
+  const client = createApiClient(baseUrl, {
+    headers: options?.headers,
+    fetch: options?.fetch,
+  });
   const requestHeaders = options?.requestHeaders;
   if (requestHeaders) {
     client.interceptors.request.use(async (request) => {

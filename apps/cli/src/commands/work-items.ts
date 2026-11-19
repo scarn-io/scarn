@@ -52,7 +52,6 @@ const DEFAULT_ENTRY_LIMIT = 50;
 
 type ReadConnection = {
   client: WorkItemReadClient;
-  headers: { Authorization: string };
 };
 
 /** What the verbs reach the API through; tests pass fakes. */
@@ -75,13 +74,12 @@ const asReadClient = (client: AuthenticatedApi["client"]) =>
 const realDependencies: WorkItemsDependencies = {
   async connect(args) {
     const api = await connectApi(resolveScarnBaseUrl(args.baseUrl));
-    return { client: asReadClient(api.client), headers: api.headers };
+    return { client: asReadClient(api.client) };
   },
   async connectProject(args) {
     const api = await connectProject(args, PROJECT_ACTIONS.inspect);
     return {
       client: asReadClient(api.client),
-      headers: api.headers,
       projectId: api.projectId,
     };
   },
@@ -175,7 +173,7 @@ const listCommand = (
           `--limit can be at most ${String(MAX_LIST_LIMIT)}.`,
         );
       }
-      const { client, headers, projectId } = await deps.connectProject(args);
+      const { client, projectId } = await deps.connectProject(args);
       const page = unwrap(
         "work items",
         await client.projects.listProjectWorkItems({
@@ -191,7 +189,6 @@ const listCommand = (
             assignee: args.assignee,
             updatedAfter: args.updatedAfter,
           },
-          headers,
         }),
       );
       if (args.json) writeJson(page);
@@ -216,10 +213,9 @@ const viewCommand = (
   handler: (args: ArgumentsCamelCase<RefArguments>) =>
     withReporter("work-items-view", async () => {
       const { workItemId, projectId } = await deps.resolveRef(args.ref, args);
-      const { client, headers } = await deps.connect(args);
+      const { client } = await deps.connect(args);
       const gathered = await gatherWorkItem({
         client,
-        headers,
         workItemId,
         projectId,
       });
@@ -252,14 +248,13 @@ const commentsCommand = (
     withReporter("work-items-comments", async () => {
       const limit = positiveLimit(args.limit, DEFAULT_ENTRY_LIMIT);
       const { workItemId } = await deps.resolveRef(args.ref, args);
-      const { client, headers } = await deps.connect(args);
+      const { client } = await deps.connect(args);
       const query = { workItemId };
       if (args.drafts) {
         const drafts = unwrap(
           "comment drafts",
           await client.workItemCommentDrafts.listPendingCommentDrafts({
             query,
-            headers,
           }),
         );
         const shown = drafts.slice(-limit);
@@ -276,7 +271,7 @@ const commentsCommand = (
       }
       const comments = unwrap(
         "comments",
-        await client.workItemComments.listWorkItemComments({ query, headers }),
+        await client.workItemComments.listWorkItemComments({ query }),
       );
       const shown = comments.slice(-limit);
       if (args.json) writeJson(shown);
@@ -304,12 +299,11 @@ const activityCommand = (
     withReporter("work-items-activity", async () => {
       const limit = positiveLimit(args.limit, DEFAULT_ENTRY_LIMIT);
       const { workItemId } = await deps.resolveRef(args.ref, args);
-      const { client, headers } = await deps.connect(args);
+      const { client } = await deps.connect(args);
       const entries = unwrap(
         "activity",
         await client.workItems.listWorkItemActivity({
           path: { workItemId },
-          headers,
         }),
       );
       const shown = entries.slice(-limit);

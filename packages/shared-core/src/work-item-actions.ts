@@ -1,6 +1,5 @@
 import { ActionError, unwrapAction } from "./lib/action-error";
 import type { WorkItemActionClient } from "./lib/action-clients";
-import type { AuthHeaders } from "./lib/api-result";
 import type {
   WorkItemComment,
   WorkItemQuestion,
@@ -13,7 +12,6 @@ import type {
 
 type WorkItemActionOptions = {
   client: WorkItemActionClient;
-  headers: AuthHeaders;
   workItemId: string;
   body: string;
 };
@@ -21,12 +19,11 @@ type WorkItemActionOptions = {
 export async function addComment(
   options: WorkItemActionOptions,
 ): Promise<WorkItemComment> {
-  const { client, headers, workItemId, body } = options;
+  const { client, workItemId, body } = options;
   return unwrapAction(
     `comment on work item ${workItemId}`,
     await client.workItemComments.createWorkItemComment({
       body: { workItemId, body },
-      headers,
     }),
   );
 }
@@ -38,12 +35,11 @@ export async function addComment(
 export async function answerQuestion(
   options: WorkItemActionOptions & { questionId: string },
 ): Promise<{ question: WorkItemQuestion; comment: WorkItemComment }> {
-  const { client, headers, workItemId, questionId } = options;
+  const { client, workItemId, questionId } = options;
   const questions = unwrapAction(
     `load the questions of work item ${workItemId}`,
     await client.workItems.listWorkItemQuestions({
       path: { workItemId },
-      headers,
     }),
   );
   const question = questions.find(
@@ -69,7 +65,6 @@ export async function answerQuestion(
     await client.pipelineExecutions.answerQuestion({
       path: { pipelineExecutionId: question.pipelineExecutionId, questionId },
       body: { body: options.body },
-      headers,
     }),
   );
   return { question, comment };

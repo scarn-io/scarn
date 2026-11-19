@@ -25,8 +25,8 @@ export class ProjectRefError extends Error {
   }
 }
 
+/** `client` authenticates its own requests (see `createScarnClient`'s `fetch`). */
 export interface ResolveProjectRefOptions {
-  headers: { Authorization: string };
   /**
    * What the caller is about to do, phrased to complete "You don't have
    * permission to …" — e.g. `"push pipelines to"`, `"run work for"`.
@@ -46,7 +46,7 @@ export const PROJECT_REF_FORMAT_HINT =
 export async function resolveProjectRef(
   client: ScarnClient,
   ref: string,
-  { headers, action = "view" }: ResolveProjectRefOptions,
+  { action = "view" }: ResolveProjectRefOptions = {},
 ): Promise<ResolvedProjectRef> {
   const parsed = parseProjectRef(ref);
   if (!parsed) {
@@ -59,7 +59,6 @@ export async function resolveProjectRef(
 
   const { data, error, response } = await client.projects.resolveProjectBySlug({
     query: { username: parsed.owner, slug: parsed.slug },
-    headers,
   });
 
   if (data) {

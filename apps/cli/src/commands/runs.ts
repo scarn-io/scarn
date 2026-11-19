@@ -46,7 +46,6 @@ const MAX_LIST_LIMIT = 100;
 
 type ReadConnection = {
   client: RunReadClient;
-  headers: { Authorization: string };
 };
 
 /** What the read verbs reach the API through; tests pass fakes. */
@@ -69,13 +68,12 @@ const asReadClient = (client: AuthenticatedApi["client"]) =>
 export const realRunReadDependencies: RunReadDependencies = {
   async connect(args) {
     const api = await connectApi(resolveScarnBaseUrl(args.baseUrl));
-    return { client: asReadClient(api.client), headers: api.headers };
+    return { client: asReadClient(api.client) };
   },
   async connectProject(args) {
     const api = await connectProject(args, PROJECT_ACTIONS.inspect);
     return {
       client: asReadClient(api.client),
-      headers: api.headers,
       projectId: api.projectId,
     };
   },
@@ -138,14 +136,13 @@ const runListCommand = (
     withReporter("runs-list", async () => {
       const limit = listLimit(args.limit);
       const status = parseStatus(args.status);
-      const { client, headers, projectId } = await deps.connectProject(args);
+      const { client, projectId } = await deps.connectProject(args);
       const workItemId =
         args.workItem === undefined
           ? undefined
           : (await deps.resolveRef(args.workItem, args)).workItemId;
       const gathered = await gatherRunList({
         client,
-        headers,
         projectId,
         pipeline: args.pipeline,
         workItemId,
@@ -205,10 +202,9 @@ const runThreadCommand = (
           `--attempt must be a positive whole number, got ${String(args.attempt)}.`,
         );
       }
-      const { client, headers } = await deps.connect(args);
+      const { client } = await deps.connect(args);
       const gathered = await gatherVisitThread({
         client,
-        headers,
         runId: args.runId,
         stepKey: args.step,
         attempt: args.attempt,

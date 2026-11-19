@@ -141,7 +141,6 @@ export interface LinkProjectPorts {
 
 function buildLinkProjectPorts(input: {
   client: ReturnType<typeof createScarnClient>;
-  headers: { Authorization: string };
   repoRoot: string;
 }): LinkProjectPorts {
   return {
@@ -165,18 +164,15 @@ export async function linkInitProject(input: {
   interactive: boolean;
   reporter: BaseReporter;
   client: ReturnType<typeof createScarnClient>;
-  headers: { Authorization: string };
   repo: ResolvedRepository;
   ports: LinkProjectPorts;
 }): Promise<void> {
-  const { baseUrl, interactive, reporter, client, headers, repo, ports } =
-    input;
+  const { baseUrl, interactive, reporter, client, repo, ports } = input;
 
   const task = reporter.startActivity("Configuring project…");
   // The remaining steps are idempotent either way, so a re-run still checks
   // the devcontainer and offers the handoff instead of exiting silently.
   const setupResult = await localConfigSetup({
-    headers,
     client,
     rootDir: repo.repoRoot,
   });
@@ -226,7 +222,6 @@ export async function linkInitProject(input: {
       checkForProject: () =>
         completeProjectHandoff({
           client,
-          headers,
           gitUrl: setupResult.gitUrl,
           rootDir: repo.repoRoot,
         }),
@@ -284,18 +279,16 @@ function runInit(argv: ArgumentsCamelCase<InitArguments>): Promise<void> {
     }
     t1.succeed("Requirements verified");
     captureMilestone(AnalyticsEvents.CliRequirementsVerified);
-    const { headers, client } = verified;
+    const { client } = verified;
 
     await linkInitProject({
       baseUrl,
       interactive,
       reporter,
       client,
-      headers,
       repo,
       ports: buildLinkProjectPorts({
         client,
-        headers,
         repoRoot: repo.repoRoot,
       }),
     });

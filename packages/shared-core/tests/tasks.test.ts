@@ -21,8 +21,6 @@ import {
   TASK_RUN_ID,
 } from "./task-fixtures";
 
-const headers = { Authorization: "Bearer test" };
-
 const ok = <T>(data: T): Promise<ApiResult<T>> =>
   Promise.resolve({ data, error: undefined });
 const fail = <T>(status: number, detail: string): Promise<ApiResult<T>> =>
@@ -78,7 +76,6 @@ describe("tasks list", () => {
     const calls: { listQuery?: unknown } = {};
     const page = await gatherTaskList({
       client: fakeClient({ calls }),
-      headers,
       projectId: PROJECT_ID,
       statuses: ["failed", "running"],
       kind: "agent",
@@ -127,7 +124,6 @@ describe("tasks view", () => {
           makeTaskRun({ number: 2, reason: "continuation" }),
         ],
       }),
-      headers,
       taskId: TASK_ID,
     });
 
@@ -173,7 +169,6 @@ describe("tasks view", () => {
   test("a missing Task fails; missing runs and earlier Tasks degrade", async () => {
     const missing = gatherTaskView({
       client: fakeClient({}),
-      headers,
       taskId: TASK_ID,
     });
     expect((await rejection(missing)).message).toBe(
@@ -191,7 +186,6 @@ describe("tasks view", () => {
         },
         runs: "down",
       }),
-      headers,
       taskId: TASK_ID,
     });
     const text = formatTaskView(gathered);
@@ -213,7 +207,6 @@ describe("tasks view", () => {
     }
     const gathered = await gatherTaskView({
       client: fakeClient({ tasks }),
-      headers,
       taskId: "task-0",
     });
 
@@ -228,7 +221,6 @@ describe("task-runs view", () => {
   test("renders worker, lease, timings, error and artifacts", async () => {
     const gathered = await gatherTaskRunView({
       client: fakeClient({}),
-      headers,
       taskRunId: TASK_RUN_ID,
     });
 
@@ -264,7 +256,6 @@ describe("task-runs view", () => {
   test("a missing run fails", async () => {
     const missing = gatherTaskRunView({
       client: fakeClient({}),
-      headers,
       taskRunId: "nope",
     });
 

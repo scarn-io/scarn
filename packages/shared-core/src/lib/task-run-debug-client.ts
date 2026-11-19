@@ -1,5 +1,5 @@
 import type { ArtifactDownloadUrl } from "./api-types";
-import type { ApiResult, AuthHeaders } from "./api-result";
+import type { ApiResult } from "./api-result";
 import type {
   TaskRunArtifact,
   TaskRunArtifactFailure,
@@ -17,25 +17,20 @@ export type TaskRunDebugClient = {
   tasks: {
     getTaskRuns: (options: {
       path: { taskId: string };
-      headers: AuthHeaders;
     }) => Promise<ApiResult<TaskRunDetail[]>>;
   };
   taskRuns: TaskLogsClient["taskRuns"] & {
     getTaskRun: (options: {
       path: { taskRunId: string };
-      headers: AuthHeaders;
     }) => Promise<ApiResult<TaskRunDetail>>;
     listTaskArtifacts: (options: {
       path: { taskRunId: string };
-      headers: AuthHeaders;
     }) => Promise<ApiResult<TaskRunArtifact[]>>;
     listTaskArtifactFailures: (options: {
       path: { taskRunId: string };
-      headers: AuthHeaders;
     }) => Promise<ApiResult<TaskRunArtifactFailure[]>>;
     getArtifactDownloadUrl: (options: {
       path: { taskRunId: string; artifactId: string };
-      headers: AuthHeaders;
     }) => Promise<ApiResult<ArtifactDownloadUrl>>;
   };
 };

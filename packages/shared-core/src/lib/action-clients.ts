@@ -1,4 +1,4 @@
-import type { ApiResult, AuthHeaders } from "./api-result";
+import type { ApiResult } from "./api-result";
 import type { PipelineVersion } from "./pipeline-api-types";
 import type { OverrulePreview, OverruleRequest } from "./route-api-types";
 import type { RunWithVisits } from "./run-api-types";
@@ -25,35 +25,28 @@ export type RunActionClient = {
   pipelineExecutions: {
     getPipelineExecution: (options: {
       path: RunPath;
-      headers: AuthHeaders;
     }) => Promise<ApiResult<RunWithVisits>>;
     rerunPipelineExecutionVisit: (options: {
       path: VisitPath;
-      headers: AuthHeaders;
     }) => Promise<ApiResult<RunWithVisits>>;
     sendVisitMessage: (options: {
       path: VisitPath;
       body: { body: string };
-      headers: AuthHeaders;
     }) => Promise<ApiResult<SentVisitMessage>>;
     cancelPipelineExecution: (options: {
       path: RunPath;
-      headers: AuthHeaders;
     }) => Promise<ApiResult<RunWithVisits>>;
     overrulePipelineExecutionRoute: (options: {
       path: VisitPath;
       body: OverruleRequest;
-      headers: AuthHeaders;
     }) => Promise<ApiResult<RunWithVisits | { preview: OverrulePreview }>>;
   };
   pipelineDefinitions: {
     listPipelineDefinitionVersions: (options: {
       path: { pipelineDefinitionId: string };
-      headers: AuthHeaders;
     }) => Promise<ApiResult<Omit<PipelineVersion, "definition" | "steps">[]>>;
     getPipelineDefinitionVersion: (options: {
       path: { pipelineDefinitionId: string; version: number };
-      headers: AuthHeaders;
     }) => Promise<ApiResult<PipelineVersion>>;
   };
 };
@@ -62,20 +55,16 @@ export type TaskActionClient = {
   tasks: {
     getTask: (options: {
       path: { taskId: string };
-      headers: AuthHeaders;
     }) => Promise<ApiResult<TaskDetail>>;
     getTaskRuns: (options: {
       path: { taskId: string };
-      headers: AuthHeaders;
     }) => Promise<ApiResult<TaskRunDetail[]>>;
     retryTask: (options: {
       path: { taskId: string };
       body: { expectedLatestRunId: string | null };
-      headers: AuthHeaders;
     }) => Promise<ApiResult<{ taskId: string; taskRunId: string | null }>>;
     cancelTask: (options: {
       path: { taskId: string };
-      headers: AuthHeaders;
     }) => Promise<ApiResult<{ taskId: string }>>;
   };
 };
@@ -84,20 +73,17 @@ export type WorkItemActionClient = {
   workItemComments: {
     createWorkItemComment: (options: {
       body: { workItemId: string; body: string };
-      headers: AuthHeaders;
     }) => Promise<ApiResult<WorkItemComment>>;
   };
   workItems: {
     listWorkItemQuestions: (options: {
       path: { workItemId: string };
-      headers: AuthHeaders;
     }) => Promise<ApiResult<WorkItemQuestion[]>>;
   };
   pipelineExecutions: {
     answerQuestion: (options: {
       path: { pipelineExecutionId: string; questionId: string };
       body: { body: string };
-      headers: AuthHeaders;
     }) => Promise<ApiResult<WorkItemComment>>;
   };
 };

@@ -1,5 +1,4 @@
 import { describeApiError } from "./lib/api-errors";
-import type { AuthHeaders } from "./lib/api-result";
 import type { LogLine, TaskLogStream } from "./lib/api-types";
 import type { TaskRunDetail } from "./lib/task-api-types";
 import type { TaskRunDebugClient } from "./lib/task-run-debug-client";
@@ -13,7 +12,6 @@ import { loadTaskLogLines, readLiveLogLines } from "./load-task-log-lines";
 
 export type ResolveTaskRunOptions = {
   client: TaskRunDebugClient;
-  headers: AuthHeaders;
   /** A Task run id, or a Task id. */
   id: string;
   /** Picks this run number of the Task; `id` must then be a Task id. */
@@ -27,11 +25,10 @@ export type ResolveTaskRunOptions = {
 export async function resolveTaskRun(
   options: ResolveTaskRunOptions,
 ): Promise<TaskRunDetail> {
-  const { client, headers, id, runNumber } = options;
+  const { client, id, runNumber } = options;
   if (runNumber === undefined) {
     const direct = await client.taskRuns.getTaskRun({
       path: { taskRunId: id },
-      headers,
     });
     if (direct.error === undefined) return direct.data;
     if (direct.error.status !== 404) {
@@ -43,7 +40,6 @@ export async function resolveTaskRun(
 
   const runs = await client.tasks.getTaskRuns({
     path: { taskId: id },
-    headers,
   });
   if (runs.error?.status === 404) {
     throw new Error(
@@ -108,12 +104,11 @@ function highestSeq(lines: readonly LogLine[]): number {
  */
 export async function gatherTaskRunLogs(options: {
   client: TaskRunDebugClient;
-  headers: AuthHeaders;
   run: TaskRunDetail;
   stream: TaskLogStream | "all";
 }): Promise<GatheredTaskRunLogs> {
-  const { client, headers, run, stream } = options;
-  const loaded = await loadTaskLogLines(client, headers, {
+  const { client, run, stream } = options;
+  const loaded = await loadTaskLogLines(client, {
     id: run.id,
     completedAt: run.completedAt,
   });
@@ -127,7 +122,7 @@ export async function gatherTaskRunLogs(options: {
     };
   }
   if (run.completedAt !== null) {
-    const live = await readLiveLogLines(client, headers, run.id, 0);
+    const live = await readLiveLogLines(client, run.id, 0);
     if (!("unavailable" in live) && live.lines.length > 0) {
       return {
         run,
@@ -146,7 +141,6 @@ export const FOLLOW_INTERVAL_MS = 2_000;
 
 export type FollowTaskRunLogsOptions = {
   client: TaskRunDebugClient;
-  headers: AuthHeaders;
   taskRunId: string;
   stream: TaskLogStream | "all";
   /** The cursor to start after, from {@link GatheredTaskRunLogs.nextOffset}. */
@@ -164,12 +158,12 @@ export type FollowTaskRunLogsOptions = {
 export async function followTaskRunLogs(
   options: FollowTaskRunLogsOptions,
 ): Promise<LogLine[]> {
-  const { client, headers, taskRunId, stream, sleep, onLines } = options;
+  const { client, taskRunId, stream, sleep, onLines } = options;
   const intervalMs = options.intervalMs ?? FOLLOW_INTERVAL_MS;
   const followed: LogLine[] = [];
   let cursor = options.from;
   for (;;) {
-    const page = await readLiveLogLines(client, headers, taskRunId, cursor);
+    const page = await readLiveLogLines(client, taskRunId, cursor);
     if ("unavailable" in page) throw new Error(page.unavailable);
     cursor = page.nextOffset;
     const lines = filterByStream(page.lines, stream);

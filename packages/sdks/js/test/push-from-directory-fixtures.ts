@@ -84,6 +84,10 @@ export async function readRequest(
 
 export const BASE_URL = "https://scarn.example.com";
 
+/** The `fetch` handed to `pushFromDirectory`: whatever `globalThis.fetch` is stubbed to. */
+export const viaGlobalFetch = (input: RequestInfo | URL, init?: RequestInit) =>
+  globalThis.fetch(input, init);
+
 export function json(body: object, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,

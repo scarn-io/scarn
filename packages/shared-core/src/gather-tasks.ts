@@ -1,5 +1,5 @@
 import { describeApiError } from "./lib/api-errors";
-import type { ApiResult, AuthHeaders } from "./lib/api-result";
+import type { ApiResult } from "./lib/api-result";
 import type {
   TaskDetail,
   TaskKind,
@@ -52,7 +52,6 @@ async function section<T>(
 
 export type GatherTaskListOptions = {
   client: TaskReadClient;
-  headers: AuthHeaders;
   projectId: string;
   workItemId?: string;
   statuses?: ProjectTaskStatus[];
@@ -64,7 +63,7 @@ export type GatherTaskListOptions = {
 export async function gatherTaskList(
   options: GatherTaskListOptions,
 ): Promise<TaskSummaryPage> {
-  const { client, headers, projectId } = options;
+  const { client, projectId } = options;
   return unwrap(
     "Tasks",
     await client.tasks.listProjectTasks({
@@ -78,14 +77,12 @@ export async function gatherTaskList(
         workItemId: options.workItemId,
         limit: options.limit,
       },
-      headers,
     }),
   );
 }
 
 export type GatherTaskViewOptions = {
   client: TaskReadClient;
-  headers: AuthHeaders;
   taskId: string;
 };
 
@@ -106,10 +103,10 @@ export type GatheredTaskView = {
 export async function gatherTaskView(
   options: GatherTaskViewOptions,
 ): Promise<GatheredTaskView> {
-  const { client, headers, taskId } = options;
+  const { client, taskId } = options;
   const [taskResult, runs] = await Promise.all([
-    client.tasks.getTask({ path: { taskId }, headers }),
-    section(() => client.tasks.getTaskRuns({ path: { taskId }, headers })),
+    client.tasks.getTask({ path: { taskId } }),
+    section(() => client.tasks.getTaskRuns({ path: { taskId } })),
   ]);
   const task = unwrap(`Task ${taskId}`, taskResult);
 
@@ -123,7 +120,7 @@ export async function gatherTaskView(
     }
     const previousId = nextId;
     const previous = await section(() =>
-      client.tasks.getTask({ path: { taskId: previousId }, headers }),
+      client.tasks.getTask({ path: { taskId: previousId } }),
     );
     if (previous.status === "unavailable") {
       previousTasksCutOff = `could not load Task ${previousId}: ${previous.reason}`;
@@ -137,7 +134,6 @@ export async function gatherTaskView(
 
 export type GatherTaskRunViewOptions = {
   client: TaskReadClient;
-  headers: AuthHeaders;
   taskRunId: string;
 };
 
@@ -150,12 +146,10 @@ export type GatheredTaskRunView = {
 export async function gatherTaskRunView(
   options: GatherTaskRunViewOptions,
 ): Promise<GatheredTaskRunView> {
-  const { client, headers, taskRunId } = options;
+  const { client, taskRunId } = options;
   const [runResult, artifacts] = await Promise.all([
-    client.taskRuns.getTaskRun({ path: { taskRunId }, headers }),
-    section(() =>
-      client.taskRuns.listTaskArtifacts({ path: { taskRunId }, headers }),
-    ),
+    client.taskRuns.getTaskRun({ path: { taskRunId } }),
+    section(() => client.taskRuns.listTaskArtifacts({ path: { taskRunId } })),
   ]);
   return { run: unwrap(`Task run ${taskRunId}`, runResult), artifacts };
 }

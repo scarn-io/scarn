@@ -9,7 +9,14 @@
   "packageManager": "bun@1.4.0",
   "catalog": {
     "@scarn/sdk": "workspace:*",
-    "@devcontainers/cli": "0.86.0"
+    "@devcontainers/cli": "0.86.0",
+    "zod": "^4.6.7",
+    "pg": "^8.23.1",
+    "@types/pg": "^8.23.1",
+    "drizzle-orm": "1.0.0-rc.5",
+    "drizzle-kit": "1.0.0-rc.5",
+    "better-auth": "^1.7.25",
+    "better-call": "1.4.5"
   },
   "overrides": {
     "@opencode/client": "2.1.4",

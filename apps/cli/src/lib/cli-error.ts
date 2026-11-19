@@ -1,3 +1,4 @@
+import { ApiTokenAuthError } from "@scarn/sdk/auth";
 import { ProjectRefError, type ProjectRefErrorKind } from "@scarn/sdk/defaults";
 import { CoreError, SetupErrorCodes } from "@scarn/worker";
 
@@ -11,6 +12,7 @@ export const CLI_ERROR_CODES = [
   "not_in_git_repo",
   "no_origin_remote",
   "not_signed_in_noninteractive",
+  "session_invalid",
   "device_login_expired",
   "device_login_denied",
   "device_login_failed",
@@ -144,4 +146,32 @@ export function classifyCliError(error: unknown): CliErrorCode | "unknown" {
     current = current.cause;
   }
   return "unknown";
+}
+
+/**
+ * The error a command failure is reported as: an {@link ApiTokenAuthError}
+ * anywhere in the `cause` chain (the API refused the profile's session while
+ * minting an API token) becomes a `session_invalid` {@link CliError} telling
+ * the user to log in again; anything else is returned as is.
+ */
+// eslint-disable-next-line local/no-unknown-parameter-type -- error boundary: caught values are `unknown`
+export function toReportedCliError(error: unknown): unknown {
+  let current: unknown = error;
+  for (let depth = 0; depth <= MAX_CAUSE_DEPTH; depth += 1) {
+    if (current instanceof CliError) {
+      return error;
+    }
+    if (current instanceof ApiTokenAuthError) {
+      return new CliError(
+        "session_invalid",
+        `Your session for ${current.baseUrl} is no longer valid. Run \`scarn auth login\`.`,
+        { cause: error },
+      );
+    }
+    if (!(current instanceof Error)) {
+      return error;
+    }
+    current = current.cause;
+  }
+  return error;
 }

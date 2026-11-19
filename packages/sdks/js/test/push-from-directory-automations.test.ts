@@ -10,6 +10,7 @@ import {
   PIPELINE_DOCUMENT,
   STEP_A_JS,
   type CapturedRequest,
+  viaGlobalFetch,
 } from "./push-from-directory-fixtures";
 
 const AUTOMATION_DOCUMENT = (
@@ -62,7 +63,7 @@ describe("pushFromDirectory publishing built automations", () => {
     pushFromDirectory(dir, {
       baseUrl: BASE_URL,
       projectId: "proj-7",
-      accessToken: "tok",
+      fetch: viaGlobalFetch,
       log: () => undefined,
     });
 

@@ -1,4 +1,11 @@
-import { createCliLogger, createTransport, ensureLogDir, resolveLogFilePath, type Logger } from "./logger";
+import {
+  createCliLogger,
+  createTransport,
+  ensureLogDir,
+  resolveLogFilePath,
+  type Logger,
+} from "./logger";
+import { toReportedCliError } from "./cli-error";
 import { createCliReporter } from "./reporter";
 import type { BaseReporter } from "./reporter-types";
 
@@ -49,7 +56,8 @@ export async function withReporter<T>(
 
   try {
     return await fn({ reporter, logger, logFilePath });
-  } catch (error) {
+  } catch (caught) {
+    const error = toReportedCliError(caught);
     const message = error instanceof Error ? error.message : String(error);
     reporter.error(message);
     logger.error({ err: error }, `${scope} failed`);

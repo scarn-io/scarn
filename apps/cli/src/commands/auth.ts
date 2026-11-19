@@ -1,4 +1,5 @@
 import type { ArgumentsCamelCase, Argv, CommandModule } from "yargs";
+import { deleteApiTokenCacheEntry } from "@scarn/sdk/auth";
 import {
   deleteAuthProfile,
   loadAuthenticatedSession,
@@ -66,6 +67,7 @@ const runLogout = async (arguments_: ArgumentsCamelCase<object>) =>
   withReporter("auth", ({ reporter }) => {
     const baseUrl = resolveScarnBaseUrl(getBaseUrlArgument(arguments_));
     deleteAuthProfile(baseUrl);
+    deleteApiTokenCacheEntry(baseUrl);
     reporter.success(`Signed out of ${baseUrl}`);
   });
 

@@ -35,12 +35,9 @@ export interface ProjectMatch {
  */
 export async function findMatchingProject(input: {
   client: ReturnType<typeof createScarnClient>;
-  headers: { Authorization: string };
   gitUrl: string;
 }): Promise<ProjectMatch | undefined> {
-  const listResponse = await input.client.projects.listProjects({
-    headers: input.headers,
-  });
+  const listResponse = await input.client.projects.listProjects();
   const projects: MatchedProject[] = (listResponse.data ?? []).map(
     (project) => ({
       id: project.id,

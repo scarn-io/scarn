@@ -104,12 +104,11 @@ export function createWorkItemRefPorts(
 
   return {
     async projectIdOfWorkItem(workItemId) {
-      const { client, headers } = await connectApi(
+      const { client } = await connectApi(
         resolveScarnBaseUrl(args.baseUrl),
       );
       const { data, error } = await client.workItems.getWorkItem({
         path: { workItemId },
-        headers,
       });
       if (error === undefined) return data.projectId;
       if (error.status === 404) return undefined;
@@ -126,7 +125,7 @@ export function createWorkItemRefPorts(
       return (await findWorkItemByUrl({ baseUrl, projectId, url }))?.id;
     },
     async findIdByPlatformKey(projectId, platform, platformKey) {
-      const { client, headers } = await connect();
+      const { client } = await connect();
       const { data, error } = await client.projects.listProjectWorkItems({
         path: { projectId },
         query: {
@@ -135,7 +134,6 @@ export function createWorkItemRefPorts(
           platform,
           q: platformKey,
         },
-        headers,
       });
       if (error !== undefined) {
         throw new CliError(

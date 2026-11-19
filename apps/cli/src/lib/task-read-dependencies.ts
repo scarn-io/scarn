@@ -15,7 +15,6 @@ import {
 
 type ReadConnection = {
   client: TaskReadClient;
-  headers: { Authorization: string };
 };
 
 export interface TaskReadDependencies {
@@ -37,13 +36,12 @@ const asReadClient = (client: AuthenticatedApi["client"]) =>
 export const realTaskReadDependencies: TaskReadDependencies = {
   async connect(args) {
     const api = await connectApi(resolveScarnBaseUrl(args.baseUrl));
-    return { client: asReadClient(api.client), headers: api.headers };
+    return { client: asReadClient(api.client) };
   },
   async connectProject(args) {
     const api = await connectProject(args, PROJECT_ACTIONS.inspect);
     return {
       client: asReadClient(api.client),
-      headers: api.headers,
       projectId: api.projectId,
     };
   },

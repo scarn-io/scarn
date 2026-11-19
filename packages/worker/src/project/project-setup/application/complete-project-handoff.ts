@@ -20,7 +20,6 @@ const logger = createLazyLogger({
  */
 export async function completeProjectHandoff(input: {
   client: ReturnType<typeof createScarnClient>;
-  headers: { Authorization: string };
   gitUrl: string;
   /** The repo root to write `.scarn/` into. Defaults to `process.cwd()`. */
   rootDir?: string;

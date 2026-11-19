@@ -44,7 +44,6 @@ export type CancelClient = TaskActionClient & Pick<TaskReadClient, "taskRuns">;
 
 export type CancelConnection = {
   client: CancelClient;
-  headers: { Authorization: string };
 };
 
 export type WorkerCancelDeps = ConnectToWorkerDeps & {
@@ -67,7 +66,7 @@ const asCancelClient = (client: AuthenticatedApi["client"]) =>
 
 async function realConnect(baseUrl: string): Promise<CancelConnection> {
   const api = await connectApi(baseUrl);
-  return { client: asCancelClient(api.client), headers: api.headers };
+  return { client: asCancelClient(api.client) };
 }
 
 async function loadTaskRun(
@@ -76,7 +75,6 @@ async function loadTaskRun(
 ): Promise<TaskRunDetail> {
   const result = await connection.client.taskRuns.getTaskRun({
     path: { taskRunId },
-    headers: connection.headers,
   });
   if (result.error === undefined) return result.data;
   if (result.error.status === 404) {

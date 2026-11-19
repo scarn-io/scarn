@@ -1,7 +1,8 @@
 /**
- * The worker client reads its bearer token from `auth.jsonc` per request, so a
- * long-running worker follows a re-login, and fails with a typed
- * `WorkerAuthError` when it can no longer act for its user.
+ * The worker client reads its session token from `auth.jsonc` per request and
+ * sends API tokens minted from it, so a long-running worker follows a
+ * re-login, and fails with a typed `WorkerAuthError` when it can no longer
+ * act for its user.
  */
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -38,15 +39,47 @@ const TASK_ID = parseUuidV7("01966a2c-9494-7db5-aa46-0f8f5cbbe003");
 let server: ReturnType<typeof Bun.serve>;
 let baseUrl: string;
 let seenAuthorization: (string | null)[];
+let mintAuthorization: (string | null)[];
+let mintStatus: number;
+let mintedCount: number;
+let rejectedTokens: Set<string>;
 let responseStatus: number;
 let responseBody: Record<string, unknown>;
 let fakeHome: string;
+
+function makeJwt(id: string): string {
+  const encode = (value: object) =>
+    Buffer.from(JSON.stringify(value)).toString("base64url");
+  const exp = Math.floor(Date.now() / 1000) + 900;
+  return `${encode({ alg: "EdDSA" })}.${encode({ exp, jti: id })}.sig`;
+}
+
+function jtiOf(authorization: string | null): string | undefined {
+  const payload = authorization?.split(".")[1];
+  if (payload === undefined) return authorization ?? undefined;
+  const claims = JSON.parse(
+    Buffer.from(payload, "base64url").toString("utf8"),
+  ) as { jti: string };
+  return claims.jti;
+}
 
 beforeAll(() => {
   server = Bun.serve({
     port: 0,
     fetch(request) {
-      seenAuthorization.push(request.headers.get("authorization"));
+      const authorization = request.headers.get("authorization");
+      if (new URL(request.url).pathname === "/api/auth/token") {
+        mintAuthorization.push(authorization);
+        if (mintStatus !== 200) {
+          return Response.json({}, { status: mintStatus });
+        }
+        mintedCount += 1;
+        return Response.json({ token: makeJwt(`jwt-${String(mintedCount)}`) });
+      }
+      seenAuthorization.push(authorization);
+      if (rejectedTokens.has(jtiOf(authorization) ?? "")) {
+        return Response.json({}, { status: 401 });
+      }
       return Response.json(responseBody, { status: responseStatus });
     },
   });
@@ -59,6 +92,10 @@ afterAll(async () => {
 
 beforeEach(() => {
   seenAuthorization = [];
+  mintAuthorization = [];
+  mintStatus = 200;
+  mintedCount = 0;
+  rejectedTokens = new Set();
   responseStatus = 200;
   responseBody = { id: TASK_ID, status: "running" };
   fakeHome = mkdtempSync(join(tmpdir(), "scarn-worker-auth-"));
@@ -87,7 +124,18 @@ async function captureError(promise: Promise<unknown>): Promise<unknown> {
 }
 
 describe("createTaskPlaneWorkerClient auth", () => {
-  test("uses a rotated token on the next call", async () => {
+  test("sends a JWT minted from the session token and reuses it", async () => {
+    saveAuthProfile(baseUrl, { accessToken: "token-1", userId: USER_A });
+    const client = await createClient();
+
+    await client.getTaskRun({ taskRunId: TASK_ID });
+    await client.getTaskRun({ taskRunId: TASK_ID });
+
+    expect(mintAuthorization).toEqual(["Bearer token-1"]);
+    expect(seenAuthorization.map(jtiOf)).toEqual(["jwt-1", "jwt-1"]);
+  });
+
+  test("mints a fresh JWT after a re-login", async () => {
     saveAuthProfile(baseUrl, { accessToken: "token-1", userId: USER_A });
     const client = await createClient();
 
@@ -95,10 +143,35 @@ describe("createTaskPlaneWorkerClient auth", () => {
     saveAuthProfile(baseUrl, { accessToken: "token-rotated", userId: USER_A });
     await client.getTaskRun({ taskRunId: TASK_ID });
 
-    expect(seenAuthorization).toEqual([
+    expect(mintAuthorization).toEqual([
       "Bearer token-1",
       "Bearer token-rotated",
     ]);
+    expect(seenAuthorization.map(jtiOf)).toEqual(["jwt-1", "jwt-2"]);
+  });
+
+  test("refreshes an expired JWT and the call succeeds", async () => {
+    saveAuthProfile(baseUrl, { accessToken: "token-a", userId: USER_A });
+    const client = await createClient();
+    await client.getTaskRun({ taskRunId: TASK_ID });
+    rejectedTokens.add("jwt-1");
+
+    const task = await client.getTaskRun({ taskRunId: TASK_ID });
+
+    expect(task.status).toBe("running");
+    expect(seenAuthorization.map(jtiOf)).toEqual(["jwt-1", "jwt-1", "jwt-2"]);
+  });
+
+  test("raises auth_rejected when the session is rejected while minting", async () => {
+    saveAuthProfile(baseUrl, { accessToken: "token-a", userId: USER_A });
+    const client = await createClient();
+    mintStatus = 401;
+
+    const error = await captureError(client.getTaskRun({ taskRunId: TASK_ID }));
+
+    expect(error).toBeInstanceOf(WorkerAuthError);
+    expect((error as WorkerAuthError).reason).toBe("auth_rejected");
+    expect(seenAuthorization).toEqual([]);
   });
 
   test("raises user_changed when another user signs in", async () => {
@@ -111,6 +184,7 @@ describe("createTaskPlaneWorkerClient auth", () => {
     expect(error).toBeInstanceOf(WorkerAuthError);
     expect((error as WorkerAuthError).reason).toBe("user_changed");
     expect(seenAuthorization).toEqual([]);
+    expect(mintAuthorization).toEqual([]);
   });
 
   test("raises user_changed at creation when the signed-in user is not the expected one", async () => {

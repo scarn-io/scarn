@@ -3,6 +3,7 @@ import {
   AutomationsApiError,
   createAutomationsClient,
 } from "@scarn/sdk/definitions/automations";
+import type { FetchLike } from "@scarn/sdk/auth";
 import { resolveScarnBaseUrl } from "@scarn/worker";
 import { connectApi } from "../lib/cli-api-client";
 import { CliError } from "../lib/cli-error";
@@ -51,17 +52,17 @@ const runToggle =
     withReporter(
       enabled ? "automations-enable" : "automations-disable",
       async ({ reporter }) => {
-        const { baseUrl, headers, projectId } = await connectProject(
+        const { baseUrl, fetch, projectId } = await connectProject(
           args,
           PROJECT_ACTIONS.automations,
         );
-        const automations = createAutomationsClient(baseUrl);
+        const automations = createAutomationsClient(baseUrl, { fetch });
         await requestAutomation(
           `${enabled ? "enable" : "disable"} "${args.key}"`,
           () =>
             enabled
-              ? automations.enable(projectId, args.key, { headers })
-              : automations.disable(projectId, args.key, { headers }),
+              ? automations.enable(projectId, args.key)
+              : automations.disable(projectId, args.key),
         );
         reporter.success(
           enabled
@@ -104,7 +105,7 @@ async function resolveWorkItemId(
   args: ArgumentsCamelCase<WorkItemArguments>,
 ): Promise<{
   baseUrl: string;
-  headers: { Authorization: string };
+  fetch: FetchLike;
   workItemId: string;
 }> {
   const reference = parseWorkItemReference(args.workItem);
@@ -116,11 +117,11 @@ async function resolveWorkItemId(
   }
   if (reference.kind === "id") {
     const baseUrl = resolveScarnBaseUrl(args.baseUrl);
-    const { headers } = await connectApi(baseUrl);
+    const { fetch } = await connectApi(baseUrl);
     syncIdentityFromDisk(baseUrl);
-    return { baseUrl, headers, workItemId: reference.value };
+    return { baseUrl, fetch, workItemId: reference.value };
   }
-  const { baseUrl, headers, projectId } = await connectProject(
+  const { baseUrl, fetch, projectId } = await connectProject(
     args,
     PROJECT_ACTIONS.automations,
   );
@@ -135,27 +136,23 @@ async function resolveWorkItemId(
       `No work item with URL ${reference.value} in this project.`,
     );
   }
-  return { baseUrl, headers, workItemId: workItem.id };
+  return { baseUrl, fetch, workItemId: workItem.id };
 }
 
 const runAttach = (args: ArgumentsCamelCase<WorkItemArguments>) =>
   withReporter("automations-attach", async ({ reporter }) => {
-    const { baseUrl, headers, workItemId } = await resolveWorkItemId(args);
+    const { baseUrl, fetch, workItemId } = await resolveWorkItemId(args);
     await requestAutomation(`attach "${args.key}"`, () =>
-      createAutomationsClient(baseUrl).attach(workItemId, args.key, {
-        headers,
-      }),
+      createAutomationsClient(baseUrl, { fetch }).attach(workItemId, args.key),
     );
     reporter.success(`Attached "${args.key}" to work item ${workItemId}.`);
   });
 
 const runDetach = (args: ArgumentsCamelCase<WorkItemArguments>) =>
   withReporter("automations-detach", async ({ reporter }) => {
-    const { baseUrl, headers, workItemId } = await resolveWorkItemId(args);
+    const { baseUrl, fetch, workItemId } = await resolveWorkItemId(args);
     await requestAutomation(`detach "${args.key}"`, () =>
-      createAutomationsClient(baseUrl).detach(workItemId, args.key, {
-        headers,
-      }),
+      createAutomationsClient(baseUrl, { fetch }).detach(workItemId, args.key),
     );
     reporter.success(`Detached "${args.key}" from work item ${workItemId}.`);
   });

@@ -187,7 +187,6 @@ describe("worker cancel", () => {
           connect: () =>
             Promise.resolve({
               client: cancelClient(task),
-              headers: { Authorization: "Bearer t" },
             }),
           io,
         },

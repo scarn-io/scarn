@@ -1,5 +1,5 @@
 import { describeApiError } from "./lib/api-errors";
-import type { ApiResult, AuthHeaders } from "./lib/api-result";
+import type { ApiResult } from "./lib/api-result";
 import type {
   ProjectTaskPage,
   WorkItemBlocks,
@@ -29,7 +29,6 @@ export type GatheredWorkItem = {
 
 export type GatherWorkItemOptions = {
   client: WorkItemReadClient;
-  headers: AuthHeaders;
   workItemId: string;
   projectId: string;
 };
@@ -59,18 +58,16 @@ async function section<T>(
 export async function gatherWorkItem(
   options: GatherWorkItemOptions,
 ): Promise<GatheredWorkItem> {
-  const { client, headers, workItemId, projectId } = options;
+  const { client, workItemId, projectId } = options;
   const path = { workItemId };
   const query = { workItemId };
 
   const [workItem, blocks, children, questions, runs, tasks] =
     await Promise.all([
-      client.workItems.getWorkItem({ path, headers }),
-      section(() =>
-        client.workItemBlocks.listWorkItemBlocks({ query, headers }),
-      ),
-      section(() => client.workItems.listWorkItemChildren({ path, headers })),
-      section(() => client.workItems.listWorkItemQuestions({ path, headers })),
+      client.workItems.getWorkItem({ path }),
+      section(() => client.workItemBlocks.listWorkItemBlocks({ query })),
+      section(() => client.workItems.listWorkItemChildren({ path })),
+      section(() => client.workItems.listWorkItemQuestions({ path })),
       section(() =>
         client.pipelineExecutions.listPipelineExecutions({
           query: {
@@ -79,14 +76,12 @@ export async function gatherWorkItem(
             sort: "newest",
             pageSize: WORK_ITEM_VIEW_RECENT_LIMIT,
           },
-          headers,
         }),
       ),
       section(() =>
         client.tasks.listProjectTasks({
           path: { projectId },
           query: { workItemId, limit: WORK_ITEM_VIEW_RECENT_LIMIT },
-          headers,
         }),
       ),
     ]);

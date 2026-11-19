@@ -73,7 +73,6 @@ function fakeDependencies(versionPaths: unknown[]): PipelineShowDependencies {
     connectProject: () =>
       Promise.resolve({
         client,
-        headers: { Authorization: "Bearer test" },
         projectId: PROJECT_ID,
       }),
   };

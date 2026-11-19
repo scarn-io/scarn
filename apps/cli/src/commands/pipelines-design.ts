@@ -139,9 +139,8 @@ async function resolveProjectFromRepo(
   baseUrl: string,
   projectRoot: string,
 ): Promise<string | undefined> {
-  const { headers, client } = await verifyRequirements({ baseUrl });
+  const { client } = await verifyRequirements({ baseUrl });
   const result = await localConfigSetup({
-    headers,
     client,
     rootDir: projectRoot,
   });

@@ -7,7 +7,6 @@ import type { PipelineReadClient } from "../src/lib/pipeline-read-client";
 const PROJECT_ID = "0196a000-0000-7000-8000-000000000001";
 const PIPELINE_ID = "0196a000-0000-7000-8000-0000000000d1";
 const STEP_ID = "0196a000-0000-7000-8000-0000000000e1";
-const headers = { Authorization: "Bearer test" };
 
 const ok = <T>(data: T) => Promise.resolve({ data, error: undefined });
 
@@ -104,7 +103,6 @@ describe("pipelines show", () => {
     const calls: Calls = { versionPaths: [] };
     const gathered = await gatherPipelineShow({
       client: fakeClient(calls),
-      headers,
       projectId: PROJECT_ID,
       pipeline: "ship-it",
     });
@@ -141,7 +139,6 @@ describe("pipelines show", () => {
     const calls: Calls = { versionPaths: [] };
     const gathered = await gatherPipelineShow({
       client: fakeClient(calls),
-      headers,
       projectId: PROJECT_ID,
       pipeline: PIPELINE_ID,
       version: 1,
@@ -162,7 +159,6 @@ describe("pipelines show", () => {
       await rejectionMessage(
         gatherPipelineShow({
           client: fakeClient(calls),
-          headers,
           projectId: PROJECT_ID,
           pipeline: "nope",
         }),
@@ -180,7 +176,6 @@ describe("pipelines show", () => {
       });
     const gathered = await gatherPipelineShow({
       client,
-      headers,
       projectId: PROJECT_ID,
       pipeline: "ship-it",
     });

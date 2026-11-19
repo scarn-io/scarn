@@ -8,7 +8,7 @@ import type {
 } from "./lib/run-api-types";
 import type { RunReadClient } from "./lib/run-read-client";
 import { resolveStepVisit } from "./lib/run-visits";
-import type { ApiResult, AuthHeaders } from "./lib/api-result";
+import type { ApiResult } from "./lib/api-result";
 
 /**
  * The reads behind `runs list` and `runs thread`: pure data that
@@ -44,7 +44,6 @@ export function findPipelineDefinition<T extends PipelineDefinitionSummary>(
 
 export type GatherRunListOptions = {
   client: RunReadClient;
-  headers: AuthHeaders;
   projectId: string;
   /** A pipeline key or id. */
   pipeline?: string;
@@ -63,13 +62,12 @@ export type GatheredRunList = {
 export async function gatherRunList(
   options: GatherRunListOptions,
 ): Promise<GatheredRunList> {
-  const { client, headers, projectId } = options;
+  const { client, projectId } = options;
   const definitions = unwrap(
     "pipelines",
     await client.pipelineDefinitions.listPipelineDefinitions({
       path: { projectId },
       query: { includeArchived: true },
-      headers,
     }),
   );
   const pipelineId =
@@ -88,7 +86,6 @@ export async function gatherRunList(
         page: 1,
         pageSize: options.limit,
       },
-      headers,
     }),
   );
   const pipelineKeys = Object.fromEntries(
@@ -99,7 +96,6 @@ export async function gatherRunList(
 
 export type GatherVisitThreadOptions = {
   client: RunReadClient;
-  headers: AuthHeaders;
   runId: string;
   stepKey: string;
   /** Which visit to the step, 1-based oldest first; defaults to the latest. */
@@ -119,10 +115,9 @@ export type GatheredVisitThread = {
 export async function gatherVisitThread(
   options: GatherVisitThreadOptions,
 ): Promise<GatheredVisitThread> {
-  const { client, headers, runId, stepKey } = options;
+  const { client, runId, stepKey } = options;
   const result = await client.pipelineExecutions.getPipelineExecution({
     path: { pipelineExecutionId: runId },
-    headers,
   });
   if (result.error?.status === 404) {
     throw new Error(`Pipeline run ${runId} not found.`);
@@ -138,7 +133,6 @@ export async function gatherVisitThread(
     `the thread of visit ${resolved.visit.id}`,
     await client.pipelineExecutions.getVisitThread({
       path: { pipelineExecutionId: runId, visitId: resolved.visit.id },
-      headers,
     }),
   );
   return { runId, stepKey, ...resolved, thread };

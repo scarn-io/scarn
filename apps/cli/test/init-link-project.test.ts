@@ -16,7 +16,6 @@ import { createReporterRecorder as createRecorder } from "./utils";
  */
 
 const REMOTE_URL = "git@github.com:acme/my-repo.git";
-const headers = { Authorization: "Bearer test-token" };
 
 function fakeClient(
   projectLists: Array<Array<{ id: string; gitUrl: string }>>,
@@ -95,7 +94,6 @@ describe("linkInitProject from a nested directory", () => {
       interactive: true,
       reporter,
       client: fakeClient([[{ id: "existing", gitUrl: REMOTE_URL }]]),
-      headers,
       repo,
       ports: fakePorts(),
     });
@@ -123,7 +121,6 @@ describe("linkInitProject from a nested directory", () => {
           },
         ],
       ]),
-      headers,
       repo,
       ports: fakePorts(),
     });

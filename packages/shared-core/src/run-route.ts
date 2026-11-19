@@ -7,7 +7,7 @@ import {
 import { ActionError, actionErrorKind, unwrapAction } from "./lib/action-error";
 import type { RunActionClient } from "./lib/action-clients";
 import { describeApiError } from "./lib/api-errors";
-import type { ApiResult, AuthHeaders } from "./lib/api-result";
+import type { ApiResult } from "./lib/api-result";
 import type {
   CheckedTransition,
   MissingArg,
@@ -28,7 +28,6 @@ import { loadRun, resolveTarget, type TargetVisit } from "./run-actions";
 
 type RouteActionOptions = {
   client: RunActionClient;
-  headers: AuthHeaders;
   runId: string;
 };
 
@@ -62,13 +61,12 @@ async function pinnedNext(
   run: RunWithVisits,
   nodeId: string,
 ): Promise<Next | undefined> {
-  const { client, headers } = options;
+  const { client } = options;
   const path = { pipelineDefinitionId: run.pipelineDefinitionId };
   const versions = unwrapAction(
     "list the pipeline's versions",
     await client.pipelineDefinitions.listPipelineDefinitionVersions({
       path,
-      headers,
     }),
   );
   const pinned = versions.find(
@@ -84,7 +82,6 @@ async function pinnedNext(
     `load version ${String(pinned.version)} of the pipeline`,
     await client.pipelineDefinitions.getPipelineDefinitionVersion({
       path: { ...path, version: pinned.version },
-      headers,
     }),
   );
   const nodes = version.definition["nodes"] as
@@ -342,7 +339,6 @@ const overrule = (options: OverruleOptions, preview: boolean) =>
       acceptMissing: options.acceptMissing,
       preview,
     },
-    headers: options.headers,
   });
 
 /** What the overrule would do; throws a {@link RouteRefusal} when refused. */

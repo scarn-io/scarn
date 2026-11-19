@@ -16,7 +16,7 @@ import { pushFromDirectory } from "@scarn/sdk/push";
 const dir = import.meta.dirname;
 const defaults = await loadPushDefaults({ dir });
 
-if (!defaults.accessToken) {
+if (!defaults.fetch) {
   throw new Error(
     "Not signed in. Run `scarn auth login` first (or set SCARN_ACCESS_TOKEN).",
   );
@@ -31,7 +31,7 @@ if (!defaults.projectId) {
 const result = await pushFromDirectory(dir, {
   baseUrl: defaults.baseUrl,
   projectId: defaults.projectId,
-  accessToken: defaults.accessToken,
+  fetch: defaults.fetch,
 });
 
 if (

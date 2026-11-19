@@ -5,7 +5,7 @@ import type {
   TaskLogArchive,
 } from "./lib/api-types";
 import { describeApiError } from "./lib/api-errors";
-import type { ApiResult, AuthHeaders } from "./lib/api-result";
+import type { ApiResult } from "./lib/api-result";
 
 /** The two log reads {@link loadTaskLogLines} makes, so any caller holding a
  * generated client (the CLI, the worker) can pass it. */
@@ -14,11 +14,9 @@ export type TaskLogsClient = {
     readTaskLogs: (options: {
       path: { taskRunId: string };
       query: { from: number; limit: number };
-      headers: AuthHeaders;
     }) => Promise<ApiResult<ReadTaskLogsResult>>;
     getTaskLogArchive: (options: {
       path: { taskRunId: string };
-      headers: AuthHeaders;
     }) => Promise<ApiResult<TaskLogArchive>>;
   };
 };
@@ -34,13 +32,11 @@ export type TaskLogLinesResult =
  */
 export async function loadTaskLogLines(
   client: TaskLogsClient,
-  headers: AuthHeaders,
   task: Pick<Task, "id" | "completedAt">,
 ): Promise<TaskLogLinesResult> {
   if (task.completedAt !== null) {
     const { data, error } = await client.taskRuns.getTaskLogArchive({
       path: { taskRunId: task.id },
-      headers,
     });
     if (error !== undefined) {
       if (error.status === 402) {
@@ -62,7 +58,7 @@ export async function loadTaskLogLines(
     return { lines: await fetchArchiveLogLines(data.url), source: "archive" };
   }
 
-  const live = await readLiveLogLines(client, headers, task.id, 0);
+  const live = await readLiveLogLines(client, task.id, 0);
   if ("unavailable" in live) return live;
   return { lines: live.lines, source: "live" };
 }
@@ -77,7 +73,6 @@ export const LIVE_LOG_PAGE_SIZE = 2_000;
  */
 export async function readLiveLogLines(
   client: TaskLogsClient,
-  headers: AuthHeaders,
   taskRunId: string,
   from: number,
 ): Promise<
@@ -90,7 +85,6 @@ export async function readLiveLogLines(
     const { data, error } = await client.taskRuns.readTaskLogs({
       path: { taskRunId },
       query: { from: cursor, limit: LIVE_LOG_PAGE_SIZE },
-      headers,
     });
     if (error !== undefined) {
       return {

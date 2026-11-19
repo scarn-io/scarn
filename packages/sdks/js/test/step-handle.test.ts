@@ -328,7 +328,7 @@ export const shout = codeStep({
     await pushFromDirectory(builderDir, {
       baseUrl: "https://scarn.example.com",
       projectId: "proj-1",
-      accessToken: "tok",
+      fetch: (input, init) => globalThis.fetch(input, init),
       log: () => undefined,
     });
 

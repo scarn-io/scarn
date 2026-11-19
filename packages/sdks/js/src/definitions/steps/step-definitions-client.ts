@@ -1,4 +1,5 @@
-import { createClient } from "../../generated/client";
+import type { ScarnClientOptions } from "../../client";
+import { createApiClient } from "../../create-api-client";
 import { StepDefinitions } from "../../generated/sdk.gen";
 import type {
   PostApiStepDefinitionsData,
@@ -23,8 +24,9 @@ const ANY_OBJECT_SCHEMA = { type: "object" };
 
 export function createStepDefinitionsClient(
   baseUrl: string,
+  options?: ScarnClientOptions,
 ): ReturnType<typeof buildStepDefinitionsClient> {
-  const client = createClient({ baseUrl });
+  const client = createApiClient(baseUrl, { fetch: options?.fetch });
   return buildStepDefinitionsClient(new StepDefinitions({ client }));
 }
 

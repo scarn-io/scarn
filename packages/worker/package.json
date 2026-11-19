@@ -31,13 +31,13 @@
     "@modelcontextprotocol/sdk": "^1.27.1",
     "@opencode/client": "2.1.4",
     "ajv": "^8.20.0",
-    "better-auth": "^1.6.7",
+    "better-auth": "catalog:",
     "dotenv": "^17.4.2",
     "elysia": "2.0.0-rc.3",
     "json-schema-to-zod": "^2.8.1",
     "pino": "^9.14.0",
     "uuid": "^13.0.0",
-    "zod": "^4"
+    "zod": "catalog:"
   },
   "devDependencies": {
     "bun-types": "^1.4.0",

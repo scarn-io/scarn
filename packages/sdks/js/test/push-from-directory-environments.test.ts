@@ -11,6 +11,7 @@ import {
   HANDLE_STEPS_JS,
   makeMockFetch,
   type CapturedRequest,
+  viaGlobalFetch,
 } from "./push-from-directory-fixtures";
 
 describe("pushFromDirectory environments", () => {
@@ -37,7 +38,7 @@ describe("pushFromDirectory environments", () => {
       pushFromDirectory(relative(process.cwd(), dir), {
         baseUrl: BASE_URL,
         projectId: "proj-env",
-        accessToken: "tok",
+        fetch: viaGlobalFetch,
         log: (message) => {
           messages.push(message);
         },
@@ -116,7 +117,7 @@ describe("pushFromDirectory environments", () => {
         pushFromDirectory(relative(process.cwd(), dir), {
           baseUrl: BASE_URL,
           projectId: "proj-env",
-          accessToken: "tok",
+          fetch: viaGlobalFetch,
           log: (message) => {
             messages.push(message);
           },

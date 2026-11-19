@@ -1,4 +1,4 @@
-import type { ApiResult, AuthHeaders } from "./api-result";
+import type { ApiResult } from "./api-result";
 import type { ProjectTaskStatus } from "./work-item-api-types";
 import type {
   TaskDetail,
@@ -25,25 +25,20 @@ export type TaskReadClient = {
         workItemId?: string;
         limit?: number;
       };
-      headers: AuthHeaders;
     }) => Promise<ApiResult<TaskSummaryPage>>;
     getTask: (options: {
       path: { taskId: string };
-      headers: AuthHeaders;
     }) => Promise<ApiResult<TaskDetail>>;
     getTaskRuns: (options: {
       path: { taskId: string };
-      headers: AuthHeaders;
     }) => Promise<ApiResult<TaskRunDetail[]>>;
   };
   taskRuns: {
     getTaskRun: (options: {
       path: { taskRunId: string };
-      headers: AuthHeaders;
     }) => Promise<ApiResult<TaskRunDetail>>;
     listTaskArtifacts: (options: {
       path: { taskRunId: string };
-      headers: AuthHeaders;
     }) => Promise<ApiResult<TaskRunArtifact[]>>;
   };
 };

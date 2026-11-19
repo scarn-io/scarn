@@ -42,7 +42,6 @@ export type LocalConfigSetupResult =
 
 export async function localConfigSetup(input: {
   client: ReturnType<typeof createScarnClient>;
-  headers: { Authorization: string };
   /**
    * The repo root `.scarn/` lives in. Defaults to `process.cwd()`; `init`
    * passes the resolved root so a run from a subdirectory still writes there.
@@ -61,7 +60,6 @@ export async function localConfigSetup(input: {
 
   const match = await findMatchingProject({
     client: input.client,
-    headers: input.headers,
     gitUrl,
   });
 

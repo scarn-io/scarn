@@ -1245,6 +1245,7 @@ unless noted above.
 | `not_in_git_repo`                | No directory at or above the current one contains `.git`                                                |
 | `no_origin_remote`               | The repository has no `origin` remote                                                                   |
 | `not_signed_in_noninteractive`   | Not signed in, and the terminal can't run the device login                                              |
+| `session_invalid`                | The API rejected your saved session; run `scarn auth login` again                                       |
 | `device_login_expired`           | The device-flow login expired or timed out before you approved it                                       |
 | `device_login_denied`            | You denied the device-flow login in the browser                                                         |
 | `device_login_failed`            | The device-flow login failed for another reason                                                         |

@@ -1,7 +1,8 @@
-import { createScarnClient } from "@scarn/sdk";
+import type { createScarnClient } from "@scarn/sdk";
 import { ConfigurationError } from "../../../lib/errors";
 import { resolveScarnBaseUrl } from "../../../auth/session/infra/auth-config";
 import { loadAuthenticatedSession } from "../../../auth/session/application/load-authenticated-session";
+import { createAuthenticatedScarnClient } from "../../../auth/session/infra/authenticated-scarn-client";
 import {
   readActivePipelineVersion,
   resolveStartStepDefinitionId,
@@ -34,12 +35,10 @@ import {
  */
 async function fetchFirstStepDefinitionId(
   client: ReturnType<typeof createScarnClient>,
-  headers: { Authorization: string },
   pipelineDefinitionId: string,
 ): Promise<string> {
   const result = await client.pipelineDefinitions.getPipelineDefinition({
     path: { pipelineDefinitionId },
-    headers,
   });
   return resolveStartStepDefinitionId(
     pipelineDefinitionId,
@@ -70,13 +69,12 @@ export async function runPipelineFirstStepDryRun(
   if (!authenticated) {
     throw new ConfigurationError(`Not signed in to ${baseUrl}.`);
   }
-  const headers = {
-    Authorization: `Bearer ${authenticated.profile.accessToken}`,
-  };
-  const client = createScarnClient(baseUrl);
+  const client = createAuthenticatedScarnClient(
+    baseUrl,
+    authenticated.profile.accessToken,
+  );
   const stepDefinitionId = await fetchFirstStepDefinitionId(
     client,
-    headers,
     options.pipelineDefinitionId,
   );
 

@@ -8,7 +8,6 @@ import {
   WORK_ITEM_ID,
 } from "./work-item-fixtures";
 
-const headers = { Authorization: "Bearer test" };
 const ok = <T>(data: T) => Promise.resolve({ data, error: undefined });
 const fail = (detail: string) =>
   Promise.resolve({ data: undefined, error: { status: 403, detail } });
@@ -67,7 +66,6 @@ describe("gatherWorkItem", () => {
   test("turns failed and rejected sub-reads into unavailable sections", async () => {
     const gathered = await gatherWorkItem({
       client: fakeClient(),
-      headers,
       workItemId: WORK_ITEM_ID,
       projectId: PROJECT_ID,
     });
@@ -88,7 +86,6 @@ describe("gatherWorkItem", () => {
   test("fails when the work item itself cannot be read", async () => {
     const gathering = gatherWorkItem({
       client: fakeClient({ getWorkItem: () => fail("Not found") }),
-      headers,
       workItemId: WORK_ITEM_ID,
       projectId: PROJECT_ID,
     });

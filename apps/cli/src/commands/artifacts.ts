@@ -61,10 +61,9 @@ const listCommand = (
       }),
   handler: (args: ArgumentsCamelCase<ListArguments>) =>
     withReporter("artifacts-list", async () => {
-      const { client, headers } = await deps.connect(args);
+      const { client } = await deps.connect(args);
       const gathered = await gatherArtifacts({
         client,
-        headers,
         taskRunId: args.taskRunId,
         failures: args.failures,
       });
@@ -93,10 +92,9 @@ const downloadCommand = (
       }),
   handler: (args: ArgumentsCamelCase<DownloadArguments>) =>
     withReporter("artifacts-download", async () => {
-      const { client, headers } = await deps.connect(args);
+      const { client } = await deps.connect(args);
       const { artifact, url } = await resolveArtifactDownload({
         client,
-        headers,
         taskRunId: args.taskRunId,
         ref: args.artifact,
       });

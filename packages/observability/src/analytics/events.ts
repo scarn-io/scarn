@@ -59,8 +59,11 @@ export type ApiEndpointTimedProperties = {
   route: string;
   status_code: number;
   duration_ms: number;
-  /** Process CPU (user + system) during the request; includes overlapping requests. */
-  cpu_ms: number;
+  /**
+   * Process CPU (user + system) during the request; includes overlapping
+   * requests. Absent on Cloudflare Workers, which expose no CPU counter.
+   */
+  cpu_ms?: number;
   ok: boolean;
   operation_id?: string;
   tags?: string[];

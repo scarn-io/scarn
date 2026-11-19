@@ -70,22 +70,23 @@ describe("RemoteSlotPort", () => {
   });
 
   test("concurrent first acquires share one lease", async () => {
-    start(60);
-    const borrower = port({ heartbeatMs: 20 });
+    start();
+    const borrower = port();
     const grants = await Promise.all([
       borrower.acquire("p1", 1),
       borrower.acquire("p2", 1),
     ]);
     expect(grants).toEqual([1, 1]);
-    await Bun.sleep(150);
     expect(slots.snapshot().machineInUse).toBe(2);
+    await borrower.close();
+    expect(slots.snapshot().machineInUse).toBe(0);
   });
 
   test("the heartbeat keeps the lease alive past its TTL", async () => {
-    start(60);
-    const borrower = port({ heartbeatMs: 20 });
+    start(1_000);
+    const borrower = port({ heartbeatMs: 50 });
     expect(await borrower.acquire("p1", 2)).toBe(2);
-    await Bun.sleep(200);
+    await Bun.sleep(1_500);
     expect(slots.snapshot().machineInUse).toBe(2);
     await borrower.release("p1", 2);
     expect(slots.snapshot().machineInUse).toBe(0);

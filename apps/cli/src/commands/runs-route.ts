@@ -244,8 +244,8 @@ export const routeCommand = (
         const choice = choiceOf(args);
         const reason =
           choice === undefined ? undefined : await readReason(args, deps);
-        const { client, headers } = await deps.connect(args);
-        const connection = { client, headers, runId: args.runId };
+        const { client } = await deps.connect(args);
+        const connection = { client, runId: args.runId };
         const context = await loadRouteContext({
           ...connection,
           stepKey: args.step,

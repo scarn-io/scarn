@@ -31,7 +31,6 @@ import {
 
 type ActionConnection = {
   client: WorkItemActionClient;
-  headers: { Authorization: string };
 };
 
 export interface WorkItemActionDependencies {
@@ -47,7 +46,7 @@ const asActionClient = (client: AuthenticatedApi["client"]) =>
 export const realWorkItemActionDependencies: WorkItemActionDependencies = {
   async connect(args) {
     const api = await connectApi(resolveScarnBaseUrl(args.baseUrl));
-    return { client: asActionClient(api.client), headers: api.headers };
+    return { client: asActionClient(api.client) };
   },
   resolveRef: (ref, args) =>
     resolveWorkItemRef(ref, createWorkItemRefPorts(args)),
@@ -90,10 +89,9 @@ const commentCommand = (
       asCliAction(async () => {
         const body = await readBody(args.body, deps.io.body);
         const { workItemId } = await deps.resolveRef(args.ref, args);
-        const { client, headers } = await deps.connect(args);
+        const { client } = await deps.connect(args);
         const comment = await addComment({
           client,
-          headers,
           workItemId,
           body,
         });
@@ -130,10 +128,9 @@ const answerCommand = (
       asCliAction(async () => {
         const body = await readBody(args.body, deps.io.body);
         const { workItemId } = await deps.resolveRef(args.ref, args);
-        const { client, headers } = await deps.connect(args);
+        const { client } = await deps.connect(args);
         const { question, comment } = await answerQuestion({
           client,
-          headers,
           workItemId,
           questionId: args.questionId,
           body,

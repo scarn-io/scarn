@@ -54,11 +54,10 @@ export async function resolveStepEnvironmentRef(
  */
 export function createLatestEnvironmentFetcher(
   client: ReturnType<typeof createScarnClient>,
-  headers: { Authorization: string },
   projectId: string,
 ): FetchLatestEnvironment {
   return fetchOncePerName((name) =>
-    fetchLatestEnvironment(client, headers, projectId, name),
+    fetchLatestEnvironment(client, projectId, name),
   );
 }
 
@@ -79,13 +78,11 @@ export function fetchOncePerName(
 
 async function fetchLatestEnvironment(
   client: ReturnType<typeof createScarnClient>,
-  headers: { Authorization: string },
   projectId: string,
   name: string,
 ): Promise<LatestEnvironmentVersion | null> {
   const result = await client.environments.getEnvironment({
     path: { projectId, name },
-    headers,
   });
   if (result.response.status === 404) return null;
   if (!result.data) {

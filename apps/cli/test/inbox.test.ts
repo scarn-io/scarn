@@ -72,7 +72,6 @@ function fakeDependencies(taskLimits: unknown[]): InboxDependencies {
     connectProject: () =>
       Promise.resolve({
         client,
-        headers: { Authorization: "Bearer test" },
         projectId: PROJECT_ID,
       }),
   };

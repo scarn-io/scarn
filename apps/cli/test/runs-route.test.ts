@@ -131,7 +131,7 @@ function setup(
   };
   const command = createRunsCommand(unusedReads, {
     connect: () =>
-      Promise.resolve({ client, headers: { Authorization: "Bearer t" } }),
+      Promise.resolve({ client }),
     io,
   });
   return {

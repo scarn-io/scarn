@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { createClient } from "../../generated/client";
+import type { ScarnClientOptions } from "../../client";
+import { createApiClient } from "../../create-api-client";
 import { PipelineDefinitions } from "../../generated/sdk.gen";
 import type {
   PostApiPipelineDefinitionsByPipelineDefinitionIdVersionsResponses,
@@ -67,8 +68,9 @@ function unwrap<T>(result: { data?: T; error?: unknown }): T {
 
 export function createPipelineDefinitionsClient(
   baseUrl: string,
+  options?: ScarnClientOptions,
 ): ReturnType<typeof buildPipelineDefinitionsClient> {
-  const client = createClient({ baseUrl });
+  const client = createApiClient(baseUrl, { fetch: options?.fetch });
   return buildPipelineDefinitionsClient(new PipelineDefinitions({ client }));
 }
 

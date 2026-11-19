@@ -7,7 +7,14 @@
 import { mkdtemp, mkdir, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  setDefaultTimeout,
+  test,
+} from "bun:test";
 import type { RepoOnPushFailure } from "@scarn/sdk/repo-config";
 import { GitCliCommitPushService } from "../../../../src/runtime/runtime-service/infra/git-cli-commit-push-service";
 import { RepoBranchInvalidError } from "../../../../src/work/task-run/application/repo-branch-invalid-error";
@@ -29,6 +36,8 @@ import {
 
 const TASK_ID = "0192f000-0000-7000-8000-000000000000";
 const BASE = "ephemeral-1234";
+
+setDefaultTimeout(15_000);
 
 describe("WorkBranch.base()", () => {
   let root: string;

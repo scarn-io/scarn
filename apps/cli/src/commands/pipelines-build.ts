@@ -1,17 +1,19 @@
 import { existsSync } from "node:fs";
 import { basename, join, relative, resolve } from "node:path";
 import type { ArgumentsCamelCase, Argv, CommandModule } from "yargs";
-import { createScarnClient } from "@scarn/sdk/client";
 import {
   buildPipelineDocuments,
   BuildScriptError,
-  loadAuthenticatedSession,
   PIPELINE_BUILDER_DIR,
   resolveScarnBaseUrl,
   type BuiltFileReport,
   type ServerCatalogResult,
 } from "@scarn/worker";
-import { describeApiError } from "../lib/cli-api-client";
+import {
+  connectApi,
+  describeApiError,
+  type AuthenticatedApi,
+} from "../lib/cli-api-client";
 import { withReporter } from "../lib/command-output";
 import { CliError } from "../lib/cli-error";
 import { buildStepCatalog } from "../lib/pipeline-documents";
@@ -45,8 +47,10 @@ async function fetchServerCatalog(
   args: BuildArguments,
 ): Promise<ServerCatalogResult> {
   const baseUrl = resolveScarnBaseUrl(args.baseUrl);
-  const authenticated = await loadAuthenticatedSession(baseUrl);
-  if (!authenticated) {
+  let api: AuthenticatedApi;
+  try {
+    api = await connectApi(baseUrl);
+  } catch {
     return { ok: false, reason: `not signed in to ${baseUrl}` };
   }
   const projectRef = await pickProjectRef(args.project);
@@ -59,14 +63,10 @@ async function fetchServerCatalog(
       ref: projectRef,
       action: PROJECT_ACTIONS.build,
     });
-    const { data, error } = await createScarnClient(
-      baseUrl,
-    ).stepDefinitions.listStepDefinitions({
-      query: { projectId },
-      headers: {
-        Authorization: `Bearer ${authenticated.profile.accessToken}`,
-      },
-    });
+    const { data, error } =
+      await api.client.stepDefinitions.listStepDefinitions({
+        query: { projectId },
+      });
     if (error !== undefined) {
       return { ok: false, reason: describeApiError(error) };
     }

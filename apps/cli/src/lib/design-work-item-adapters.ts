@@ -38,7 +38,7 @@ export async function listRecentWorkItems(input: {
   projectId: string;
   query?: string;
 }): Promise<readonly DesignWorkItem[]> {
-  const { client, headers } = await connectApi(input.baseUrl);
+  const { client } = await connectApi(input.baseUrl);
 
   const q = input.query?.trim();
   const { data, error } = await client.projects.listProjectWorkItems({
@@ -48,7 +48,6 @@ export async function listRecentWorkItems(input: {
       pageSize: WORK_ITEM_PICKER_LIMIT,
       ...(q !== undefined && q.length > 0 ? { q } : {}),
     },
-    headers,
   });
 
   if (error !== undefined) {
@@ -78,12 +77,11 @@ export async function findWorkItemByUrl(input: {
   projectId: string;
   url: string;
 }): Promise<DesignWorkItem | undefined> {
-  const { client, headers } = await connectApi(input.baseUrl);
+  const { client } = await connectApi(input.baseUrl);
 
   const { data, error } = await client.projects.listProjectWorkItems({
     path: { projectId: input.projectId },
     query: { page: 1, pageSize: WORK_ITEM_PICKER_LIMIT, q: input.url },
-    headers,
   });
 
   if (error !== undefined) {
@@ -116,11 +114,10 @@ export async function getDesignWorkItemById(input: {
   projectId: string;
   workItemId: string;
 }): Promise<DesignWorkItem | undefined> {
-  const { client, headers } = await connectApi(input.baseUrl);
+  const { client } = await connectApi(input.baseUrl);
 
   const { data, error } = await client.workItems.getWorkItem({
     path: { workItemId: input.workItemId },
-    headers,
   });
 
   if (error !== undefined) {
@@ -150,14 +147,13 @@ export async function createDesignWorkItem(input: {
   projectId: string;
   draft: WorkItemDraft;
 }): Promise<DesignWorkItem> {
-  const { client, headers } = await connectApi(input.baseUrl);
+  const { client } = await connectApi(input.baseUrl);
 
   const { data, error } = await client.workItems.createWorkItem({
     body: buildCreateWorkItemBody({
       projectId: input.projectId,
       draft: input.draft,
     }),
-    headers,
   });
 
   if (error !== undefined) {

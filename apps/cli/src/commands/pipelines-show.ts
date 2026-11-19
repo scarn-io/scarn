@@ -22,7 +22,6 @@ import { PROJECT_ACTIONS } from "../lib/resolve-project-ref";
 
 type PipelineReadConnection = {
   client: PipelineReadClient;
-  headers: { Authorization: string };
   projectId: string;
 };
 
@@ -44,7 +43,6 @@ export const realPipelineShowDependencies: PipelineShowDependencies = {
     const api = await connectProject(args, PROJECT_ACTIONS.inspect);
     return {
       client: asReadClient(api.client),
-      headers: api.headers,
       projectId: api.projectId,
     };
   },
@@ -91,10 +89,9 @@ export const createShowCommand = (
           `--version must be a positive whole number, got ${String(args.version)}.`,
         );
       }
-      const { client, headers, projectId } = await deps.connectProject(args);
+      const { client, projectId } = await deps.connectProject(args);
       const gathered = await gatherPipelineShow({
         client,
-        headers,
         projectId,
         pipeline: args.pipeline,
         version: args.version,

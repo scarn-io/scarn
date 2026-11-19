@@ -1,3 +1,4 @@
+import type { FetchLike } from "../auth";
 import {
   AutomationsApiError,
   createAutomationsClient,
@@ -27,7 +28,11 @@ import {
 export interface PushFromDirectoryOptions {
   baseUrl: string;
   projectId: string;
-  accessToken: string;
+  /**
+   * Authenticates every request, e.g. the `fetch` from `loadPushDefaults` or
+   * one from `createAuthenticatedFetch`.
+   */
+  fetch: FetchLike;
   /** Override the logger; defaults to console.log. */
   log?: (message: string) => void;
 }
@@ -50,7 +55,6 @@ export interface PushFromDirectoryResult {
 
 type PipelinesClient = ReturnType<typeof createPipelineDefinitionsClient>;
 type AutomationsClient = ReturnType<typeof createAutomationsClient>;
-type Headers = { Authorization: string };
 
 const latestVersionSchema = z.object({ version: z.number() });
 
@@ -90,7 +94,7 @@ export async function pushFromDirectory(
     ((msg: string) => {
       console.warn(msg);
     });
-  const headers = { Authorization: `Bearer ${opts.accessToken}` };
+  const clientOptions = { fetch: opts.fetch };
 
   const { steps, environments } = await collectDefinitionsFromDirectory(dir);
   const built = collectBuiltDocuments(dir);
@@ -109,12 +113,14 @@ export async function pushFromDirectory(
 
   assertValidDefinitionSpecs(steps);
 
-  const environmentsClient = createEnvironmentsClient(opts.baseUrl);
+  const environmentsClient = createEnvironmentsClient(
+    opts.baseUrl,
+    clientOptions,
+  );
   await assertNamedEnvironmentsExist(
     steps,
     environments,
     opts.projectId,
-    headers,
     environmentsClient,
   );
 
@@ -124,7 +130,6 @@ export async function pushFromDirectory(
     const published = await publishEnvironment(
       environment,
       opts.projectId,
-      headers,
       environmentsClient,
       log,
     );
@@ -133,19 +138,21 @@ export async function pushFromDirectory(
     );
   }
 
-  const stepsClient = createStepDefinitionsClient(opts.baseUrl);
+  const stepsClient = createStepDefinitionsClient(opts.baseUrl, clientOptions);
   for (const spec of steps) {
-    await stepsClient.upsertFromSpec(opts.projectId, spec, { headers });
+    await stepsClient.upsertFromSpec(opts.projectId, spec);
     log(`✓ step ${spec.key} v${String(spec.version)} → upserted`);
   }
 
-  const pipelinesClient = createPipelineDefinitionsClient(opts.baseUrl);
+  const pipelinesClient = createPipelineDefinitionsClient(
+    opts.baseUrl,
+    clientOptions,
+  );
   const publishedPipelines: string[] = [];
   const unchangedPipelines: string[] = [];
   if (documents.length > 0) {
     const serverPipelines = await pipelinesClient.listByProjectId(
       opts.projectId,
-      { headers },
     );
     const idByKey = new Map(serverPipelines.map((p) => [p.key, p.id]));
     for (const document of documents) {
@@ -153,7 +160,6 @@ export async function pushFromDirectory(
         document,
         idByKey.get(document.key),
         opts.projectId,
-        headers,
         pipelinesClient,
         log,
       );
@@ -161,14 +167,16 @@ export async function pushFromDirectory(
     }
   }
 
-  const automationsClient = createAutomationsClient(opts.baseUrl);
+  const automationsClient = createAutomationsClient(
+    opts.baseUrl,
+    clientOptions,
+  );
   const publishedAutomations: string[] = [];
   const unchangedAutomations: string[] = [];
   for (const document of automations) {
     const published = await publishAutomationDocument(
       document,
       opts.projectId,
-      headers,
       automationsClient,
       log,
     );
@@ -197,7 +205,6 @@ async function assertNamedEnvironmentsExist(
   steps: readonly StepDefinitionSpec[],
   environments: readonly CollectedEnvironment[],
   projectId: string,
-  headers: Headers,
   environmentsClient: EnvironmentsClient,
 ): Promise<void> {
   const local = new Set(environments.map((environment) => environment.name));
@@ -214,7 +221,7 @@ async function assertNamedEnvironmentsExist(
   if (stepsByMissingName.size === 0) return;
 
   const onServer = new Set(
-    (await environmentsClient.listByProjectId(projectId, { headers })).map(
+    (await environmentsClient.listByProjectId(projectId)).map(
       (environment) => environment.name,
     ),
   );
@@ -238,14 +245,11 @@ async function assertNamedEnvironmentsExist(
 async function publishEnvironment(
   { name, content, sourceFile }: CollectedEnvironment,
   projectId: string,
-  headers: Headers,
   environmentsClient: EnvironmentsClient,
   log: (msg: string) => void,
 ): Promise<boolean> {
   try {
-    const result = await environmentsClient.publish(projectId, name, content, {
-      headers,
-    });
+    const result = await environmentsClient.publish(projectId, name, content);
     const version = String(result.version.version);
     log(
       result.published
@@ -273,23 +277,23 @@ async function publishPipelineDocument(
   { file, key, title, document }: PipelineDocumentFile,
   pipelineDefinitionId: string | undefined,
   projectId: string,
-  headers: Headers,
   pipelinesClient: PipelinesClient,
   log: (msg: string) => void,
 ): Promise<boolean> {
   try {
     if (pipelineDefinitionId === undefined) {
-      await pipelinesClient.create(
-        { projectId, key, name: title ?? key, document },
-        { headers },
-      );
+      await pipelinesClient.create({
+        projectId,
+        key,
+        name: title ?? key,
+        document,
+      });
       log(`✓ pipeline ${key} → created and published (${file})`);
       return true;
     }
     const result = await pipelinesClient.publishVersion(
       pipelineDefinitionId,
       document,
-      { headers },
     );
     const version = String(result.version.version);
     log(
@@ -307,14 +311,11 @@ async function publishPipelineDocument(
 async function publishAutomationDocument(
   { file, key, document }: PipelineDocumentFile,
   projectId: string,
-  headers: Headers,
   automationsClient: AutomationsClient,
   log: (msg: string) => void,
 ): Promise<boolean> {
   try {
-    const result = await automationsClient.publish(projectId, key, document, {
-      headers,
-    });
+    const result = await automationsClient.publish(projectId, key, document);
     const latest = latestVersionSchema.safeParse(
       result.automation.latestVersion,
     );

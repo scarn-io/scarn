@@ -111,14 +111,13 @@ const taskListCommand = (
       const limit = listLimit(args.limit);
       const statuses = parseStatuses(args.status);
       const kind = parseKind(args.kind);
-      const { client, headers, projectId } = await deps.connectProject(args);
+      const { client, projectId } = await deps.connectProject(args);
       const workItemId =
         args.workItem === undefined
           ? undefined
           : (await deps.resolveRef(args.workItem, args)).workItemId;
       const page = await gatherTaskList({
         client,
-        headers,
         projectId,
         workItemId,
         statuses,
@@ -159,10 +158,9 @@ const taskViewCommand = (
       }),
   handler: (args: ArgumentsCamelCase<ViewArguments>) =>
     withReporter("tasks-view", async () => {
-      const { client, headers } = await deps.connect(args);
+      const { client } = await deps.connect(args);
       const gathered = await gatherTaskView({
         client,
-        headers,
         taskId: args.taskId,
       });
       if (args.json) writeJson(gathered);

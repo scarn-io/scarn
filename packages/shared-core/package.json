@@ -27,7 +27,7 @@
   },
   "dependencies": {
     "@scarn/sdk": "workspace:*",
-    "zod": "^4.3.6"
+    "zod": "catalog:"
   },
   "devDependencies": {
     "bun-types": "^1.4.0"

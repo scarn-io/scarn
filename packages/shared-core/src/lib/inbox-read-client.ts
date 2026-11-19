@@ -1,4 +1,4 @@
-import type { ApiResult, AuthHeaders } from "./api-result";
+import type { ApiResult } from "./api-result";
 import type {
   InboxDraftWorkItemPage,
   InboxNotification,
@@ -18,11 +18,9 @@ export type InboxReadClient = {
   inbox: {
     getProjectInboxSummary: (options: {
       path: { projectId: string };
-      headers: AuthHeaders;
     }) => Promise<ApiResult<InboxSummary>>;
     listProjectInboxWaits: (options: {
       path: { projectId: string };
-      headers: AuthHeaders;
     }) => Promise<ApiResult<InboxWaits>>;
   };
   tasks: {
@@ -35,21 +33,18 @@ export type InboxReadClient = {
         excludeEndedChats?: boolean;
         limit?: number;
       };
-      headers: AuthHeaders;
     }) => Promise<ApiResult<TaskSummaryPage>>;
   };
   projects: {
     listProjectWorkItems: (options: {
       path: { projectId: string };
       query: { awaitingApproval: "true"; pageSize: number };
-      headers: AuthHeaders;
     }) => Promise<ApiResult<InboxDraftWorkItemPage>>;
   };
   userNotifications: {
     listUserNotifications: (options: {
       path: { projectId: string };
       query: { status?: string };
-      headers: AuthHeaders;
     }) => Promise<ApiResult<InboxNotification[]>>;
   };
 };

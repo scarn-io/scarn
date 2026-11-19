@@ -80,11 +80,10 @@ function fakeDependencies(calls: Calls): RunReadDependencies {
         ]),
     },
   };
-  const headers = { Authorization: "Bearer test" };
   return {
-    connect: () => Promise.resolve({ client, headers }),
+    connect: () => Promise.resolve({ client }),
     connectProject: () =>
-      Promise.resolve({ client, headers, projectId: PROJECT_ID }),
+      Promise.resolve({ client, projectId: PROJECT_ID }),
     resolveRef: (ref) => {
       calls.refs.push(ref);
       return Promise.resolve({

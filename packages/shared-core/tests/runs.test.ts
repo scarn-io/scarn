@@ -17,7 +17,6 @@ import { resolveStepVisit } from "../src/lib/run-visits";
 const RUN_ID = "0196a000-0000-7000-8000-0000000000bb";
 const PROJECT_ID = "0196a000-0000-7000-8000-000000000001";
 const PIPELINE_ID = "0196a000-0000-7000-8000-0000000000d1";
-const headers = { Authorization: "Bearer test" };
 
 const ok = <T>(data: T) => Promise.resolve({ data, error: undefined });
 
@@ -174,7 +173,6 @@ describe("runs list", () => {
     const calls: Calls = {};
     const gathered = await gatherRunList({
       client: fakeClient(calls),
-      headers,
       projectId: PROJECT_ID,
       pipeline: "ship-it",
       status: "failed",
@@ -217,7 +215,6 @@ describe("runs thread", () => {
     const calls: Calls = {};
     const gathered = await gatherVisitThread({
       client: fakeClient(calls),
-      headers,
       runId: RUN_ID,
       stepKey: "build",
     });
@@ -249,7 +246,6 @@ Run 2  ● running  run-2  2026-01-02T00:05:00.000Z  session restored
     try {
       await gatherVisitThread({
         client: fakeClient({}),
-        headers,
         runId: RUN_ID,
         stepKey: "approve",
       });

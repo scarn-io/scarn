@@ -12,5 +12,3 @@ import type { ApiErrorBody } from "./api-types";
  * cast once with `as unknown as <Client>`. */
 export type ApiResult<TData> =
   { data: TData; error: undefined } | { data: undefined; error: ApiErrorBody };
-
-export type AuthHeaders = { Authorization: string };

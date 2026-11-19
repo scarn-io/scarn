@@ -1,4 +1,9 @@
 import { createTaskPlaneClient } from "@scarn/sdk";
+import {
+  ApiTokenAuthError,
+  createApiTokenSource,
+  createAuthenticatedFetch,
+} from "@scarn/sdk/auth";
 import { loadTaskLogLines, type TaskLogsClient } from "@scarn/shared-core";
 import { parseUuidV7 } from "../../../common/contracts/uuid-v7";
 import type { TaskRunWorkerClient } from "../contracts/process-project-work-types";
@@ -25,8 +30,7 @@ type TaskPlaneClient = Pick<
 
 /**
  * Adapts the plane client's log reads to `@scarn/shared-core`'s
- * {@link TaskLogsClient}. The plane client already sends the bearer token, so
- * the per-call `headers` that interface carries are ignored.
+ * {@link TaskLogsClient}. The plane client already sends the bearer token.
  */
 export function toTaskLogsClient(planeClient: TaskPlaneClient): TaskLogsClient {
   return {
@@ -57,11 +61,7 @@ export function buildLoadTaskLogLines(
     const task = await planeClient.getTaskRun({ taskRunId });
     const completedAt =
       typeof task.completedAt === "string" ? task.completedAt : null;
-    return await loadTaskLogLines(
-      logsClient,
-      { Authorization: "" },
-      { id: taskRunId, completedAt },
-    );
+    return await loadTaskLogLines(logsClient, { id: taskRunId, completedAt });
   };
 }
 
@@ -150,11 +150,13 @@ async function throwIfProjectUnavailable(response: Response, baseUrl: string) {
 }
 
 /**
- * The worker's API client. The bearer token is read from `auth.jsonc` for
- * every request (cached until the file changes), so a long-running worker
- * picks up a re-login or rotated token. Calls fail with a typed
- * {@link WorkerAuthError} when the profile is gone, belongs to another user,
- * or the server answers 401/403.
+ * The worker's API client. Requests carry a short-lived API token minted
+ * from the session token in `auth.jsonc`, which is read for every request
+ * (cached until the file changes), so a long-running worker picks up a
+ * re-login or rotated token. An expired API token is refreshed and the
+ * request retried once. Calls fail with a typed {@link WorkerAuthError} when
+ * the profile is gone, belongs to another user, the session is rejected
+ * while minting, or the server answers 401 after the retry or 403.
  */
 export async function createTaskPlaneWorkerClient(
   baseUrl: string,
@@ -180,10 +182,27 @@ export async function createTaskPlaneWorkerClient(
     );
   }
 
-  const planeClient = createTaskPlaneClient(baseUrl, {
-    requestHeaders: () => ({
-      Authorization: `Bearer ${requireProfile(readProfile, baseUrl, userId).accessToken}`,
+  const authenticatedFetch = createAuthenticatedFetch(
+    createApiTokenSource({
+      baseUrl,
+      getSessionToken: () =>
+        requireProfile(readProfile, baseUrl, userId).accessToken,
     }),
+  );
+  const planeClient = createTaskPlaneClient(baseUrl, {
+    fetch: async (input, init) => {
+      try {
+        return await authenticatedFetch(input, init);
+      } catch (error) {
+        if (error instanceof ApiTokenAuthError) {
+          throw new WorkerAuthError(
+            "auth_rejected",
+            `${baseUrl} rejected the worker's credentials (${error.status === undefined ? error.message : `HTTP ${String(error.status)}`}). Run \`scarn auth login\` to authenticate.`,
+          );
+        }
+        throw error;
+      }
+    },
     onResponse: async (response) => {
       await throwIfProjectUnavailable(response, baseUrl);
       await throwIfLogFeedLimited(response);

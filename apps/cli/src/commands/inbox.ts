@@ -31,7 +31,6 @@ const MAX_LIMIT = 100;
 
 type InboxConnection = {
   client: InboxReadClient;
-  headers: { Authorization: string };
   projectId: string;
 };
 
@@ -53,7 +52,6 @@ export const realInboxDependencies: InboxDependencies = {
     const api = await connectProject(args, PROJECT_ACTIONS.inspect);
     return {
       client: asReadClient(api.client),
-      headers: api.headers,
       projectId: api.projectId,
     };
   },
@@ -85,10 +83,9 @@ export function createInboxCommand(
     handler: (args: ArgumentsCamelCase<InboxArguments>) =>
       withReporter("inbox", async () => {
         const limit = inboxLimit(args.limit);
-        const { client, headers, projectId } = await deps.connectProject(args);
+        const { client, projectId } = await deps.connectProject(args);
         const gathered = await gatherInbox({
           client,
-          headers,
           projectId,
           limit,
         });

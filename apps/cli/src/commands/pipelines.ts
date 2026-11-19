@@ -27,6 +27,7 @@ import {
 } from "./pipelines-documents";
 import { showCommand } from "./pipelines-show";
 import { studioCommand } from "./pipelines-studio";
+import { connectApi } from "../lib/cli-api-client";
 import { withReporter } from "../lib/command-output";
 import {
   captureMilestone,
@@ -158,7 +159,9 @@ const runPush = (args: ArgumentsCamelCase<PushArguments>): Promise<void> =>
     // The script reads auth from the same file the CLI writes, and the project
     // from .scarn/scarn.jsonc — both already resolved above to fail fast.
     // We forward the resolved id via env vars so the script skips its own lookup
-    // and a positional project still takes effect.
+    // and a positional project still takes effect. SCARN_ACCESS_TOKEN is the
+    // session token: the script mints its own API tokens from it, sharing
+    // `~/.scarn/api-tokens.jsonc` with this process.
     const env: NodeJS.ProcessEnv = {
       ...process.env,
       SCARN_PROJECT_ID: projectId,
@@ -265,12 +268,7 @@ const runPullBuilderDirectory = (
       throw new CliError("no_project_id", NO_PROJECT_MESSAGE);
     }
 
-    const authenticated = await loadAuthenticatedSession(baseUrl);
-    if (!authenticated) {
-      throw new Error(
-        `Not signed in to ${baseUrl}. Run \`scarn auth login\` first.`,
-      );
-    }
+    const api = await connectApi(baseUrl);
 
     const { id: projectId } = await resolveCliProjectRef({
       baseUrl,
@@ -278,9 +276,6 @@ const runPullBuilderDirectory = (
       action: PROJECT_ACTIONS.pull,
     });
 
-    const headers = {
-      Authorization: `Bearer ${authenticated.profile.accessToken}`,
-    };
     const dir = join(process.cwd(), PIPELINE_BUILDER_DIR);
 
     const existingFiles = listExistingPipelineBuilderFiles(dir);
@@ -293,7 +288,7 @@ const runPullBuilderDirectory = (
     const result = await pullPipelineDefinitions({
       projectId,
       baseUrl,
-      headers,
+      fetch: api.fetch,
       logger,
       dir,
       sdkVersion: CLI_VERSION,
