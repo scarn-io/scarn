@@ -15,6 +15,7 @@ import type {
 } from "../application/resolve-step-env";
 import { logWork, logWorkWarn } from "../application/work-logger";
 import type { MaterializeRuntimeConfigResult } from "../contracts/agent-runtime/runtime-config-materializer";
+import type { RegisterLaunchServers } from "../contracts/managed-launch-types";
 import type { AgentRuntime } from "../contracts/process-project-work-types";
 import type { WorkReporter } from "../contracts/work-reporter";
 import { buildFakeProviderConfig } from "./fake-ai";
@@ -82,6 +83,7 @@ export async function prepareAgentLaunch(input: {
   connectors?: readonly string[] | undefined;
   stepEnv?: Readonly<Record<string, string>> | undefined;
   resolveMcpEnv?: ((refs: readonly McpEnvRef[]) => ResolvedStepEnv) | undefined;
+  registerManagedLaunch?: RegisterLaunchServers | undefined;
 }): Promise<AgentLaunchPlan> {
   const { deps } = input;
 
@@ -91,6 +93,7 @@ export async function prepareAgentLaunch(input: {
       connectors: input.connectors,
       workspacePath: input.workspacePath,
       sessionId: input.sessionId,
+      registerManagedLaunch: input.registerManagedLaunch,
     }),
     stepEnv: input.stepEnv,
     resolveMcpEnv: input.resolveMcpEnv,

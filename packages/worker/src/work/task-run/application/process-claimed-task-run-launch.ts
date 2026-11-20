@@ -13,6 +13,7 @@ import type {
   TaskRunWorkerClient,
   LaunchedRuntimeOrchestrator,
 } from "../contracts/process-project-work-types";
+import type { RegisterManagedLaunch } from "../contracts/managed-launch-types";
 import type { TaskRunWorkerContextContract } from "../contracts/task-run-contracts";
 import type { WorkReporter } from "../contracts/work-reporter";
 import type { PreviousRunFilesInput } from "./write-previous-run-files";
@@ -55,6 +56,8 @@ export async function launchRuntimeEnvironment(
     claimToken: string;
     /** See `LaunchedRuntimeOrchestrator.launch`'s field of the same name. */
     onSecretValues?: ((values: readonly string[]) => void) | undefined;
+    /** Called once the run's managed launch is registered, before OpenCode starts. */
+    onManagedLaunchRegistered?: (() => void) | undefined;
     localRuntimeSessionId: UuidV7;
     workerContext: Awaited<ReturnType<typeof fetchWorkerContext>>;
     requestedByUserId: UuidV7;
@@ -123,6 +126,7 @@ export async function launchRuntimeEnvironment(
     gitUrl: input.workerContext.gitUrl,
     claimToken: input.claimToken,
     onSecretValues: input.onSecretValues,
+    registerManagedLaunch: buildRegisterManagedLaunch(deps.workerClient, input),
     baseWorkBranch: repoContext
       ? null
       : resolveBaseWorkBranch(input.workerContext.baseWorkBranch),
@@ -181,6 +185,43 @@ export async function launchRuntimeEnvironment(
     ),
     logger: deps.logger,
   });
+}
+
+/**
+ * Registers the run's managed launch with its claim token and the launch's
+ * resolved MCP server URLs, which the server checks against the project's
+ * connections, rewrites each relay URL to the host OpenCode reaches from the
+ * runtime (see {@link agentReachableBaseUrl}), then reports the registration
+ * so the caller can arm the control-loss watchdog.
+ */
+function buildRegisterManagedLaunch(
+  client: TaskRunWorkerClient,
+  input: {
+    claimToken: string;
+    taskRunId: string;
+    onManagedLaunchRegistered?: (() => void) | undefined;
+  },
+): RegisterManagedLaunch | undefined {
+  const register = client.registerTaskRunManagedLaunch;
+  if (!register) return undefined;
+  return async ({ runtimeKind, entries: entryUrls, remotesWithoutAuth }) => {
+    const entries = await register({
+      taskRunId: parseUuidV7(input.taskRunId),
+      claimToken: input.claimToken,
+      entries: entryUrls,
+      remotesWithoutAuth,
+    });
+    input.onManagedLaunchRegistered?.();
+    return Object.fromEntries(
+      Object.entries(entries).map(([key, entry]) => [
+        key,
+        {
+          relayUrl: agentReachableBaseUrl(entry.relayUrl, runtimeKind),
+          capability: entry.capability,
+        },
+      ]),
+    );
+  };
 }
 
 /**

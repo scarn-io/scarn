@@ -31,7 +31,7 @@ apps/cli/
 
 ## Prerequisites
 
-- Bun `1.4.0` or newer (the root `package.json`'s `packageManager`)
+- Bun `1.4.4` or newer (the root `package.json`'s `packageManager`)
 
 ## Local development
 

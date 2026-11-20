@@ -6,11 +6,20 @@ import type {
 } from "../contracts/process-project-work-types";
 import type { TaskRunStatus } from "../contracts/task-run-contracts";
 import { isTaskRunCancelledResponse } from "./task-run-cancelled-error";
+import type { RunHandle } from "./run-registry";
 
 function getHeartbeatPollDelayMs(leaseDurationSeconds: number) {
   return Math.max(1_000, Math.floor((leaseDurationSeconds * 1_000) / 2));
 }
 
+/**
+ * Keeps a claimed run's lease alive and watches what the server says about
+ * it. A heartbeat reporting `managedAuthority.lost` aborts the run with
+ * `managed_authority_lost`. Once {@link armManagedWatchdog} is called (the
+ * run has a managed launch), a whole lease without an accepted heartbeat
+ * aborts it the same way with `control_lost`: the server stops relaying the
+ * run's calls once its lease lapses (decision 6).
+ */
 export function createTaskRunHeartbeatController(
   client: TaskRunWorkerClient,
   deps: Pick<ProcessProjectWorkDeps, "sleep" | "logger">,
@@ -18,6 +27,7 @@ export function createTaskRunHeartbeatController(
     taskRunId: UuidV7;
     claimToken: string;
     leaseDurationSeconds: number;
+    run: Pick<RunHandle, "abortManagedAuthorityLost">;
   },
 ) {
   const logger = resolveProjectWorkLogger(deps);
@@ -39,6 +49,37 @@ export function createTaskRunHeartbeatController(
   let activePollTimeout: ReturnType<typeof setTimeout> | null = null;
   let cancelled = false;
   let lastKnownStatus: TaskRunStatus = "running";
+  let lastAcceptedAt = Date.now();
+  let watchdogTimeout: ReturnType<typeof setTimeout> | null = null;
+  let watchdogArmed = false;
+  let stopped = false;
+
+  function clearWatchdog(): void {
+    if (watchdogTimeout !== null) {
+      clearTimeout(watchdogTimeout);
+      watchdogTimeout = null;
+    }
+  }
+
+  function scheduleWatchdog(): void {
+    clearWatchdog();
+    if (!watchdogArmed || stopped) return;
+    const leaseMs = input.leaseDurationSeconds * 1_000;
+    const remainingMs = Math.max(0, lastAcceptedAt + leaseMs - Date.now());
+    watchdogTimeout = setTimeout(() => {
+      watchdogTimeout = null;
+      watchdogArmed = false;
+      logger.error(
+        "heartbeat",
+        "No heartbeat accepted for a whole lease; aborting the run that uses a managed connection",
+        {
+          taskRunId: input.taskRunId,
+          leaseDurationSeconds: input.leaseDurationSeconds,
+        },
+      );
+      input.run.abortManagedAuthorityLost("control_lost");
+    }, remainingMs);
+  }
 
   function waitForNextPoll(): Promise<void> {
     return new Promise((resolve) => {
@@ -70,6 +111,8 @@ export function createTaskRunHeartbeatController(
           leaseDurationSeconds: input.leaseDurationSeconds,
         });
         lastKnownStatus = taskRun.status;
+        lastAcceptedAt = Date.now();
+        scheduleWatchdog();
         if (taskRun.status !== "running") {
           cancelled = true;
           logger.log(
@@ -78,6 +121,17 @@ export function createTaskRunHeartbeatController(
             { taskRunId: input.taskRunId, status: taskRun.status },
           );
           return;
+        }
+        if (taskRun.managedAuthority !== "ok") {
+          logger.error(
+            "heartbeat",
+            "A managed connection the run uses lost its authority; aborting the run",
+            {
+              taskRunId: input.taskRunId,
+              reason: taskRun.managedAuthority.lost,
+            },
+          );
+          input.run.abortManagedAuthorityLost(taskRun.managedAuthority.lost);
         }
         logger.debug("heartbeat", "Heartbeat accepted", {
           taskRunId: input.taskRunId,
@@ -113,10 +167,22 @@ export function createTaskRunHeartbeatController(
     lastKnownStatus(): TaskRunStatus {
       return lastKnownStatus;
     },
+    /**
+     * Starts the control-loss watchdog, for a run with a managed launch: a
+     * whole lease since the last accepted heartbeat (or the claim) aborts
+     * the run with `managed_authority_lost` (`control_lost`).
+     */
+    armManagedWatchdog(): void {
+      if (watchdogArmed || stopped) return;
+      watchdogArmed = true;
+      scheduleWatchdog();
+    },
     async stop() {
       logger.debug("heartbeat", "Stopping heartbeat loop", {
         taskRunId: input.taskRunId,
       });
+      stopped = true;
+      clearWatchdog();
       if (activePollTimeout !== null) {
         clearTimeout(activePollTimeout);
         activePollTimeout = null;

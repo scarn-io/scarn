@@ -12,13 +12,15 @@ import type { McpHandshakeReport } from "./poll-mcp-status";
  * advisory, and a gate that blocked on it would refuse runs the worker
  * would happily execute. So:
  *
- * - a `required` check that did not pass blocks. `skipped` counts, though it
- *   only happens after an earlier `required` failure in the same step;
+ * - a `required` check that did not pass blocks, including an ordinary
+ *   `skipped` check after an earlier required failure in the same step;
  * - an environment that failed to launch, or came up with an unhealthy
  *   container or OpenCode, blocks every step it was launched for: a real run
  *   of that step would fail the same way, before any check;
  * - a step `mcps` server or connector that is not `connected` blocks: a
  *   real run's MCP startup gate (`mcp-startup-gate.ts`) stops on it;
+ * - an auth tool check explicitly skipped as `real-runs-only` does not
+ *   block; its server's startup failure still blocks independently;
  * - a `warn` check that did not pass is shown but does not block.
  */
 
@@ -30,6 +32,11 @@ export type StepHealthCheckReport = {
   runtime: string;
   /** Set when the launch these checks needed never came up; `healthChecks` is then empty. */
   launchError: string | null;
+  /**
+   * Legacy whole-step skip explanation for managed auth. Advisory only:
+   * never suppresses other findings, including managed startup failures.
+   */
+  notRunnable?: string | null | undefined;
   /** Container/OpenCode problems in the launch this step shared. */
   environmentProblems: string[];
   /** MCP startup gate result for this step's `mcps` servers and connectors, in the launch it shared. */
@@ -79,8 +86,11 @@ function checkFinding(
       return {
         ...base,
         outcome: "skipped",
-        message: "not run: an earlier required check in this step failed",
-        blocking: blocks,
+        message:
+          check.outcome.reason === "real-runs-only"
+            ? "runs in real runs only"
+            : "not run: an earlier required check in this step failed",
+        blocking: blocks && check.outcome.reason !== "real-runs-only",
       };
   }
 }
@@ -103,25 +113,33 @@ export function listStepHealthCheckFindings(
           },
         ]
       : [];
-    if (step.launchError !== null) {
-      return [
-        ...baseBranch,
-        {
-          ...where,
-          checkName: "environment",
-          severity: "required" as const,
-          outcome: "failed" as const,
-          message: `${step.runtime} failed to launch: ${step.launchError}`,
-          blocking: true,
-        },
-      ];
-    }
-    const environment = step.environmentProblems.map((problem) => ({
+    const notRunnable = step.notRunnable
+      ? [
+          {
+            ...where,
+            checkName: "connection",
+            severity: "required" as const,
+            outcome: "skipped" as const,
+            message: step.notRunnable,
+            blocking: false,
+          },
+        ]
+      : [];
+    const launchProblems =
+      step.launchError === null
+        ? []
+        : [`${step.runtime} failed to launch: ${step.launchError}`];
+    const environment = [
+      ...launchProblems,
+      ...step.environmentProblems.map(
+        (problem) => `${step.runtime}: ${problem}`,
+      ),
+    ].map((message) => ({
       ...where,
       checkName: "environment",
       severity: "required" as const,
       outcome: "failed" as const,
-      message: `${step.runtime}: ${problem}`,
+      message,
       blocking: true,
     }));
     const handshakes = step.mcpServers
@@ -136,6 +154,7 @@ export function listStepHealthCheckFindings(
       }));
     return [
       ...baseBranch,
+      ...notRunnable,
       ...environment,
       ...handshakes,
       ...step.healthChecks.map((check) => checkFinding(step, check)),

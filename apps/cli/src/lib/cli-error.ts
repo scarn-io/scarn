@@ -33,6 +33,7 @@ export const CLI_ERROR_CODES = [
   "builder_install_failed",
   "run_queue_failed",
   "push_failed",
+  "push_connection_url_mismatch",
   "pipeline_file_unreadable",
   "pipeline_invalid",
   "pipeline_not_found",

@@ -4,9 +4,14 @@ import {
   missingRequiredEnv,
   type AgentToolsManifest,
   type DiscoveredAgentTools,
+  type ManifestServerListing,
   type McpToolLister,
 } from "@scarn/worker";
 import type { BaseReporter } from "./reporter-types";
+import {
+  resolveManagedConnections,
+  type ManagedConnectionsPorts,
+} from "./design-managed-connections";
 
 /**
  * The design preflight's tool-discovery step (D12–D14): find the MCP servers
@@ -14,12 +19,17 @@ import type { BaseReporter } from "./reporter-types";
  * its tools, and write the result as `discovered-tools.json` outside the
  * repository for the designer to read.
  *
+ * A server whose URL is one of the project's listed connections' resource is
+ * never started: its tools come from that connection, listed by the API (see
+ * `design-managed-connections.ts`), and the project's connections are
+ * recorded too.
+ *
  * Nothing here is fatal. A server missing a `requiredEnv` variable is not
  * started; a server that fails or times out is recorded; and if the step
  * itself fails, the session continues without a manifest.
  */
 
-export interface AgentToolsPorts {
+export interface AgentToolsPorts extends ManagedConnectionsPorts {
   /** Run repo discovery (`discoverRepoAgentTools`) on the project root. */
   discoverAgentTools(): Promise<DiscoveredAgentTools>;
   /** `process.env` merged with `.scarn/.env`, which wins. */
@@ -45,6 +55,8 @@ export function announceMcpToolListing(count: number): string {
  * `null` when it could not be written.
  */
 export async function ensureAgentToolsManifest(input: {
+  baseUrl: string;
+  projectId: string;
   project: string;
   owner: string;
   slug: string;
@@ -55,34 +67,61 @@ export async function ensureAgentToolsManifest(input: {
 }): Promise<string | null> {
   const { reporter, ports } = input;
   try {
-    const [discovered, env] = await Promise.all([
+    const [discovered, env, managed] = await Promise.all([
       ports.discoverAgentTools(),
       ports.readToolEnv(),
+      resolveManagedConnections({
+        baseUrl: input.baseUrl,
+        projectId: input.projectId,
+        ports,
+      }),
     ]);
+    if (managed.listFailure !== undefined) {
+      reporter.warn(
+        `Could not check this project's MCP connections: ${managed.listFailure}`,
+      );
+    }
 
-    const startable = discovered.servers.filter(
+    const connectionListings = new Map(
+      discovered.servers.flatMap((server) => {
+        const listing = managed.connectionForServer(server);
+        return listing === null ? [] : [[server.name, listing] as const];
+      }),
+    );
+    const localServers = discovered.servers.filter(
+      (server) => !connectionListings.has(server.name),
+    );
+    const startable = localServers.filter(
       (server) => missingRequiredEnv(server, env).length === 0,
     );
     const task =
       startable.length > 0
         ? reporter.startActivity(announceMcpToolListing(startable.length))
         : undefined;
-    const listings = await listMcpServerTools({
-      servers: discovered.servers,
-      env,
-      lister: ports.mcpToolLister,
-      ...(input.timeoutMs === undefined ? {} : { timeoutMs: input.timeoutMs }),
-    });
+    const listings: Map<string, ManifestServerListing> =
+      await listMcpServerTools({
+        servers: localServers,
+        env,
+        lister: ports.mcpToolLister,
+        ...(input.timeoutMs === undefined
+          ? {}
+          : { timeoutMs: input.timeoutMs }),
+      });
+    const listed = [...listings.values()].filter(
+      (listing) => listing.availability.status === "available",
+    ).length;
+
+    for (const [name, listing] of connectionListings) {
+      listings.set(name, listing);
+    }
 
     const manifest = buildAgentToolsManifest({
       project: input.project,
       generatedAt: (input.now ?? (() => new Date()))(),
       discovered,
       listings,
+      connections: managed.connections,
     });
-    const listed = manifest.servers.filter(
-      (server) => server.availability.status === "available",
-    ).length;
     task?.succeed(
       `Listed the tools of ${String(listed)} of ${String(startable.length)} MCP server(s)`,
     );

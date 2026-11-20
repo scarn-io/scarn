@@ -1,8 +1,10 @@
-import type {
-  OpenCodeMcpRefConfig,
-  OpenCodeMcpServers,
-  ResolvedOpenCodeMcpServerConfig,
-  ResolvedOpenCodeMcpServers,
+import type { ManagedConnectionName } from "@scarn/sdk/managed-connections";
+import {
+  collectEnvPlaceholderNames,
+  type OpenCodeMcpRefConfig,
+  type OpenCodeMcpServers,
+  type ResolvedOpenCodeMcpServerConfig,
+  type ResolvedOpenCodeMcpServers,
 } from "../../../common/contracts/opencode-mcp";
 import type {
   DiscoveredAgentTools,
@@ -21,7 +23,17 @@ import type {
  *     `timeout`, `protocol`) are laid on top. Its Scarn-only `name` is
  *     dropped. A ref never reaches OpenCode. One that matches nothing throws
  *     {@link McpServerRefNotFoundError}.
- *   - Inline `local`/`remote` entries pass through unchanged.
+ *   - Inline `local`/`remote` entries pass through without their Scarn-only
+ *     `workerVars` and `auth`.
+ *   - An entry with `auth: { connection }` must resolve to a `remote`
+ *     ({@link McpConnectionAuthNotRemoteError}). Its definition's `headers`
+ *     and `oauth` are dropped, so neither the repository's credentials nor
+ *     OpenCode's native OAuth is ever used for it, and it is recorded in
+ *     `connectionAuth` with its resolved URL. The server checks that URL
+ *     against the connection's resource at launch registration, not here.
+ *   - Every other enabled remote is recorded in `remotesWithoutAuth` by key
+ *     and URL, so registration can refuse one that points at a connection's
+ *     URL without `auth`.
  *   - Every discovered server whose name is not one of the step's keys is
  *     emitted with `disabled: true`, so a step only gets the servers it names
  *     — including servers OpenCode would otherwise load from the clone's own
@@ -72,6 +84,45 @@ export class McpServerRefNotFoundError extends Error {
   }
 }
 
+const INLINE_SOURCE = "the step definition";
+
+/** Failure code for a step MCP server whose `auth` can't be used. */
+export const MCP_CONNECTION_AUTH_INVALID_ERROR_CODE =
+  "SCARN_MCP_CONNECTION_AUTH_INVALID";
+
+/** The named error a pipeline's `retry`/`catch` matches for an unusable connection auth. */
+export const MCP_CONNECTION_AUTH_INVALID_ERROR_NAME =
+  "Scarn.McpConnectionAuthInvalid";
+
+function authSnippet(connection: ManagedConnectionName): string {
+  return `auth: { connection: "${connection}" }`;
+}
+
+export class McpConnectionAuthNotRemoteError extends Error {
+  readonly code = MCP_CONNECTION_AUTH_INVALID_ERROR_CODE;
+  readonly key: string;
+  readonly connection: ManagedConnectionName;
+  readonly source: string;
+
+  constructor(input: {
+    key: string;
+    connection: ManagedConnectionName;
+    source: string;
+    type: ResolvedOpenCodeMcpServerConfig["type"];
+  }) {
+    super(
+      `MCP server "${input.key}" uses the project's "${input.connection}" connection (${authSnippet(input.connection)}), ` +
+        `but its definition in ${input.source} is a ${input.type} server. A connection can only authenticate a remote server. ` +
+        `Change the definition in ${input.source} to a remote server with the connection's URL, ` +
+        `or declare it inline with defineMcp({ type: "remote", url: "<connection URL>", ${authSnippet(input.connection)} }).`,
+    );
+    this.name = "McpConnectionAuthNotRemoteError";
+    this.key = input.key;
+    this.connection = input.connection;
+    this.source = input.source;
+  }
+}
+
 const SHARED_SERVER_FIELDS = [
   "disabled",
   "codemode",
@@ -107,13 +158,67 @@ export type ResolvedMcpServerRef = {
   requiredEnv: string[];
 };
 
+/**
+ * An enabled step MCP server authenticated by a managed connection. Apart
+ * from `url`, it carries only names, never a value, so it is safe to log
+ * without `url`.
+ */
+export type ResolvedConnectionAuth = {
+  key: string;
+  connection: ManagedConnectionName;
+  /** The definition's URL, before it is replaced with the relay's. */
+  url: string;
+  /** Repo-relative file of a ref's definition, or "the step definition". */
+  source: string;
+  /** Header names the definition set, dropped in favour of the connection. */
+  droppedHeaders: string[];
+  /** Whether the definition set `oauth`, dropped in favour of the connection. */
+  droppedOAuth: boolean;
+};
+
 export type ResolveStepMcpServersResult = {
   /** `null` when the step declares nothing and the repository defines nothing. */
   servers: ResolvedOpenCodeMcpServers | null;
   resolvedRefs: ResolvedMcpServerRef[];
   /** Discovered servers emitted as `disabled: true`, by name. */
   disabledServers: string[];
+  /** Enabled entries with `auth: { connection }`, in step order. */
+  connectionAuth: ResolvedConnectionAuth[];
+  /** Enabled step entries that resolved to a remote without `auth`, by key and URL. */
+  remotesWithoutAuth: { key: string; url: string }[];
 };
+
+function applyConnectionAuth(input: {
+  key: string;
+  connection: ManagedConnectionName;
+  source: string;
+  resolved: ResolvedOpenCodeMcpServerConfig;
+}): {
+  server: ResolvedOpenCodeMcpServerConfig;
+  auth: ResolvedConnectionAuth;
+} {
+  const { key, connection, source, resolved } = input;
+  if (resolved.type !== "remote") {
+    throw new McpConnectionAuthNotRemoteError({
+      key,
+      connection,
+      source,
+      type: resolved.type,
+    });
+  }
+  const { headers, oauth, ...server } = resolved;
+  return {
+    server,
+    auth: {
+      key,
+      connection,
+      url: server.url,
+      source,
+      droppedHeaders: Object.keys(headers ?? {}),
+      droppedOAuth: oauth !== undefined,
+    },
+  };
+}
 
 export function resolveStepMcpServers(input: {
   servers: OpenCodeMcpServers | null | undefined;
@@ -124,14 +229,45 @@ export function resolveStepMcpServers(input: {
   );
   const servers: ResolvedOpenCodeMcpServers = {};
   const resolvedRefs: ResolvedMcpServerRef[] = [];
+  const connectionAuth: ResolvedConnectionAuth[] = [];
+  const remotesWithoutAuth: { key: string; url: string }[] = [];
+  const recordWithoutAuth = (
+    key: string,
+    server: ResolvedOpenCodeMcpServerConfig,
+  ) => {
+    if (server.type === "remote" && server.disabled !== true) {
+      remotesWithoutAuth.push({ key, url: server.url });
+    }
+  };
   const used = new Set<string>();
 
   for (const [key, entry] of Object.entries(input.servers ?? {})) {
-    if (entry.type !== "ref") {
+    used.add(key);
+    if (entry.type === "local") {
       const native = { ...entry };
       delete native.workerVars;
       servers[key] = native;
-      used.add(key);
+      continue;
+    }
+
+    if (entry.type === "remote") {
+      const { auth } = entry;
+      const native = { ...entry };
+      delete native.workerVars;
+      delete native.auth;
+      if (auth === undefined) {
+        servers[key] = native;
+        recordWithoutAuth(key, native);
+        continue;
+      }
+      const applied = applyConnectionAuth({
+        key,
+        connection: auth.connection,
+        source: INLINE_SOURCE,
+        resolved: native,
+      });
+      servers[key] = applied.server;
+      if (applied.server.disabled !== true) connectionAuth.push(applied.auth);
       continue;
     }
 
@@ -144,15 +280,30 @@ export function resolveStepMcpServers(input: {
         tools: input.tools,
       });
     }
-    servers[key] = applySharedFields(match.config, entry);
-    used.add(key);
+    const resolved = applySharedFields(match.config, entry);
+    let server = resolved;
+    let requiredEnv = match.requiredEnv;
+    if (entry.auth !== undefined) {
+      const applied = applyConnectionAuth({
+        key,
+        connection: entry.auth.connection,
+        source: match.source,
+        resolved,
+      });
+      server = applied.server;
+      requiredEnv = collectEnvPlaceholderNames(server);
+      if (server.disabled !== true) connectionAuth.push(applied.auth);
+    } else {
+      recordWithoutAuth(key, server);
+    }
+    servers[key] = server;
     resolvedRefs.push({
       key,
       lookupName,
       source: match.source,
       type: match.config.type,
       inlineSecrets: match.inlineSecrets,
-      requiredEnv: match.requiredEnv,
+      requiredEnv,
     });
   }
 
@@ -167,5 +318,7 @@ export function resolveStepMcpServers(input: {
     servers: Object.keys(servers).length > 0 ? servers : null,
     resolvedRefs,
     disabledServers,
+    connectionAuth,
+    remotesWithoutAuth,
   };
 }

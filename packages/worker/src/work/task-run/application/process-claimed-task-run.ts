@@ -79,6 +79,11 @@ export async function startProcessClaimedTaskRun(
      * stops the launch at the next stage boundary.
      */
     run?: RunHandle | undefined;
+    /**
+     * Called once the run's managed launch is registered, before OpenCode
+     * starts (arms the heartbeat's control-loss watchdog).
+     */
+    onManagedLaunchRegistered?: (() => void) | undefined;
   },
   deps: ProcessProjectWorkDeps,
   client: TaskRunWorkerClient,
@@ -180,6 +185,7 @@ export async function startProcessClaimedTaskRun(
             logStream.registerSecretValues(values);
           }
         : undefined,
+      onManagedLaunchRegistered: input.onManagedLaunchRegistered,
       localRuntimeSessionId,
       workerContext,
       requestedByUserId: input.requestedByUserId,

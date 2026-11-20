@@ -48,8 +48,12 @@ function describeHealthCheckOutcome(report: HealthCheckReport): {
       };
     }
     case "skipped":
-      // Never attempted — still counts against the report's `ok`, since the
-      // user asked for it.
+      if (outcome.reason === "real-runs-only") {
+        return {
+          line: `${label}: skipped — runs in real runs only`,
+          severity: "info",
+        };
+      }
       return {
         line: `${label}: skipped — an earlier required health check failed first`,
         severity: "warn",
@@ -106,9 +110,13 @@ export function renderDryRunReport(
     reporter.warn(`Base branch: ${report.baseBranchNote}`);
   }
 
+  if (report.notRunnable) {
+    reporter.error(`Step ${report.notRunnable}`);
+    return;
+  }
+
   if (report.launchError) {
     reporter.error(`Environment failed to launch: ${report.launchError}`);
-    return;
   }
 
   if (report.runtime) reporter.info(`Runtime: ${report.runtime}`);

@@ -48,6 +48,35 @@ const inherit = (name: string, optional: boolean, mcp: string) => ({
 });
 
 describe("defineStep — mcps", () => {
+  test("connection-authenticated checks compile under the step alias and validate", () => {
+    const notion = defineMcp({
+      type: "ref",
+      name: "notion",
+      auth: { connection: "notion" },
+      healthChecks: {
+        search: { tool: "notion_search", args: { query: "docs" } },
+      },
+    });
+    const spec = step({ mcps: { docs: notion } });
+
+    expect(spec.opencodeMcpJson).toEqual({
+      docs: { type: "ref", name: "notion", auth: { connection: "notion" } },
+    });
+    expect(spec.healthChecksJson).toEqual([
+      {
+        kind: "tool",
+        mcp: "docs",
+        name: "docs.search",
+        tool: "notion_search",
+        args: { query: "docs" },
+        serialGroup: "docs",
+        severity: "required",
+      },
+    ]);
+    expect(spec.environment).toBeNull();
+    expect(validateDefinitionSpecs([spec])).toEqual([]);
+  });
+
   test("a host step preserves repository MCP refs and their environment", () => {
     const spec = step({
       environment: { runtime: Runtime.host() },

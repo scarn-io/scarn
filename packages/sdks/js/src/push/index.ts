@@ -19,6 +19,7 @@ export type {
   PipelineDocumentFile,
 } from "./collect-pipeline-documents";
 export { pushFromDirectory } from "./push-from-directory";
+export type { PushedMcpServer } from "./pushed-mcp-servers";
 export type {
   PushFromDirectoryOptions,
   PushFromDirectoryResult,

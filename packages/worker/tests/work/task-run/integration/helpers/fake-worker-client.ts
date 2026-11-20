@@ -126,9 +126,11 @@ export class FakeTaskRunWorkerClient implements TaskRunWorkerClient {
     taskRunId: UuidV7;
     claimToken: string;
     leaseDurationSeconds: number;
-  }): Promise<Pick<TaskRunContract, "status">> {
+  }): Promise<
+    Pick<TaskRunContract, "status"> & { managedAuthority: "ok" }
+  > {
     this.heartbeatCalls.push({ ...input });
-    return Promise.resolve({ status: "running" });
+    return Promise.resolve({ status: "running", managedAuthority: "ok" });
   }
 
   /** Project secrets the fake API holds, by name; empty unless a test sets them. */

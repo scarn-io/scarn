@@ -118,4 +118,23 @@ describe("computeDryRunOk", () => {
       }),
     ).toBe(false);
   });
+
+  test.each([true, false])(
+    "real-runs-only skips are advisory, independently of managed startup health %p",
+    (healthy) => {
+      expect(
+        computeDryRunOk({
+          containerHealthy: undefined,
+          opencodeHealthy: true,
+          mcpServers: [{ ...passingServer, healthy }],
+          healthChecks: [
+            {
+              ...passingCheck,
+              outcome: { kind: "skipped", reason: "real-runs-only" },
+            },
+          ],
+        }),
+      ).toBe(healthy);
+    },
+  );
 });

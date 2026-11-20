@@ -80,9 +80,13 @@ Read first. Never ask for something you can discover.
   the tools it listed. Each server carries a `source` file, an
   `availability` (`available`, `unavailable` with the missing env var, or
   `failed` with the error), its `requiredEnv` names and its `tools`, each
-  with a `readOnlyHint` when the server sets one. `skipped` lists entries
-  that could not be used and why; `caveats` says what a listing does not
-  prove. If no manifest was written, read the repository's MCP config files
+  with a `readOnlyHint` when the server sets one. A server with `connection`
+  points at a project connection's URL: it was not started; its tools were
+  listed centrally, and `connection.state` says whether it is ready.
+  `connections` lists the project's connections (`name`, `label`, `url`,
+  `state`, `account`, `tools`); absent means they couldn't be listed.
+  `skipped` lists entries that could not be used and why; `caveats` says
+  what a listing does not prove. If no manifest was written, read the repository's MCP config files
   yourself (`.opencode/opencode.json[c]`, `opencode.json[c]`, `.mcp.json`,
   `.cursor/mcp.json`, `.vscode/mcp.json`, `.codex/config.toml`) and the skill
   directories (`.claude/skills/`, `.agents/skills/`, `.opencode/skill/`,
@@ -207,6 +211,14 @@ Playwright server if one is listed. Say plainly when a server is `unavailable`
 error in a line); either can still be chosen, but its tools were not listed, so
 there is nothing to pick from in phase 6. Mention `skipped` entries only when
 one is a server they named.
+
+A server with `connection` is written
+`defineMcp({ type: "ref", name, auth: { connection } })`. With no such
+repository server, offer a `connections` entry inline:
+`defineMcp({ type: "remote", name, url, auth: { connection } })` with its
+`url`. Never write a server at a connection's `url` without `auth`. If the
+connection isn't `ready`, say a project admin must connect (or reconnect) it
+in project settings, naming it by its `label`, and still write the step.
 
 If they name a tool you did not find, check it against phase 1 first:
 
@@ -376,7 +388,7 @@ manifest name as the `defineMcp` `name` (with `type: "ref"`; a new server
 is `local` or `remote`), and write the check into that `defineMcp`'s
 `healthChecks`. A server with no listed tools (`unavailable` or
 `failed`) has nothing to choose from: ask the user for the tool name, or leave
-the check out and say so in phase 9.
+the check out and say so in phase 9. A server with `auth` takes no checks yet.
 
 Define each server once per file and mount it on every step that uses it, so
 every such step gets that server's check, not just the investigate step.

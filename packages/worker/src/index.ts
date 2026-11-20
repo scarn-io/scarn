@@ -109,7 +109,10 @@ export {
 export type {
   AgentToolsManifest,
   ListedMcpTool,
+  ManifestManagedConnection,
   ManifestMcpServer,
+  ManifestServerConnection,
+  ManifestServerListing,
   McpServerAvailability,
 } from "./project/agent-tools/domain/agent-tools-manifest";
 export {

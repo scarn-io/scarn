@@ -77,10 +77,11 @@ export type HealthCheckOutcome =
       availableIds?: string[];
     }
   /**
-   * Not reached because an earlier `required` check aborted the run. Distinct
-   * from a failure — this check was never attempted at all.
+   * Never attempted: by default an earlier required check aborted the run.
+   * Dry runs explicitly mark managed auth tool checks `real-runs-only`;
+   * that skip is advisory, independent of the server's startup gate.
    */
-  | { kind: "skipped" };
+  | { kind: "skipped"; reason?: "real-runs-only" };
 
 export type HealthCheckReport = {
   /** `check.name`, defaulting to the resolved tool id. */

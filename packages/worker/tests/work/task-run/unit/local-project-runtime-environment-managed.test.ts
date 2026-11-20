@@ -184,7 +184,7 @@ describe("launch with a managed runtime", () => {
     expect(env.devcontainerConfigPath).toBe(BUN1_CONFIG_PATH);
     expect(env.agent).not.toBeNull();
     expect(env.commitAndPushWorkBranch).toBeUndefined();
-    expect(configAtLaunch).toMatchObject({ image: "oven/bun:1.4.0-debian" });
+    expect(configAtLaunch).toMatchObject({ image: "oven/bun:1.4.4-debian" });
     expect(configAtLaunch).not.toHaveProperty("onCreateCommand");
   });
 

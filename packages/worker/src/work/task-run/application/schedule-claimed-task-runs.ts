@@ -50,19 +50,19 @@ export function scheduleClaimedTaskRunJob(
     activeJobsBeforeSchedule: runs.count({ projectId: input.projectId }),
   });
 
-  const heartbeat = createTaskRunHeartbeatController(
-    deps.workerClient,
-    streamingDeps,
-    {
-      taskRunId: claim.task.id,
-      claimToken: claim.claimToken,
-      leaseDurationSeconds: input.leaseDurationSeconds,
-    },
-  );
-
   const job = runs.start(
     { taskRunId: claim.task.id, projectId: input.projectId },
     async (run) => {
+      const heartbeat = createTaskRunHeartbeatController(
+        deps.workerClient,
+        streamingDeps,
+        {
+          taskRunId: claim.task.id,
+          claimToken: claim.claimToken,
+          leaseDurationSeconds: input.leaseDurationSeconds,
+          run,
+        },
+      );
       // Capture any thrown error so the finally block can report the step as
       // failed *after* flushing buffered logs. Flushing first is critical:
       // appendTaskLogs rejects once the step leaves "running", so any
@@ -83,6 +83,9 @@ export function scheduleClaimedTaskRunJob(
             localEnvVars,
             preserveRuntimeOnFailure: input.preserveRuntimeOnComplete ?? false,
             run,
+            onManagedLaunchRegistered: () => {
+              heartbeat.armManagedWatchdog();
+            },
           },
           streamingDeps,
           deps.workerClient,

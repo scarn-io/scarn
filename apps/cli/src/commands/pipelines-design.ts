@@ -26,6 +26,7 @@ import {
   runDesignPreflight,
   type DesignPreflightPorts,
 } from "../lib/design-preflight";
+import { createManagedConnectionsAdapters } from "../lib/design-managed-connections-adapters";
 import { runOpencodeAuthLogin } from "../lib/design-provider-connect";
 import {
   pipelineNeedsProjectDevcontainer,
@@ -206,6 +207,7 @@ export function buildDesignPreflightPorts(
     mcpToolLister: new SdkMcpToolLister({ repoRoot: projectRoot }),
     writeAgentToolsManifest: (input) =>
       writeAgentToolsManifest({ homeDir: resolveHostHome(), ...input }),
+    ...createManagedConnectionsAdapters(),
   };
 }
 

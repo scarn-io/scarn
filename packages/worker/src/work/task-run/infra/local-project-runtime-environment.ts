@@ -15,6 +15,7 @@ import type {
   LaunchedRuntime,
   LaunchedRuntimeOrchestrator,
 } from "../contracts/process-project-work-types";
+import type { ManagedLaunchServerUrls } from "../contracts/managed-launch-types";
 import { startStopwatch } from "../../../lib/elapsed";
 import { logWork } from "../application/work-logger";
 import { writePreviousRunFiles } from "../application/write-previous-run-files";
@@ -121,6 +122,11 @@ export class DefaultLocalProjectRuntimeEnvironmentOrchestrator implements LocalP
         cloneResult.resolvedBranch,
       );
       const isHost = resolvedEnvironment.runtime.kind === "host";
+      const register = input.registerManagedLaunch;
+      const registerManagedLaunch = register
+        ? (urls: ManagedLaunchServerUrls) =>
+            register({ ...urls, runtimeKind: resolvedEnvironment.runtime.kind })
+        : undefined;
       sessionAgentHomeDir = isHost
         ? resolveSessionAgentHomeDir(input.sessionId)
         : null;
@@ -155,6 +161,7 @@ export class DefaultLocalProjectRuntimeEnvironmentOrchestrator implements LocalP
           fakeAiProviderOverride,
           stepEnv,
           resolveMcpEnv,
+          registerManagedLaunch,
           reporter,
           taskRunId,
           onAgentLogReady: input.onAgentLogReady,
@@ -236,6 +243,7 @@ export class DefaultLocalProjectRuntimeEnvironmentOrchestrator implements LocalP
               connectors: resolvedEnvironment.connectors,
               stepEnv,
               resolveMcpEnv,
+              registerManagedLaunch,
             })
           : null;
         payloadVersion = plan?.payload.version ?? null;

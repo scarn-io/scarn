@@ -9,6 +9,7 @@
  */
 import { renderPromptTemplate } from "@scarn/sdk/definitions/steps";
 import { restoreAgentSession } from "./restore-agent-session";
+import { stepMcpServersAddEnv } from "./resolve-step-env";
 import {
   buildContainerStepArtifactsDir,
   buildPromptRenderContext,
@@ -62,9 +63,7 @@ export async function runAgentStepBranch(input: {
       env: input.workerEnv,
       promptEnv:
         environment.resolvedEnvironment.envVars.length ||
-        Object.values(workerContext.runtime.opencodeMcpJson ?? {}).some(
-          (server) => server.type === "ref" || server.workerVars?.length,
-        )
+        stepMcpServersAddEnv(workerContext.runtime.opencodeMcpJson)
           ? input.promptEnv
           : undefined,
       artifactsDir: `${containerStepArtifactsDir}/`,

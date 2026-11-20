@@ -408,6 +408,14 @@ Found 1 environment(s), 4 step(s), 1 pipeline document(s) and 0 automation docum
 ✓ pipeline bugs v5 → unchanged (bugs.json)
 ```
 
+After the push, the pushed steps' MCP servers are checked against the project's managed connections. A `ref` server's URL is read from the repository's MCP files in your working tree.
+
+- Each connection a step's `auth` names gets one status line.
+- A server without `auth` whose URL is a connection's gets a warning suggesting `auth: { connection: "<name>" }`.
+- A server whose `auth` names an existing connection but whose URL isn't that connection's fails the command with `push_connection_url_mismatch`. The push is already published; runs of that step would fail at launch, so fix the URL and push again.
+
+A connection that doesn't exist yet is never an error: you can push before connecting.
+
 | Flag               | Description                 |
 | ------------------ | --------------------------- |
 | `--base-url <url>` | Override the API server URL |
@@ -1261,6 +1269,7 @@ unless noted above.
 | `builder_install_failed`         | Installing the builder's dependencies failed                                                            |
 | `run_queue_failed`               | The run offer could not queue the run                                                                   |
 | `push_failed`                    | `pipelines push` failed: no builder directory, missing dependencies, or the push script exited non-zero |
+| `push_connection_url_mismatch`   | `pipelines push` published, but an MCP server's URL isn't the URL of the connection its `auth` names    |
 | `automation_request_failed`      | The server rejected an `automations` command, e.g. enabling a work-item automation                      |
 | `build_failed`                   | `pipelines build` couldn't run: no builder directory, missing dependencies, or no runtime               |
 | `build_check_failed`             | `pipelines build --check` found missing, out-of-date or invalid pipeline JSON                           |

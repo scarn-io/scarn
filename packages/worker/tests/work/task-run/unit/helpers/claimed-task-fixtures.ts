@@ -158,7 +158,7 @@ export function createWorkerClient(
     userId: requestedByUserId,
     claimTaskRuns: vi.fn(),
     heartbeatTaskRun: vi.fn(() =>
-      Promise.resolve({ status: "running" as const }),
+      Promise.resolve({ status: "running" as const, managedAuthority: "ok" as const }),
     ),
     reportTaskRunBaseCommit: vi.fn(),
     failTaskRun: vi.fn(),

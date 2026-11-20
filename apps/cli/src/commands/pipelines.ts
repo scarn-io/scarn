@@ -1,6 +1,7 @@
 import type { ArgumentsCamelCase, Argv, CommandModule } from "yargs";
 import { spawn } from "node:child_process";
-import { existsSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import * as clack from "@clack/prompts";
 import { AnalyticsEvents } from "@scarn/observability/analytics/events";
@@ -39,6 +40,15 @@ import {
   PUSH_SCRIPT_TEMPLATE,
 } from "../templates/push-script";
 import { CliError } from "../lib/cli-error";
+import { createManagedConnectionsAdapters } from "../lib/design-managed-connections-adapters";
+import {
+  assertNoPushConnectionProblems,
+  pushConnectionReport,
+} from "../lib/push-connection-status";
+import {
+  readPushedMcpServers,
+  resolvePushedMcpServerUrlsInRepo,
+} from "../lib/push-mcp-server-urls";
 import {
   NO_PROJECT_MESSAGE,
   pickProjectRef,
@@ -162,11 +172,14 @@ const runPush = (args: ArgumentsCamelCase<PushArguments>): Promise<void> =>
     // and a positional project still takes effect. SCARN_ACCESS_TOKEN is the
     // session token: the script mints its own API tokens from it, sharing
     // `~/.scarn/api-tokens.jsonc` with this process.
+    const resultDir = mkdtempSync(join(tmpdir(), "scarn-push-"));
+    const resultPath = join(resultDir, "result.json");
     const env: NodeJS.ProcessEnv = {
       ...process.env,
       SCARN_PROJECT_ID: projectId,
       SCARN_BASE_URL: baseUrl,
       SCARN_ACCESS_TOKEN: authenticated.profile.accessToken,
+      SCARN_PUSH_RESULT_PATH: resultPath,
     };
 
     const task = reporter.startActivity(
@@ -187,6 +200,8 @@ const runPush = (args: ArgumentsCamelCase<PushArguments>): Promise<void> =>
         resolvePromise(code ?? 1);
       });
     });
+    const pushedMcpServers = readPushedMcpServers(resultPath);
+    rmSync(resultDir, { recursive: true, force: true });
 
     if (exitCode !== 0) {
       task.fail(`Push failed (exit ${String(exitCode)})`);
@@ -204,6 +219,19 @@ const runPush = (args: ArgumentsCamelCase<PushArguments>): Promise<void> =>
 
     task.succeed("Pushed environments, steps, built pipelines and automations");
     captureMilestone(AnalyticsEvents.CliPipelinePushed);
+
+    const report = await pushConnectionReport({
+      baseUrl,
+      projectId,
+      servers: await resolvePushedMcpServerUrlsInRepo(
+        pushedMcpServers,
+        process.cwd(),
+      ),
+      ports: createManagedConnectionsAdapters(),
+    });
+    for (const line of report.status.concat(report.warnings))
+      reporter.warn(line);
+    assertNoPushConnectionProblems(report);
   });
 
 const pushCommand: CommandModule<object, PushArguments> = {

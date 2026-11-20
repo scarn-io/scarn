@@ -14,6 +14,12 @@ import {
 } from "../contracts/project-unavailable-error";
 import { logFeedLimitErrorFromHttp } from "../contracts/log-feed-errors";
 import { logWorkWarn } from "../application/work-logger";
+import {
+  MANAGED_CONNECTION_NOT_READY_ERROR_CODE,
+  ManagedConnectionNotReadyError,
+} from "../application/managed-connection-not-ready-error";
+import { McpConnectionAuthRejectedError } from "../application/mcp-connection-auth-rejected-error";
+import { MCP_CONNECTION_AUTH_INVALID_ERROR_CODE } from "./mcp-server-ref-resolver";
 import { fetchAuthenticatedSession } from "../../../auth/session/application/fetch-authenticated-session";
 import { WorkerAuthError } from "../../../auth/session/domain/worker-auth-error";
 import {
@@ -237,6 +243,27 @@ export async function createTaskPlaneWorkerClient(
     loadTaskLogLines: buildLoadTaskLogLines(planeClient),
     readTaskRunWorkItem: async (input) =>
       await planeClient.readTaskRunWorkItem(input),
+    registerTaskRunManagedLaunch: async (input) => {
+      const result = await planeClient.registerTaskRunManagedLaunch(input);
+      if (result.error !== undefined) {
+        const problem: {
+          code?: string;
+          detail?: string;
+          meta?: Record<string, unknown>;
+        } = result.error;
+        if (
+          result.response.status === 409 &&
+          problem.code === MANAGED_CONNECTION_NOT_READY_ERROR_CODE
+        ) {
+          throw new ManagedConnectionNotReadyError(problem.meta);
+        }
+        if (problem.code === MCP_CONNECTION_AUTH_INVALID_ERROR_CODE) {
+          throw new McpConnectionAuthRejectedError(problem.detail);
+        }
+        throw new Error(JSON.stringify(result.error));
+      }
+      return result.data.entries;
+    },
     issueWorkSignalToken: async (input) => {
       const result = await planeClient.issueWorkSignalToken(input);
       if (result.response.status === 404) {

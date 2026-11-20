@@ -50,6 +50,8 @@ async function run(
   const written: AgentToolsManifest[] = [];
   const recorder = createReporterRecorder();
   const result = await ensureAgentToolsManifest({
+    baseUrl: "https://scarn.test",
+    projectId: "project-1",
     project: "acme/app",
     owner: "acme",
     slug: "app",

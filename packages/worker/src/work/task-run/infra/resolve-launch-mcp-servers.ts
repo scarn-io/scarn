@@ -9,12 +9,18 @@ import type {
   ResolvedStepEnv,
 } from "../application/resolve-step-env";
 import { logWork } from "../application/work-logger";
-import { resolveStepMcpServers } from "./mcp-server-ref-resolver";
+import type { RegisterLaunchServers } from "../contracts/managed-launch-types";
+import {
+  type ResolvedConnectionAuth,
+  resolveStepMcpServers,
+} from "./mcp-server-ref-resolver";
 
 /** A step's MCP servers with every ref resolved, plus what env resolution needs from each ref. */
 export type StepMcpServerPlan = {
   servers: ResolvedOpenCodeMcpServers | null;
   refs: McpEnvRef[];
+  /** The managed relay capabilities in {@link servers}, for the log masker. */
+  secretValues: string[];
 };
 
 /**
@@ -29,18 +35,33 @@ export type StepMcpServerPlan = {
  * `{env:NAME}` placeholders read the step env, which the environment's
  * `vars` already cover.
  *
- * Throws `McpServerRefNotFoundError`, or `ConnectorMcpCollision` when a step
- * `mcps` key reuses a connector id; the caller lets both propagate so the
- * launch fails before anything starts.
+ * An enabled entry with `auth: { connection }` (logged by key, connection,
+ * source and the names of the dropped headers) calls `registerManagedLaunch`
+ * once with every such entry's resolved URL and every other enabled remote's,
+ * which the server checks against the project's connections, and points at
+ * the relay entry it returns (see `pointAtManagedRelay`).
+ *
+ * Throws `McpServerRefNotFoundError`, `McpConnectionAuthNotRemoteError`,
+ * whatever `registerManagedLaunch` throws (`ManagedConnectionNotReadyError`,
+ * `McpConnectionAuthRejectedError`),
+ * or `ConnectorMcpCollision` when a step `mcps` key reuses a connector id;
+ * the caller lets each propagate so the launch fails before OpenCode starts.
  */
 export async function planStepMcpServers(input: {
   servers: OpenCodeMcpServers | null | undefined;
   connectors?: readonly string[] | undefined;
   workspacePath: string;
   sessionId: string;
+  registerManagedLaunch?: RegisterLaunchServers | undefined;
 }): Promise<StepMcpServerPlan> {
   const tools = await discoverRepoAgentTools(input.workspacePath);
-  const { servers, resolvedRefs, disabledServers } = resolveStepMcpServers({
+  const {
+    servers,
+    resolvedRefs,
+    disabledServers,
+    connectionAuth,
+    remotesWithoutAuth,
+  } = resolveStepMcpServers({
     servers: input.servers,
     tools,
   });
@@ -65,6 +86,26 @@ export async function planStepMcpServers(input: {
         .map(({ source, name, reason }) => ({ source, name, reason })),
     });
   }
+  for (const auth of connectionAuth) {
+    logWork("runtime", "MCP server uses a managed connection", {
+      sessionId: input.sessionId,
+      key: auth.key,
+      connection: auth.connection,
+      source: auth.source,
+      droppedHeaders: auth.droppedHeaders,
+      droppedOAuth: auth.droppedOAuth,
+    });
+  }
+  const secretValues =
+    connectionAuth.length > 0 && servers
+      ? await pointAtManagedRelay({
+          servers,
+          connectionAuth,
+          remotesWithoutAuth,
+          registerManagedLaunch: input.registerManagedLaunch,
+          sessionId: input.sessionId,
+        })
+      : [];
   const connectors = input.connectors ?? [];
   if (connectors.length > 0) {
     logWork("runtime", "Connectors added to the step's MCP servers", {
@@ -79,13 +120,67 @@ export async function planStepMcpServers(input: {
       Object.keys(input.servers ?? {}),
     ),
     refs: resolvedRefs.map(({ key, requiredEnv }) => ({ key, requiredEnv })),
+    secretValues,
   };
+}
+
+const urlsByKey = (entries: readonly { key: string; url: string }[]) =>
+  Object.fromEntries(entries.map(({ key, url }) => [key, { url }]));
+
+/**
+ * Registers the managed launch with the resolved URLs and replaces each
+ * connection-auth server, in place, with its relay entry: the relay URL and
+ * the capability as a bearer header, with OpenCode's own OAuth off. Returns
+ * the capabilities for the log masker.
+ */
+async function pointAtManagedRelay(input: {
+  servers: ResolvedOpenCodeMcpServers;
+  connectionAuth: readonly ResolvedConnectionAuth[];
+  remotesWithoutAuth: readonly { key: string; url: string }[];
+  registerManagedLaunch: RegisterLaunchServers | undefined;
+  sessionId: string;
+}): Promise<string[]> {
+  const keys = input.connectionAuth.map(({ key }) => key);
+  if (!input.registerManagedLaunch) {
+    throw new Error(
+      `MCP servers ${keys.map((key) => `"${key}"`).join(", ")} use a managed connection, which this launch can't register.`,
+    );
+  }
+  const entries = await input.registerManagedLaunch({
+    entries: urlsByKey(input.connectionAuth),
+    remotesWithoutAuth: urlsByKey(input.remotesWithoutAuth),
+  });
+  const secretValues: string[] = [];
+  for (const key of keys) {
+    const entry = entries[key];
+    const server = input.servers[key];
+    if (!entry || server?.type !== "remote") {
+      throw new Error(
+        `The managed launch registration returned no relay entry for MCP server "${key}".`,
+      );
+    }
+    input.servers[key] = {
+      ...server,
+      url: entry.relayUrl,
+      headers: { Authorization: `Bearer ${entry.capability}` },
+      oauth: false,
+    };
+    secretValues.push(entry.capability);
+  }
+  logWork("runtime", "Managed connection MCP servers point at the relay", {
+    sessionId: input.sessionId,
+    keys,
+  });
+  return secretValues;
 }
 
 export type StepMcpLaunch = {
   servers: ResolvedOpenCodeMcpServers | null;
   stepEnv: Readonly<Record<string, string>> | undefined;
-  /** Secret values of variables inferred from the refs, for the log masker. */
+  /**
+   * Secret values of variables inferred from the refs and the managed relay
+   * capabilities, for the log masker.
+   */
   secretValues: string[];
 };
 
@@ -104,13 +199,13 @@ export function applyStepMcpEnv(input: {
     return {
       servers: input.plan.servers,
       stepEnv: input.stepEnv,
-      secretValues: [],
+      secretValues: input.plan.secretValues,
     };
   }
   const resolved = input.resolveMcpEnv(input.plan.refs);
   return {
     servers: input.plan.servers,
     stepEnv: resolved.stepEnv,
-    secretValues: resolved.secretValues,
+    secretValues: [...resolved.secretValues, ...input.plan.secretValues],
   };
 }

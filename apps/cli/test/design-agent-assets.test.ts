@@ -182,12 +182,14 @@ describe("composed prompt size", () => {
   // to ~96,000, and documenting `gitCredentials` on `Repo` took it to ~98,500,
   // and named environments (`defineEnvironment` in §1 and `push`) to ~100,900,
   // and route labels and overrules (§4's "Labels and overrules", §7, phase 6
-  // and the template's labels and `overridable` marks) to ~105,700
+  // and the template's labels and `overridable` marks) to ~105,700, and
+  // connection-backed MCP servers (`connection`/`connections` in phase 1,
+  // both `auth` forms in phase 3 and §1) to ~107,200
   // — the lower bound is set just under the current value so any further
   // growth is a deliberate decision rather than a drift.
   test("stays within the expected envelope", () => {
     const length = buildPipelineDesignerPrompt().length;
-    expect(length).toBeGreaterThan(105_300);
+    expect(length).toBeGreaterThan(106_900);
     expect(length).toBeLessThan(108_000);
   });
 

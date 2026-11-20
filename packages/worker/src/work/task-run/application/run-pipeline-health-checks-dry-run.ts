@@ -44,6 +44,11 @@ import {
   listPinnedStepDefinitionIds,
   readActivePipelineVersion,
 } from "./pipeline-version-steps";
+import {
+  probeManagedMcpConnections,
+  type ManagedMcpProbeReport,
+} from "./probe-managed-mcp-connections";
+import type { StepConnectionAuthEntry } from "./resolve-step-env";
 
 /**
  * The post-push run-offer gate's dry run: every step of a pushed pipeline has
@@ -63,7 +68,7 @@ export type PipelineHealthDryRunReport = {
   pipelineDefinitionId: string;
   /** How many environments were launched. */
   launchCount: number;
-  /** Steps that declare checks, in pipeline order. */
+  /** Steps with checks or enabled managed startup gates, in pipeline order. */
   steps: StepHealthCheckReport[];
   /** Steps that declare none (code steps always), so nothing ran for them. */
   stepsWithoutChecks: Array<{ stepKey: string; stepName: string }>;
@@ -150,9 +155,26 @@ export async function runPipelineHealthCheckLaunches(input: {
   pipelineDefinitionId: string;
   steps: readonly HealthCheckStep[];
   runLaunch: RunHealthCheckLaunch;
+  probeManaged?: (
+    entries: readonly StepConnectionAuthEntry[],
+  ) => Promise<ManagedMcpProbeReport>;
 }): Promise<PipelineHealthDryRunReport> {
   const plan = planHealthCheckLaunches(input.steps);
   const reportByStep = new Map<string, StepHealthCheckReport>();
+
+  for (const { step } of plan.managedSteps) {
+    reportByStep.set(step.stepDefinitionId, {
+      stepDefinitionId: step.stepDefinitionId,
+      stepKey: step.key,
+      stepName: step.name,
+      runtime: describeHealthCheckRuntime(step.environment),
+      baseBranchNote: step.baseBranchNote ?? null,
+      launchError: null,
+      environmentProblems: [],
+      mcpServers: [],
+      healthChecks: [],
+    });
+  }
 
   for (const launch of plan.launches) {
     // A launch that throws after coming up (a probe or runner error) is
@@ -174,6 +196,26 @@ export async function runPipelineHealthCheckLaunches(input: {
         toStepReport(step, runtime, outcome),
       );
     }
+  }
+
+  for (const { step, entries, skippedChecks } of plan.managedSteps) {
+    if (!input.probeManaged) {
+      throw new Error("Managed MCP startup requires a server-side probe");
+    }
+    const managed = await input.probeManaged(entries);
+    const report = reportByStep.get(step.stepDefinitionId);
+    if (!report) throw new Error(`Missing health report for ${step.key}`);
+    const runnable = [...report.healthChecks];
+    const skipped = [...skippedChecks];
+    const aliases = new Set(entries.map((entry) => entry.key));
+    report.mcpServers = [...report.mcpServers, ...managed.mcpServers];
+    report.healthChecks = (step.healthChecksJson ?? []).flatMap((check) => {
+      const result =
+        check.kind === "tool" && check.mcp && aliases.has(check.mcp)
+          ? skipped.shift()
+          : runnable.shift();
+      return result ? [result] : [];
+    });
   }
 
   const steps = input.steps.flatMap((step) => {
@@ -376,6 +418,12 @@ export async function runPipelineHealthChecksDryRun(
       pipelineDefinitionId: options.pipelineDefinitionId,
       steps,
       runLaunch,
+      probeManaged: (entries) =>
+        probeManagedMcpConnections({
+          client,
+          projectId: options.projectId,
+          entries,
+        }),
     });
   } finally {
     // eslint-disable-next-line local/no-unknown-parameter-type -- narrows a caught value, not a real input boundary

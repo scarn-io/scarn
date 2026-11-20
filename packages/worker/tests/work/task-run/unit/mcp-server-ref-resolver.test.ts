@@ -51,6 +51,8 @@ describe("resolveStepMcpServers", () => {
       servers: null,
       resolvedRefs: [],
       disabledServers: [],
+      connectionAuth: [],
+      remotesWithoutAuth: [],
     });
     expect((await resolveWith(undefined)).servers).toBeNull();
   });
@@ -319,6 +321,8 @@ describe("resolveStepMcpServers", () => {
           },
         ],
         disabledServers: ["postgres", "playwright"],
+        connectionAuth: [],
+        remotesWithoutAuth: [{ key: "sentry", url: "https://sentry.test/mcp" }],
       });
     });
 

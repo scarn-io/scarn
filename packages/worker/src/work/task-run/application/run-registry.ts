@@ -1,5 +1,9 @@
 import { TaskRunCancelledError } from "./task-run-cancelled-error";
 import { WorkerStoppedError } from "./worker-stopped-error";
+import {
+  ManagedAuthorityLostError,
+  type ManagedAuthorityAbortReason,
+} from "./managed-authority-lost-error";
 
 /** Where a run is in its lifecycle on this worker. */
 export type RunPhase = "launching" | "running" | "tearing_down";
@@ -7,9 +11,20 @@ export type RunPhase = "launching" | "running" | "tearing_down";
 /**
  * Why a run was aborted. `cancelled` ends it quietly, as if the server had
  * revoked the claim. `worker_stopped` ends it and reports it as failed with
- * the `WORKER_STOPPED` code.
+ * the `WORKER_STOPPED` code. `managed_authority_lost` ends it and reports it
+ * as failed with `ManagedConnectionAuthorityLost`; only the run itself
+ * aborts with it, through {@link RunHandle.abortManagedAuthorityLost}.
  */
-export type RunAbortReason = "cancelled" | "worker_stopped";
+export type RunAbortReason =
+  | "cancelled"
+  | "worker_stopped"
+  | "managed_authority_lost";
+
+/** The abort reasons a run can be aborted with from outside it. */
+export type ExternalRunAbortReason = Exclude<
+  RunAbortReason,
+  "managed_authority_lost"
+>;
 
 /** A snapshot of one run in a {@link RunRegistry}. */
 export type RunEntry = {
@@ -18,7 +33,7 @@ export type RunEntry = {
   taskName: string | null;
   phase: RunPhase;
   startedAt: Date;
-  abort(reason: RunAbortReason): void;
+  abort(reason: ExternalRunAbortReason): void;
 };
 
 /**
@@ -28,6 +43,11 @@ export type RunEntry = {
 export type RunHandle = {
   readonly signal: AbortSignal;
   abortReason(): RunAbortReason | null;
+  /**
+   * Aborts the run with `managed_authority_lost`, recording why. The first
+   * abort reason wins.
+   */
+  abortManagedAuthorityLost(reason: ManagedAuthorityAbortReason): void;
   setPhase(phase: RunPhase): void;
   setTaskName(taskName: string): void;
   /**
@@ -47,6 +67,7 @@ type RegisteredRun = {
   phase: RunPhase;
   startedAt: Date;
   reason: RunAbortReason | null;
+  managedAuthorityReason: ManagedAuthorityAbortReason | null;
   controller: AbortController;
   job: Promise<void>;
 };
@@ -60,7 +81,7 @@ type RegisteredRun = {
 export class RunRegistry {
   readonly #runs = new Map<string, RegisteredRun>();
   readonly #now: () => Date;
-  #abortNewRunsWith: RunAbortReason | null = null;
+  #abortNewRunsWith: ExternalRunAbortReason | null = null;
 
   constructor(options: { now?: (() => Date) | undefined } = {}) {
     this.#now = options.now ?? (() => new Date());
@@ -85,12 +106,18 @@ export class RunRegistry {
       phase: "launching",
       startedAt: this.#now(),
       reason: null,
+      managedAuthorityReason: null,
       controller,
       job: Promise.resolve(),
     };
     const handle: RunHandle = {
       signal: controller.signal,
       abortReason: () => run.reason,
+      abortManagedAuthorityLost: (reason) => {
+        if (run.reason !== null) return;
+        run.managedAuthorityReason = reason;
+        abortRun(run, "managed_authority_lost");
+      },
       setPhase: (phase) => {
         run.phase = phase;
       },
@@ -119,7 +146,7 @@ export class RunRegistry {
    * Aborts a run. The first reason wins; later aborts are ignored. Returns
    * false when no such run is registered.
    */
-  abort(taskRunId: string, reason: RunAbortReason): boolean {
+  abort(taskRunId: string, reason: ExternalRunAbortReason): boolean {
     const run = this.#runs.get(taskRunId);
     if (!run) return false;
     abortRun(run, reason);
@@ -131,7 +158,7 @@ export class RunRegistry {
    * For a forced stop: a claim already in flight when the stop began still
    * ends promptly. Returns how many runs were in flight.
    */
-  abortAll(reason: RunAbortReason): number {
+  abortAll(reason: ExternalRunAbortReason): number {
     this.#abortNewRunsWith ??= reason;
     for (const run of this.#runs.values()) abortRun(run, reason);
     return this.#runs.size;
@@ -188,6 +215,11 @@ function abortErrorFor(run: RegisteredRun): Error | null {
       return new TaskRunCancelledError(run.taskRunId);
     case "worker_stopped":
       return new WorkerStoppedError(run.taskRunId);
+    case "managed_authority_lost":
+      return new ManagedAuthorityLostError(
+        run.taskRunId,
+        run.managedAuthorityReason ?? "control_lost",
+      );
     case null:
       return null;
   }

@@ -393,6 +393,29 @@ servers. Push does not check that a ref exists; one that
 matches nothing fails the step before launch, listing every file searched.
 Only write a `ref` for a server you saw defined in one of those files.
 
+**A project connection.** `auth: { connection }` takes the connection's
+`name`; people know it by its `label`. The project's connection authenticates
+the server; never write a token, header or env var for it, and never write a
+server at a connection's URL without `auth`. For example, with a connection
+named `notion`:
+
+```ts
+import { defineMcp } from "@scarn/sdk/definitions/steps";
+
+const notion = defineMcp({ type: "ref", name: "notion", auth: { connection: "notion" } });
+// No repository server: inline, with the connection's `url`.
+const notionInline = defineMcp({
+  type: "remote",
+  name: "notion",
+  url: "https://mcp.notion.com/mcp",
+  auth: { connection: "notion" },
+});
+```
+
+A `defineMcp` with `auth` takes no `env`, `optionalEnv`, `headers`, `oauth`
+or `healthChecks`. Push works whatever the connection's state; running the
+step fails with "not yet supported" in this Scarn version.
+
 ### Secrets
 
 Never write a secret **value** into a step file: it is pushed to the server,

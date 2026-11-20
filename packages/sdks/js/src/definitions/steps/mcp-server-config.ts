@@ -3,9 +3,12 @@ import { ENV_VAR_NAME_PATTERN, isReservedEnvVarName } from "../../env-vars";
 import {
   collectEnvPlaceholderNames,
   isEnvPlaceholderValue,
+  mcpConnectionAuthSchema,
   openCodeMcpLocalConfigSchema,
   openCodeMcpRefConfigSchema,
   openCodeMcpRemoteConfigSchema,
+  refConnectionAuthIssues,
+  remoteConnectionAuthIssues,
 } from "../../opencode-mcp";
 
 /**
@@ -21,13 +24,18 @@ const refFieldsSchema = openCodeMcpRefConfigSchema.omit({
   name: true,
 });
 const localFieldsSchema = openCodeMcpLocalConfigSchema.omit(ownedFields);
-const remoteFieldsSchema = openCodeMcpRemoteConfigSchema.omit(ownedFields);
+const remoteFieldsSchema = openCodeMcpRemoteConfigSchema
+  .omit(ownedFields)
+  .extend({ auth: mcpConnectionAuthSchema.optional() });
 
 /** The shared OpenCode fields a `ref` applies on top of the repo's definition. */
 export type McpRefServerFields = z.output<typeof refFieldsSchema>;
 /** A `local` server: `command`, `cwd?`, `environment?` and the shared fields. */
 export type McpLocalServerFields = z.output<typeof localFieldsSchema>;
-/** A `remote` server: `url`, `headers?`, `oauth?` and the shared fields. */
+/**
+ * A `remote` server: `url`, `headers?`, `oauth?`, `auth?` and the shared
+ * fields.
+ */
 export type McpRemoteServerFields = z.output<typeof remoteFieldsSchema>;
 
 export type McpServerType = "ref" | "local" | "remote";
@@ -92,6 +100,38 @@ function parseFields<T>(
   return parsed.data;
 }
 
+function assertConnectionAuth(
+  name: string,
+  issues: readonly { path: string; message: string }[],
+): void {
+  if (issues.length === 0) return;
+  throw new Error(
+    `defineMcp "${name}": ${issues.map((issue) => `${issue.path}: ${issue.message}`).join("; ")}`,
+  );
+}
+
+/**
+ * Checks a `remote` config's `auth` before its fields are parsed, so a
+ * `workerVars` beside `auth` gets a specific message rather than
+ * "unrecognized key". An invalid `auth` is left to the parse.
+ */
+function assertRemoteConnectionAuth(
+  name: string,
+  config: Extract<McpServerConfig, { type: "remote" }>,
+): void {
+  const auth = mcpConnectionAuthSchema.safeParse(config.auth);
+  if (!auth.success) return;
+  if (typeof config.url !== "string") {
+    throw new Error(
+      `defineMcp "${name}": url is required with auth; write the ${auth.data.connection} connection's resource URL explicitly.`,
+    );
+  }
+  assertConnectionAuth(
+    name,
+    remoteConnectionAuthIssues({ ...config, auth: auth.data }),
+  );
+}
+
 function assertPlaceholders(
   name: string,
   field: "environment" | "headers",
@@ -134,8 +174,9 @@ function assertInferredEnv(definition: McpServerDefinition): void {
 /**
  * Validates a `defineMcp` config's server half and returns it with its
  * OpenCode fields parsed. Throws on an unknown `type`, an invalid field, a
- * literal (non-`{env:VAR}`) `environment` or `headers` value, or a
- * placeholder naming an invalid or reserved variable.
+ * literal (non-`{env:VAR}`) `environment` or `headers` value, a
+ * placeholder naming an invalid or reserved variable, or an `auth` the
+ * server can't carry (see `remoteConnectionAuthIssues`).
  */
 export function parseMcpServer(config: McpServerConfig): McpServerDefinition {
   if (typeof config.name !== "string" || config.name.trim().length === 0) {
@@ -144,13 +185,12 @@ export function parseMcpServer(config: McpServerConfig): McpServerDefinition {
   const { name } = config;
   let definition: McpServerDefinition;
   switch (config.type) {
-    case "ref":
-      definition = {
-        type: "ref",
-        name,
-        server: parseFields(name, refFieldsSchema, config),
-      };
+    case "ref": {
+      const server = parseFields(name, refFieldsSchema, config);
+      assertConnectionAuth(name, refConnectionAuthIssues(server));
+      definition = { type: "ref", name, server };
       break;
+    }
     case "local": {
       const server = parseFields(name, localFieldsSchema, config);
       assertPlaceholders(name, "environment", server.environment);
@@ -158,6 +198,7 @@ export function parseMcpServer(config: McpServerConfig): McpServerDefinition {
       break;
     }
     case "remote": {
+      assertRemoteConnectionAuth(name, config);
       const server = parseFields(name, remoteFieldsSchema, config);
       assertPlaceholders(name, "headers", server.headers);
       definition = { type: "remote", name, server };

@@ -31,6 +31,21 @@ import {
   WORKER_STOPPED_ERROR_NAME,
   WorkerStoppedError,
 } from "./worker-stopped-error";
+import {
+  MANAGED_CONNECTION_AUTHORITY_LOST_ERROR_CODE,
+  MANAGED_CONNECTION_AUTHORITY_LOST_ERROR_NAME,
+  ManagedAuthorityLostError,
+} from "./managed-authority-lost-error";
+import {
+  MANAGED_CONNECTION_NOT_READY_ERROR_CODE,
+  MANAGED_CONNECTION_NOT_READY_ERROR_NAME,
+  ManagedConnectionNotReadyError,
+} from "./managed-connection-not-ready-error";
+import { McpConnectionAuthRejectedError } from "./mcp-connection-auth-rejected-error";
+import {
+  MCP_CONNECTION_AUTH_INVALID_ERROR_NAME,
+  McpConnectionAuthNotRemoteError,
+} from "../infra/mcp-server-ref-resolver";
 
 const WORKER_EXECUTION_FAILED_ERROR_CODE = "SCARN_WORKER_EXECUTION_FAILED";
 const STEP_FAILED_ERROR_NAME = "Scarn.StepFailed";
@@ -114,10 +129,28 @@ function failureIdentity(error: TaskRunFailureInputError): {
       code: REPO_CONTEXT_COMMIT_UNAVAILABLE_ERROR_CODE,
     };
   }
+  if (
+    error instanceof McpConnectionAuthNotRemoteError ||
+    error instanceof McpConnectionAuthRejectedError
+  ) {
+    return { name: MCP_CONNECTION_AUTH_INVALID_ERROR_NAME, code: error.code };
+  }
+  if (error instanceof ManagedConnectionNotReadyError) {
+    return {
+      name: MANAGED_CONNECTION_NOT_READY_ERROR_NAME,
+      code: MANAGED_CONNECTION_NOT_READY_ERROR_CODE,
+    };
+  }
   if (error instanceof WorkerStoppedError) {
     return {
       name: WORKER_STOPPED_ERROR_NAME,
       code: WORKER_STOPPED_ERROR_CODE,
+    };
+  }
+  if (error instanceof ManagedAuthorityLostError) {
+    return {
+      name: MANAGED_CONNECTION_AUTHORITY_LOST_ERROR_NAME,
+      code: MANAGED_CONNECTION_AUTHORITY_LOST_ERROR_CODE,
     };
   }
   return {
@@ -134,6 +167,12 @@ export function buildTaskRunFailurePayload(error: TaskRunFailureInputError) {
     errorJson: {
       ...failureIdentity(error),
       message: toFailureMessage(error),
+      ...(error instanceof ManagedAuthorityLostError
+        ? { cause: { reason: error.reason } }
+        : {}),
+      ...(error instanceof ManagedConnectionNotReadyError
+        ? { cause: error.details }
+        : {}),
     },
   };
 }

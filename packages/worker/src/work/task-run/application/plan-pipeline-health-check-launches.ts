@@ -5,6 +5,12 @@ import type {
 } from "@scarn/sdk/environment";
 import type { HealthCheck } from "@scarn/sdk/health-checks";
 import type { OpenCodeMcpServers } from "../../../common/contracts/opencode-mcp";
+import {
+  stepConnectionAuthEntries,
+  type StepConnectionAuthEntry,
+} from "./resolve-step-env";
+import { partitionManagedMcpHealthChecks } from "./probe-managed-mcp-connections";
+import type { HealthCheckReport } from "./run-health-checks";
 
 /**
  * Plans how the post-push run-offer gate runs every step's health checks
@@ -21,7 +27,9 @@ import type { OpenCodeMcpServers } from "../../../common/contracts/opencode-mcp"
  * goes into the next launch of that runtime that has no conflict, or a new one.
  *
  * Steps with no declared checks are not launched at all; code steps never
- * declare any. Pure, so the grouping is unit-tested without a launch.
+ * declare any. Managed auth startup is probed server-side; only its tool
+ * checks are skipped, while ordinary checks still share launches.
+ * Pure, so the grouping is unit-tested without a launch.
  */
 
 export type HealthCheckStep = {
@@ -49,10 +57,18 @@ export type PlannedHealthCheckLaunch = {
   opencodeMcpJson: OpenCodeMcpServers;
 };
 
+export type ManagedHealthCheckStep = {
+  step: HealthCheckStep;
+  entries: StepConnectionAuthEntry[];
+  skippedChecks: HealthCheckReport[];
+};
+
 export type HealthCheckLaunchPlan = {
   launches: PlannedHealthCheckLaunch[];
   /** Steps that declare no checks, so nothing runs for them. */
   stepsWithoutChecks: HealthCheckStep[];
+  /** Enabled managed servers require a server-side startup probe, even without checks. */
+  managedSteps: ManagedHealthCheckStep[];
 };
 
 export function resolveHealthCheckRuntime(
@@ -159,10 +175,28 @@ export function planHealthCheckLaunches(
 ): HealthCheckLaunchPlan {
   const builders: LaunchBuilder[] = [];
   const stepsWithoutChecks: HealthCheckStep[] = [];
+  const managedSteps: ManagedHealthCheckStep[] = [];
 
-  for (const step of steps) {
-    if ((step.healthChecksJson ?? []).length === 0) {
-      stepsWithoutChecks.push(step);
+  for (const authoredStep of steps) {
+    const entries = stepConnectionAuthEntries(authoredStep.opencodeMcpJson);
+    const { runnableChecks, skippedChecks } = partitionManagedMcpHealthChecks({
+      entries,
+      healthChecks: authoredStep.healthChecksJson ?? [],
+    });
+    if (entries.length > 0) {
+      managedSteps.push({ step: authoredStep, entries, skippedChecks });
+    }
+    const step = {
+      ...authoredStep,
+      healthChecksJson: runnableChecks,
+      opencodeMcpJson: Object.fromEntries(
+        Object.entries(authoredStep.opencodeMcpJson ?? {}).filter(
+          ([, server]) => server.type === "local" || server.auth === undefined,
+        ),
+      ),
+    };
+    if (step.healthChecksJson.length === 0) {
+      if (entries.length === 0) stepsWithoutChecks.push(authoredStep);
       continue;
     }
     const runtime = resolveHealthCheckRuntime(step);
@@ -195,5 +229,6 @@ export function planHealthCheckLaunches(
       opencodeMcpJson: Object.fromEntries(builder.mcp),
     })),
     stepsWithoutChecks,
+    managedSteps,
   };
 }

@@ -12,8 +12,9 @@ export const EMPTY_DISCOVERY: DiscoveredAgentTools = {
 };
 
 /**
- * Agent-tools ports for a repository with no MCP servers or skills: nothing
- * is started, and the manifest "write" returns a fixed path.
+ * Agent-tools ports for a repository with no MCP servers or skills and a
+ * project with no managed connections: nothing is started, and the manifest
+ * "write" returns a fixed path.
  */
 export function fakeAgentToolsPorts(
   overrides: Partial<AgentToolsPorts> = {},
@@ -26,6 +27,10 @@ export function fakeAgentToolsPorts(
     },
     writeAgentToolsManifest: () =>
       Promise.resolve(FAKE_AGENT_TOOLS_MANIFEST_PATH),
+    listManagedConnections: () =>
+      Promise.resolve({ ok: true, connections: [] }),
+    listManagedConnectionTools: () =>
+      Promise.reject(new Error("no connection to list")),
     ...overrides,
   };
 }

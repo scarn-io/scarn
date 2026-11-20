@@ -1,6 +1,8 @@
 import { describe, expect, test, vi } from "bun:test";
 import { monitorStartedClaimedTaskRun } from "../../../../src/work/task-run/application/process-project-work-monitor";
 import { TaskRunCancelledError } from "../../../../src/work/task-run/application/task-run-cancelled-error";
+import { ManagedAuthorityLostError } from "../../../../src/work/task-run/application/managed-authority-lost-error";
+import { RunRegistry } from "../../../../src/work/task-run/application/run-registry";
 import { captureRejection } from "../../../support/capture-rejection";
 import {
   createHarness,
@@ -11,7 +13,11 @@ import {
   writeExecutionInfo,
 } from "./helpers/monitor-turn-end-harness";
 
-async function setUp(input: { conversation: boolean; cancelled?: boolean }) {
+async function setUp(input: {
+  conversation: boolean;
+  cancelled?: boolean;
+  managedAuthorityLost?: boolean;
+}) {
   const workspacePath = await createWorkspace();
   await writeExecutionInfo(workspacePath, {
     conversation: input.conversation,
@@ -34,7 +40,7 @@ async function setUp(input: { conversation: boolean; cancelled?: boolean }) {
     order.push("cleanup");
     return Promise.resolve();
   });
-  const run = () =>
+  const monitor = () =>
     monitorStartedClaimedTaskRun(
       { ...createInput(startedTask), preserveRuntimeOnComplete: false },
       harness.deps,
@@ -43,6 +49,17 @@ async function setUp(input: { conversation: boolean; cancelled?: boolean }) {
       heartbeat,
       harness.logStream,
     );
+  const run = input.managedAuthorityLost
+    ? () =>
+        new RunRegistry().start(
+          { taskRunId: startedTask.taskRunId, projectId: "project" },
+          async (handle) => {
+            startedTask.run = handle;
+            handle.abortManagedAuthorityLost("disconnected");
+            await monitor();
+          },
+        )
+    : monitor;
   return { heartbeat, order, run, harness };
 }
 
@@ -90,6 +107,22 @@ describe("monitorStartedClaimedTaskRun — heartbeat", () => {
       expect(workerClient.yieldTaskRun).not.toHaveBeenCalled();
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(workerClient.createSessionUploadUrl).not.toHaveBeenCalled();
+    },
+  );
+
+  test.concurrent(
+    "fails the run, keeping the heartbeat through cleanup, once managed authority is lost",
+    async () => {
+      const { heartbeat, order, run } = await setUp({
+        conversation: true,
+        managedAuthorityLost: true,
+      });
+
+      const failure = await captureRejection(run());
+
+      expect(failure).toBeInstanceOf(ManagedAuthorityLostError);
+      expect(heartbeat.stop).not.toHaveBeenCalled();
+      expect(order).toEqual(["cleanup"]);
     },
   );
 });

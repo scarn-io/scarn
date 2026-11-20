@@ -1,4 +1,5 @@
 import path from "node:path";
+import type { ManagedConnectionName } from "@scarn/sdk/managed-connections";
 import type { AnyJsonObject } from "../../../common/contracts/json";
 import type {
   DiscoveredAgentTools,
@@ -23,6 +24,7 @@ export const AGENT_TOOLS_MANIFEST_FILENAME = "discovered-tools.json";
 /** Recorded in every manifest, so the designer never over-reads a listing. */
 export const AGENT_TOOLS_MANIFEST_CAVEATS: readonly string[] = [
   "Tools were listed by starting each server on the user's machine. For a local server that proves the definition works, not that its command exists inside the devcontainer a workspace step runs in.",
+  "A server whose URL is a managed connection's resource was not started locally: Scarn listed its tools through the project's connection.",
 ];
 
 /** One tool as its server listed it. */
@@ -52,17 +54,59 @@ export type ManifestMcpServer = {
   shadowed: string[];
   /** `true` when the source file turns the server off. */
   disabledInSource?: true;
+  /**
+   * Set when the server's URL is a managed connection's resource. Such a
+   * server is never started locally; its tools come from the connection.
+   */
+  connection?: ManifestServerConnection;
+  availability: McpServerAvailability;
+  tools: ListedMcpTool[];
+};
+
+/**
+ * The project's connection for a repository server's resource. `state` and
+ * `reasonCode` are null when the project has no such connection, or when the
+ * connections could not be listed.
+ */
+export type ManifestServerConnection = {
+  name: ManagedConnectionName;
+  label: string;
+  state: string | null;
+  reasonCode: string | null;
+};
+
+/** How one repository server's tools were listed, if they were. */
+export type ManifestServerListing = {
+  availability: McpServerAvailability;
+  tools: ListedMcpTool[];
+  connection?: ManifestServerConnection;
+};
+
+/** One of the project's managed connections, by display names only. */
+export type ManifestManagedConnection = {
+  name: ManagedConnectionName;
+  label: string;
+  /** The MCP resource an inline `remote` server with this `auth` must use. */
+  url: string;
+  state: string;
+  reasonCode: string | null;
+  account: { userName: string | null; workspaceName: string | null } | null;
   availability: McpServerAvailability;
   tools: ListedMcpTool[];
 };
 
 export type AgentToolsManifest = {
-  version: 1;
+  version: 2;
   generatedAt: string;
   /** The `owner/slug` project this repository is linked to. */
   project: string;
   caveats: readonly string[];
   servers: ManifestMcpServer[];
+  /**
+   * The project's managed connections. Absent when they could not be listed;
+   * empty when the project has none.
+   */
+  connections?: ManifestManagedConnection[];
   skills: { name: string; description: string; path: string }[];
   /** Entries discovery found but could not use, with the reason. */
   skipped: SkippedAgentTool[];
@@ -102,14 +146,12 @@ export function buildAgentToolsManifest(input: {
   generatedAt: Date;
   discovered: DiscoveredAgentTools;
   /** Per server name; a server with no entry is recorded as not listed. */
-  listings: ReadonlyMap<
-    string,
-    { availability: McpServerAvailability; tools: ListedMcpTool[] }
-  >;
+  listings: ReadonlyMap<string, ManifestServerListing>;
+  connections?: ManifestManagedConnection[];
 }): AgentToolsManifest {
   const { discovered } = input;
   return {
-    version: 1,
+    version: 2,
     generatedAt: input.generatedAt.toISOString(),
     project: input.project,
     caveats: AGENT_TOOLS_MANIFEST_CAVEATS,
@@ -131,10 +173,16 @@ export function buildAgentToolsManifest(input: {
         ...(server.config.disabled === true
           ? { disabledInSource: true as const }
           : {}),
+        ...(listing.connection === undefined
+          ? {}
+          : { connection: listing.connection }),
         availability: listing.availability,
         tools: listing.tools,
       };
     }),
+    ...(input.connections === undefined
+      ? {}
+      : { connections: input.connections }),
     skills: discovered.skills.map(({ name, description, path: file }) => ({
       name,
       description,

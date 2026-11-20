@@ -86,7 +86,7 @@ describe("renderManagedRuntimeConfig", () => {
 
     expect(config).toEqual({
       name: "scarn-managed-bun1",
-      image: "oven/bun:1.4.0-debian",
+      image: "oven/bun:1.4.4-debian",
       remoteUser: "bun",
     });
   });

@@ -74,9 +74,11 @@ function compileChecks(key: string, handle: McpHandle): HealthChecksInput {
 /**
  * MCP variables always apply to the agent: MCP servers run inside it. An
  * inline server's `{env:VAR}` names are required unless listed in
- * `optionalEnv`, the same as the worker infers them for a `ref`.
+ * `optionalEnv`, the same as the worker infers them for a `ref`. A server
+ * with `auth` gets none: the connection authenticates it.
  */
 function compileEnv(key: string, handle: McpHandle): InheritEnvVarSpec[] {
+  if (handle.type !== "local" && handle.server.auth !== undefined) return [];
   const entry = (name: string, optional: boolean): InheritEnvVarSpec => ({
     source: "inherit",
     name,

@@ -32,7 +32,7 @@ function createWorkerClient(
     Promise.resolve([]),
   );
   const heartbeatTaskRun: TaskRunWorkerClient["heartbeatTaskRun"] = vi.fn(() =>
-    Promise.resolve({ status: "running" as const }),
+    Promise.resolve({ status: "running" as const, managedAuthority: "ok" as const }),
   );
   const failTaskRun: TaskRunWorkerClient["failTaskRun"] = vi.fn(() =>
     Promise.resolve(undefined),

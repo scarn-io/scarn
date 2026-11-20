@@ -51,6 +51,6 @@
     "posthog-node": "^4.18.0"
   },
   "devDependencies": {
-    "bun-types": "^1.4.0"
+    "bun-types": "^1.4.4"
   }
 }

@@ -169,7 +169,7 @@ Runtime.managed: { [K in ManagedRuntimeId]: () => ManagedRuntimeSpec<K> };
 
 | Constructor                | Image                   | Behaviour                                                                                                                                                                                               |
 | -------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Runtime.managed.bun1()`   | `oven/bun:1.4.0-debian` | The default for `codeStep()`. Runs `bun install --production` in `.scarn/pipeline-builder`, then runs the step with Bun. Skips dependency `postinstall` scripts unless listed in `trustedDependencies`. |
+| `Runtime.managed.bun1()`   | `oven/bun:1.4.4-debian` | The default for `codeStep()`. Runs `bun install --production` in `.scarn/pipeline-builder`, then runs the step with Bun. Skips dependency `postinstall` scripts unless listed in `trustedDependencies`. |
 | `Runtime.managed.node24()` | `node:24-bookworm-slim` | Runs `npm install --omit=dev` (or `corepack pnpm install --prod` for `pnpm-lock.yaml`), then runs the step with Node 24. Runs `postinstall` scripts. Does not resolve extensionless relative imports.   |
 
 The install and the runner apply to code steps only. `Runtime.managed.nope` is a type error: the identifiers come from `MANAGED_RUNTIME_IDS` in `@scarn/sdk/managed-runtimes`. A managed step has no `config`. See [Runtime for code steps](/scarn/guides/steps/#runtime-for-code-steps) for the lockfile handling and runtime differences, and [Running Workers](/scarn/guides/workers/#managed-runtimes) for the worker side.
@@ -382,7 +382,11 @@ type SharedFields = {
 type RefServer = SharedFields & {
   type: "ref";
   name: string; // the server's name in the repository's MCP config
+  auth?: McpConnectionAuth;
 };
+
+// Authenticate the server with the project's managed connection.
+type McpConnectionAuth = { connection: string }; // the connection's name, e.g. "notion"
 
 // A subprocess server. `command` is [executable, ...args]; `name` labels errors.
 type LocalServer = SharedFields & {
@@ -409,6 +413,7 @@ type RemoteServer = SharedFields & {
         auth_server_metadata_url?: string;
       }
     | false;
+  auth?: McpConnectionAuth;
 };
 
 // A tool check without `kind`, `mcp` or `name`, plus `enabled` (default: true).
@@ -431,6 +436,13 @@ type McpCheckPatch = Partial<
 ```
 
 `defineMcp` throws on an empty `name`, an unknown `type` or field, a literal (non-`{env:VAR}`) `environment` or `headers` value, a check name that is empty or contains `.`, and a variable name that is invalid, declared twice, or reserved (`SCARN_*`), including one read by a `{env:VAR}` placeholder.
+
+`auth` authenticates a `ref` or `remote` server with one of the project's [MCP connections](/scarn/connections/). `connection` is the connection's name: lowercase letters, digits and hyphens, at most 63 characters. A `local` server can't have `auth`. With `auth`, `defineMcp` also throws on:
+
+- `env` or `optionalEnv`;
+- on a `remote` server, a missing `url` (it is never filled in from the connection), a `url` that isn't an absolute `http(s)` URL or has a query string, fragment or credentials, and `headers` or `oauth`.
+
+`defineMcp` doesn't know which URL a connection has. When a run starts, Scarn checks each server's URL, resolved from the repository for a `ref`, against its connection's after normalizing scheme and host case, a default port and a trailing slash, and fails the run with `SCARN_MCP_CONNECTION_AUTH_INVALID` on a mismatch. A `ref` must resolve to a `remote` definition, whose own `headers` and `oauth` are dropped. See [Use the connection in a step](/scarn/connections/notion/#use-the-connection-in-a-step).
 
 Every `{env:VAR}` in a `local` server's `command`, `cwd` or `environment`, or a `remote` server's `url` or `headers`, compiles to a required worker variable tagged with the server's `mcps` key, unless it is listed in `optionalEnv`. See [Variables in inline servers](/scarn/guides/steps/#variables-in-inline-servers).
 

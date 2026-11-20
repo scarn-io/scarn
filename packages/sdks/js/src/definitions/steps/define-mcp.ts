@@ -210,6 +210,25 @@ function assertEnvNames(
   }
 }
 
+function connectionOf(state: McpServerDefinition): string | undefined {
+  return state.type === "local" ? undefined : state.server.auth?.connection;
+}
+
+/**
+ * A server authenticated by a managed connection gets no worker env vars
+ * (the connection replaces them).
+ */
+function assertConnectionAuthFree(
+  state: McpServerDefinition,
+  what: "env" | "optionalEnv",
+): void {
+  const connection = connectionOf(state);
+  if (connection === undefined) return;
+  throw new Error(
+    `defineMcp "${state.name}": ${what} must be absent when auth is set; the ${connection} connection authenticates the server.`,
+  );
+}
+
 function knownCheckNames(state: McpState): Set<string> {
   const names = new Set(Object.keys(state.checks));
   for (const op of state.overrides) {
@@ -275,13 +294,17 @@ function createHandle(state: McpState): McpHandle {
 
 /**
  * Defines an MCP server once, with its env vars and health checks. Throws on
- * an invalid server field, a literal `environment`/`headers` value, or an
- * invalid check or env var name.
+ * an invalid server field, a literal `environment`/`headers` value, an
+ * invalid check or env var name, or env vars beside `auth`.
  */
 export function defineMcp<
   TChecks extends Record<string, McpCheckInput> = Record<never, never>,
 >(config: DefineMcpConfig<TChecks>): McpHandle<keyof TChecks & string> {
   const definition = parseMcpServer(config);
+  if (config.env !== undefined) assertConnectionAuthFree(definition, "env");
+  if (config.optionalEnv !== undefined) {
+    assertConnectionAuthFree(definition, "optionalEnv");
+  }
   const env = config.env ?? [];
   const optionalEnv = config.optionalEnv ?? [];
   assertEnvNames(definition.name, env, optionalEnv);

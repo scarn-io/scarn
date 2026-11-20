@@ -213,6 +213,17 @@ export default defineConfig({
           ],
         },
         {
+          label: "Connections",
+          items: [
+            { label: "Overview", slug: "connections" },
+            { label: "Notion", slug: "connections/notion" },
+            {
+              label: "Cloudflare Observability",
+              slug: "connections/cloudflare",
+            },
+          ],
+        },
+        {
           label: "Reference",
           items: [{ autogenerate: { directory: "reference" } }],
         },

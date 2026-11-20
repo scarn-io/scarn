@@ -8,8 +8,11 @@
 // Reads credentials from your scarn auth file (run `scarn auth login` first),
 // or from the SCARN_ACCESS_TOKEN env var. Resolves the "project" (owner/slug) in
 // .scarn/scarn.jsonc, or takes a project id from SCARN_PROJECT_ID, and reads
-// baseUrl from SCARN_BASE_URL.
+// baseUrl from SCARN_BASE_URL. When SCARN_PUSH_RESULT_PATH is set, writes the
+// pushed steps' remote and ref MCP servers there as JSON, for
+// `scarn pipelines push` to check against the project's connections.
 
+import { writeFileSync } from "node:fs";
 import { loadPushDefaults } from "@scarn/sdk/defaults";
 import { pushFromDirectory } from "@scarn/sdk/push";
 
@@ -57,5 +60,14 @@ if (
   console.log(
     `Published ${String(result.publishedAutomations.length)} automation(s), ` +
       `${String(result.unchangedAutomations.length)} unchanged.`,
+  );
+}
+
+const resultPath = process.env["SCARN_PUSH_RESULT_PATH"];
+if (resultPath) {
+  writeFileSync(
+    resultPath,
+    JSON.stringify({ mcpServers: result.mcpServers }),
+    "utf8",
   );
 }

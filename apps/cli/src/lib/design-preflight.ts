@@ -224,6 +224,8 @@ export async function runDesignPreflight(
   });
   await ensureBuilderDirectory(reporter, ports);
   const agentToolsManifestPath = await ensureAgentToolsManifest({
+    baseUrl,
+    projectId,
     project,
     owner,
     slug,

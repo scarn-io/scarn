@@ -10,6 +10,7 @@ import type {
   PostApiTaskRunsByTaskRunIdEnvironmentData,
   PostApiTaskRunsByTaskRunIdLogFeedTokenData,
   PostApiTaskRunsByTaskRunIdLogsData,
+  PostApiTaskRunsByTaskRunIdManagedLaunchData,
   PostApiTaskRunsByTaskRunIdSessionUploadUrlData,
   PostApiTaskRunsByTaskRunIdYieldsData,
   PostApiTaskRunsClaimsData,
@@ -121,6 +122,16 @@ const buildTaskPlaneClient = (taskRuns: TaskRuns) => {
       unwrap(
         await taskRuns.resolveTaskRunEnvironment({ path: { taskRunId }, body }),
       ),
+    /**
+     * Registers the run's managed launch: a relay URL and capability per
+     * connection-auth MCP server. Not unwrapped: callers read the 409
+     * `MANAGED_CONNECTION_NOT_READY` problem.
+     */
+    registerTaskRunManagedLaunch: ({
+      taskRunId,
+      ...body
+    }: TaskRunRef & PostApiTaskRunsByTaskRunIdManagedLaunchData["body"]) =>
+      taskRuns.registerTaskRunManagedLaunch({ path: { taskRunId }, body }),
     readTaskRunWorkItem: async ({
       taskRunId,
       ...body

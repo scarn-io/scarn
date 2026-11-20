@@ -31,6 +31,7 @@
     "./environment": "./src/environment.ts",
     "./resolve-environment": "./src/resolve-environment.ts",
     "./devcontainer-config-path": "./src/devcontainer-config-path.ts",
+    "./managed-connections": "./src/managed-connections.ts",
     "./managed-runtimes": "./src/managed-runtimes.ts",
     "./repo-config": "./src/repo-config.ts",
     "./git-url": "./src/git-url/git-repo-identity.ts",
@@ -68,7 +69,7 @@
   "devDependencies": {
     "@hey-api/openapi-ts": "^0.90.10",
     "@opencode/client": "2.1.4",
-    "bun-types": "^1.4.0",
+    "bun-types": "^1.4.4",
     "zod": "catalog:"
   }
 }

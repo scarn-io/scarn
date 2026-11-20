@@ -1696,6 +1696,9 @@ export type GetApiStepDefinitionsResponses = {
                     mcp?: string;
                     applies: 'agent';
                 }>;
+                auth?: {
+                    connection: string;
+                };
             } | {
                 type: 'ref';
                 name?: string;
@@ -1709,6 +1712,9 @@ export type GetApiStepDefinitionsResponses = {
                     mcp?: string;
                     applies: 'agent';
                 }>;
+                auth?: {
+                    connection: string;
+                };
                 disabled?: boolean;
                 codemode?: boolean;
                 timeout?: {
@@ -1917,6 +1923,9 @@ export type PostApiStepDefinitionsData = {
                     mcp?: string;
                     applies: 'agent';
                 }>;
+                auth?: {
+                    connection: string;
+                };
             } | {
                 type: 'ref';
                 name?: string;
@@ -1930,6 +1939,9 @@ export type PostApiStepDefinitionsData = {
                     mcp?: string;
                     applies: 'agent';
                 }>;
+                auth?: {
+                    connection: string;
+                };
                 disabled?: boolean;
                 codemode?: boolean;
                 timeout?: {
@@ -2279,6 +2291,9 @@ export type PostApiStepDefinitionsResponses = {
                     mcp?: string;
                     applies: 'agent';
                 }>;
+                auth?: {
+                    connection: string;
+                };
             } | {
                 type: 'ref';
                 name?: string;
@@ -2292,6 +2307,9 @@ export type PostApiStepDefinitionsResponses = {
                     mcp?: string;
                     applies: 'agent';
                 }>;
+                auth?: {
+                    connection: string;
+                };
                 disabled?: boolean;
                 codemode?: boolean;
                 timeout?: {
@@ -2500,6 +2518,9 @@ export type PutApiStepDefinitionsData = {
                     mcp?: string;
                     applies: 'agent';
                 }>;
+                auth?: {
+                    connection: string;
+                };
             } | {
                 type: 'ref';
                 name?: string;
@@ -2513,6 +2534,9 @@ export type PutApiStepDefinitionsData = {
                     mcp?: string;
                     applies: 'agent';
                 }>;
+                auth?: {
+                    connection: string;
+                };
                 disabled?: boolean;
                 codemode?: boolean;
                 timeout?: {
@@ -2824,6 +2848,9 @@ export type PutApiStepDefinitionsResponses = {
                     mcp?: string;
                     applies: 'agent';
                 }>;
+                auth?: {
+                    connection: string;
+                };
             } | {
                 type: 'ref';
                 name?: string;
@@ -2837,6 +2864,9 @@ export type PutApiStepDefinitionsResponses = {
                     mcp?: string;
                     applies: 'agent';
                 }>;
+                auth?: {
+                    connection: string;
+                };
                 disabled?: boolean;
                 codemode?: boolean;
                 timeout?: {
@@ -3158,6 +3188,9 @@ export type GetApiStepDefinitionsByStepDefinitionIdResponses = {
                     mcp?: string;
                     applies: 'agent';
                 }>;
+                auth?: {
+                    connection: string;
+                };
             } | {
                 type: 'ref';
                 name?: string;
@@ -3171,6 +3204,9 @@ export type GetApiStepDefinitionsByStepDefinitionIdResponses = {
                     mcp?: string;
                     applies: 'agent';
                 }>;
+                auth?: {
+                    connection: string;
+                };
                 disabled?: boolean;
                 codemode?: boolean;
                 timeout?: {
@@ -3492,6 +3528,9 @@ export type PutApiStepDefinitionsByStepDefinitionIdArchiveResponses = {
                     mcp?: string;
                     applies: 'agent';
                 }>;
+                auth?: {
+                    connection: string;
+                };
             } | {
                 type: 'ref';
                 name?: string;
@@ -3505,6 +3544,9 @@ export type PutApiStepDefinitionsByStepDefinitionIdArchiveResponses = {
                     mcp?: string;
                     applies: 'agent';
                 }>;
+                auth?: {
+                    connection: string;
+                };
                 disabled?: boolean;
                 codemode?: boolean;
                 timeout?: {
@@ -4997,6 +5039,9 @@ export type PutApiTaskRunsByTaskRunIdHeartbeatResponses = {
         sessionRestored: boolean | null;
         createdAt: string;
         updatedAt: string;
+        managedAuthority: 'ok' | {
+            lost: 'disconnected' | 'replaced' | 'reconnect_required' | 'operation_unknown';
+        };
     };
 };
 
@@ -5547,6 +5592,9 @@ export type PostApiTaskRunsByTaskRunIdWorkerContextResponses = {
                         mcp?: string;
                         applies: 'agent';
                     }>;
+                    auth?: {
+                        connection: string;
+                    };
                 } | {
                     type: 'ref';
                     name?: string;
@@ -5560,6 +5608,9 @@ export type PostApiTaskRunsByTaskRunIdWorkerContextResponses = {
                         mcp?: string;
                         applies: 'agent';
                     }>;
+                    auth?: {
+                        connection: string;
+                    };
                     disabled?: boolean;
                     codemode?: boolean;
                     timeout?: {
@@ -26854,6 +26905,181 @@ export type PostApiTaskRunsByTaskRunIdEnvironmentResponses = {
 
 export type PostApiTaskRunsByTaskRunIdEnvironmentResponse = PostApiTaskRunsByTaskRunIdEnvironmentResponses[keyof PostApiTaskRunsByTaskRunIdEnvironmentResponses];
 
+export type PostApiTaskRunsByTaskRunIdManagedLaunchData = {
+    body: {
+        claimToken: string;
+        entries: {
+            [key: string]: {
+                url: string;
+            };
+        };
+        remotesWithoutAuth: {
+            [key: string]: {
+                url: string;
+            };
+        };
+    };
+    path: {
+        taskRunId: string;
+    };
+    query?: never;
+    url: '/api/task-runs/{taskRunId}/managed-launch';
+};
+
+export type PostApiTaskRunsByTaskRunIdManagedLaunchErrors = {
+    /**
+     * Response for status 400
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 404
+     */
+    404: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 409
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type PostApiTaskRunsByTaskRunIdManagedLaunchError = PostApiTaskRunsByTaskRunIdManagedLaunchErrors[keyof PostApiTaskRunsByTaskRunIdManagedLaunchErrors];
+
+export type PostApiTaskRunsByTaskRunIdManagedLaunchResponses = {
+    /**
+     * Response for status 200
+     */
+    200: {
+        entries: {
+            [key: string]: {
+                relayUrl: string;
+                capability: string;
+            };
+        };
+    };
+};
+
+export type PostApiTaskRunsByTaskRunIdManagedLaunchResponse = PostApiTaskRunsByTaskRunIdManagedLaunchResponses[keyof PostApiTaskRunsByTaskRunIdManagedLaunchResponses];
+
 export type GetApiConnectorsData = {
     body?: never;
     path?: never;
@@ -26959,3 +27185,1634 @@ export type GetApiConnectorsResponses = {
 };
 
 export type GetApiConnectorsResponse = GetApiConnectorsResponses[keyof GetApiConnectorsResponses];
+
+export type GetApiOauthMcpCallbackData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/oauth/mcp/callback';
+};
+
+export type GetApiProjectsByProjectIdMcpConnectionsData = {
+    body?: never;
+    path: {
+        projectId: string;
+    };
+    query?: never;
+    url: '/api/projects/{projectId}/mcp-connections';
+};
+
+export type GetApiProjectsByProjectIdMcpConnectionsErrors = {
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 404
+     */
+    404: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type GetApiProjectsByProjectIdMcpConnectionsError = GetApiProjectsByProjectIdMcpConnectionsErrors[keyof GetApiProjectsByProjectIdMcpConnectionsErrors];
+
+export type GetApiProjectsByProjectIdMcpConnectionsResponses = {
+    /**
+     * Response for status 200
+     */
+    200: Array<{
+        id: string;
+        projectId: string;
+        name: string;
+        label: string;
+        preset: string | null;
+        resource: string;
+        state: 'disconnected' | 'connecting' | 'awaiting_confirmation' | 'ready' | 'ready_with_pending_reconnect' | 'reconnect_required';
+        reasonCode: 'attempt_expired' | 'candidate_expired' | 'candidate_cancelled' | 'refresh_failed' | 'grant_expired' | 'client_configuration' | null;
+        generation: number;
+        version: number;
+        connectedBy: {
+            userId: string;
+            username: string | null;
+        } | null;
+        account: {
+            userName: string | null;
+            workspaceName: string | null;
+            identityVerified: boolean;
+        } | null;
+        grantedScopes: Array<string>;
+        reconnectBy: string | null;
+        candidate: {
+            id: string;
+            account: {
+                userName: string | null;
+                workspaceName: string | null;
+                identityVerified: boolean;
+            };
+            grantedScopes: Array<string>;
+            fingerprint: string;
+            expiresAt: string;
+            sameIdentityAsActive: boolean | 'unknown';
+        } | null;
+        lastRevocation: {
+            outcome: 'accepted' | 'failed' | 'unconfirmed';
+            at: string;
+        } | null;
+        createdAt: string;
+        updatedAt: string;
+    }>;
+};
+
+export type GetApiProjectsByProjectIdMcpConnectionsResponse = GetApiProjectsByProjectIdMcpConnectionsResponses[keyof GetApiProjectsByProjectIdMcpConnectionsResponses];
+
+export type PostApiProjectsByProjectIdMcpConnectionsData = {
+    body: {
+        preset: string;
+        name?: string;
+    };
+    path: {
+        projectId: string;
+    };
+    query?: never;
+    url: '/api/projects/{projectId}/mcp-connections';
+};
+
+export type PostApiProjectsByProjectIdMcpConnectionsErrors = {
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 404
+     */
+    404: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 409
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 502
+     */
+    502: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type PostApiProjectsByProjectIdMcpConnectionsError = PostApiProjectsByProjectIdMcpConnectionsErrors[keyof PostApiProjectsByProjectIdMcpConnectionsErrors];
+
+export type PostApiProjectsByProjectIdMcpConnectionsResponses = {
+    /**
+     * Response for status 201
+     */
+    201: {
+        connectionId: string;
+        authorizationUrl: string;
+    };
+};
+
+export type PostApiProjectsByProjectIdMcpConnectionsResponse = PostApiProjectsByProjectIdMcpConnectionsResponses[keyof PostApiProjectsByProjectIdMcpConnectionsResponses];
+
+export type GetApiProjectsByProjectIdMcpConnectionPresetsData = {
+    body?: never;
+    path: {
+        projectId: string;
+    };
+    query?: never;
+    url: '/api/projects/{projectId}/mcp-connection-presets';
+};
+
+export type GetApiProjectsByProjectIdMcpConnectionPresetsErrors = {
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 404
+     */
+    404: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type GetApiProjectsByProjectIdMcpConnectionPresetsError = GetApiProjectsByProjectIdMcpConnectionPresetsErrors[keyof GetApiProjectsByProjectIdMcpConnectionPresetsErrors];
+
+export type GetApiProjectsByProjectIdMcpConnectionPresetsResponses = {
+    /**
+     * Response for status 200
+     */
+    200: Array<{
+        key: string;
+        label: string;
+        resource: string;
+        removalUrl: string | null;
+    }>;
+};
+
+export type GetApiProjectsByProjectIdMcpConnectionPresetsResponse = GetApiProjectsByProjectIdMcpConnectionPresetsResponses[keyof GetApiProjectsByProjectIdMcpConnectionPresetsResponses];
+
+export type DeleteApiProjectsByProjectIdMcpConnectionsByConnectionIdData = {
+    body?: never;
+    path: {
+        projectId: string;
+        connectionId: string;
+    };
+    query?: never;
+    url: '/api/projects/{projectId}/mcp-connections/{connectionId}';
+};
+
+export type DeleteApiProjectsByProjectIdMcpConnectionsByConnectionIdErrors = {
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 404
+     */
+    404: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 409
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type DeleteApiProjectsByProjectIdMcpConnectionsByConnectionIdError = DeleteApiProjectsByProjectIdMcpConnectionsByConnectionIdErrors[keyof DeleteApiProjectsByProjectIdMcpConnectionsByConnectionIdErrors];
+
+export type DeleteApiProjectsByProjectIdMcpConnectionsByConnectionIdResponses = {
+    /**
+     * Response for status 200
+     */
+    200: {
+        connection: {
+            id: string;
+            projectId: string;
+            name: string;
+            label: string;
+            preset: string | null;
+            resource: string;
+            state: 'disconnected' | 'connecting' | 'awaiting_confirmation' | 'ready' | 'ready_with_pending_reconnect' | 'reconnect_required';
+            reasonCode: 'attempt_expired' | 'candidate_expired' | 'candidate_cancelled' | 'refresh_failed' | 'grant_expired' | 'client_configuration' | null;
+            generation: number;
+            version: number;
+            connectedBy: {
+                userId: string;
+                username: string | null;
+            } | null;
+            account: {
+                userName: string | null;
+                workspaceName: string | null;
+                identityVerified: boolean;
+            } | null;
+            grantedScopes: Array<string>;
+            reconnectBy: string | null;
+            candidate: {
+                id: string;
+                account: {
+                    userName: string | null;
+                    workspaceName: string | null;
+                    identityVerified: boolean;
+                };
+                grantedScopes: Array<string>;
+                fingerprint: string;
+                expiresAt: string;
+                sameIdentityAsActive: boolean | 'unknown';
+            } | null;
+            lastRevocation: {
+                outcome: 'accepted' | 'failed' | 'unconfirmed';
+                at: string;
+            } | null;
+            createdAt: string;
+            updatedAt: string;
+        };
+        revocation: 'accepted' | 'failed' | 'unconfirmed' | null;
+        providerRemovalUrl: string | null;
+    };
+};
+
+export type DeleteApiProjectsByProjectIdMcpConnectionsByConnectionIdResponse = DeleteApiProjectsByProjectIdMcpConnectionsByConnectionIdResponses[keyof DeleteApiProjectsByProjectIdMcpConnectionsByConnectionIdResponses];
+
+export type GetApiProjectsByProjectIdMcpConnectionsByConnectionIdData = {
+    body?: never;
+    path: {
+        projectId: string;
+        connectionId: string;
+    };
+    query?: never;
+    url: '/api/projects/{projectId}/mcp-connections/{connectionId}';
+};
+
+export type GetApiProjectsByProjectIdMcpConnectionsByConnectionIdErrors = {
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 404
+     */
+    404: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type GetApiProjectsByProjectIdMcpConnectionsByConnectionIdError = GetApiProjectsByProjectIdMcpConnectionsByConnectionIdErrors[keyof GetApiProjectsByProjectIdMcpConnectionsByConnectionIdErrors];
+
+export type GetApiProjectsByProjectIdMcpConnectionsByConnectionIdResponses = {
+    /**
+     * Response for status 200
+     */
+    200: {
+        id: string;
+        projectId: string;
+        name: string;
+        label: string;
+        preset: string | null;
+        resource: string;
+        state: 'disconnected' | 'connecting' | 'awaiting_confirmation' | 'ready' | 'ready_with_pending_reconnect' | 'reconnect_required';
+        reasonCode: 'attempt_expired' | 'candidate_expired' | 'candidate_cancelled' | 'refresh_failed' | 'grant_expired' | 'client_configuration' | null;
+        generation: number;
+        version: number;
+        connectedBy: {
+            userId: string;
+            username: string | null;
+        } | null;
+        account: {
+            userName: string | null;
+            workspaceName: string | null;
+            identityVerified: boolean;
+        } | null;
+        grantedScopes: Array<string>;
+        reconnectBy: string | null;
+        candidate: {
+            id: string;
+            account: {
+                userName: string | null;
+                workspaceName: string | null;
+                identityVerified: boolean;
+            };
+            grantedScopes: Array<string>;
+            fingerprint: string;
+            expiresAt: string;
+            sameIdentityAsActive: boolean | 'unknown';
+        } | null;
+        lastRevocation: {
+            outcome: 'accepted' | 'failed' | 'unconfirmed';
+            at: string;
+        } | null;
+        createdAt: string;
+        updatedAt: string;
+    };
+};
+
+export type GetApiProjectsByProjectIdMcpConnectionsByConnectionIdResponse = GetApiProjectsByProjectIdMcpConnectionsByConnectionIdResponses[keyof GetApiProjectsByProjectIdMcpConnectionsByConnectionIdResponses];
+
+export type GetApiProjectsByProjectIdMcpConnectionsByConnectionIdUsageData = {
+    body?: never;
+    path: {
+        projectId: string;
+        connectionId: string;
+    };
+    query?: never;
+    url: '/api/projects/{projectId}/mcp-connections/{connectionId}/usage';
+};
+
+export type GetApiProjectsByProjectIdMcpConnectionsByConnectionIdUsageErrors = {
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 404
+     */
+    404: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type GetApiProjectsByProjectIdMcpConnectionsByConnectionIdUsageError = GetApiProjectsByProjectIdMcpConnectionsByConnectionIdUsageErrors[keyof GetApiProjectsByProjectIdMcpConnectionsByConnectionIdUsageErrors];
+
+export type GetApiProjectsByProjectIdMcpConnectionsByConnectionIdUsageResponses = {
+    /**
+     * Response for status 200
+     */
+    200: {
+        steps: Array<{
+            id: string;
+            key: string;
+            name: string;
+            pipelines: Array<{
+                id: string;
+                key: string;
+                name: string;
+            }>;
+        }>;
+        liveRuns: number;
+    };
+};
+
+export type GetApiProjectsByProjectIdMcpConnectionsByConnectionIdUsageResponse = GetApiProjectsByProjectIdMcpConnectionsByConnectionIdUsageResponses[keyof GetApiProjectsByProjectIdMcpConnectionsByConnectionIdUsageResponses];
+
+export type GetApiProjectsByProjectIdMcpConnectionsByConnectionIdToolsData = {
+    body?: never;
+    path: {
+        projectId: string;
+        connectionId: string;
+    };
+    query?: never;
+    url: '/api/projects/{projectId}/mcp-connections/{connectionId}/tools';
+};
+
+export type GetApiProjectsByProjectIdMcpConnectionsByConnectionIdToolsErrors = {
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 404
+     */
+    404: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 409
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 502
+     */
+    502: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 503
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type GetApiProjectsByProjectIdMcpConnectionsByConnectionIdToolsError = GetApiProjectsByProjectIdMcpConnectionsByConnectionIdToolsErrors[keyof GetApiProjectsByProjectIdMcpConnectionsByConnectionIdToolsErrors];
+
+export type GetApiProjectsByProjectIdMcpConnectionsByConnectionIdToolsResponses = {
+    /**
+     * Response for status 200
+     */
+    200: {
+        tools: Array<{
+            name: string;
+            description?: string;
+            inputSchema: {
+                [key: string]: unknown;
+            };
+            readOnlyHint?: boolean;
+        }>;
+        listedAt: string;
+        cached: boolean;
+    };
+};
+
+export type GetApiProjectsByProjectIdMcpConnectionsByConnectionIdToolsResponse = GetApiProjectsByProjectIdMcpConnectionsByConnectionIdToolsResponses[keyof GetApiProjectsByProjectIdMcpConnectionsByConnectionIdToolsResponses];
+
+export type PostApiProjectsByProjectIdMcpConnectionsByConnectionIdReconnectData = {
+    body?: never;
+    path: {
+        projectId: string;
+        connectionId: string;
+    };
+    query?: never;
+    url: '/api/projects/{projectId}/mcp-connections/{connectionId}/reconnect';
+};
+
+export type PostApiProjectsByProjectIdMcpConnectionsByConnectionIdReconnectErrors = {
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 404
+     */
+    404: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 409
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 502
+     */
+    502: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type PostApiProjectsByProjectIdMcpConnectionsByConnectionIdReconnectError = PostApiProjectsByProjectIdMcpConnectionsByConnectionIdReconnectErrors[keyof PostApiProjectsByProjectIdMcpConnectionsByConnectionIdReconnectErrors];
+
+export type PostApiProjectsByProjectIdMcpConnectionsByConnectionIdReconnectResponses = {
+    /**
+     * Response for status 201
+     */
+    201: {
+        connectionId: string;
+        authorizationUrl: string;
+    };
+};
+
+export type PostApiProjectsByProjectIdMcpConnectionsByConnectionIdReconnectResponse = PostApiProjectsByProjectIdMcpConnectionsByConnectionIdReconnectResponses[keyof PostApiProjectsByProjectIdMcpConnectionsByConnectionIdReconnectResponses];
+
+export type PostApiProjectsByProjectIdMcpConnectionsByConnectionIdCandidateConfirmData = {
+    body: {
+        candidateId: string;
+        fingerprint: string;
+        expectedVersion: number;
+    };
+    path: {
+        projectId: string;
+        connectionId: string;
+    };
+    query?: never;
+    url: '/api/projects/{projectId}/mcp-connections/{connectionId}/candidate/confirm';
+};
+
+export type PostApiProjectsByProjectIdMcpConnectionsByConnectionIdCandidateConfirmErrors = {
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 404
+     */
+    404: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 409
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type PostApiProjectsByProjectIdMcpConnectionsByConnectionIdCandidateConfirmError = PostApiProjectsByProjectIdMcpConnectionsByConnectionIdCandidateConfirmErrors[keyof PostApiProjectsByProjectIdMcpConnectionsByConnectionIdCandidateConfirmErrors];
+
+export type PostApiProjectsByProjectIdMcpConnectionsByConnectionIdCandidateConfirmResponses = {
+    /**
+     * Response for status 200
+     */
+    200: {
+        id: string;
+        projectId: string;
+        name: string;
+        label: string;
+        preset: string | null;
+        resource: string;
+        state: 'disconnected' | 'connecting' | 'awaiting_confirmation' | 'ready' | 'ready_with_pending_reconnect' | 'reconnect_required';
+        reasonCode: 'attempt_expired' | 'candidate_expired' | 'candidate_cancelled' | 'refresh_failed' | 'grant_expired' | 'client_configuration' | null;
+        generation: number;
+        version: number;
+        connectedBy: {
+            userId: string;
+            username: string | null;
+        } | null;
+        account: {
+            userName: string | null;
+            workspaceName: string | null;
+            identityVerified: boolean;
+        } | null;
+        grantedScopes: Array<string>;
+        reconnectBy: string | null;
+        candidate: {
+            id: string;
+            account: {
+                userName: string | null;
+                workspaceName: string | null;
+                identityVerified: boolean;
+            };
+            grantedScopes: Array<string>;
+            fingerprint: string;
+            expiresAt: string;
+            sameIdentityAsActive: boolean | 'unknown';
+        } | null;
+        lastRevocation: {
+            outcome: 'accepted' | 'failed' | 'unconfirmed';
+            at: string;
+        } | null;
+        createdAt: string;
+        updatedAt: string;
+    };
+};
+
+export type PostApiProjectsByProjectIdMcpConnectionsByConnectionIdCandidateConfirmResponse = PostApiProjectsByProjectIdMcpConnectionsByConnectionIdCandidateConfirmResponses[keyof PostApiProjectsByProjectIdMcpConnectionsByConnectionIdCandidateConfirmResponses];
+
+export type PostApiProjectsByProjectIdMcpConnectionsByConnectionIdCandidateCancelData = {
+    body: {
+        candidateId: string;
+    };
+    path: {
+        projectId: string;
+        connectionId: string;
+    };
+    query?: never;
+    url: '/api/projects/{projectId}/mcp-connections/{connectionId}/candidate/cancel';
+};
+
+export type PostApiProjectsByProjectIdMcpConnectionsByConnectionIdCandidateCancelErrors = {
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 404
+     */
+    404: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 409
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type PostApiProjectsByProjectIdMcpConnectionsByConnectionIdCandidateCancelError = PostApiProjectsByProjectIdMcpConnectionsByConnectionIdCandidateCancelErrors[keyof PostApiProjectsByProjectIdMcpConnectionsByConnectionIdCandidateCancelErrors];
+
+export type PostApiProjectsByProjectIdMcpConnectionsByConnectionIdCandidateCancelResponses = {
+    /**
+     * Response for status 200
+     */
+    200: {
+        id: string;
+        projectId: string;
+        name: string;
+        label: string;
+        preset: string | null;
+        resource: string;
+        state: 'disconnected' | 'connecting' | 'awaiting_confirmation' | 'ready' | 'ready_with_pending_reconnect' | 'reconnect_required';
+        reasonCode: 'attempt_expired' | 'candidate_expired' | 'candidate_cancelled' | 'refresh_failed' | 'grant_expired' | 'client_configuration' | null;
+        generation: number;
+        version: number;
+        connectedBy: {
+            userId: string;
+            username: string | null;
+        } | null;
+        account: {
+            userName: string | null;
+            workspaceName: string | null;
+            identityVerified: boolean;
+        } | null;
+        grantedScopes: Array<string>;
+        reconnectBy: string | null;
+        candidate: {
+            id: string;
+            account: {
+                userName: string | null;
+                workspaceName: string | null;
+                identityVerified: boolean;
+            };
+            grantedScopes: Array<string>;
+            fingerprint: string;
+            expiresAt: string;
+            sameIdentityAsActive: boolean | 'unknown';
+        } | null;
+        lastRevocation: {
+            outcome: 'accepted' | 'failed' | 'unconfirmed';
+            at: string;
+        } | null;
+        createdAt: string;
+        updatedAt: string;
+    };
+};
+
+export type PostApiProjectsByProjectIdMcpConnectionsByConnectionIdCandidateCancelResponse = PostApiProjectsByProjectIdMcpConnectionsByConnectionIdCandidateCancelResponses[keyof PostApiProjectsByProjectIdMcpConnectionsByConnectionIdCandidateCancelResponses];

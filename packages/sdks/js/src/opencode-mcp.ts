@@ -9,6 +9,21 @@
  */
 import { z } from "zod";
 import { inheritEnvVarSchema, MAX_ENV_VARS } from "./env-vars";
+import {
+  managedConnectionNameSchema,
+  normalizeMcpResourceUrl,
+} from "./managed-connections";
+
+/**
+ * Scarn-only: the server is authenticated by the project's managed
+ * connection named `connection`. Authored on `ref` and `remote` entries only;
+ * resolution removes it before anything reaches OpenCode.
+ */
+export const mcpConnectionAuthSchema = z.strictObject({
+  connection: managedConnectionNameSchema,
+});
+
+export type McpConnectionAuth = z.infer<typeof mcpConnectionAuthSchema>;
 
 const workerVarsSchema = z
   .array(inheritEnvVarSchema.safeExtend({ applies: z.literal("agent") }))
@@ -92,6 +107,7 @@ export const openCodeMcpRefConfigSchema = z
     type: z.literal("ref"),
     name: nonEmptyStringSchema.optional(),
     workerVars: workerVarsSchema.optional(),
+    auth: mcpConnectionAuthSchema.optional(),
     ...sharedServerFields,
   })
   .strict();
@@ -106,15 +122,87 @@ export const openCodeResolvedMcpServersSchema = z.record(
   openCodeResolvedMcpServerConfigSchema,
 );
 
-/** The authored/stored shape: `local`, `remote`, or an unresolved `ref`. */
+/**
+ * Why an authored `remote` entry can't carry its `auth`, or null when it
+ * can: its `url` must be usable as a connection's resource (an absolute
+ * `http(s)` URL with no query string, fragment or credentials), and the
+ * connection replaces `headers`, `oauth` and `workerVars` rather than
+ * merging with them. Whether `url` is the named connection's resource is
+ * only known once the connection is loaded, so the worker checks that.
+ */
+export function remoteConnectionAuthIssues(entry: {
+  url: string;
+  auth?: McpConnectionAuth | undefined;
+  headers?: unknown;
+  oauth?: unknown;
+  workerVars?: unknown;
+}): { path: string; message: string }[] {
+  if (entry.auth === undefined) return [];
+  const { connection } = entry.auth;
+  const issues: { path: string; message: string }[] = [];
+  if (normalizeMcpResourceUrl(entry.url) === null) {
+    issues.push({
+      path: "url",
+      message: `must be an absolute http(s) URL with no query string, fragment or credentials when auth is set; the ${connection} connection authenticates the server`,
+    });
+  }
+  for (const field of ["headers", "oauth", "workerVars"] as const) {
+    if (entry[field] === undefined) continue;
+    issues.push({
+      path: field,
+      message: `must be absent when auth is set; the ${connection} connection authenticates the server`,
+    });
+  }
+  return issues;
+}
+
+/** Why an authored `ref` entry can't carry its `auth`, or an empty list. */
+export function refConnectionAuthIssues(entry: {
+  auth?: McpConnectionAuth | undefined;
+  workerVars?: unknown;
+}): { path: string; message: string }[] {
+  if (entry.auth === undefined || entry.workerVars === undefined) return [];
+  return [
+    {
+      path: "workerVars",
+      message: `must be absent when auth is set; the ${entry.auth.connection} connection authenticates the server`,
+    },
+  ];
+}
+
+const addIssues = (
+  issues: { path: string; message: string }[],
+  ctx: z.RefinementCtx,
+): void => {
+  for (const issue of issues) {
+    ctx.addIssue({
+      code: "custom",
+      path: [issue.path],
+      message: issue.message,
+    });
+  }
+};
+
+/**
+ * The authored/stored shape: `local`, `remote`, or an unresolved `ref`.
+ * `remote` and `ref` may carry Scarn-only `auth`, which never reaches
+ * OpenCode.
+ */
 export const openCodeMcpServerConfigSchema = z.discriminatedUnion("type", [
   openCodeMcpLocalConfigSchema.extend({
     workerVars: workerVarsSchema.optional(),
   }),
-  openCodeMcpRemoteConfigSchema.extend({
-    workerVars: workerVarsSchema.optional(),
+  openCodeMcpRemoteConfigSchema
+    .extend({
+      workerVars: workerVarsSchema.optional(),
+      auth: mcpConnectionAuthSchema.optional(),
+    })
+    .superRefine((entry, ctx) => {
+      addIssues(remoteConnectionAuthIssues(entry), ctx);
+    }),
+  openCodeMcpRefConfigSchema.superRefine((entry, ctx) => {
+    addIssues(refConnectionAuthIssues(entry), ctx);
   }),
-  openCodeMcpRefConfigSchema,
 ]);
 
 export const openCodeMcpServersSchema = z.record(

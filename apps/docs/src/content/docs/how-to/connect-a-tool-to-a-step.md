@@ -7,17 +7,13 @@ description: Ask the designer to wire a tool into a step, keep its secret out of
 scarn pipelines design
 ```
 
-Name the tool when the designer asks how you'd work the item — "I'd check
-the error in Sentry, then query the read replica." Each tool you name becomes
-an MCP server on the step that needs it. A step gets only the servers it
-lists.
+Tell the designer which tools each step needs. A step gets only the MCP
+servers it lists.
 
 ## Is it a connector? Turn it on in the environment
 
-For a tool in the [connector catalog](/scarn/reference/connectors/), such as
-Datadog or Playwright, you don't need a `defineMcp`. List its id in the
-environment's `connectors` and provide the variables it needs, for example
-from [project secrets](/scarn/guides/secrets/):
+For a [connector](/scarn/reference/connectors/), use the environment's
+`connectors` and [project secrets](/scarn/guides/secrets/), not `defineMcp`:
 
 ```jsonc
 {
@@ -29,26 +25,20 @@ from [project secrets](/scarn/guides/secrets/):
 }
 ```
 
-Every step that uses the environment gets the server. Don't also give a step
-an `mcps` key with the same name as a connector id; that fails the run.
+Every step using this environment gets the server. Duplicating its id in
+`mcps` fails the run.
 
 ## Already in your repo? The step refers to it
 
-If your repository already defines the server (in `.opencode/opencode.json`,
-`.mcp.json`, `.cursor/mcp.json`, `.vscode/mcp.json`, or `.codex/config.toml`),
-the designer defines it once with `defineMcp`, with its environment variables
-and health checks, and mounts it under `mcps` on each step that uses it
-instead of copying the definition. See
+The designer references existing repository servers with `defineMcp` and
+mounts them under each step's `mcps`. See
 [Referencing a server from your repository](/scarn/guides/steps/#referencing-a-server-from-your-repository).
-Custom tools in `.opencode/tools/` load for every devcontainer step without
-this; see
-[Tools already available to every step](/scarn/guides/steps/#tools-already-available-to-every-step).
+[`.opencode/tools/` tools](/scarn/guides/steps/#tools-already-available-to-every-step)
+load automatically for devcontainer steps.
 
 ## Otherwise, the designer writes it inline
 
-It asks how the step reaches the tool — a launch command, a package, or a URL
-— and writes it as a `defineMcp` with `type: "local"` (or `"remote"` for a
-URL), mounted under the step's `mcps`:
+The designer uses `type: "local"` for commands or `"remote"` for URLs:
 
 ```typescript
 const postgres = defineMcp({
@@ -60,51 +50,61 @@ const postgres = defineMcp({
 });
 ```
 
-A step on `Runtime.host()` also has a checkout and can use repository refs;
-its local server commands run on the worker host. Local and remote fields:
+With `Runtime.host()`, local commands run on the worker host. See
 [Local servers](/scarn/guides/steps/#local-servers) and
-[Remote servers](/scarn/guides/steps/#remote-servers).
+[Remote servers](/scarn/guides/steps/#remote-servers) for fields.
+
+## Use a project connection
+
+For a service in [MCP connections](/scarn/connections/), such as Notion or
+Cloudflare Observability, connect it in project settings, then let the
+designer add `auth: { connection: "<name>" }` to a repository `ref` or inline
+`remote`. `connection` is the connection's name, and the server's URL must be
+the connection's MCP URL:
+
+```typescript
+const notion = defineMcp({
+  type: "remote",
+  name: "notion",
+  url: "https://mcp.notion.com/mcp",
+  auth: { connection: "notion" },
+});
+
+const observability = defineMcp({
+  type: "remote",
+  name: "cloudflare-observability",
+  url: "https://observability.mcp.cloudflare.com/mcp",
+  auth: { connection: "cloudflare-observability" },
+});
+```
+
+Scarn checks each URL against its connection when a run starts, and fails the
+run with `SCARN_MCP_CONNECTION_AUTH_INVALID` if it doesn't match.
+`scarn pipelines push` reports a mismatch earlier when the connection already
+exists. See [Use the connection in a step](/scarn/connections/notion/#use-the-connection-in-a-step).
 
 ## Secrets: you give it a name, never a value
 
-When the server needs a token, password, or connection string, the designer
-asks only for the **environment variable name** it should come from, and
-proposes one if you don't have a convention. Then it:
-
-1. references the variable as `{env:VAR}` in the server's `environment` or
-   `headers` — never the value, because definitions are pushed to the server
-   and shown in the dashboard;
-2. adds `VAR=` to `.scarn/.env.example`;
-3. names every variable it added when the session ends.
-
-Your part:
+The designer references `{env:VAR}` in `environment` or `headers`, adds the
+name to `.scarn/.env.example`, and tells you what to fill in:
 
 ```bash
 cp .scarn/.env.example .scarn/.env
 ```
 
-Fill in the real values in `.scarn/.env`. The designer never writes that
-file, and no step that uses the variable will work until you do. Keep it out
-of git — see [Commit and share your pipeline](/scarn/how-to/commit-your-pipeline/#secrets-envexample-vs-env).
+Fill `.scarn/.env` yourself; never commit it. Missing variables fail launch
+unless listed in `optionalEnv`. See [Secrets](/scarn/guides/steps/#secrets)
+for lookup order and shared secrets.
 
-The worker reads every `{env:VAR}` from `.scarn/.env`, then its own
-environment, and a missing one fails the step before launch — unless the
-server lists it in `optionalEnv`, so it launches without it. To share a value
-across workers instead, save it as a [project secret](/scarn/guides/secrets/)
-and declare the variable as a `secret`. When a server only helps a step, set
-its checks to `severity: "warn"` so a failed check doesn't block the step. See
-[Secrets](/scarn/guides/steps/#secrets) and
-[Severity](/scarn/guides/steps/#severity).
+For optional checks, use
+[`severity: "warn"`](/scarn/guides/steps/#severity) so failures don't block.
 
 ## Every server must connect before the first prompt
 
-Before the agent gets its prompt, every connector and every server in the
-step's `mcps` must report `connected` within 60 seconds. A server that fails,
-needs auth, is disabled, is still starting, or never registers fails the run
-with `SCARN_CONNECTOR_UNAVAILABLE`, whatever its checks' severity. Servers that
-appear only in your repository's own OpenCode config are not checked. Declared
-health checks run after this. A health check doesn't start or wait for a
-server on its own: list the server in the step's `mcps`. See
+Every connector and declared server must report `connected` within 60 seconds, before
+health checks and the first prompt. Otherwise the run fails with
+`SCARN_CONNECTOR_UNAVAILABLE`, regardless of check severity. Servers only
+in repository OpenCode config aren't checked. See
 [Failure codes](/scarn/guides/environments/#failure-codes).
 
 ## Check it connects
@@ -115,9 +115,17 @@ After the push, dry-run the step:
 scarn work --dry-run
 ```
 
-Pick the step when asked. The dry run launches its environment, starts its MCP
-servers, reports each server's status, and runs any
-[health checks](/scarn/guides/steps/#health-checks) it declares — without
-running the step. The
-designer's own post-push check runs every step's health checks; see
+Pick the step. For servers without `auth`, this starts servers and runs
+[health checks](/scarn/guides/steps/#health-checks), without running the step.
+The designer also checks after pushing; see
 [Dry runs](/scarn/reference/cli/#dry-runs).
+
+Servers with `auth` accept tool health checks. Choose a read-only tool:
+real runs call it through OpenCode and Scarn's relay before the first prompt.
+These are real provider calls. `env` and `optionalEnv` remain forbidden.
+
+Dry runs and post-push checks instead list tools server-side (requiring
+`executions:write`, possibly cached), never execute managed tools, and report
+tool checks as **skipped: runs in real runs only** without blocking.
+A connection that isn't serving blocks startup with reconnect guidance. See
+[Dry runs don't start the server](/scarn/connections/notion/#dry-runs-dont-start-the-server).

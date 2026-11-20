@@ -32,6 +32,10 @@ import type { DryRunSecretReport } from "./resolve-secret-env";
 import type { LaunchedRuntimeOrchestrator } from "../contracts/process-project-work-types";
 import { describeHealthCheckRuntime } from "./plan-pipeline-health-check-launches";
 import {
+  managedOnlyWorkDryRunReport,
+  prepareWorkDryRunHealthChecks,
+} from "./prepare-work-dry-run-health-checks";
+import {
   createLatestEnvironmentFetcher,
   resolveStepEnvironmentRef,
   type DryRunLaunchStep,
@@ -90,8 +94,10 @@ export type WorkDryRunReport = {
    * configured or remote default branch instead.
    */
   baseBranchNote?: string | undefined;
-  /** Set only when the environment failed to launch at all (no health data below applies). */
+  /** Set when runtime launch failed; server-side managed startup reports still apply. */
   launchError?: string | undefined;
+  /** Reserved for steps that cannot be rehearsed. Managed startup is probed server-side. */
+  notRunnable?: string | undefined;
 };
 
 export type WorkDryRunOptions = {
@@ -266,6 +272,19 @@ export async function runWorkDryRun(
   const note = baseBranchNote ? { baseBranchNote } : {};
 
   const reporter = options.reporter ?? noopReporter;
+  const checks = await prepareWorkDryRunHealthChecks({
+    client,
+    projectId: options.projectId,
+    opencodeMcpJson: stepDefinition?.opencodeMcpJson,
+    healthChecks: stepDefinition?.healthChecksJson ?? [],
+  });
+  if (!checks.needsRuntime) {
+    return managedOnlyWorkDryRunReport({
+      scope,
+      ...checks.mergeReports({ mcpServers: [], healthChecks: [] }),
+      note,
+    });
+  }
   const logger = createLogger(
     {
       name: "@scarn/worker",
@@ -322,7 +341,7 @@ export async function runWorkDryRun(
         // No stepKey: skips work-branch creation, so a dry run never pushes or
         // even creates a `scarn/...` branch.
         stepKey: undefined,
-        opencodeMcpJson: stepDefinition?.opencodeMcpJson ?? null,
+        opencodeMcpJson: checks.opencodeMcpJson,
         currentExecutionInfo: {
           taskRunId,
           resultSchemaJson: stepDefinition?.resultSchemaJson ?? null,
@@ -341,7 +360,7 @@ export async function runWorkDryRun(
             inputJson: null,
             workerEnv: { ...process.env, ...options.localEnvVars },
             localEnvVars: options.localEnvVars,
-            opencodeMcpJson: stepDefinition?.opencodeMcpJson ?? null,
+            opencodeMcpJson: checks.opencodeMcpJson,
           });
           secrets = dryRun.secrets;
           return Promise.resolve(dryRun.plan);
@@ -359,7 +378,7 @@ export async function runWorkDryRun(
       run: (server) =>
         runHealthChecks({
           server,
-          healthChecks: stepDefinition?.healthChecksJson ?? [],
+          healthChecks: checks.runnableChecks,
           fakeAiServer,
         }),
     });
@@ -386,20 +405,23 @@ export async function runWorkDryRun(
         containerHealth: null,
         opencodeHealth: null,
         providerCredentials,
-        mcpServers: [],
-        healthChecks: [],
+        ...checks.mergeReports({ mcpServers: [], healthChecks: [] }),
         secrets,
         ...note,
         launchError: reason,
       };
     }
 
-    const { health, result: healthChecks } = outcome;
+    const { health } = outcome;
+    const { mcpServers, healthChecks } = checks.mergeReports({
+      mcpServers: health.mcpServers,
+      healthChecks: outcome.result,
+    });
 
     const ok = computeDryRunOk({
       containerHealthy: health.containerHealth?.healthy,
       opencodeHealthy: health.opencodeHealth.healthy,
-      mcpServers: health.mcpServers,
+      mcpServers,
       healthChecks,
     });
 
@@ -440,7 +462,7 @@ export async function runWorkDryRun(
       containerHealth: health.containerHealth,
       opencodeHealth: health.opencodeHealth,
       providerCredentials,
-      mcpServers: health.mcpServers,
+      mcpServers,
       healthChecks,
       secrets,
       ...note,

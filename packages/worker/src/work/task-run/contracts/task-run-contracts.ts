@@ -37,6 +37,21 @@ export type TaskRunContract = {
   status: TaskRunStatus;
 };
 
+/**
+ * Why the server says a run lost the authority of a managed connection its
+ * launch pinned.
+ */
+export type ManagedAuthorityLossReason =
+  | "disconnected"
+  | "replaced"
+  | "reconnect_required"
+  | "operation_unknown";
+
+/** A heartbeat's `managedAuthority`: `ok`, or the reason the run lost it. */
+export type ManagedAuthorityStatus =
+  | "ok"
+  | { lost: ManagedAuthorityLossReason };
+
 export type TaskRunWorkerContextContract = {
   projectId: string;
   /** The project's `<ownerUsername>/<slug>` web path; null without an owner username. */

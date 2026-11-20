@@ -6,7 +6,11 @@ import {
   type EnvVarSpec,
 } from "@scarn/sdk/env-vars";
 import { renderPromptTemplate } from "@scarn/sdk/definitions/steps";
-import type { OpenCodeMcpServers } from "../../../common/contracts/opencode-mcp";
+import type { ManagedConnectionName } from "@scarn/sdk/managed-connections";
+import type {
+  OpenCodeMcpServerConfig,
+  OpenCodeMcpServers,
+} from "../../../common/contracts/opencode-mcp";
 
 /**
  * Resolves an environment's declared vars against a run's input and the worker's
@@ -190,6 +194,10 @@ export function resolveStepEnv(
  * does not reach the agent, so the MCP still gets its own). A name read by
  * several servers is unowned. Explicit declarations suppress inference only
  * on their own server; across servers, required and secret win.
+ *
+ * A server with `auth: { connection }` is authenticated by the connection
+ * alone (decision 9): it contributes no `workerVars`, and its ref's
+ * `requiredEnv` already excludes the variables of the dropped headers.
  */
 export function withInferredMcpEnv(
   envJson: readonly EnvVarSpec[] | null | undefined,
@@ -208,8 +216,13 @@ export function withInferredMcpEnv(
     ...refs.map((ref) => ref.key),
   ]);
   for (const key of keys) {
+    const server = servers?.[key];
+    const workerVars =
+      server === undefined || usesConnectionAuth(server)
+        ? []
+        : (server.workerVars ?? []);
     const serverEntries = new Map<string, Inherited>(
-      (servers?.[key]?.workerVars ?? []).map((entry) => [
+      workerVars.map((entry) => [
         entry.name,
         { ...entry, mcp: key, applies: "agent" },
       ]),
@@ -245,8 +258,70 @@ export function withInferredMcpEnv(
   return [...(envJson ?? []), ...entries.values()];
 }
 
+function usesConnectionAuth(server: OpenCodeMcpServerConfig): boolean {
+  return server.type !== "local" && server.auth !== undefined;
+}
+
+/** An enabled authored step MCP server authenticated by a managed connection. */
+export type StepConnectionAuthEntry = {
+  key: string;
+  connection: ManagedConnectionName;
+};
+
+/**
+ * The step's enabled MCP servers with `auth`, read from the authored entries
+ * without resolving refs. Real runs authenticate these through the relay;
+ * dry runs have no run's managed launch, so they skip these steps.
+ */
+export function stepConnectionAuthEntries(
+  servers: OpenCodeMcpServers | null | undefined,
+): StepConnectionAuthEntry[] {
+  return Object.entries(servers ?? {}).flatMap(([key, server]) =>
+    server.type !== "local" &&
+    server.auth !== undefined &&
+    server.disabled !== true
+      ? [{ key, connection: server.auth.connection }]
+      : [],
+  );
+}
+
+/** Why a dry run skips a step that needs a run's managed launch. */
+export function describeNotRunnableConnections(
+  entries: readonly StepConnectionAuthEntry[],
+): string {
+  const names = [
+    ...new Set(entries.map(({ connection }) => `"${connection}"`)),
+  ];
+  return `uses the project's ${names.join(" and ")} connection${names.length > 1 ? "s" : ""}: skipped: needs a run's managed launch`;
+}
+
+/** {@link describeNotRunnableConnections} for the step's servers, or null when it uses no managed connection. */
+export function stepNotRunnableReason(
+  servers: OpenCodeMcpServers | null | undefined,
+): string | null {
+  const entries = stepConnectionAuthEntries(servers);
+  return entries.length > 0 ? describeNotRunnableConnections(entries) : null;
+}
+
+/**
+ * Whether the step's MCP servers add variables to the step env: a ref
+ * (its definition's `{env:X}`) or `workerVars`. A server with `auth` adds
+ * none; the connection authenticates it.
+ */
+export function stepMcpServersAddEnv(
+  servers: OpenCodeMcpServers | null | undefined,
+): boolean {
+  return Object.values(servers ?? {}).some(
+    (server) =>
+      !usesConnectionAuth(server) &&
+      (server.type === "ref" || (server.workerVars?.length ?? 0) > 0),
+  );
+}
+
 function hasMcpRefs(servers: OpenCodeMcpServers | null | undefined): boolean {
-  return Object.values(servers ?? {}).some((entry) => entry.type === "ref");
+  return Object.values(servers ?? {}).some(
+    (entry) => entry.type === "ref" && !usesConnectionAuth(entry),
+  );
 }
 
 /**

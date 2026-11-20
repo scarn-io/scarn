@@ -18,6 +18,7 @@ import type {
 import { logWork, logWorkWarn } from "../application/work-logger";
 import type { ProviderAccessResolver } from "../contracts/agent-runtime/provider-access-resolver";
 import type { RuntimeConfigMaterializer } from "../contracts/agent-runtime/runtime-config-materializer";
+import type { RegisterLaunchServers } from "../contracts/managed-launch-types";
 import type { AgentRuntime } from "../contracts/process-project-work-types";
 import type { WorkReporter } from "../contracts/work-reporter";
 import { buildFakeProviderConfig } from "./fake-ai";
@@ -51,6 +52,7 @@ export async function startHostAgent(input: {
   fakeAiProviderOverride?: { baseUrl: string } | undefined;
   stepEnv?: Readonly<Record<string, string>> | undefined;
   resolveMcpEnv?: ((refs: readonly McpEnvRef[]) => ResolvedStepEnv) | undefined;
+  registerManagedLaunch?: RegisterLaunchServers | undefined;
   reporter: WorkReporter;
   taskRunId: string;
   onSecretValues?: ((values: readonly string[]) => void) | undefined;
@@ -74,6 +76,7 @@ export async function startHostAgent(input: {
       connectors: input.connectors,
       workspacePath,
       sessionId: input.sessionId,
+      registerManagedLaunch: input.registerManagedLaunch,
     }),
     stepEnv: input.stepEnv,
     resolveMcpEnv: input.resolveMcpEnv,

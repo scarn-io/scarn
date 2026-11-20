@@ -24,6 +24,7 @@ import {
   collectBuiltDocuments,
   type PipelineDocumentFile,
 } from "./collect-pipeline-documents";
+import { pushedMcpServers, type PushedMcpServer } from "./pushed-mcp-servers";
 
 export interface PushFromDirectoryOptions {
   baseUrl: string;
@@ -51,6 +52,8 @@ export interface PushFromDirectoryResult {
   publishedAutomations: string[];
   /** Keys of the automations whose document matched their latest version. */
   unchangedAutomations: string[];
+  /** Every enabled `ref` and `remote` MCP server of the pushed steps. */
+  mcpServers: PushedMcpServer[];
 }
 
 type PipelinesClient = ReturnType<typeof createPipelineDefinitionsClient>;
@@ -193,6 +196,7 @@ export async function pushFromDirectory(
     unchangedPipelines,
     publishedAutomations,
     unchangedAutomations,
+    mcpServers: pushedMcpServers(steps),
   };
 }
 

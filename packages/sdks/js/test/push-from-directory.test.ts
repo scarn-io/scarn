@@ -88,6 +88,85 @@ describe("pushFromDirectory", () => {
       rmSync(dir2, { recursive: true, force: true });
     }
   });
+
+  test("publishes an authored step with an auth check and records its MCP servers", async () => {
+    const dir3 = mkdtempSync(join(tmpdir(), "scarn-pfd-connection-"));
+    const previous3 = globalThis.fetch;
+    const requests: CapturedRequest[] = [];
+    globalThis.fetch = makeMockFetch(requests);
+    try {
+      writeFileSync(
+        join(dir3, "steps.js"),
+        `
+import { defineMcp, defineStep } from ${JSON.stringify(new URL("../src/definitions/steps/index.ts", import.meta.url).href)};
+const notion = defineMcp({
+  type: "ref", name: "notion", auth: { connection: "notion" },
+  healthChecks: { search: { tool: "notion_search", args: { query: "docs" } } },
+});
+export const step = defineStep({
+  key: "step-a", name: "Auth check", agentPrompt: "Read docs.",
+  mcps: {
+    docs: notion,
+    search: defineMcp({ type: "remote", name: "search", url: "https://search.acme.test/mcp" }),
+  },
+});
+`,
+      );
+      writeFileSync(
+        join(dir3, "triage.json"),
+        JSON.stringify(PIPELINE_DOCUMENT("triage", "Triage")),
+      );
+      const result = await pushFromDirectory(dir3, {
+        baseUrl: BASE_URL,
+        projectId: "proj-3",
+        fetch: viaGlobalFetch,
+        log: () => undefined,
+      });
+      expect(result.pushedSteps).toBe(1);
+      expect(result.publishedPipelines).toEqual(["triage"]);
+      expect(result.mcpServers).toEqual([
+        {
+          step: "step-a",
+          key: "docs",
+          connection: "notion",
+          type: "ref",
+          name: "notion",
+        },
+        {
+          step: "step-a",
+          key: "search",
+          connection: null,
+          type: "remote",
+          url: "https://search.acme.test/mcp",
+        },
+      ]);
+      expect(
+        requests.find(
+          (request) =>
+            request.method === "PUT" &&
+            request.url.endsWith("/api/step-definitions"),
+        )?.body,
+      ).toMatchObject({
+        opencodeMcpJson: {
+          docs: { type: "ref", name: "notion", auth: { connection: "notion" } },
+        },
+        healthChecksJson: [
+          {
+            kind: "tool",
+            mcp: "docs",
+            name: "docs.search",
+            tool: "notion_search",
+            args: { query: "docs" },
+            severity: "required",
+            serialGroup: "docs",
+          },
+        ],
+      });
+    } finally {
+      globalThis.fetch = previous3;
+      rmSync(dir3, { recursive: true, force: true });
+    }
+  });
 });
 
 // Publishing a pipeline needs its steps on the server: one push has to do
@@ -137,6 +216,7 @@ describe("pushFromDirectory publishing built pipelines", () => {
       unchangedPipelines: [],
       publishedAutomations: [],
       unchangedAutomations: [],
+      mcpServers: [],
     });
 
     const order = captured

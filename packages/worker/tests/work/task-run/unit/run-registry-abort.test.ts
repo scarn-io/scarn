@@ -10,11 +10,13 @@ import { describe, expect, test, vi } from "bun:test";
 import { processProjectWork } from "../../../../src/work/task-run/application/process-project-work";
 import {
   RunRegistry,
+  type ExternalRunAbortReason,
   type RunAbortReason,
 } from "../../../../src/work/task-run/application/run-registry";
 import { scheduleClaimedTaskRunJob } from "../../../../src/work/task-run/application/schedule-claimed-task-runs";
 import { TaskRunCancelledError } from "../../../../src/work/task-run/application/task-run-cancelled-error";
 import { WorkerStoppedError } from "../../../../src/work/task-run/application/worker-stopped-error";
+import { ManagedAuthorityLostError } from "../../../../src/work/task-run/application/managed-authority-lost-error";
 import type {
   ProcessProjectWorkDeps,
   ProcessProjectWorkInput,
@@ -97,7 +99,7 @@ async function setUpRunningAgent() {
   return { deps, workerClient, order, sleeps, abort };
 }
 
-async function abortWhileSleeping(reason: RunAbortReason) {
+async function abortWhileSleeping(reason: ExternalRunAbortReason) {
   const setUp = await setUpRunningAgent();
   const runs = new RunRegistry();
   const job = scheduleClaimedTaskRunJob(
@@ -164,6 +166,69 @@ describe("run registry abort", () => {
       expect(order.at(-1)).toBe("failTaskRun");
     },
   );
+
+  test.concurrent(
+    "a heartbeat reporting lost managed authority fails the run with ManagedConnectionAuthorityLost, never a quiet cancel",
+    async () => {
+      const setUp = await setUpRunningAgent();
+      setUp.workerClient.heartbeatTaskRun = vi.fn(() =>
+        Promise.resolve({
+          status: "running" as const,
+          managedAuthority: { lost: "disconnected" as const },
+        }),
+      );
+      const runs = new RunRegistry();
+      const job = scheduleClaimedTaskRunJob(
+        { ...input, leaseDurationSeconds: 2 },
+        setUp.deps,
+        claim,
+        createRunTracker(),
+        { claimedCount: 1, processedCount: 0, skippedCount: 0 },
+        runs,
+      );
+
+      const failure = await captureRejection(job);
+
+      expect(failure).toBeInstanceOf(ManagedAuthorityLostError);
+      expect(setUp.abort).toHaveBeenCalledTimes(1);
+      const [report] = setUp.workerClient.failTaskRun.mock.calls as unknown as [
+        { errorJson: { name: string; code: string; cause: unknown } },
+      ][];
+      expect(report?.[0].errorJson).toMatchObject({
+        name: "ManagedConnectionAuthorityLost",
+        code: "MANAGED_CONNECTION_AUTHORITY_LOST",
+        cause: { reason: "disconnected" },
+      });
+      expect(setUp.order.at(-1)).toBe("failTaskRun");
+    },
+  );
+
+  test("the first abort reason wins over a later managed authority loss, and the other way round", async () => {
+    const runs = new RunRegistry();
+    const reasons: (RunAbortReason | null)[] = [];
+    const errors: (Error | null)[] = [];
+
+    await runs.start({ taskRunId: "run-1", projectId }, (handle) => {
+      runs.abort("run-1", "cancelled");
+      handle.abortManagedAuthorityLost("replaced");
+      reasons.push(handle.abortReason());
+      errors.push(handle.abortError());
+      return Promise.resolve();
+    });
+    await runs.start({ taskRunId: "run-2", projectId }, (handle) => {
+      handle.abortManagedAuthorityLost("replaced");
+      runs.abort("run-2", "cancelled");
+      handle.abortManagedAuthorityLost("disconnected");
+      reasons.push(handle.abortReason());
+      errors.push(handle.abortError());
+      return Promise.resolve();
+    });
+
+    expect(reasons).toEqual(["cancelled", "managed_authority_lost"]);
+    expect(errors[0]).toBeInstanceOf(TaskRunCancelledError);
+    expect(errors[1]).toBeInstanceOf(ManagedAuthorityLostError);
+    expect((errors[1] as ManagedAuthorityLostError).reason).toBe("replaced");
+  });
 
   test("abortAll aborts every run, and runs started after it", async () => {
     const runs = new RunRegistry();

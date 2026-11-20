@@ -11,6 +11,7 @@ import type { ArtifactStore } from "../../../artifacts/artifact-store/domain/art
 import type { RunCodeStepCommand } from "../application/execute-code-step";
 import type { FakeAiServer } from "../infra/fake-ai/fake-ai-server";
 import type {
+  ManagedAuthorityStatus,
   TaskRunContract,
   TaskRunWorkerContextContract,
 } from "./task-run-contracts";
@@ -34,6 +35,11 @@ import type { OpencodeServerHandle } from "../../../runtime/runtime-service/infr
 import type { TaskAgentRunner } from "./task-agent-runner";
 import type { RepoContextLaunchInput } from "./repo-context-launch-input";
 import type { EnvironmentDiagnostics } from "./environment-diagnostics";
+import type {
+  ManagedLaunchEntries,
+  ManagedLaunchRegistration,
+  RegisterManagedLaunch,
+} from "./managed-launch-types";
 
 export type { RepoContextLaunchInput };
 
@@ -198,7 +204,11 @@ export type TaskRunWorkerClient = {
     taskRunId: UuidV7;
     claimToken: string;
     leaseDurationSeconds: number;
-  }): Promise<Pick<TaskRunContract, "status">>;
+  }): Promise<
+    Pick<TaskRunContract, "status"> & {
+      managedAuthority: ManagedAuthorityStatus;
+    }
+  >;
   /**
    * Fetches the named project secrets for a claimed run (one call per run).
    * Absent on clients with no API behind them; a run that needs a secret
@@ -213,6 +223,16 @@ export type TaskRunWorkerClient = {
         secrets: Record<string, { value: string; expiresAt: string | null }>;
         missing: string[];
       }>)
+    | undefined;
+  /**
+   * Registers a claimed run's managed launch with its resolved MCP server
+   * URLs and returns each connection-auth server's relay entry by key.
+   * Throws `ManagedConnectionNotReadyError` when a connection isn't serving,
+   * `McpConnectionAuthRejectedError` when the server refuses a URL. Absent
+   * on clients with no API behind them; a managed-connection step then fails.
+   */
+  registerTaskRunManagedLaunch?:
+    | ((input: ManagedLaunchRegistration) => Promise<ManagedLaunchEntries>)
     | undefined;
   failTaskRun(input: {
     taskRunId: UuidV7;
@@ -501,6 +521,12 @@ export type LaunchedRuntimeOrchestrator = {
      * passwords). Register them with the log masker.
      */
     onSecretValues?: ((values: readonly string[]) => void) | undefined;
+    /**
+     * Called before OpenCode starts when the step's MCP servers use a managed
+     * connection; the relay entries replace those servers. Absent for launches
+     * that can't register one (dry runs), where such a step fails.
+     */
+    registerManagedLaunch?: RegisterManagedLaunch | undefined;
     /**
      * The branch the run starts from, handed down by the server: the Task's
      * continued branch, or the previous step's work branch when the step sets

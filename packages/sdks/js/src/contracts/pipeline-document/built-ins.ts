@@ -18,6 +18,8 @@ export const BUILT_IN_ERRORS = [
   "Scarn.LogArchiveFailed",
   "Scarn.WorkItemChangesInvalid",
   "Scarn.WorkItemNotNative",
+  "ManagedConnectionAuthorityLost",
+  "ManagedConnectionNotReady",
 ] as const;
 
 /** The errors a wait node can raise, so the only names its `catch` may use. */

@@ -31,6 +31,6 @@
   },
   "devDependencies": {
     "@types/dagre": "^0.7.54",
-    "bun-types": "^1.4.0"
+    "bun-types": "^1.4.4"
   }
 }

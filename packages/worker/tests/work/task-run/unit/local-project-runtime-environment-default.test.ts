@@ -129,7 +129,7 @@ describe("Repo default launch runtime", () => {
       expect(
         deps.devcontainerLauncher.launchInputs[0]?.devcontainerConfigPath,
       ).toBe(BUN1_CONFIG_PATH);
-      expect(config["image"]).toBe("oven/bun:1.4.0-debian");
+      expect(config["image"]).toBe("oven/bun:1.4.4-debian");
       expect(typeof config["onCreateCommand"]).toBe(
         startAgent ? "undefined" : "string",
       );

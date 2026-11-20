@@ -173,7 +173,7 @@ describe("buildAgentToolsManifest", () => {
       });
 
       expect(manifest).toEqual({
-        version: 1,
+        version: 2,
         generatedAt: "2026-10-14T00:00:00.000Z",
         project: "acme/app",
         caveats: AGENT_TOOLS_MANIFEST_CAVEATS,

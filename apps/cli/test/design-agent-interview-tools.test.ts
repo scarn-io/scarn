@@ -122,3 +122,49 @@ describe("orientation discovers project tools before the interview asks about th
     );
   });
 });
+
+describe("a server backed by a project connection is always written with auth", () => {
+  const prompt = buildPipelineDesignerPrompt();
+  const orient = sectionBetween(prompt, PHASE.orient, PHASE.goal);
+  const reachability = sectionBetween(
+    prompt,
+    PHASE.reachability,
+    PHASE.changeSize,
+  );
+
+  test("phase 1 reads a server's connection and the connections list", () => {
+    expectPhrase(orient, "A server with `connection`");
+    expectPhrase(orient, "`connections` lists the project's connections");
+  });
+
+  test("phase 3 writes the ref form, the inline remote form, and never omits auth", () => {
+    expectPhrase(
+      reachability,
+      '`defineMcp({ type: "ref", name, auth: { connection } })`',
+    );
+    expectPhrase(
+      reachability,
+      '`defineMcp({ type: "remote", name, url, auth: { connection } })`',
+    );
+    expectPhrase(
+      reachability,
+      "Never write a server at a connection's `url` without `auth`.",
+    );
+    expectPhrase(
+      reachability,
+      "a project admin must connect (or reconnect) it in project settings, naming it by its `label`, and still write the step",
+    );
+  });
+
+  test("the authoring reference shows both forms", () => {
+    expectPhrase(
+      prompt,
+      'defineMcp({ type: "ref", name: "notion", auth: { connection: "notion" } })',
+    );
+    expectPhrase(prompt, 'url: "https://mcp.notion.com/mcp",');
+    expectPhrase(
+      prompt,
+      "never write a server at a connection's URL without `auth`",
+    );
+  });
+});
