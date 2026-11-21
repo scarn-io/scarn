@@ -209,7 +209,7 @@ export const withAddProjectOptions = <T>(argv: Argv<T>) =>
     })
     .option("baseUrl", {
       alias: "base-url",
-      describe: "Scarn app base URL",
+      describe: "Scarn API URL",
       type: "string",
     })
     .option("concurrency", {

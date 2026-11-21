@@ -247,7 +247,7 @@ const pushCommand: CommandModule<object, PushArguments> = {
       .option("baseUrl", {
         alias: "base-url",
         type: "string",
-        describe: "Scarn app base URL",
+        describe: "Scarn API URL",
       }),
   handler: runPush,
 };
@@ -351,7 +351,7 @@ const pullCommand: CommandModule<object, PullArguments> = {
       .option("baseUrl", {
         alias: "base-url",
         type: "string",
-        describe: "Scarn app base URL",
+        describe: "Scarn API URL",
       })
       .option("key", {
         type: "string",

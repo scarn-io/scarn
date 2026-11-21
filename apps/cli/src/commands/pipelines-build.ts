@@ -191,7 +191,7 @@ export const buildCommand: CommandModule<object, BuildArguments> = {
       .option("baseUrl", {
         alias: "base-url",
         type: "string",
-        describe: "Scarn app base URL",
+        describe: "Scarn API URL",
       }),
   handler: runBuild,
 };

@@ -12,11 +12,11 @@ import { stripGitUrlCredentials } from "@scarn/sdk/git-url";
  * the URL is opened in a browser and lands in its history.
  */
 export function buildProjectsNewUrl(input: {
-  baseUrl: string;
+  appUrl: string;
   gitUrl: string;
   suggestedName: string;
 }): string {
-  const url = new URL("/projects/new", input.baseUrl);
+  const url = new URL("/projects/new", input.appUrl);
   url.searchParams.set("gitUrl", stripGitUrlCredentials(input.gitUrl));
   url.searchParams.set("name", input.suggestedName);
   url.searchParams.set("source", "cli");

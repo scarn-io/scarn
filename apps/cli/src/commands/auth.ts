@@ -12,7 +12,7 @@ import { performDeviceLogin } from "../lib/device-login";
 const addBaseUrlOption = (argv: Argv<object>) =>
   argv.option("base-url", {
     type: "string",
-    describe: "Scarn app base URL",
+    describe: "Scarn API URL",
   });
 
 const getBaseUrlArgument = (arguments_: ArgumentsCamelCase<object>) => {

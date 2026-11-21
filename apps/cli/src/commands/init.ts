@@ -2,6 +2,7 @@ import type { ArgumentsCamelCase, Argv, CommandModule } from "yargs";
 import * as clack from "@clack/prompts";
 import type { createScarnClient } from "@scarn/sdk";
 import { AnalyticsEvents } from "@scarn/observability/analytics/events";
+import { resolveScarnAppUrl } from "@scarn/sdk/defaults";
 import {
   checkOpencodeProviderCredentials,
   completeProjectHandoff,
@@ -160,14 +161,14 @@ function buildLinkProjectPorts(input: {
  * Exported so the whole ladder is testable against a fake client.
  */
 export async function linkInitProject(input: {
-  baseUrl: string;
+  appUrl: string;
   interactive: boolean;
   reporter: BaseReporter;
   client: ReturnType<typeof createScarnClient>;
   repo: ResolvedRepository;
   ports: LinkProjectPorts;
 }): Promise<void> {
-  const { baseUrl, interactive, reporter, client, repo, ports } = input;
+  const { appUrl, interactive, reporter, client, repo, ports } = input;
 
   const task = reporter.startActivity("Configuring project…");
   // The remaining steps are idempotent either way, so a re-run still checks
@@ -196,7 +197,7 @@ export async function linkInitProject(input: {
   const autocreated = await tryAutocreateGitHubProject({
     interactive,
     reporter,
-    baseUrl,
+    appUrl,
     remoteUrl: setupResult.gitUrl,
     suggestedName: setupResult.suggestedName,
     ports: ports.autocreate,
@@ -213,7 +214,7 @@ export async function linkInitProject(input: {
     interactive,
     reporter,
     url: buildProjectsNewUrl({
-      baseUrl,
+      appUrl,
       gitUrl: setupResult.gitUrl,
       suggestedName: setupResult.suggestedName,
     }),
@@ -235,6 +236,7 @@ export async function linkInitProject(input: {
 
 interface InitArguments {
   baseUrl?: string;
+  appUrl?: string;
   workItemId?: string;
   studio?: boolean;
 }
@@ -242,6 +244,10 @@ interface InitArguments {
 function runInit(argv: ArgumentsCamelCase<InitArguments>): Promise<void> {
   return withReporter("init", async ({ reporter, logger }) => {
     const baseUrl = resolveScarnBaseUrl(argv.baseUrl);
+    const appUrl = resolveScarnAppUrl({
+      appUrl: argv.appUrl,
+      baseUrl: argv.baseUrl,
+    });
     const interactive = process.stdin.isTTY && process.stdout.isTTY;
 
     // A signed-in session from an earlier run gives every milestone below
@@ -282,7 +288,7 @@ function runInit(argv: ArgumentsCamelCase<InitArguments>): Promise<void> {
     const { client } = verified;
 
     await linkInitProject({
-      baseUrl,
+      appUrl,
       interactive,
       reporter,
       client,
@@ -322,7 +328,12 @@ const addInitOptions = (argv: Argv<object>) =>
   argv
     .option("base-url", {
       type: "string",
-      describe: "Scarn app base URL",
+      describe: "Scarn API URL",
+    })
+    .option("app-url", {
+      type: "string",
+      describe:
+        "Scarn web app URL for browser links (defaults to SCARN_APP_URL, then --base-url)",
     })
     .option("workItemId", {
       alias: "work-item-id",

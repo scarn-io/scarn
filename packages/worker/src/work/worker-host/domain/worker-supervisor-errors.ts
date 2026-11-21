@@ -11,7 +11,9 @@ export class WorkerBaseUrlMismatchError extends Error {
     readonly actualBaseUrl: string,
   ) {
     super(
-      `Worker instance ${instance} works for ${expectedBaseUrl}; it cannot add a project from ${actualBaseUrl}.`,
+      `Worker instance ${instance} works for ${expectedBaseUrl}; it cannot add a project from ${actualBaseUrl}. ` +
+        "Use the instance that works for that server, or start a separate one " +
+        "with SCARN_WORKER_INSTANCE=<name>.",
     );
   }
 }

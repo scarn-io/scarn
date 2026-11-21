@@ -32,7 +32,7 @@ Neither env file overrides a variable that is already set.
 
 `--base-url <url>` is a per-command flag, accepted by `auth`, `init`, `pipelines design`, `pipelines pull`,
 `pipelines push`, `connections`, and `work`. It overrides the API server URL; without it the CLI uses `SCARN_BASE_URL`,
-then `https://app.scarn.io`.
+then `https://api.scarn.io`.
 
 ---
 
@@ -88,11 +88,12 @@ scarn init
 scarn init --work-item-id <id>
 ```
 
-| Flag                  | Description                                                                                     |
-| --------------------- | ----------------------------------------------------------------------------------------------- |
-| `--base-url <url>`    | Override the API server URL. Forwarded to `pipelines design` in step 7                          |
-| `--work-item-id <id>` | Forwarded to `pipelines design` in step 7: design around this item instead of picking one       |
-| `--no-studio`         | Forwarded to `pipelines design` in step 7: don't open the [studio](#the-studio) in your browser |
+| Flag                  | Description                                                                                                                                                                 |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--base-url <url>`    | Override the API server URL. Forwarded to `pipelines design` in step 7                                                                                                      |
+| `--app-url <url>`     | Web app URL for the browser links `init` prints or opens; defaults to `SCARN_APP_URL`, then an explicitly set `--base-url` or `SCARN_BASE_URL`, then `https://app.scarn.io` |
+| `--work-item-id <id>` | Forwarded to `pipelines design` in step 7: design around this item instead of picking one                                                                                   |
+| `--no-studio`         | Forwarded to `pipelines design` in step 7: don't open the [studio](#the-studio) in your browser                                                                             |
 
 Runs in sequence:
 
@@ -1045,7 +1046,7 @@ scarn work --dry-run
 
 | Flag                             | Alias | Default                | Description                                                                                                  |
 | -------------------------------- | ----- | ---------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `--base-url <url>`               | —     | `https://app.scarn.io` | Override the API server URL                                                                                  |
+| `--base-url <url>`               | —     | `https://api.scarn.io` | Override the API server URL                                                                                  |
 | `--concurrency <n>`              | `-c`  | no project limit       | Max runs of this project at a time, within the worker's machine-wide limit                                   |
 | `--work-item-id <id>`            | —     | —                      | Only process tasks for this work item ID                                                                     |
 | `--preserve-runtime-on-complete` | `-k`  | `false`                | Keep runtime containers and workspace after each run (or, with `--dry-run`, after the report) for debugging  |
@@ -1152,7 +1153,7 @@ scarn worker start --foreground --once acme/app --work-item-id 0196a000-0000-700
 | -------------------------------- | ----- | ---------------------------------- | --------------------------------------------------------------------------------------------------------- |
 | `--foreground`                   | —     | `false`                            | Run the worker in this terminal instead of in the background                                              |
 | `--max-concurrency <n>`          | —     | saved, else `1`                    | Machine-wide limit on runs at a time across every project; saved for the instance                         |
-| `--base-url <url>`               | —     | `https://app.scarn.io`             | The server the instance works for, bound on its first start; another one fails `worker_base_url_mismatch` |
+| `--base-url <url>`               | —     | `https://api.scarn.io`             | The server the instance works for, bound on its first start; another one fails `worker_base_url_mismatch` |
 | `--once`                         | —     | `false`                            | With `--foreground`: claim once for one project and exit                                                  |
 | `--concurrency <n>`              | `-c`  | `SCARN_WORK_CONCURRENCY`, else `1` | With `--once`: max runs at a time                                                                         |
 | `--work-item-id <id>`            | —     | —                                  | With `--once`: only process tasks for this work item ID                                                   |

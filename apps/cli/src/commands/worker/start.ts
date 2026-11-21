@@ -188,8 +188,7 @@ export function createWorkerStartCommand(
         })
         .option("baseUrl", {
           alias: "base-url",
-          describe:
-            "Scarn app base URL; bound to the instance on its first start",
+          describe: "Scarn API URL; bound to the instance on its first start",
           type: "string",
         })
         .option("once", {

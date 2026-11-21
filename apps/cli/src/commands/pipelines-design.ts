@@ -335,7 +335,7 @@ export const designCommand: CommandModule<object, DesignArguments> = {
       .option("baseUrl", {
         alias: "base-url",
         type: "string",
-        describe: "Scarn app base URL",
+        describe: "Scarn API URL",
       })
       .option("workItemId", {
         alias: "work-item-id",

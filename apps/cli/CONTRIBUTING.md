@@ -87,8 +87,10 @@ Things to know while working on it:
   no build ID.
 - **Startup crashes** show up in `worker.stdio.log`, not `worker.log`.
 
-The CLI targets `https://app.scarn.io` by default. Point it at a local
-server with `--base-url` or the `SCARN_BASE_URL` environment variable.
+The CLI calls the API at `https://api.scarn.io` by default. Point it at a
+local server with `--base-url` or the `SCARN_BASE_URL` environment variable.
+Browser links (from `init`) use `https://app.scarn.io`, or `SCARN_APP_URL`,
+or the configured base URL when only that is set.
 Credentials are stored in `~/.scarn/auth.jsonc`.
 
 `SCARN_TELEMETRY_DEBUG=1` prints every telemetry payload to stderr;

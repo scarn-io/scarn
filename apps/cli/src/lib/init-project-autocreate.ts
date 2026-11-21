@@ -95,16 +95,16 @@ export function initialSyncFailedMessage(settingsUrl: string): string {
 }
 
 export function projectSettingsUrl(
-  baseUrl: string,
+  appUrl: string,
   project: CreatedGitHubProject,
 ): string {
   if (project.ownerUsername === null) {
-    return new URL("/projects", baseUrl).toString();
+    return new URL("/projects", appUrl).toString();
   }
   const path = [project.ownerUsername, project.slug, "settings"]
     .map((segment) => encodeURIComponent(segment))
     .join("/");
-  return new URL(`/${path}`, baseUrl).toString();
+  return new URL(`/${path}`, appUrl).toString();
 }
 
 function findRepo(
@@ -131,12 +131,12 @@ function findRepo(
 export async function tryAutocreateGitHubProject(input: {
   interactive: boolean;
   reporter: BaseReporter;
-  baseUrl: string;
+  appUrl: string;
   remoteUrl: string;
   suggestedName: string;
   ports: ProjectAutocreatePorts;
 }): Promise<ProjectAutocreateResult> {
-  const { interactive, reporter, baseUrl, remoteUrl, suggestedName, ports } =
+  const { interactive, reporter, appUrl, remoteUrl, suggestedName, ports } =
     input;
 
   if (!interactive) {
@@ -207,7 +207,7 @@ export async function tryAutocreateGitHubProject(input: {
   const { project } = created;
   if (project.initialSyncFailed) {
     reporter.warn(
-      initialSyncFailedMessage(projectSettingsUrl(baseUrl, project)),
+      initialSyncFailedMessage(projectSettingsUrl(appUrl, project)),
     );
   }
 

@@ -25,7 +25,7 @@ export const withBaseUrlOption = <T>(argv: Argv<T>) =>
   argv.option("baseUrl", {
     alias: "base-url",
     type: "string",
-    describe: "Scarn app base URL",
+    describe: "Scarn API URL",
   });
 
 /** Adds `--project` and `--base-url`. */

@@ -4,7 +4,7 @@ import { buildProjectsNewUrl } from "../src/lib/build-projects-new-url";
 describe("buildProjectsNewUrl", () => {
   test("builds /projects/new with gitUrl and name query params", () => {
     const url = buildProjectsNewUrl({
-      baseUrl: "https://app.scarn.io",
+      appUrl: "https://app.scarn.io",
       gitUrl: "git@github.com:acme/my-repo.git",
       suggestedName: "my-repo",
     });
@@ -19,9 +19,9 @@ describe("buildProjectsNewUrl", () => {
     expect(parsed.searchParams.get("source")).toBe("cli");
   });
 
-  test("respects a non-default base URL (e.g. --base-url / SCARN_BASE_URL)", () => {
+  test("respects a non-default app URL (e.g. --app-url / SCARN_APP_URL)", () => {
     const url = buildProjectsNewUrl({
-      baseUrl: "http://localhost:3000",
+      appUrl: "http://localhost:3000",
       gitUrl: "https://example.com/acme/my-repo.git",
       suggestedName: "my-repo",
     });
@@ -31,7 +31,7 @@ describe("buildProjectsNewUrl", () => {
 
   test("strips credentials from the gitUrl it puts in the link", () => {
     const url = buildProjectsNewUrl({
-      baseUrl: "https://app.scarn.io",
+      appUrl: "https://app.scarn.io",
       gitUrl: "https://user:ghp_secret@github.com/acme/my-repo.git",
       suggestedName: "my-repo",
     });

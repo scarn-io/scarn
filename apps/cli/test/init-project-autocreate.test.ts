@@ -22,7 +22,7 @@ import {
  * browser hand-off.
  */
 
-const BASE_URL = "https://app.scarn.io";
+const APP_URL = "https://app.scarn.io";
 const REMOTE = "git@github.com:Acme/My-Repo.git";
 const REPO = { id: 42, fullName: "acme/my-repo" };
 
@@ -80,7 +80,7 @@ function run(
   const result = tryAutocreateGitHubProject({
     interactive: overrides.interactive ?? true,
     reporter: recorder.reporter,
-    baseUrl: BASE_URL,
+    appUrl: APP_URL,
     remoteUrl: overrides.remoteUrl ?? REMOTE,
     suggestedName: "My-Repo",
     ports,
@@ -317,7 +317,7 @@ describe("tryAutocreateGitHubProject", () => {
       project: "octo/my-repo",
     });
     expect(messages(calls)).toContain(
-      initialSyncFailedMessage(`${BASE_URL}/octo/my-repo/settings`),
+      initialSyncFailedMessage(`${APP_URL}/octo/my-repo/settings`),
     );
     expect(fake.written).toEqual(["octo/my-repo"]);
   });

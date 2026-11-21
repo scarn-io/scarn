@@ -41,6 +41,19 @@ scarn worker stop
 
 The worker's files are in `~/.scarn/workers/scarn/`: `worker.log` (rotated by size and by day) and `worker.stdio.log`, which catches anything printed before the log opens. A worker belongs to one server. To run against another one on the same machine, start a separate worker with `SCARN_WORKER_INSTANCE=<name>`; it gets its own directory, saved projects and limit. Every command is in the [CLI reference](/scarn/reference/cli/#scarn-worker).
 
+### Moving a worker to another server
+
+A worker remembers the server it was first started for, and `scarn worker stop && scarn worker start` keeps it. Scarn's API moved from `https://app.scarn.io` to `https://api.scarn.io`, so a worker started before that move still points at the old URL, and `scarn work` (or `scarn worker start --base-url https://api.scarn.io`) fails with `worker_base_url_mismatch`. No command changes the saved server, so update it in the worker's database, `~/.scarn/db.sqlite` (or `SCARN_LOCAL_DB_PATH`):
+
+```bash
+scarn worker stop
+scarn auth login
+sqlite3 ~/.scarn/db.sqlite "UPDATE worker_instances SET base_url = 'https://api.scarn.io' WHERE base_url = 'https://app.scarn.io'; UPDATE worker_projects SET base_url = 'https://api.scarn.io' WHERE base_url = 'https://app.scarn.io';"
+scarn worker start
+```
+
+Your saved projects and limit are kept. If you'd rather start clean, skip the `sqlite3` line and use a new instance, for example `SCARN_WORKER_INSTANCE=scarn-api scarn work` in each checkout; you then need that variable set for every `scarn worker` command. The old instance's saved settings stay unused.
+
 ## Push wake-up
 
 A backed-off worker would otherwise take up to 10 minutes to notice new work. Push wake-up closes that gap: the worker holds a WebSocket open to Scarn's wake-up service, and when a run is queued for your project the server tells every connected worker to poll now. There's nothing to configure. The worker connects automatically when the server supports it, and the worker log shows `Push wake-up connected`.

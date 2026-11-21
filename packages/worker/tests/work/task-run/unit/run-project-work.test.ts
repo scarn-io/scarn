@@ -279,7 +279,7 @@ describe("CLI processProjectWork", () => {
       }
 
       expect(createWorkerClientForBaseUrl).toHaveBeenCalledWith(
-        "https://app.scarn.io",
+        "https://api.scarn.io",
         { expectedUserId: undefined },
       );
     },

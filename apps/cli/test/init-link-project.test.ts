@@ -90,7 +90,7 @@ describe("linkInitProject from a nested directory", () => {
     const { reporter } = createRecorder();
 
     await linkInitProject({
-      baseUrl: "https://app.scarn.io",
+      appUrl: "https://app.scarn.io",
       interactive: true,
       reporter,
       client: fakeClient([[{ id: "existing", gitUrl: REMOTE_URL }]]),
@@ -108,7 +108,7 @@ describe("linkInitProject from a nested directory", () => {
     const { reporter } = createRecorder();
 
     await linkInitProject({
-      baseUrl: "https://app.scarn.io",
+      appUrl: "https://app.scarn.io",
       interactive: true,
       reporter,
       client: fakeClient([
