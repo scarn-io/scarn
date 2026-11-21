@@ -119,8 +119,7 @@ function fakeDependencies(calls: Calls): TaskReadDependencies {
   };
   return {
     connect: () => Promise.resolve({ client }),
-    connectProject: () =>
-      Promise.resolve({ client, projectId: PROJECT_ID }),
+    connectProject: () => Promise.resolve({ client, projectId: PROJECT_ID }),
     resolveRef: (ref) => {
       calls.refs.push(ref);
       return Promise.resolve({
@@ -223,7 +222,7 @@ describe("scarn tasks", () => {
     ).toContain('Invalid --status "done"');
     expect(
       (await rejection(runTasks(["list", "--kind", "human"]))).message,
-    ).toBe('Invalid --kind "human". Expected one of: agent, code.');
+    ).toBe('Invalid --kind "human". Expected one of: agent, code, mcp_tool.');
   });
 
   test("view ends with the latest run's logs and detail", async () => {

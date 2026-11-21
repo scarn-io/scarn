@@ -19,7 +19,7 @@ import { logWork, logWorkWarn } from "../application/work-logger";
 import type { ProviderAccessResolver } from "../contracts/agent-runtime/provider-access-resolver";
 import type { RuntimeConfigMaterializer } from "../contracts/agent-runtime/runtime-config-materializer";
 import type { RegisterLaunchServers } from "../contracts/managed-launch-types";
-import type { AgentRuntime } from "../contracts/process-project-work-types";
+import type { AgentRuntime } from "../contracts/launched-runtime-handles";
 import type { WorkReporter } from "../contracts/work-reporter";
 import { buildFakeProviderConfig } from "./fake-ai";
 import {

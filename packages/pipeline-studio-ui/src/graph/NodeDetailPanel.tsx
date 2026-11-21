@@ -5,7 +5,12 @@ import type {
   StudioSchemaField,
 } from "./studio-graph-types";
 import { SeverityChip } from "./SeverityChip";
-import { nodeCaption, severityColor } from "./studio-graph-visuals";
+import {
+  MCP_TOOL_BADGE,
+  mcpToolTarget,
+  nodeCaption,
+  severityColor,
+} from "./studio-graph-visuals";
 
 /** One row of an issue list — full message text, colored by its own severity. */
 function IssueMessageRow({ issue }: { issue: StudioIssue }) {
@@ -112,6 +117,7 @@ export function NodeDetailPanel({
 }) {
   const { data } = node;
   const { shape } = data;
+  const mcpTool = mcpToolTarget(data);
 
   return (
     <div className="studio-detail">
@@ -120,6 +126,12 @@ export function NodeDetailPanel({
       </button>
       <h2 className="studio-detail-title">{data.label}</h2>
       <div className="studio-node-kind">{nodeCaption(data)}</div>
+      {mcpTool ? (
+        <div className="studio-detail-mcp-tool">
+          <span className="studio-required-badge">{MCP_TOOL_BADGE}</span>{" "}
+          <code>{mcpTool}</code>
+        </div>
+      ) : null}
       {notice ? <p className="studio-detail-notice">{notice}</p> : null}
       {children}
 

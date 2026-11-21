@@ -1,5 +1,8 @@
 import type { Edge, Node } from "@xyflow/react";
-import type { PipelineNode } from "@scarn/sdk/contracts/pipeline-document";
+import type {
+  PipelineNode,
+  StepContract,
+} from "@scarn/sdk/contracts/pipeline-document";
 
 // `Node`/`Edge` are imported `type`-only (see the top-level comment in
 // `translate-spec-to-graph.ts`), so this file — and everything that only
@@ -31,11 +34,23 @@ export type StudioSchemaField = {
   required: boolean;
 };
 
+/** The one tool an MCP tool step calls: its server key and tool name. */
+export type StudioMcpTool = { server: string; tool: string };
+
+/**
+ * The step catalog the studio translates with: the validator's
+ * `StepContract`s, plus the tool an MCP tool step calls.
+ */
+export type StudioStepCatalog = Readonly<
+  Record<string, StepContract & { mcpTool?: StudioMcpTool }>
+>;
+
 /**
  * A node's step-derived shape. `"step"` when the node's step key resolves in
  * the step catalog passed to `translateSpecToGraph`; `"none"` otherwise
  * (wait/succeed/fail nodes, or a step that wasn't found) — chosen over
  * fabricating empty arrays, which would read as a real zero-field step.
+ * `mcpTool` is set on an MCP tool step.
  */
 export type StudioNodeShape =
   | {
@@ -44,6 +59,7 @@ export type StudioNodeShape =
       resultFields: StudioSchemaField[];
       resultSchemaJson: Record<string, unknown>;
       errors: string[];
+      mcpTool?: StudioMcpTool;
     }
   | { kind: "none" };
 

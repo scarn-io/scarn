@@ -64,6 +64,8 @@ export type {
   EachOptions,
   EachTarget,
   FlowChain,
+  McpContentBlock,
+  McpToolContentResult,
   Mergeable,
   NextContext,
   NextOptions,

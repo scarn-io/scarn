@@ -11,6 +11,7 @@
  * anything that copies or sends a step converts it with `toStepSpec` first.
  */
 import { makeHandle, stepCall, stepNode } from "../../pipelines/handles";
+import { registerStepSource } from "../../pipelines/registry";
 import type { PipelineStep } from "../../pipelines/types";
 import { BUILT_IN_ERRORS } from "../../contracts/pipeline-document/built-ins";
 import type {
@@ -137,6 +138,7 @@ export function toStepHandle(
       enumerable: false,
     });
   }
+  registerStepSource(node, call);
   return makeHandle(call, node) as unknown as StepHandle;
 }
 

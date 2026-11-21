@@ -27,6 +27,7 @@ import {
 import { newState, type CompileState, type PlacedNode } from "./compile-state";
 import { PipelineBuildError, type BuildIssue } from "./errors";
 import { withTracker } from "./refs";
+import { stepSourceOf } from "./registry";
 import { captureSite, type SourceSite } from "./source";
 import type { FlowChain, Target } from "./types";
 
@@ -49,6 +50,11 @@ export interface PipelineDefinition {
   readonly steps: StepCatalog;
   /** Problems that don't stop the build, such as chains left out of `flow`. */
   readonly warnings: readonly BuildIssue[];
+  /**
+   * The step handles behind the local steps, each once (non-enumerable).
+   * Push publishes them alongside the exported steps.
+   */
+  readonly localSteps: readonly object[];
   /**
    * In an automation rule: a run of this pipeline for `workItem`
    * (`r.workItem` or `r.child`). The bare pipeline runs for `r.workItem`.
@@ -118,6 +124,17 @@ function stepCatalog(state: CompileState): StepCatalog {
   return steps;
 }
 
+/** The step handles behind the local step nodes, each once. */
+function localStepSources(state: CompileState): object[] {
+  const sources = new Set<object>();
+  for (const { def } of state.nodes.values()) {
+    if (def.kind !== "step" || !def.local) continue;
+    const source = stepSourceOf(def);
+    if (source !== undefined) sources.add(source);
+  }
+  return [...sources];
+}
+
 function compile(
   config: PipelineConfig,
   site: SourceSite | null,
@@ -172,11 +189,12 @@ function compile(
     steps: stepCatalog(state),
     warnings,
   } as const;
-  Object.defineProperty(definition, "on", {
-    value: pipelineOn(config.key),
-    enumerable: false,
+  Object.defineProperties(definition, {
+    on: { value: pipelineOn(config.key), enumerable: false },
+    localSteps: { value: localStepSources(state), enumerable: false },
   });
-  return definition as typeof definition & Pick<PipelineDefinition, "on">;
+  return definition as typeof definition &
+    Pick<PipelineDefinition, "on" | "localSteps">;
 }
 
 /** Compiles a pipeline to its JSON document. Throws `PipelineBuildError`. */

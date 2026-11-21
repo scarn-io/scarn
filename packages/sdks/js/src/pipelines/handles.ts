@@ -3,12 +3,18 @@
  * with the chain-starting methods attached. Step handles from `defineStep` /
  * `codeStep` and `stepRef` are built here, and so are wait handles.
  */
+import { assertNever } from "../assert-never";
 import { stepOn } from "../automations/targets";
 import type { JsonSchema } from "../contracts/pipeline-document";
 import { attachChainMethods } from "./chain";
 import { AuthoringError } from "./errors";
 import type { NodeDef, RawArgs } from "./model";
-import { registerNode, registerTarget } from "./registry";
+import {
+  registerNode,
+  registerStepSource,
+  registerTarget,
+  stepSourceOf,
+} from "./registry";
 import { captureSite } from "./source";
 
 /** What `toPipelineStep` needs from a step definition. */
@@ -18,7 +24,7 @@ export interface StepSource {
   resultSchemaJson: JsonSchema | Record<string, unknown> | null;
   errors?: readonly string[];
   /** A code step always has a result schema, so only an agent step without one is a conversation step. */
-  kind?: "built_in" | "user_defined" | "code";
+  kind?: "built_in" | "user_defined" | "code" | "mcp_tool";
 }
 
 function checkArgs(node: NodeDef, args: RawArgs | undefined): void {
@@ -64,8 +70,12 @@ export function makeHandle<T extends object>(handle: T, node: NodeDef): T {
   });
   if (node.kind === "step") {
     Object.defineProperty(handle, "as", {
-      value: (id: string) =>
-        stepHandleFor({ ...node, id, site: captureSite() }),
+      value: (id: string) => {
+        const renamed: NodeDef = { ...node, id, site: captureSite() };
+        const source = stepSourceOf(node);
+        if (source !== undefined) registerStepSource(renamed, source);
+        return stepHandleFor(renamed);
+      },
       enumerable: false,
       configurable: true,
     });
@@ -86,6 +96,20 @@ function stepHandleFor(node: NodeDef): object {
   return makeHandle(handle, node);
 }
 
+function kindCanConverse(kind: StepSource["kind"]): boolean {
+  switch (kind) {
+    case undefined:
+    case "built_in":
+    case "user_defined":
+      return true;
+    case "code":
+    case "mcp_tool":
+      return false;
+    default:
+      return assertNever(kind);
+  }
+}
+
 /**
  * The call behind a step handle: records a target for `source`'s node. Used
  * by `toStepHandle` so `defineStep` / `codeStep` handles are pipeline steps.
@@ -99,7 +123,7 @@ export function stepNode(source: StepSource, local = true): NodeDef {
     inputSchema: source.inputSchemaJson ?? null,
     resultSchema: source.resultSchemaJson ?? null,
     conversation:
-      local && source.kind !== "code" && source.resultSchemaJson === null,
+      local && kindCanConverse(source.kind) && source.resultSchemaJson === null,
     errors: [...(source.errors ?? [])],
     site: captureSite(),
   };

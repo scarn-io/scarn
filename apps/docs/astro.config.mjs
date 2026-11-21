@@ -208,6 +208,7 @@ export default defineConfig({
             { label: "Environments", slug: "guides/environments" },
             { label: "Project secrets", slug: "guides/secrets" },
             { label: "Building Pipelines", slug: "guides/pipelines" },
+            { label: "MCP tool steps", slug: "guides/mcp-tool-steps" },
             { label: "Project Automations", slug: "guides/automations" },
             { label: "Running Workers", slug: "guides/workers" },
           ],
@@ -216,11 +217,13 @@ export default defineConfig({
           label: "Connections",
           items: [
             { label: "Overview", slug: "connections" },
+            { label: "Connect from the CLI", slug: "connections/cli" },
             { label: "Notion", slug: "connections/notion" },
             {
               label: "Cloudflare Observability",
               slug: "connections/cloudflare",
             },
+            { label: "Slack", slug: "connections/slack" },
           ],
         },
         {

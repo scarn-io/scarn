@@ -34,6 +34,8 @@ import {
 import { assertNoConnectorMcpCollisions, mergeStepMcps } from "./compile-mcps";
 import { isEnvironmentHandle } from "../../push/code-step-lookup";
 import type { McpHandle } from "./define-mcp";
+import type { ArgsTemplate } from "./args-template";
+import type { JsonSchema } from "../../contracts/pipeline-document/json";
 import type { BuiltInError, ConversationResult } from "../../pipelines/types";
 import {
   compileStepConcurrency,
@@ -146,12 +148,27 @@ export type StepDefinitionEntrypointJson = {
   sourceFile: string;
 };
 
+/**
+ * A `kind: "mcp_tool"` step's tool call spec: the server key in
+ * `opencodeMcpJson`, the tool's name on that server, the compiled args
+ * template, and the catalog's JSON Schemas for the tool.
+ */
+export type McpToolCallSpec = {
+  server: string;
+  tool: string;
+  argsTemplate: ArgsTemplate;
+  toolSchemas: {
+    input: JsonSchema;
+    output: JsonSchema | null;
+  };
+};
+
 export type StepDefinitionSpec = {
   key: string;
   name: string;
   description: string | null;
   version: number;
-  kind: "user_defined" | "code";
+  kind: "user_defined" | "code" | "mcp_tool";
   status: "draft" | "active" | "archived";
   environment: CompiledEnvironment;
   /**
@@ -196,6 +213,8 @@ export type StepDefinitionSpec = {
   };
   /** `kind === "code"` only, present after `collect-definitions.ts` has run. */
   entrypointJson?: StepDefinitionEntrypointJson | null;
+  /** `kind === "mcp_tool"` only: the one tool the step calls. */
+  toolCall?: McpToolCallSpec;
 };
 
 // A step's effective result type: its own `result` schema's output merged

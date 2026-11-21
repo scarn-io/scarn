@@ -1,11 +1,14 @@
 import path from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
-import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 import type { Tool } from "@modelcontextprotocol/sdk/types.js";
 import type { AnyJsonObject } from "../../../common/contracts/json";
+import {
+  createStdioMcpTransport,
+  remoteMcpTransportCandidates,
+  resolveLocalMcpLaunch,
+  resolveRemoteMcpEndpoint,
+} from "../../../common/infra/mcp-transport";
 import type { McpToolLister } from "../application/list-mcp-server-tools";
 import type { ListedMcpTool } from "../domain/agent-tools-manifest";
 import type { DiscoveredMcpServer } from "../domain/discovered-agent-tools";
@@ -30,65 +33,36 @@ export class SdkMcpToolLister implements McpToolLister {
     signal: AbortSignal;
   }): Promise<ListedMcpTool[]> {
     const { config } = input.server;
-    const resolve = (value: string) => substituteEnv(value, input.env);
 
     if (config.type === "local") {
-      const [command = "", ...args] = config.command.map(resolve);
-      const environment = Object.fromEntries(
-        Object.entries(config.environment ?? {}).map(([key, value]) => [
-          key,
-          resolve(value),
-        ]),
-      );
+      const launch = resolveLocalMcpLaunch(config, input.env);
+      const [command, ...args] = launch.command;
       return listOver(
-        new StdioClientTransport({
+        createStdioMcpTransport({
           command,
           args,
-          env: { ...input.env, ...environment },
-          cwd: path.resolve(
-            this.options.repoRoot,
-            config.cwd === undefined ? "." : resolve(config.cwd),
-          ),
+          env: { ...input.env, ...launch.environment },
+          cwd: path.resolve(this.options.repoRoot, launch.cwd ?? "."),
           stderr: "ignore",
         }),
         input.signal,
       );
     }
 
-    const url = new URL(resolve(config.url));
-    const headers = Object.fromEntries(
-      Object.entries(config.headers ?? {}).map(([key, value]) => [
-        key,
-        resolve(value),
-      ]),
+    const [streamable, sse] = remoteMcpTransportCandidates(
+      resolveRemoteMcpEndpoint(config, input.env),
     );
     try {
-      return await listOver(
-        new StreamableHTTPClientTransport(url, { requestInit: { headers } }),
-        input.signal,
-      );
+      return await listOver(streamable(), input.signal);
     } catch (streamableError) {
       if (input.signal.aborted) throw streamableError;
       try {
-        return await listOver(
-          // eslint-disable-next-line @typescript-eslint/no-deprecated -- the SSE fallback OpenCode also keeps for older servers
-          new SSEClientTransport(url, { requestInit: { headers } }),
-          input.signal,
-        );
+        return await listOver(sse(), input.signal);
       } catch {
         throw streamableError;
       }
     }
   }
-}
-
-const ENV_PLACEHOLDER = /\{env:([^}]+)\}/gu;
-
-function substituteEnv(
-  value: string,
-  env: Readonly<Record<string, string>>,
-): string {
-  return value.replace(ENV_PLACEHOLDER, (_, name: string) => env[name] ?? "");
 }
 
 async function listOver(
@@ -127,10 +101,18 @@ function toListedTool(tool: Tool): ListedMcpTool {
   const readOnlyHint = tool.annotations?.readOnlyHint;
   return {
     name: tool.name,
+    ...(tool.title === undefined ? {} : { title: tool.title }),
     ...(tool.description === undefined
       ? {}
       : { description: tool.description }),
-    inputSchema: JSON.parse(JSON.stringify(tool.inputSchema)) as AnyJsonObject,
+    inputSchema: toJsonObject(tool.inputSchema),
+    ...(tool.outputSchema === undefined
+      ? {}
+      : { outputSchema: toJsonObject(tool.outputSchema) }),
     ...(readOnlyHint === undefined ? {} : { readOnlyHint }),
   };
+}
+
+function toJsonObject(schema: object): AnyJsonObject {
+  return JSON.parse(JSON.stringify(schema)) as AnyJsonObject;
 }

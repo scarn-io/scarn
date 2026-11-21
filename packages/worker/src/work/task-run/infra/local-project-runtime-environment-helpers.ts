@@ -51,7 +51,7 @@ export async function selectLaunchRuntimeConfig(input: {
   workspacePath: string;
   lookupBranch: string;
   runtime: ResolvedEnvironment["runtime"];
-  startAgent: boolean;
+  installPipelineBuilder: boolean;
 }): Promise<{
   devcontainerConfigPath: string;
   managedRuntime: ResolvedManagedRuntime | null;
@@ -71,7 +71,7 @@ export async function selectLaunchRuntimeConfig(input: {
   const devcontainerConfigPath = await writeManagedRuntimeConfig({
     workspacePath: input.workspacePath,
     id: managedRuntime.id,
-    installPipelineBuilder: !input.startAgent,
+    installPipelineBuilder: input.installPipelineBuilder,
   });
   return {
     devcontainerConfigPath,

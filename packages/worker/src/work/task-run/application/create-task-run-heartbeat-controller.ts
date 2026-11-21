@@ -13,12 +13,24 @@ function getHeartbeatPollDelayMs(leaseDurationSeconds: number) {
 }
 
 /**
+ * Statuses the worker's own completion moves a run to. A heartbeat seeing one
+ * stops, but aborts nothing: the run already ended the way it meant to.
+ */
+const SELF_REPORTED_STATUSES: ReadonlySet<TaskRunStatus> = new Set([
+  "succeeded",
+  "yielded",
+]);
+
+/**
  * Keeps a claimed run's lease alive and watches what the server says about
- * it. A heartbeat reporting `managedAuthority.lost` aborts the run with
- * `managed_authority_lost`. Once {@link armManagedWatchdog} is called (the
- * run has a managed launch), a whole lease without an accepted heartbeat
- * aborts it the same way with `control_lost`: the server stops relaying the
- * run's calls once its lease lapses (decision 6).
+ * it. A run the server ended (gone, claim revoked, cancelled, timed out) is
+ * aborted with `cancelled`, so work in flight (an MCP tool call, say) stops
+ * at once rather than at the monitor's next poll. A heartbeat reporting
+ * `managedAuthority.lost` aborts the run with `managed_authority_lost`. Once
+ * {@link armManagedWatchdog} is called (the run has a managed launch), a
+ * whole lease without an accepted heartbeat aborts it the same way with
+ * `control_lost`: the server stops relaying the run's calls once its lease
+ * lapses (decision 6).
  */
 export function createTaskRunHeartbeatController(
   client: TaskRunWorkerClient,
@@ -27,7 +39,7 @@ export function createTaskRunHeartbeatController(
     taskRunId: UuidV7;
     claimToken: string;
     leaseDurationSeconds: number;
-    run: Pick<RunHandle, "abortManagedAuthorityLost">;
+    run: Pick<RunHandle, "abortManagedAuthorityLost" | "abortCancelled">;
   },
 ) {
   const logger = resolveProjectWorkLogger(deps);
@@ -115,6 +127,9 @@ export function createTaskRunHeartbeatController(
         scheduleWatchdog();
         if (taskRun.status !== "running") {
           cancelled = true;
+          if (!SELF_REPORTED_STATUSES.has(taskRun.status)) {
+            input.run.abortCancelled();
+          }
           logger.log(
             "heartbeat",
             "Task run is no longer running; stopping heartbeat",
@@ -139,6 +154,7 @@ export function createTaskRunHeartbeatController(
       } catch (error) {
         if (isTaskRunCancelledResponse(error)) {
           cancelled = true;
+          input.run.abortCancelled();
           logger.log(
             "heartbeat",
             "Task run is gone or its claim was revoked; stopping heartbeat",

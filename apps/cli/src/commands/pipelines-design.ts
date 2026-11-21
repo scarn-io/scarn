@@ -1,5 +1,6 @@
 import type { ArgumentsCamelCase, Argv, CommandModule } from "yargs";
 import { existsSync } from "node:fs";
+import { join } from "node:path";
 import * as clack from "@clack/prompts";
 import { isProjectRef, PROJECT_REF_FORMAT_HINT } from "@scarn/sdk/defaults";
 import {
@@ -28,6 +29,7 @@ import {
 } from "../lib/design-preflight";
 import { createManagedConnectionsAdapters } from "../lib/design-managed-connections-adapters";
 import { runOpencodeAuthLogin } from "../lib/design-provider-connect";
+import { MCP_TOOLS_DIR, readMcpToolLocks } from "../lib/mcp-pull-context";
 import {
   pipelineNeedsProjectDevcontainer,
   promptRunNow,
@@ -205,6 +207,8 @@ export function buildDesignPreflightPorts(
       ...(await readLocalEnvVars(projectRoot)),
     }),
     mcpToolLister: new SdkMcpToolLister({ repoRoot: projectRoot }),
+    readMcpToolLocks: () =>
+      Promise.resolve(readMcpToolLocks(join(builderDir, MCP_TOOLS_DIR))),
     writeAgentToolsManifest: (input) =>
       writeAgentToolsManifest({ homeDir: resolveHostHome(), ...input }),
     ...createManagedConnectionsAdapters(),

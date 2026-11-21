@@ -14,7 +14,6 @@ import {
   type JsonSchema,
   type PipelineDocument,
   type PipelineNode,
-  type StepCatalog,
 } from "@scarn/sdk/contracts/pipeline-document";
 import {
   buildGraph,
@@ -29,6 +28,7 @@ import type {
   StudioNode,
   StudioNodeShape,
   StudioSchemaField,
+  StudioStepCatalog,
 } from "./studio-graph-types";
 
 /** Id of the synthetic node the document's `start` transition leaves from. */
@@ -55,7 +55,10 @@ export function schemaFields(schema: JsonSchema): StudioSchemaField[] {
   }));
 }
 
-function nodeShape(node: PipelineNode, steps: StepCatalog): StudioNodeShape {
+function nodeShape(
+  node: PipelineNode,
+  steps: StudioStepCatalog,
+): StudioNodeShape {
   if (node.kind !== "step") return { kind: "none" };
   const step = steps[node.step];
   if (!step) return { kind: "none" };
@@ -66,6 +69,9 @@ function nodeShape(node: PipelineNode, steps: StepCatalog): StudioNodeShape {
     resultFields: schemaFields(resultSchema),
     resultSchemaJson: typeof resultSchema === "boolean" ? {} : resultSchema,
     errors: [...step.errors],
+    ...(step.mcpTool
+      ? { mcpTool: { server: step.mcpTool.server, tool: step.mcpTool.tool } }
+      : {}),
   };
 }
 
@@ -197,7 +203,7 @@ function attachIssues(
 function buildRawGraph(
   document: PipelineDocument,
   issues: readonly StudioIssue[],
-  steps: StepCatalog,
+  steps: StudioStepCatalog,
 ): { nodes: StudioNode[]; edges: StudioEdge[] } {
   const graph = buildGraph(document);
   const { byNode, byEdge } = attachIssues(document, graph.edges, issues);
@@ -274,7 +280,7 @@ function buildRawGraph(
 export function translateDocumentToGraph(
   document: PipelineDocument,
   issues: readonly StudioIssue[] = [],
-  steps: StepCatalog = {},
+  steps: StudioStepCatalog = {},
 ): { nodes: StudioNode[]; edges: StudioEdge[] } {
   const { nodes, edges } = buildRawGraph(document, issues, steps);
   return layoutGraph(nodes, edges);
@@ -284,7 +290,7 @@ export function translateDocumentToGraph(
 export function translatePipelineToSnapshot(
   document: PipelineDocument,
   issues: readonly StudioIssue[] = [],
-  steps: StepCatalog = {},
+  steps: StudioStepCatalog = {},
 ): PipelineGraphSnapshot {
   const { nodes, edges } = translateDocumentToGraph(document, issues, steps);
   return {
@@ -361,6 +367,8 @@ export type {
   StudioNodeData,
   StudioNodeKind,
   StudioNodeShape,
+  StudioMcpTool,
   StudioSchemaField,
   StudioSnapshot,
+  StudioStepCatalog,
 } from "./studio-graph-types";

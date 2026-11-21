@@ -32,8 +32,8 @@ import {
   extractCompilableSnippets,
   extractFencedBlocks,
   KNOWN_FENCE_TAGS,
-  SHARED_STEPS_FIXTURE,
   writeHarnessTsconfig,
+  writeSnippetFixtures,
 } from "./template-harness";
 
 // The default pipeline and the authoring reference are TEXT assets: nothing in
@@ -264,9 +264,7 @@ describe("everything the agent is told to copy compiles against the SDK", () => 
         );
       }
 
-      // Snippets that import `./steps` rely on the shared-steps file the
-      // reference's section 0 documents. Its shape is dictated by the snippets.
-      writeFileSync(join(dir, "steps.ts"), SHARED_STEPS_FIXTURE, "utf-8");
+      writeSnippetFixtures(dir);
 
       const snippets = extractCompilableSnippets(PIPELINE_AUTHORING_REFERENCE);
       expect(snippets.length).toBeGreaterThan(2);

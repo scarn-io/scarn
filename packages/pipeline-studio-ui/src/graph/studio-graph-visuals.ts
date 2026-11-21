@@ -235,6 +235,18 @@ export function orderedEdgeLabel(
     : `${String(order)}. ${label}`;
 }
 
+/** The kind badge on an MCP tool step's node. */
+export const MCP_TOOL_BADGE = "MCP tool";
+
+/** The `server.tool` an MCP tool step calls; `null` for every other node. */
+export function mcpToolTarget(
+  data: Pick<StudioNodeData, "shape">,
+): string | null {
+  const { shape } = data;
+  if (shape.kind !== "step" || !shape.mcpTool) return null;
+  return `${shape.mcpTool.server}.${shape.mcpTool.tool}`;
+}
+
 /** The dash pattern of a detached step node's border. */
 export const DETACHED_DASH_ARRAY = "8 5";
 

@@ -9,7 +9,6 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { createLazyLogger } from "@scarn/observability/logging/host";
-import type { StepCatalog } from "@scarn/sdk/contracts/pipeline-document";
 import {
   formatValidationError,
   validatePipeline,
@@ -24,6 +23,7 @@ import type {
   PipelineGraphSnapshot,
   StudioIssue,
   StudioSnapshot,
+  StudioStepCatalog,
 } from "@scarn/pipeline-studio-ui";
 import { collectDefinitionsFromDirectoryTolerant } from "@scarn/sdk/push";
 import type { TolerantCollectedDefinitions } from "@scarn/sdk/push";
@@ -69,11 +69,12 @@ function collectDefinitions(
 
 /**
  * The highest local version of each step key, with the error names it
- * declares. Takes handles or plain specs.
+ * declares and, for an MCP tool step, the tool it calls. Takes handles or
+ * plain specs.
  */
 export function buildLocalStepCatalog(
   steps: readonly StepDefinitionSpec[],
-): StepCatalog {
+): StudioStepCatalog {
   const latest = new Map<string, StepDefinitionSpec>();
   for (const step of steps.map(toStepSpec)) {
     const current = latest.get(step.key);
@@ -86,6 +87,14 @@ export function buildLocalStepCatalog(
         inputSchema: step.inputSchemaJson ?? true,
         resultSchema: step.resultSchemaJson ?? true,
         errors: [...(step.errors ?? [])],
+        ...(step.toolCall
+          ? {
+              mcpTool: {
+                server: step.toolCall.server,
+                tool: step.toolCall.tool,
+              },
+            }
+          : {}),
       },
     ]),
   );
@@ -113,7 +122,7 @@ type DocumentResult =
 function readDocumentFile(
   builderDir: string,
   file: string,
-  catalog: StepCatalog,
+  catalog: StudioStepCatalog,
 ): DocumentResult | null {
   let parsed: unknown;
   try {

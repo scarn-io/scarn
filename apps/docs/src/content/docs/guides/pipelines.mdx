@@ -529,6 +529,10 @@ A retry queues a new attempt straight away, and the next worker poll picks it up
 | `Scarn.WorkItemNotNative`        | The step tried to change a work item synced from GitHub, Jira or Bitbucket                                                                                                               |
 | `ManagedConnectionAuthorityLost` | A project [MCP connection](/scarn/connections/) the step uses was disconnected, replaced or needs reconnecting before the step finished, so its outcome wasn't applied. It isn't retried |
 | `ManagedConnectionNotReady`      | A project MCP connection the step uses wasn't ready when the step started, so nothing ran. It isn't retried                                                                              |
+| `Scarn.ArgsError`                | An [MCP tool step](/scarn/guides/mcp-tool-steps/)'s rendered args don't match the tool's input schema, so the tool wasn't called                                                         |
+| `Scarn.McpToolError`             | The MCP tool ran and returned an error result                                                                                                                                            |
+| `Scarn.McpUnavailable`           | The MCP server couldn't start, connect or initialize, or has no such tool                                                                                                                |
+| `Scarn.McpOutputInvalid`         | The MCP tool's result doesn't match its output schema, or is over 1 MiB                                                                                                                  |
 
 Names in `on` must be built-in or declared in the step's `errors`; anything else is a validation error, and in TypeScript a type error.
 

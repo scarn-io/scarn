@@ -12,6 +12,8 @@ import {
   resolveManagedConnections,
   type ManagedConnectionsPorts,
 } from "./design-managed-connections";
+import { manifestMcpToolLocks } from "./design-mcp-tool-locks";
+import type { LockedServer } from "./mcp-pull-context";
 
 /**
  * The design preflight's tool-discovery step (D12–D14): find the MCP servers
@@ -23,6 +25,11 @@ import {
  * never started: its tools come from that connection, listed by the API (see
  * `design-managed-connections.ts`), and the project's connections are
  * recorded too.
+ *
+ * Servers that `scarn mcp pull` has locked (`mcp/<server>.lock.json` in the
+ * builder directory) are marked with their lock, and whether the tools just
+ * listed still match it, so the designer can bind the existing catalog with
+ * `.withTools()` instead of pulling again.
  *
  * Nothing here is fatal. A server missing a `requiredEnv` variable is not
  * started; a server that fails or times out is recorded; and if the step
@@ -36,6 +43,8 @@ export interface AgentToolsPorts extends ManagedConnectionsPorts {
   readToolEnv(): Promise<Record<string, string>>;
   /** Starts, lists and stops one server. */
   mcpToolLister: McpToolLister;
+  /** The `scarn mcp pull` locks in the builder's `mcp/` (`readMcpToolLocks`). */
+  readMcpToolLocks(): Promise<LockedServer[]>;
   /** Persist the manifest for `owner/slug`; returns its absolute path. */
   writeAgentToolsManifest(input: {
     owner: string;
@@ -115,12 +124,16 @@ export async function ensureAgentToolsManifest(input: {
       listings.set(name, listing);
     }
 
+    const locks = await readLocks(ports, reporter);
     const manifest = buildAgentToolsManifest({
       project: input.project,
       generatedAt: (input.now ?? (() => new Date()))(),
       discovered,
       listings,
       connections: managed.connections,
+      ...(locks === undefined
+        ? {}
+        : { locks: manifestMcpToolLocks(locks, listings) }),
     });
     task?.succeed(
       `Listed the tools of ${String(listed)} of ${String(startable.length)} MCP server(s)`,
@@ -129,6 +142,15 @@ export async function ensureAgentToolsManifest(input: {
       if (server.availability.status !== "available") {
         reporter.warn(
           `MCP server ${server.name} (${server.source}): ${server.availability.status}: ${server.availability.reason}`,
+        );
+      }
+    }
+    for (const lock of manifest.locks ?? []) {
+      if (lock.status === "unreadable") {
+        reporter.warn(`MCP tool lock ${lock.file}: ${lock.reason}`);
+      } else if (lock.drift === "drifted") {
+        reporter.warn(
+          `MCP server ${lock.server}'s tools changed since ${lock.file}; run \`scarn mcp pull ${lock.server}\` to update it.`,
         );
       }
     }
@@ -148,5 +170,19 @@ export async function ensureAgentToolsManifest(input: {
         `designer: ${error instanceof Error ? error.message : String(error)}`,
     );
     return null;
+  }
+}
+
+async function readLocks(
+  ports: AgentToolsPorts,
+  reporter: BaseReporter,
+): Promise<LockedServer[] | undefined> {
+  try {
+    return await ports.readMcpToolLocks();
+  } catch (error) {
+    reporter.warn(
+      `Could not read the MCP tool locks: ${error instanceof Error ? error.message : String(error)}`,
+    );
+    return undefined;
   }
 }

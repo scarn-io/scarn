@@ -11,11 +11,14 @@ import {
   writeCurrentExecutionInfoFile,
 } from "../application/process-project-work-findings";
 import type {
-  AgentRuntime,
   LaunchedRuntime,
   LaunchedRuntimeOrchestrator,
 } from "../contracts/process-project-work-types";
 import type { ManagedLaunchServerUrls } from "../contracts/managed-launch-types";
+import type {
+  AgentRuntime,
+  McpToolLaunch,
+} from "../contracts/launched-runtime-handles";
 import { startStopwatch } from "../../../lib/elapsed";
 import { logWork } from "../application/work-logger";
 import { writePreviousRunFiles } from "../application/write-previous-run-files";
@@ -41,6 +44,8 @@ import {
   type LocalProjectRuntimeEnvironmentDeps,
 } from "./local-project-runtime-environment-deps";
 import { prepareGitCredentialRelay } from "./local-project-git-credentials";
+import { launchPlan } from "./resolve-launch-environment";
+import { planMcpToolLaunch } from "./local-mcp-tool-launch";
 
 export type LocalProjectRuntimeEnvironment = LaunchedRuntime;
 
@@ -78,6 +83,9 @@ export class DefaultLocalProjectRuntimeEnvironmentOrchestrator implements LocalP
     let payloadVersion: string | null = null;
     let secretValues: readonly string[] = [];
     let gitCredentialRelay: { stop(): Promise<void> } | null = null;
+    let mcpTool: McpToolLaunch | undefined;
+    const plan = launchPlan(input);
+    const callsMcpTool = plan.kind === "mcp_tool" && !input.startAgent;
 
     try {
       logWork("runtime", "Creating local runtime environment", {
@@ -123,10 +131,22 @@ export class DefaultLocalProjectRuntimeEnvironmentOrchestrator implements LocalP
       );
       const isHost = resolvedEnvironment.runtime.kind === "host";
       const register = input.registerManagedLaunch;
+      const relayRuntimeKind = callsMcpTool
+        ? "host"
+        : resolvedEnvironment.runtime.kind;
       const registerManagedLaunch = register
         ? (urls: ManagedLaunchServerUrls) =>
-            register({ ...urls, runtimeKind: resolvedEnvironment.runtime.kind })
+            register({ ...urls, runtimeKind: relayRuntimeKind })
         : undefined;
+      const mcpToolPlan = (checkout: string) =>
+        planMcpToolLaunch({
+          launch: input,
+          workspacePath: checkout,
+          connectors: resolvedEnvironment.connectors,
+          stepEnv,
+          resolveMcpEnv,
+          registerManagedLaunch,
+        });
       sessionAgentHomeDir = isHost
         ? resolveSessionAgentHomeDir(input.sessionId)
         : null;
@@ -171,6 +191,11 @@ export class DefaultLocalProjectRuntimeEnvironmentOrchestrator implements LocalP
         agent = started.agent;
         payloadVersion = started.payloadVersion;
         secretValues = started.secretValues;
+      } else if (isHost && callsMcpTool) {
+        const toolPlan = await mcpToolPlan(workspacePath);
+        secretValues = toolPlan.secretValues;
+        input.onSecretValues?.(secretValues);
+        mcpTool = toolPlan.place({ kind: "host", workspaceDir: workspacePath });
       } else if (!isHost) {
         // Step 2: Resolve the devcontainer config + its workspace folder: the
         // cloned repo's, or for a managed runtime one synthesized into the clone.
@@ -181,7 +206,7 @@ export class DefaultLocalProjectRuntimeEnvironmentOrchestrator implements LocalP
           workspacePath,
           lookupBranch: devcontainerLookupBranch,
           runtime: resolvedEnvironment.runtime,
-          startAgent: input.startAgent,
+          installPipelineBuilder: plan.installPipelineBuilder,
         });
         devcontainerConfigPath = selected.devcontainerConfigPath;
         managedRuntime = selected.managedRuntime;
@@ -229,8 +254,10 @@ export class DefaultLocalProjectRuntimeEnvironmentOrchestrator implements LocalP
         // the OpenCode runtime payload, materialize provider access, and patch
         // the devcontainer
         // config with the payload mounts, published port and host-gateway
-        // runArgs. A step without an agent launches an unmodified devcontainer.
-        const plan = input.startAgent
+        // runArgs. A step without an agent launches an unmodified devcontainer;
+        // an MCP tool step still resolves its MCP servers here, before the
+        // container starts, but starts no OpenCode.
+        const agentPlan = input.startAgent
           ? await prepareAgentLaunch({
               deps: deps,
               sessionId: input.sessionId,
@@ -246,8 +273,11 @@ export class DefaultLocalProjectRuntimeEnvironmentOrchestrator implements LocalP
               registerManagedLaunch,
             })
           : null;
-        payloadVersion = plan?.payload.version ?? null;
-        secretValues = plan ? agentLaunchSecretValues(plan) : [];
+        payloadVersion = agentPlan?.payload.version ?? null;
+        const toolPlan = callsMcpTool ? await mcpToolPlan(workspacePath) : null;
+        secretValues = agentPlan
+          ? agentLaunchSecretValues(agentPlan)
+          : (toolPlan?.secretValues ?? []);
         input.onSecretValues?.(secretValues);
 
         // Step 4: Launch the devcontainer. Stream the CLI's lifecycle progress
@@ -283,10 +313,10 @@ export class DefaultLocalProjectRuntimeEnvironmentOrchestrator implements LocalP
         // Step 4b/5/6: With the container running, seed the agent HOME, build
         // the OpenCode context, and start OpenCode inside the devcontainer.
         // Skipped for steps that do not start an agent.
-        agent = plan
+        agent = agentPlan
           ? await startAgentInContainer({
               deps: deps,
-              plan,
+              plan: agentPlan,
               sessionId: input.sessionId,
               containerId: devcontainerId,
               workspacePath,
@@ -296,6 +326,11 @@ export class DefaultLocalProjectRuntimeEnvironmentOrchestrator implements LocalP
               taskRunId,
             })
           : null;
+        mcpTool = toolPlan?.place({
+          kind: "container",
+          containerId: devcontainerId,
+          workspaceDir: agentWorkspaceFolder,
+        });
 
         logWork("runtime", "Local runtime environment ready", {
           sessionId: input.sessionId,
@@ -347,6 +382,7 @@ export class DefaultLocalProjectRuntimeEnvironmentOrchestrator implements LocalP
         // OpenCode.
         runtimeContainerId: devcontainerId,
         agent,
+        ...(mcpTool ? { mcpTool } : {}),
         // No AI image is used; surface the pinned OpenCode runtime version
         // (empty when no agent was started).
         aiImage: payloadVersion ? `opencode-runtime@${payloadVersion}` : "",

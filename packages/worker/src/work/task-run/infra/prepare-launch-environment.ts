@@ -104,7 +104,7 @@ export async function prepareLaunchEnvironment(
         return env;
       }
     : undefined;
-  if (!resolveMcpEnv || !input.startAgent) logDiagnostics();
+  if (!resolveMcpEnv || !resolved.resolveMcpServers) logDiagnostics();
   return {
     ...branches,
     ...resolved,

@@ -39,6 +39,9 @@ export function connection(
     label: "Notion",
     preset: "notion",
     resource: NOTION_URL,
+    issuerOrigin: "https://mcp.notion.com",
+    suppliedClient: null,
+    scopes: null,
     state: "ready",
     reasonCode: null,
     generation: 1,
@@ -61,8 +64,13 @@ export function connection(
 
 export const SEARCH_TOOL: ListedMcpTool = {
   name: "notion-search",
+  title: "Search",
   description: "Search the workspace",
   inputSchema: { type: "object" },
+  outputSchema: {
+    type: "object",
+    properties: { results: { type: "array" } },
+  },
   readOnlyHint: true,
 };
 

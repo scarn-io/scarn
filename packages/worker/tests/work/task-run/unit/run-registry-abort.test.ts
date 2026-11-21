@@ -203,6 +203,35 @@ describe("run registry abort", () => {
     },
   );
 
+  test.concurrent(
+    "a heartbeat finding the claim revoked aborts the run signal, ending it quietly mid-sleep",
+    async () => {
+      const setUp = await setUpRunningAgent();
+      setUp.workerClient.heartbeatTaskRun = vi.fn(() =>
+        Promise.reject(
+          new Error(
+            JSON.stringify({ title: "Conflict", status: 409, code: "X" }),
+          ),
+        ),
+      );
+      const runs = new RunRegistry();
+      const job = scheduleClaimedTaskRunJob(
+        { ...input, leaseDurationSeconds: 2 },
+        setUp.deps,
+        claim,
+        createRunTracker(),
+        { claimedCount: 1, processedCount: 0, skippedCount: 0 },
+        runs,
+      );
+
+      const failure = await captureRejection(job);
+
+      expect(failure).toBeInstanceOf(TaskRunCancelledError);
+      expect(setUp.abort).toHaveBeenCalledTimes(1);
+      expect(setUp.workerClient.failTaskRun).not.toHaveBeenCalled();
+    },
+  );
+
   test("the first abort reason wins over a later managed authority loss, and the other way round", async () => {
     const runs = new RunRegistry();
     const reasons: (RunAbortReason | null)[] = [];

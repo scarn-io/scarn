@@ -25,6 +25,37 @@ describe("buildLocalStepCatalog", () => {
     });
   });
 
+  test("carries the tool an MCP tool step calls", () => {
+    const catalog = buildLocalStepCatalog([
+      {
+        key: "create-issue",
+        name: "Create issue",
+        description: null,
+        version: 1,
+        kind: "mcp_tool",
+        status: "active",
+        environment: null,
+        prompt: null,
+        inputSchemaJson: null,
+        resultSchemaJson: { type: "object" },
+        opencodeMcpJson: null,
+        healthChecksJson: null,
+        toolCall: {
+          server: "linear",
+          tool: "create_issue",
+          argsTemplate: {},
+          toolSchemas: { input: { type: "object" }, output: null },
+        },
+      },
+    ]);
+
+    expect(catalog["create-issue"]?.mcpTool).toEqual({
+      server: "linear",
+      tool: "create_issue",
+    });
+    expect(catalog["create-issue"]?.resultSchema).toEqual({ type: "object" });
+  });
+
   test("keeps the highest version of each key", () => {
     const v1 = defineStep({ key: "s", name: "S", agentPrompt: "p" });
     const v2 = defineStep({

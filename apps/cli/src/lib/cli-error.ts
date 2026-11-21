@@ -58,6 +58,16 @@ export const CLI_ERROR_CODES = [
   "worker_version_mismatch",
   "worker_unresponsive",
   "worker_request_failed",
+  "mcp_server_not_found",
+  "mcp_pull_failed",
+  "mcp_tools_drift",
+  "loopback_port_in_use",
+  "loopback_timeout",
+  "loopback_cancelled",
+  "connection_not_found",
+  "connection_request_failed",
+  "connection_completion_failed",
+  "connection_client_required",
 ] as const;
 
 export type CliErrorCode = (typeof CLI_ERROR_CODES)[number];

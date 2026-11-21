@@ -27,6 +27,7 @@ function startController(
   options: {
     leaseDurationSeconds?: number;
     abortManagedAuthorityLost?: (reason: ManagedAuthorityAbortReason) => void;
+    abortCancelled?: () => void;
   } = {},
 ) {
   const client = { heartbeatTaskRun } as unknown as TaskRunWorkerClient;
@@ -42,6 +43,7 @@ function startController(
       leaseDurationSeconds: options.leaseDurationSeconds ?? 0,
       run: {
         abortManagedAuthorityLost: options.abortManagedAuthorityLost ?? vi.fn(),
+        abortCancelled: options.abortCancelled ?? vi.fn(),
       },
     },
   );
@@ -79,9 +81,64 @@ describe("createTaskRunHeartbeatController", () => {
     expect(heartbeatTaskRun).toHaveBeenCalledTimes(1);
   });
 
+  test.each([404, 409])(
+    "a %d heartbeat aborts the run as cancelled, so a call in flight stops",
+    async (status) => {
+      const abortCancelled = vi.fn();
+      const controller = startController(
+        vi.fn(() => Promise.reject(problem(status))),
+        { abortCancelled },
+      );
+
+      await waitUntil(() => controller.isCancelled());
+      await controller.stop();
+
+      expect(abortCancelled).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  test.each(["cancelled", "timeout", "failed"] as const)(
+    "a 200 with status %s aborts the run as cancelled",
+    async (status) => {
+      const abortCancelled = vi.fn();
+      const controller = startController(
+        vi.fn(() =>
+          Promise.resolve({ status, managedAuthority: "ok" as const }),
+        ),
+        { abortCancelled },
+      );
+
+      await waitUntil(() => controller.isCancelled());
+      await controller.stop();
+
+      expect(abortCancelled).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  test.each(["succeeded", "yielded"] as const)(
+    "a 200 with status %s, which the worker reported itself, aborts nothing",
+    async (status) => {
+      const abortCancelled = vi.fn();
+      const controller = startController(
+        vi.fn(() =>
+          Promise.resolve({ status, managedAuthority: "ok" as const }),
+        ),
+        { abortCancelled },
+      );
+
+      await waitUntil(() => controller.isCancelled());
+      await controller.stop();
+
+      expect(abortCancelled).not.toHaveBeenCalled();
+    },
+  );
+
   test("a 200 with status running keeps the loop going", async () => {
     const heartbeatTaskRun = vi.fn(() =>
-      Promise.resolve({ status: "running" as const, managedAuthority: "ok" as const }),
+      Promise.resolve({
+        status: "running" as const,
+        managedAuthority: "ok" as const,
+      }),
     );
     const controller = startController(heartbeatTaskRun);
 

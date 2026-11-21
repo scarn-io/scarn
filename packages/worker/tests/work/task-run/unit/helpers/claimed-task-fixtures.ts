@@ -73,6 +73,7 @@ export function createWorkerContext(
     prompt:
       "Open {{env.BASE_URL}} for {{input.title}} and save to {{scarn.artifactsDir}}trace.zip. Legacy: {{title}} and {{stepArtifactsDir}}trace.zip.",
     entrypointJson: null,
+    toolCall: null,
     resultSchemaJson: { type: "object" },
     grants: [],
   };
@@ -140,6 +141,24 @@ export function createCodeStepWorkerContext(
   });
 }
 
+/** A `kind: "mcp_tool"` worker context: no prompt, a Notion search tool call. */
+export function createMcpToolStepWorkerContext(): TaskRunWorkerContext {
+  return createWorkerContext(
+    { kind: "inline", runtime: { kind: "managed", id: "bun1" }, envJson: null },
+    null,
+    {
+      kind: "mcp_tool",
+      prompt: null,
+      toolCall: {
+        server: "notion",
+        tool: "search",
+        argsTemplate: { query: "{{input.title}}" },
+        toolSchemas: { input: { type: "object" }, output: null },
+      },
+    },
+  );
+}
+
 export function createRunTracker(): TaskRunTracker {
   return {
     createSession: vi.fn(() => Promise.resolve(undefined)),
@@ -158,7 +177,10 @@ export function createWorkerClient(
     userId: requestedByUserId,
     claimTaskRuns: vi.fn(),
     heartbeatTaskRun: vi.fn(() =>
-      Promise.resolve({ status: "running" as const, managedAuthority: "ok" as const }),
+      Promise.resolve({
+        status: "running" as const,
+        managedAuthority: "ok" as const,
+      }),
     ),
     reportTaskRunBaseCommit: vi.fn(),
     failTaskRun: vi.fn(),

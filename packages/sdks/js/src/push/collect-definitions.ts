@@ -88,11 +88,27 @@ type RegisteredCodeStep = {
   readonly sourceFile: string;
 };
 
+/**
+ * The local steps one file's default-exported pipeline uses, merged into the
+ * collection once every file's exports are in.
+ */
+type ReferencedSteps = {
+  /** The pipeline file, relative to the collected directory. */
+  readonly sourceFile: string;
+  readonly pipelineKey: string;
+  readonly steps: readonly StepDefinitionSpec[];
+};
+
 /** Mutable accumulator shared by every file of one collection run. */
 type CollectionState = {
   readonly stepMap: Map<string, StepDefinitionSpec>;
+  /** Where each `stepMap` entry came from, for conflict messages. */
+  readonly stepSites: Map<string, string>;
+  /** Every exported step handle or spec, by identity. */
+  readonly exportedSteps: Set<StepDefinitionSpec>;
   readonly codeSteps: Map<string, RegisteredCodeStep>;
   readonly environments: Map<string, CollectedEnvironmentEntry>;
+  readonly referenced: ReferencedSteps[];
 };
 
 type CollectedEnvironmentEntry = {
@@ -103,7 +119,18 @@ type CollectedEnvironmentEntry = {
 };
 
 function createCollectionState(): CollectionState {
-  return { stepMap: new Map(), codeSteps: new Map(), environments: new Map() };
+  return {
+    stepMap: new Map(),
+    stepSites: new Map(),
+    exportedSteps: new Set(),
+    codeSteps: new Map(),
+    environments: new Map(),
+    referenced: [],
+  };
+}
+
+function stepMapKey(spec: StepDefinitionSpec): string {
+  return `${spec.key}@v${String(spec.version)}`;
 }
 
 /**
@@ -283,10 +310,112 @@ async function collectFile(
     state.environments.set(entry.handle.name, entry);
   }
 
+  const sourceFile = relative(absDir, absoluteFilePath);
   for (const [exportName, value] of Object.entries(mod)) {
     if (exportName === "default" || !isStepDefinitionSpec(value)) continue;
+    state.exportedSteps.add(value);
     const resolved = resolveCodeStepEntrypoint(value, absoluteFilePath, absDir);
-    state.stepMap.set(`${resolved.key}@v${String(resolved.version)}`, resolved);
+    const mapKey = stepMapKey(resolved);
+    state.stepMap.set(mapKey, resolved);
+    if (!state.stepSites.has(mapKey)) {
+      state.stepSites.set(mapKey, `${sourceFile} (export "${exportName}")`);
+    }
+  }
+
+  const referenced = referencedStepsOf(mod["default"], sourceFile);
+  if (referenced !== undefined) state.referenced.push(referenced);
+}
+
+/**
+ * The local steps a default-exported `definePipeline` result uses, read from
+ * its non-enumerable `localSteps`. Undefined for any other default export.
+ */
+function referencedStepsOf(
+  // eslint-disable-next-line local/no-unknown-parameter-type -- a module's default export
+  value: unknown,
+  sourceFile: string,
+): ReferencedSteps | undefined {
+  if (typeof value !== "object" || value === null) return undefined;
+  const pipeline = value as {
+    _tag?: unknown;
+    key?: unknown;
+    localSteps?: unknown;
+  };
+  if (
+    pipeline._tag !== "pipeline_document" ||
+    typeof pipeline.key !== "string" ||
+    !Array.isArray(pipeline.localSteps)
+  ) {
+    return undefined;
+  }
+  return {
+    sourceFile,
+    pipelineKey: pipeline.key,
+    steps: pipeline.localSteps.filter(isStepDefinitionSpec),
+  };
+}
+
+/**
+ * Folds one pipeline's referenced steps into `state`. A step that is also
+ * exported is already collected. A code step must be exported, since the
+ * worker re-imports it by file. A step whose key is already taken by a
+ * different spec throws, naming both source sites. Checks everything before
+ * changing `state`, so a failure rejects the whole pipeline.
+ */
+function mergeReferencedSteps(
+  state: CollectionState,
+  { sourceFile, pipelineKey, steps }: ReferencedSteps,
+): void {
+  const site = `${sourceFile} (pipeline "${pipelineKey}")`;
+  const additions = new Map<string, StepDefinitionSpec>();
+  const environmentHandles: {
+    handle: EnvironmentHandle;
+    exported: boolean;
+  }[] = [];
+
+  for (const step of steps) {
+    if (state.exportedSteps.has(step)) continue;
+    if (step.kind === "code") {
+      throw new Error(
+        `Code step "${step.key}" is used by ${site} but isn't exported. ` +
+          `The worker loads a code step from the file that exports it, so ` +
+          `export it from a file in ${PIPELINE_BUILDER_DIR}.`,
+      );
+    }
+    const resolved = toStepSpec(step);
+    const mapKey = stepMapKey(resolved);
+    const conflict = [...state.stepMap, ...additions].find(
+      ([existingKey, existing]) =>
+        existing.key === resolved.key &&
+        (existingKey !== mapKey || !isDeepStrictEqual(existing, resolved)),
+    );
+    if (conflict !== undefined) {
+      const [conflictKey] = conflict;
+      const otherSite = state.stepSites.get(conflictKey) ?? site;
+      throw new Error(
+        `Step "${resolved.key}" is defined twice with different specs ` +
+          `(${otherSite} and ${site}). ` +
+          `Give each step a unique key, or define it once and import it.`,
+      );
+    }
+    if (state.stepMap.has(mapKey)) continue;
+    additions.set(mapKey, resolved);
+    const handle = stepEnvironmentHandle(step);
+    if (handle) environmentHandles.push({ handle, exported: false });
+  }
+
+  const environmentEntries = environmentEntriesForFile(
+    state,
+    environmentHandles,
+    sourceFile,
+  );
+
+  for (const [mapKey, spec] of additions) {
+    state.stepMap.set(mapKey, spec);
+    state.stepSites.set(mapKey, site);
+  }
+  for (const entry of environmentEntries) {
+    state.environments.set(entry.handle.name, entry);
   }
 }
 
@@ -300,7 +429,11 @@ function collectedEnvironments(state: CollectionState): CollectedEnvironment[] {
 
 /**
  * Imports every `.ts`/`.js` file in `dir` (except the push script itself) and
- * collects the step definitions they export.
+ * collects the step definitions they export, plus every local step a
+ * default-exported pipeline uses — so a step created inline in a pipeline,
+ * or imported from a package, is published too. Referenced steps are merged
+ * after every file's exports, deduped by identity and then by `key@vN` with
+ * equal specs; a different spec under a taken key throws, naming both sites.
  *
  * Designed to run on the user's native runtime (bun, node-with-tsx, deno), NOT
  * inside a `bun --compile`'d binary — that runtime can't resolve scoped package
@@ -331,6 +464,9 @@ export async function collectDefinitionsFromDirectory(
   for (const file of sourceFiles) {
     await collectFile(join(absDir, file), absDir, state);
   }
+  for (const referenced of state.referenced) {
+    mergeReferencedSteps(state, referenced);
+  }
 
   return {
     steps: [...state.stepMap.values()],
@@ -345,7 +481,8 @@ export async function collectDefinitionsFromDirectory(
  * `BrokenPipeline` entry instead of aborting collection — every *other*
  * file's steps still come back usable, so one bad edit in the builder
  * directory doesn't blank the whole designer (see
- * `compute-studio-snapshot.ts`).
+ * `compute-studio-snapshot.ts`). A pipeline whose referenced steps can't be
+ * merged is recorded the same way, under its file's name.
  */
 export async function collectDefinitionsFromDirectoryTolerant(
   dir: string,
@@ -362,6 +499,16 @@ export async function collectDefinitionsFromDirectoryTolerant(
     } catch (error) {
       brokenPipelines.push({
         key: fileNameWithoutExtension(file),
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+  for (const referenced of state.referenced) {
+    try {
+      mergeReferencedSteps(state, referenced);
+    } catch (error) {
+      brokenPipelines.push({
+        key: fileNameWithoutExtension(referenced.sourceFile),
         message: error instanceof Error ? error.message : String(error),
       });
     }

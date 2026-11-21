@@ -197,6 +197,12 @@ function fromMcpJson(entry: JsonObject, format: McpConfigFormat): FormatResult {
       if (typeof oauth["callbackPort"] === "number") {
         converted["callback_port"] = oauth["callbackPort"];
       }
+      if (typeof oauth["redirectUri"] === "string") {
+        converted["redirect_uri"] = oauth["redirectUri"];
+      }
+      if (typeof oauth["scope"] === "string") {
+        converted["scope"] = oauth["scope"];
+      }
       if (Object.keys(converted).length > 0) candidate["oauth"] = converted;
     }
     if (entry["disabled"] === true) candidate["disabled"] = true;

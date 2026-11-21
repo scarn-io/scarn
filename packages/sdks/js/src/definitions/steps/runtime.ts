@@ -150,8 +150,12 @@ export type CompiledEnvironment =
   CompiledInlineEnvironment | { kind: "named"; name: string } | null;
 
 export type CompileEnvironmentContext = CompileRepoContext & {
-  /** Used when the environment declares no `runtime`. `codeStep` passes the default managed runtime. */
-  readonly defaultRuntime?: ManagedRuntimeSpec;
+  /**
+   * Used when the environment declares no `runtime`. `codeStep` passes the
+   * default managed runtime; an MCP tool step passes one based on its
+   * server's transport.
+   */
+  readonly defaultRuntime?: ManagedRuntimeSpec | DevcontainerRuntimeSpec;
 };
 
 /**

@@ -1,4 +1,7 @@
-import { normalizeMcpResourceUrl } from "@scarn/sdk/managed-connections";
+import {
+  normalizeMcpResourceUrl,
+  type ManagedConnectionName,
+} from "@scarn/sdk/managed-connections";
 import type {
   GetApiProjectsByProjectIdMcpConnectionsResponse,
   GetApiProjectsByProjectIdMcpConnectionsByConnectionIdToolsResponse,
@@ -81,12 +84,32 @@ export type ResolvedManagedConnections = {
    * The listing for a repository server whose URL is one of the listed
    * connections' resource, or null when no listed connection backs it.
    */
-  connectionForServer(server: DiscoveredMcpServer):
-    | (ConnectionListing & {
-        connection: ManifestServerConnection;
-      })
-    | null;
+  connectionForServer(
+    server: DiscoveredMcpServer,
+  ): ConnectionListingWithConnection | null;
+  /**
+   * The listing for the connection named `name`, as `auth: { connection }`
+   * names it; unavailable when the project has no such connection or its
+   * connections could not be listed.
+   */
+  connectionByName(
+    name: ManagedConnectionName,
+  ): ConnectionListingWithConnection;
 };
+
+type ConnectionListingWithConnection = ConnectionListing & {
+  connection: ManifestServerConnection;
+};
+
+function unlistedConnection(
+  name: ManagedConnectionName,
+  reason: string,
+): ConnectionListingWithConnection {
+  return {
+    connection: { name, label: name, state: null, reasonCode: null },
+    ...unavailable(reason),
+  };
+}
 
 export async function resolveManagedConnections(input: {
   baseUrl: string;
@@ -101,10 +124,12 @@ export async function resolveManagedConnections(input: {
     .catch((): ManagedConnectionsApiFailure => ({ ok: false, status: null }));
 
   if (!listed.ok) {
+    const listFailure = `couldn't list the project's connections (${describeStatus(listed.status)})`;
     return {
       connections: undefined,
-      listFailure: `couldn't list the project's connections (${describeStatus(listed.status)})`,
+      listFailure,
       connectionForServer: () => null,
+      connectionByName: (name) => unlistedConnection(name, listFailure),
     };
   }
 
@@ -144,17 +169,32 @@ export async function resolveManagedConnections(input: {
       if (server.config.type !== "remote") return null;
       const resource = normalizeMcpResourceUrl(server.config.url);
       const match = resource === null ? undefined : byResource.get(resource);
-      if (match === undefined) return null;
-      return {
-        connection: {
-          name: match.summary.name,
-          label: match.summary.label,
-          state: match.summary.state,
-          reasonCode: match.summary.reasonCode,
-        },
-        ...match.listing,
-      };
+      return match === undefined ? null : withConnection(match);
     },
+    connectionByName: (name) => {
+      const match = connections.find((entry) => entry.summary.name === name);
+      return match === undefined
+        ? unlistedConnection(
+            name,
+            `the project has no connection named "${name}"`,
+          )
+        : withConnection(match);
+    },
+  };
+}
+
+function withConnection(entry: {
+  summary: ManagedConnectionSummary;
+  listing: ConnectionListing;
+}): ConnectionListingWithConnection {
+  return {
+    connection: {
+      name: entry.summary.name,
+      label: entry.summary.label,
+      state: entry.summary.state,
+      reasonCode: entry.summary.reasonCode,
+    },
+    ...entry.listing,
   };
 }
 
@@ -246,10 +286,18 @@ function wait(ms: number): Promise<void> {
 function toListedTool(tool: ManagedConnectionTool): ListedMcpTool {
   return {
     name: tool.name,
+    ...(tool.title === undefined ? {} : { title: tool.title }),
     ...(tool.description === undefined
       ? {}
       : { description: tool.description }),
     inputSchema: tool.inputSchema as ListedMcpTool["inputSchema"],
+    ...(tool.outputSchema === undefined
+      ? {}
+      : {
+          outputSchema: tool.outputSchema as NonNullable<
+            ListedMcpTool["outputSchema"]
+          >,
+        }),
     ...(tool.readOnlyHint === undefined
       ? {}
       : { readOnlyHint: tool.readOnlyHint }),

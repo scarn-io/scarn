@@ -1550,9 +1550,22 @@ export type GetApiStepDefinitionsResponses = {
         description: string | null;
         prompt: string | null;
         version: number;
-        kind: 'built_in' | 'user_defined' | 'code';
+        kind: 'built_in' | 'user_defined' | 'code' | 'mcp_tool';
         entrypointJson: {
             sourceFile: string;
+        } | null;
+        toolCallJson: {
+            server: string;
+            tool: string;
+            argsTemplate: unknown;
+            toolSchemas: {
+                input: {
+                    [key: string]: unknown;
+                } | boolean;
+                output: {
+                    [key: string]: unknown;
+                } | boolean | null;
+            };
         } | null;
         environment: {
             kind: 'named';
@@ -1777,9 +1790,22 @@ export type PostApiStepDefinitionsData = {
         description: string | null;
         prompt?: string | null;
         version: number;
-        kind: 'built_in' | 'user_defined' | 'code';
+        kind: 'built_in' | 'user_defined' | 'code' | 'mcp_tool';
         entrypointJson?: {
             sourceFile: string;
+        } | null;
+        toolCallJson?: {
+            server: string;
+            tool: string;
+            argsTemplate: unknown;
+            toolSchemas: {
+                input: {
+                    [key: string]: unknown;
+                } | boolean;
+                output: {
+                    [key: string]: unknown;
+                } | boolean | null;
+            };
         } | null;
         environment?: {
             kind: 'named';
@@ -2145,9 +2171,22 @@ export type PostApiStepDefinitionsResponses = {
         description: string | null;
         prompt: string | null;
         version: number;
-        kind: 'built_in' | 'user_defined' | 'code';
+        kind: 'built_in' | 'user_defined' | 'code' | 'mcp_tool';
         entrypointJson: {
             sourceFile: string;
+        } | null;
+        toolCallJson: {
+            server: string;
+            tool: string;
+            argsTemplate: unknown;
+            toolSchemas: {
+                input: {
+                    [key: string]: unknown;
+                } | boolean;
+                output: {
+                    [key: string]: unknown;
+                } | boolean | null;
+            };
         } | null;
         environment: {
             kind: 'named';
@@ -2372,9 +2411,22 @@ export type PutApiStepDefinitionsData = {
         description: string | null;
         prompt?: string | null;
         version: number;
-        kind: 'built_in' | 'user_defined' | 'code';
+        kind: 'built_in' | 'user_defined' | 'code' | 'mcp_tool';
         entrypointJson?: {
             sourceFile: string;
+        } | null;
+        toolCallJson?: {
+            server: string;
+            tool: string;
+            argsTemplate: unknown;
+            toolSchemas: {
+                input: {
+                    [key: string]: unknown;
+                } | boolean;
+                output: {
+                    [key: string]: unknown;
+                } | boolean | null;
+            };
         } | null;
         environment?: {
             kind: 'named';
@@ -2702,9 +2754,22 @@ export type PutApiStepDefinitionsResponses = {
         description: string | null;
         prompt: string | null;
         version: number;
-        kind: 'built_in' | 'user_defined' | 'code';
+        kind: 'built_in' | 'user_defined' | 'code' | 'mcp_tool';
         entrypointJson: {
             sourceFile: string;
+        } | null;
+        toolCallJson: {
+            server: string;
+            tool: string;
+            argsTemplate: unknown;
+            toolSchemas: {
+                input: {
+                    [key: string]: unknown;
+                } | boolean;
+                output: {
+                    [key: string]: unknown;
+                } | boolean | null;
+            };
         } | null;
         environment: {
             kind: 'named';
@@ -3042,9 +3107,22 @@ export type GetApiStepDefinitionsByStepDefinitionIdResponses = {
         description: string | null;
         prompt: string | null;
         version: number;
-        kind: 'built_in' | 'user_defined' | 'code';
+        kind: 'built_in' | 'user_defined' | 'code' | 'mcp_tool';
         entrypointJson: {
             sourceFile: string;
+        } | null;
+        toolCallJson: {
+            server: string;
+            tool: string;
+            argsTemplate: unknown;
+            toolSchemas: {
+                input: {
+                    [key: string]: unknown;
+                } | boolean;
+                output: {
+                    [key: string]: unknown;
+                } | boolean | null;
+            };
         } | null;
         environment: {
             kind: 'named';
@@ -3382,9 +3460,22 @@ export type PutApiStepDefinitionsByStepDefinitionIdArchiveResponses = {
         description: string | null;
         prompt: string | null;
         version: number;
-        kind: 'built_in' | 'user_defined' | 'code';
+        kind: 'built_in' | 'user_defined' | 'code' | 'mcp_tool';
         entrypointJson: {
             sourceFile: string;
+        } | null;
+        toolCallJson: {
+            server: string;
+            tool: string;
+            argsTemplate: unknown;
+            toolSchemas: {
+                input: {
+                    [key: string]: unknown;
+                } | boolean;
+                output: {
+                    [key: string]: unknown;
+                } | boolean | null;
+            };
         } | null;
         environment: {
             kind: 'named';
@@ -3792,7 +3883,7 @@ export type PostApiTasksResponses = {
             projectId: string;
             workItemId: string | null;
             stepDefinitionId: string | null;
-            kind: 'agent' | 'code';
+            kind: 'agent' | 'code' | 'mcp_tool';
             name: string | null;
             taskExecutionConfigId: string | null;
             environmentSelection: {
@@ -3858,7 +3949,7 @@ export type PostApiTasksResponses = {
             workItemId: string | null;
             taskExecutionConfigId: string | null;
             name: string | null;
-            kind: 'agent' | 'code';
+            kind: 'agent' | 'code' | 'mcp_tool';
             previousTaskRunId: string | null;
             baseBranch: string | null;
             baseCommit: string | null;
@@ -4266,7 +4357,7 @@ export type GetApiTasksByTaskIdResponses = {
         projectId: string;
         workItemId: string | null;
         stepDefinitionId: string | null;
-        kind: 'agent' | 'code';
+        kind: 'agent' | 'code' | 'mcp_tool';
         name: string | null;
         taskExecutionConfigId: string | null;
         environmentSelection: {
@@ -4360,6 +4451,9 @@ export type GetApiTasksByTaskIdResponses = {
             promptPreview: string;
         } | {
             kind: 'code';
+            name: string | null;
+        } | {
+            kind: 'mcp_tool';
             name: string | null;
         };
         pipelineRunId: string | null;
@@ -4491,7 +4585,7 @@ export type GetApiTasksByTaskIdRunsResponses = {
         workItemId: string | null;
         taskExecutionConfigId: string | null;
         name: string | null;
-        kind: 'agent' | 'code';
+        kind: 'agent' | 'code' | 'mcp_tool';
         previousTaskRunId: string | null;
         baseBranch: string | null;
         baseCommit: string | null;
@@ -4525,7 +4619,7 @@ export type GetApiProjectsByProjectIdTasksData = {
     };
     query?: {
         status?: 'waiting_for_concurrency_slot' | 'waiting_for_work' | 'queued' | 'running' | 'waiting_for_person' | 'succeeded' | 'failed' | 'cancelled' | Array<'waiting_for_concurrency_slot' | 'waiting_for_work' | 'queued' | 'running' | 'waiting_for_person' | 'succeeded' | 'failed' | 'cancelled'>;
-        kind?: 'agent' | 'code';
+        kind?: 'agent' | 'code' | 'mcp_tool';
         waitingOnMe?: boolean | string;
         startedByMe?: boolean | string;
         workItemId?: string | Array<string>;
@@ -4645,7 +4739,7 @@ export type GetApiProjectsByProjectIdTasksResponses = {
         tasks: Array<{
             id: string;
             projectId: string;
-            kind: 'agent' | 'code';
+            kind: 'agent' | 'code' | 'mcp_tool';
             name: string | null;
             status: 'waiting_for_concurrency_slot' | 'waiting_for_work' | 'queued' | 'running' | 'waiting_for_person' | 'succeeded' | 'failed' | 'cancelled';
             createdAt: string;
@@ -4698,6 +4792,9 @@ export type GetApiProjectsByProjectIdTasksResponses = {
                 promptPreview: string;
             } | {
                 kind: 'code';
+                name: string | null;
+            } | {
+                kind: 'mcp_tool';
                 name: string | null;
             };
             pipelineRunId: string | null;
@@ -4839,7 +4936,7 @@ export type PostApiTaskRunsClaimsResponses = {
             workItemId: string | null;
             taskExecutionConfigId: string | null;
             name: string | null;
-            kind: 'agent' | 'code';
+            kind: 'agent' | 'code' | 'mcp_tool';
             previousTaskRunId: string | null;
             baseBranch: string | null;
             baseCommit: string | null;
@@ -5017,7 +5114,7 @@ export type PutApiTaskRunsByTaskRunIdHeartbeatResponses = {
         workItemId: string | null;
         taskExecutionConfigId: string | null;
         name: string | null;
-        kind: 'agent' | 'code';
+        kind: 'agent' | 'code' | 'mcp_tool';
         previousTaskRunId: string | null;
         baseBranch: string | null;
         baseCommit: string | null;
@@ -5374,7 +5471,7 @@ export type PostApiTaskRunsByTaskRunIdWorkerContextResponses = {
         task: {
             id: string;
             status: 'pending' | 'queued' | 'running' | 'succeeded' | 'failed' | 'timeout' | 'abandoned' | 'cancelled' | 'skipped' | 'yielded';
-            kind: 'agent' | 'code';
+            kind: 'agent' | 'code' | 'mcp_tool';
             key: string;
             name: string;
             inputJson: unknown | null;
@@ -5382,6 +5479,19 @@ export type PostApiTaskRunsByTaskRunIdWorkerContextResponses = {
             prompt: string | null;
             entrypointJson: {
                 sourceFile: string;
+            } | null;
+            toolCall: {
+                server: string;
+                tool: string;
+                argsTemplate: unknown;
+                toolSchemas: {
+                    input: {
+                        [key: string]: unknown;
+                    } | boolean;
+                    output: {
+                        [key: string]: unknown;
+                    } | boolean | null;
+                };
             } | null;
             resultSchemaJson: {
                 [key: string]: unknown;
@@ -5825,7 +5935,7 @@ export type PostApiTaskRunsByTaskRunIdCompletionsResponses = {
         workItemId: string | null;
         taskExecutionConfigId: string | null;
         name: string | null;
-        kind: 'agent' | 'code';
+        kind: 'agent' | 'code' | 'mcp_tool';
         previousTaskRunId: string | null;
         baseBranch: string | null;
         baseCommit: string | null;
@@ -6001,7 +6111,7 @@ export type PostApiTaskRunsByTaskRunIdYieldsResponses = {
         workItemId: string | null;
         taskExecutionConfigId: string | null;
         name: string | null;
-        kind: 'agent' | 'code';
+        kind: 'agent' | 'code' | 'mcp_tool';
         previousTaskRunId: string | null;
         baseBranch: string | null;
         baseCommit: string | null;
@@ -6150,7 +6260,7 @@ export type PutApiTaskRunsByTaskRunIdRunningResponses = {
         workItemId: string | null;
         taskExecutionConfigId: string | null;
         name: string | null;
-        kind: 'agent' | 'code';
+        kind: 'agent' | 'code' | 'mcp_tool';
         previousTaskRunId: string | null;
         baseBranch: string | null;
         baseCommit: string | null;
@@ -6616,7 +6726,7 @@ export type GetApiTaskRunsByTaskRunIdResponses = {
         workItemId: string | null;
         taskExecutionConfigId: string | null;
         name: string | null;
-        kind: 'agent' | 'code';
+        kind: 'agent' | 'code' | 'mcp_tool';
         previousTaskRunId: string | null;
         baseBranch: string | null;
         baseCommit: string | null;
@@ -6746,7 +6856,7 @@ export type GetApiTaskRunsResponses = {
         workItemId: string | null;
         taskExecutionConfigId: string | null;
         name: string | null;
-        kind: 'agent' | 'code';
+        kind: 'agent' | 'code' | 'mcp_tool';
         previousTaskRunId: string | null;
         baseBranch: string | null;
         baseCommit: string | null;
@@ -27313,6 +27423,12 @@ export type GetApiProjectsByProjectIdMcpConnectionsResponses = {
         label: string;
         preset: string | null;
         resource: string;
+        issuerOrigin: string;
+        suppliedClient: {
+            clientId: string;
+            redirectUri: string;
+        } | null;
+        scopes: Array<string> | null;
         state: 'disconnected' | 'connecting' | 'awaiting_confirmation' | 'ready' | 'ready_with_pending_reconnect' | 'reconnect_required';
         reasonCode: 'attempt_expired' | 'candidate_expired' | 'candidate_cancelled' | 'refresh_failed' | 'grant_expired' | 'client_configuration' | null;
         generation: number;
@@ -27336,6 +27452,7 @@ export type GetApiProjectsByProjectIdMcpConnectionsResponses = {
                 identityVerified: boolean;
             };
             grantedScopes: Array<string>;
+            missingScopes: Array<string>;
             fingerprint: string;
             expiresAt: string;
             sameIdentityAsActive: boolean | 'unknown';
@@ -27777,6 +27894,12 @@ export type DeleteApiProjectsByProjectIdMcpConnectionsByConnectionIdResponses = 
             label: string;
             preset: string | null;
             resource: string;
+            issuerOrigin: string;
+            suppliedClient: {
+                clientId: string;
+                redirectUri: string;
+            } | null;
+            scopes: Array<string> | null;
             state: 'disconnected' | 'connecting' | 'awaiting_confirmation' | 'ready' | 'ready_with_pending_reconnect' | 'reconnect_required';
             reasonCode: 'attempt_expired' | 'candidate_expired' | 'candidate_cancelled' | 'refresh_failed' | 'grant_expired' | 'client_configuration' | null;
             generation: number;
@@ -27800,6 +27923,7 @@ export type DeleteApiProjectsByProjectIdMcpConnectionsByConnectionIdResponses = 
                     identityVerified: boolean;
                 };
                 grantedScopes: Array<string>;
+                missingScopes: Array<string>;
                 fingerprint: string;
                 expiresAt: string;
                 sameIdentityAsActive: boolean | 'unknown';
@@ -27939,6 +28063,12 @@ export type GetApiProjectsByProjectIdMcpConnectionsByConnectionIdResponses = {
         label: string;
         preset: string | null;
         resource: string;
+        issuerOrigin: string;
+        suppliedClient: {
+            clientId: string;
+            redirectUri: string;
+        } | null;
+        scopes: Array<string> | null;
         state: 'disconnected' | 'connecting' | 'awaiting_confirmation' | 'ready' | 'ready_with_pending_reconnect' | 'reconnect_required';
         reasonCode: 'attempt_expired' | 'candidate_expired' | 'candidate_cancelled' | 'refresh_failed' | 'grant_expired' | 'client_configuration' | null;
         generation: number;
@@ -27962,6 +28092,7 @@ export type GetApiProjectsByProjectIdMcpConnectionsByConnectionIdResponses = {
                 identityVerified: boolean;
             };
             grantedScopes: Array<string>;
+            missingScopes: Array<string>;
             fingerprint: string;
             expiresAt: string;
             sameIdentityAsActive: boolean | 'unknown';
@@ -28282,8 +28413,12 @@ export type GetApiProjectsByProjectIdMcpConnectionsByConnectionIdToolsResponses 
     200: {
         tools: Array<{
             name: string;
+            title?: string;
             description?: string;
             inputSchema: {
+                [key: string]: unknown;
+            };
+            outputSchema?: {
                 [key: string]: unknown;
             };
             readOnlyHint?: boolean;
@@ -28599,6 +28734,12 @@ export type PostApiProjectsByProjectIdMcpConnectionsByConnectionIdCandidateConfi
         label: string;
         preset: string | null;
         resource: string;
+        issuerOrigin: string;
+        suppliedClient: {
+            clientId: string;
+            redirectUri: string;
+        } | null;
+        scopes: Array<string> | null;
         state: 'disconnected' | 'connecting' | 'awaiting_confirmation' | 'ready' | 'ready_with_pending_reconnect' | 'reconnect_required';
         reasonCode: 'attempt_expired' | 'candidate_expired' | 'candidate_cancelled' | 'refresh_failed' | 'grant_expired' | 'client_configuration' | null;
         generation: number;
@@ -28622,6 +28763,7 @@ export type PostApiProjectsByProjectIdMcpConnectionsByConnectionIdCandidateConfi
                 identityVerified: boolean;
             };
             grantedScopes: Array<string>;
+            missingScopes: Array<string>;
             fingerprint: string;
             expiresAt: string;
             sameIdentityAsActive: boolean | 'unknown';
@@ -28779,6 +28921,12 @@ export type PostApiProjectsByProjectIdMcpConnectionsByConnectionIdCandidateCance
         label: string;
         preset: string | null;
         resource: string;
+        issuerOrigin: string;
+        suppliedClient: {
+            clientId: string;
+            redirectUri: string;
+        } | null;
+        scopes: Array<string> | null;
         state: 'disconnected' | 'connecting' | 'awaiting_confirmation' | 'ready' | 'ready_with_pending_reconnect' | 'reconnect_required';
         reasonCode: 'attempt_expired' | 'candidate_expired' | 'candidate_cancelled' | 'refresh_failed' | 'grant_expired' | 'client_configuration' | null;
         generation: number;
@@ -28802,6 +28950,7 @@ export type PostApiProjectsByProjectIdMcpConnectionsByConnectionIdCandidateCance
                 identityVerified: boolean;
             };
             grantedScopes: Array<string>;
+            missingScopes: Array<string>;
             fingerprint: string;
             expiresAt: string;
             sameIdentityAsActive: boolean | 'unknown';
@@ -28816,3 +28965,1071 @@ export type PostApiProjectsByProjectIdMcpConnectionsByConnectionIdCandidateCance
 };
 
 export type PostApiProjectsByProjectIdMcpConnectionsByConnectionIdCandidateCancelResponse = PostApiProjectsByProjectIdMcpConnectionsByConnectionIdCandidateCancelResponses[keyof PostApiProjectsByProjectIdMcpConnectionsByConnectionIdCandidateCancelResponses];
+
+export type PostApiProjectsByProjectIdMcpConnectionsProbeData = {
+    body: {
+        resource: string;
+        client?: {
+            clientId: string;
+            redirectUri: string;
+        };
+    };
+    path: {
+        projectId: string;
+    };
+    query?: never;
+    url: '/api/projects/{projectId}/mcp-connections/probe';
+};
+
+export type PostApiProjectsByProjectIdMcpConnectionsProbeErrors = {
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 404
+     */
+    404: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 502
+     */
+    502: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type PostApiProjectsByProjectIdMcpConnectionsProbeError = PostApiProjectsByProjectIdMcpConnectionsProbeErrors[keyof PostApiProjectsByProjectIdMcpConnectionsProbeErrors];
+
+export type PostApiProjectsByProjectIdMcpConnectionsProbeResponses = {
+    /**
+     * Response for status 200
+     */
+    200: {
+        resource: string;
+        issuerOrigin: string;
+        endpointOrigins: Array<string>;
+        clientRegistration: 'cimd' | 'dcr' | 'supplied';
+        supports: {
+            cimd: boolean;
+            dcr: boolean;
+        };
+        overrides: {
+            resourceMetadataUrl?: string;
+            advertisedResource?: string;
+            endpointOrigins?: Array<string>;
+            tokenErrors?: 'slack';
+        };
+    };
+};
+
+export type PostApiProjectsByProjectIdMcpConnectionsProbeResponse = PostApiProjectsByProjectIdMcpConnectionsProbeResponses[keyof PostApiProjectsByProjectIdMcpConnectionsProbeResponses];
+
+export type PostApiProjectsByProjectIdMcpConnectionsLoopbackData = {
+    body: {
+        preset: string;
+        name?: string;
+        redirectUri: string;
+    } | {
+        custom: {
+            name: string;
+            label?: string;
+            resource: string;
+            client?: {
+                clientId: string;
+                redirectUri: string;
+            };
+            scopes?: Array<string>;
+            confirmIssuerOrigin: string;
+        };
+        redirectUri: string;
+    };
+    path: {
+        projectId: string;
+    };
+    query?: never;
+    url: '/api/projects/{projectId}/mcp-connections/loopback';
+};
+
+export type PostApiProjectsByProjectIdMcpConnectionsLoopbackErrors = {
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 404
+     */
+    404: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 409
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 502
+     */
+    502: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type PostApiProjectsByProjectIdMcpConnectionsLoopbackError = PostApiProjectsByProjectIdMcpConnectionsLoopbackErrors[keyof PostApiProjectsByProjectIdMcpConnectionsLoopbackErrors];
+
+export type PostApiProjectsByProjectIdMcpConnectionsLoopbackResponses = {
+    /**
+     * Response for status 201
+     */
+    201: {
+        connectionId: string;
+        authorizationUrl: string;
+        attemptId: string;
+        completionSecret: string;
+        redirectUri: string;
+    };
+};
+
+export type PostApiProjectsByProjectIdMcpConnectionsLoopbackResponse = PostApiProjectsByProjectIdMcpConnectionsLoopbackResponses[keyof PostApiProjectsByProjectIdMcpConnectionsLoopbackResponses];
+
+export type PostApiProjectsByProjectIdMcpConnectionsByConnectionIdReconnectLoopbackData = {
+    body: {
+        redirectUri: string;
+    };
+    path: {
+        projectId: string;
+        connectionId: string;
+    };
+    query?: never;
+    url: '/api/projects/{projectId}/mcp-connections/{connectionId}/reconnect/loopback';
+};
+
+export type PostApiProjectsByProjectIdMcpConnectionsByConnectionIdReconnectLoopbackErrors = {
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 404
+     */
+    404: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 409
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 502
+     */
+    502: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type PostApiProjectsByProjectIdMcpConnectionsByConnectionIdReconnectLoopbackError = PostApiProjectsByProjectIdMcpConnectionsByConnectionIdReconnectLoopbackErrors[keyof PostApiProjectsByProjectIdMcpConnectionsByConnectionIdReconnectLoopbackErrors];
+
+export type PostApiProjectsByProjectIdMcpConnectionsByConnectionIdReconnectLoopbackResponses = {
+    /**
+     * Response for status 201
+     */
+    201: {
+        connectionId: string;
+        authorizationUrl: string;
+        attemptId: string;
+        completionSecret: string;
+        redirectUri: string;
+    };
+};
+
+export type PostApiProjectsByProjectIdMcpConnectionsByConnectionIdReconnectLoopbackResponse = PostApiProjectsByProjectIdMcpConnectionsByConnectionIdReconnectLoopbackResponses[keyof PostApiProjectsByProjectIdMcpConnectionsByConnectionIdReconnectLoopbackResponses];
+
+export type PostApiMcpConnectionAttemptsByAttemptIdCompleteData = {
+    body: {
+        completionSecret: string;
+        state: string;
+        code?: string;
+        iss?: string;
+        error?: string;
+    };
+    path: {
+        attemptId: string;
+    };
+    query?: never;
+    url: '/api/mcp-connection-attempts/{attemptId}/complete';
+};
+
+export type PostApiMcpConnectionAttemptsByAttemptIdCompleteErrors = {
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 404
+     */
+    404: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 409
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type PostApiMcpConnectionAttemptsByAttemptIdCompleteError = PostApiMcpConnectionAttemptsByAttemptIdCompleteErrors[keyof PostApiMcpConnectionAttemptsByAttemptIdCompleteErrors];
+
+export type PostApiMcpConnectionAttemptsByAttemptIdCompleteResponses = {
+    /**
+     * Response for status 200
+     */
+    200: {
+        id: string;
+        projectId: string;
+        name: string;
+        label: string;
+        preset: string | null;
+        resource: string;
+        issuerOrigin: string;
+        suppliedClient: {
+            clientId: string;
+            redirectUri: string;
+        } | null;
+        scopes: Array<string> | null;
+        state: 'disconnected' | 'connecting' | 'awaiting_confirmation' | 'ready' | 'ready_with_pending_reconnect' | 'reconnect_required';
+        reasonCode: 'attempt_expired' | 'candidate_expired' | 'candidate_cancelled' | 'refresh_failed' | 'grant_expired' | 'client_configuration' | null;
+        generation: number;
+        version: number;
+        connectedBy: {
+            userId: string;
+            username: string | null;
+        } | null;
+        account: {
+            userName: string | null;
+            workspaceName: string | null;
+            identityVerified: boolean;
+        } | null;
+        grantedScopes: Array<string>;
+        reconnectBy: string | null;
+        candidate: {
+            id: string;
+            account: {
+                userName: string | null;
+                workspaceName: string | null;
+                identityVerified: boolean;
+            };
+            grantedScopes: Array<string>;
+            missingScopes: Array<string>;
+            fingerprint: string;
+            expiresAt: string;
+            sameIdentityAsActive: boolean | 'unknown';
+        } | null;
+        lastRevocation: {
+            outcome: 'accepted' | 'failed' | 'unconfirmed';
+            at: string;
+        } | null;
+        createdAt: string;
+        updatedAt: string;
+    };
+};
+
+export type PostApiMcpConnectionAttemptsByAttemptIdCompleteResponse = PostApiMcpConnectionAttemptsByAttemptIdCompleteResponses[keyof PostApiMcpConnectionAttemptsByAttemptIdCompleteResponses];
+
+export type PostApiProjectsByProjectIdMcpConnectionsByConnectionIdCandidateConfirmCliData = {
+    body: {
+        candidateId: string;
+        fingerprint: string;
+        expectedVersion: number;
+    };
+    path: {
+        projectId: string;
+        connectionId: string;
+    };
+    query?: never;
+    url: '/api/projects/{projectId}/mcp-connections/{connectionId}/candidate/confirm/cli';
+};
+
+export type PostApiProjectsByProjectIdMcpConnectionsByConnectionIdCandidateConfirmCliErrors = {
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 404
+     */
+    404: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 409
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type PostApiProjectsByProjectIdMcpConnectionsByConnectionIdCandidateConfirmCliError = PostApiProjectsByProjectIdMcpConnectionsByConnectionIdCandidateConfirmCliErrors[keyof PostApiProjectsByProjectIdMcpConnectionsByConnectionIdCandidateConfirmCliErrors];
+
+export type PostApiProjectsByProjectIdMcpConnectionsByConnectionIdCandidateConfirmCliResponses = {
+    /**
+     * Response for status 200
+     */
+    200: {
+        id: string;
+        projectId: string;
+        name: string;
+        label: string;
+        preset: string | null;
+        resource: string;
+        issuerOrigin: string;
+        suppliedClient: {
+            clientId: string;
+            redirectUri: string;
+        } | null;
+        scopes: Array<string> | null;
+        state: 'disconnected' | 'connecting' | 'awaiting_confirmation' | 'ready' | 'ready_with_pending_reconnect' | 'reconnect_required';
+        reasonCode: 'attempt_expired' | 'candidate_expired' | 'candidate_cancelled' | 'refresh_failed' | 'grant_expired' | 'client_configuration' | null;
+        generation: number;
+        version: number;
+        connectedBy: {
+            userId: string;
+            username: string | null;
+        } | null;
+        account: {
+            userName: string | null;
+            workspaceName: string | null;
+            identityVerified: boolean;
+        } | null;
+        grantedScopes: Array<string>;
+        reconnectBy: string | null;
+        candidate: {
+            id: string;
+            account: {
+                userName: string | null;
+                workspaceName: string | null;
+                identityVerified: boolean;
+            };
+            grantedScopes: Array<string>;
+            missingScopes: Array<string>;
+            fingerprint: string;
+            expiresAt: string;
+            sameIdentityAsActive: boolean | 'unknown';
+        } | null;
+        lastRevocation: {
+            outcome: 'accepted' | 'failed' | 'unconfirmed';
+            at: string;
+        } | null;
+        createdAt: string;
+        updatedAt: string;
+    };
+};
+
+export type PostApiProjectsByProjectIdMcpConnectionsByConnectionIdCandidateConfirmCliResponse = PostApiProjectsByProjectIdMcpConnectionsByConnectionIdCandidateConfirmCliResponses[keyof PostApiProjectsByProjectIdMcpConnectionsByConnectionIdCandidateConfirmCliResponses];
+
+export type PostApiProjectsByProjectIdMcpConnectionsByConnectionIdCandidateCancelCliData = {
+    body: {
+        candidateId: string;
+    };
+    path: {
+        projectId: string;
+        connectionId: string;
+    };
+    query?: never;
+    url: '/api/projects/{projectId}/mcp-connections/{connectionId}/candidate/cancel/cli';
+};
+
+export type PostApiProjectsByProjectIdMcpConnectionsByConnectionIdCandidateCancelCliErrors = {
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 404
+     */
+    404: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 409
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type PostApiProjectsByProjectIdMcpConnectionsByConnectionIdCandidateCancelCliError = PostApiProjectsByProjectIdMcpConnectionsByConnectionIdCandidateCancelCliErrors[keyof PostApiProjectsByProjectIdMcpConnectionsByConnectionIdCandidateCancelCliErrors];
+
+export type PostApiProjectsByProjectIdMcpConnectionsByConnectionIdCandidateCancelCliResponses = {
+    /**
+     * Response for status 200
+     */
+    200: {
+        id: string;
+        projectId: string;
+        name: string;
+        label: string;
+        preset: string | null;
+        resource: string;
+        issuerOrigin: string;
+        suppliedClient: {
+            clientId: string;
+            redirectUri: string;
+        } | null;
+        scopes: Array<string> | null;
+        state: 'disconnected' | 'connecting' | 'awaiting_confirmation' | 'ready' | 'ready_with_pending_reconnect' | 'reconnect_required';
+        reasonCode: 'attempt_expired' | 'candidate_expired' | 'candidate_cancelled' | 'refresh_failed' | 'grant_expired' | 'client_configuration' | null;
+        generation: number;
+        version: number;
+        connectedBy: {
+            userId: string;
+            username: string | null;
+        } | null;
+        account: {
+            userName: string | null;
+            workspaceName: string | null;
+            identityVerified: boolean;
+        } | null;
+        grantedScopes: Array<string>;
+        reconnectBy: string | null;
+        candidate: {
+            id: string;
+            account: {
+                userName: string | null;
+                workspaceName: string | null;
+                identityVerified: boolean;
+            };
+            grantedScopes: Array<string>;
+            missingScopes: Array<string>;
+            fingerprint: string;
+            expiresAt: string;
+            sameIdentityAsActive: boolean | 'unknown';
+        } | null;
+        lastRevocation: {
+            outcome: 'accepted' | 'failed' | 'unconfirmed';
+            at: string;
+        } | null;
+        createdAt: string;
+        updatedAt: string;
+    };
+};
+
+export type PostApiProjectsByProjectIdMcpConnectionsByConnectionIdCandidateCancelCliResponse = PostApiProjectsByProjectIdMcpConnectionsByConnectionIdCandidateCancelCliResponses[keyof PostApiProjectsByProjectIdMcpConnectionsByConnectionIdCandidateCancelCliResponses];

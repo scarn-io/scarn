@@ -8,6 +8,7 @@ import { requestProjectSecrets } from "./request-project-secrets";
 import { taskKindUsesAgent } from "./task-kind-runtime";
 import { runAgentStepBranch } from "./process-claimed-task-run-agent-branch";
 import { runCodeStepBranch } from "./process-claimed-task-run-code-branch";
+import { runMcpToolStepBranch } from "./process-claimed-task-run-mcp-tool-branch";
 import {
   fetchWorkerContext,
   launchRuntimeEnvironment,
@@ -107,7 +108,7 @@ export async function startProcessClaimedTaskRun(
     leaseDurationSeconds: input.leaseDurationSeconds,
   });
   let cleanup: (() => Promise<void>) | null = null;
-  let taskRunId: UuidV7 = input.claim.task.id;
+  const taskRunId: UuidV7 = input.claim.task.id;
   // The fake-AI harness (#120): only started for a step that declares
   // `healthChecks`, stopped again as soon as those checks finish (success or
   // failure) — well before the agent is prompted. Tracked here (rather than
@@ -334,38 +335,30 @@ export async function startProcessClaimedTaskRun(
     await mkdir(stepArtifactsDir, { recursive: true });
     throwIfAborted();
 
+    const branchInput = {
+      deps,
+      logger,
+      reporter,
+      workerContext,
+      environment,
+      taskRunId: input.claim.task.id,
+      localRuntimeSessionId,
+    };
     switch (kind) {
-      case "code": {
-        await runCodeStepBranch({
-          deps,
-          logger,
-          reporter,
-          workerContext,
-          environment,
-          taskRunId: input.claim.task.id,
-          localRuntimeSessionId,
-          stepEnv,
+      case "code":
+        await runCodeStepBranch({ ...branchInput, stepEnv });
+        break;
+      case "mcp_tool":
+        await runMcpToolStepBranch({
+          ...branchInput,
+          promptEnv,
+          run: input.run,
         });
-        taskRunId = input.claim.task.id;
-        return {
-          projectId: input.projectId,
-          localRuntimeSessionId,
-          taskRunId,
-          claimToken: input.claim.claimToken,
-          agentSessionId: null,
-          environment,
-        };
-      }
+        break;
       case "agent": {
         const { sessionId: agentSessionId, sessionRestored } =
           await runAgentStepBranch({
-            deps,
-            logger,
-            reporter,
-            workerContext,
-            environment,
-            taskRunId: input.claim.task.id,
-            localRuntimeSessionId,
+            ...branchInput,
             stepArtifactsDir,
             workerEnv,
             promptEnv,
@@ -382,7 +375,6 @@ export async function startProcessClaimedTaskRun(
           localRuntimeSessionId,
           agentSessionId,
         });
-        taskRunId = input.claim.task.id;
         return {
           projectId: input.projectId,
           localRuntimeSessionId,
@@ -396,6 +388,14 @@ export async function startProcessClaimedTaskRun(
       default:
         return assertNever(kind);
     }
+    return {
+      projectId: input.projectId,
+      localRuntimeSessionId,
+      taskRunId,
+      claimToken: input.claim.claimToken,
+      agentSessionId: null,
+      environment,
+    };
   } catch (error) {
     const failureReason =
       error instanceof Error ? error.message : String(error);

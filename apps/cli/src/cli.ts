@@ -10,10 +10,12 @@ import { CoreError } from "@scarn/worker";
 import { artifactsCommand } from "./commands/artifacts";
 import { authCommand } from "./commands/auth";
 import { automationsCommand } from "./commands/automations";
+import { connectionsCommand } from "./commands/connections";
 import { helloCommand } from "./commands/hello";
 import { inboxCommand } from "./commands/inbox";
 import { initCommand } from "./commands/init";
 import { logsCommand } from "./commands/logs";
+import { mcpCommand } from "./commands/mcp";
 import { reportBugCommand } from "./commands/report-bug";
 import { runsCommand } from "./commands/runs";
 import { runtimeCommand } from "./commands/runtime";
@@ -97,10 +99,12 @@ export function createCli(
     .command(artifactsCommand)
     .command(authCommand)
     .command(automationsCommand)
+    .command(connectionsCommand)
     .command(helloCommand)
     .command(inboxCommand)
     .command(initCommand)
     .command(logsCommand)
+    .command(mcpCommand)
     .command(reportBugCommand)
     .command(runsCommand)
     .command(runtimeCommand)

@@ -10,6 +10,7 @@ import type { StepDefinitionSpec } from "../steps/define-step";
 import { checkArtifactFields } from "./validate-artifacts";
 import { checkArtifactMarkers } from "./validate-artifact-markers";
 import { checkEnv } from "./validate-env";
+import { checkMcpToolSteps } from "./validate-mcp-tool";
 import { checkRepo } from "./validate-repo";
 import { checkRuntime } from "./validate-runtime";
 import { listPaths, type DefinitionValidationIssue } from "./validation-issue";
@@ -84,6 +85,7 @@ export function validateDefinitionSpecs(
     ...checkArtifactFields(steps),
     ...checkArtifactMarkers(steps, stepsByKey),
     ...checkHealthChecks(steps),
+    ...checkMcpToolSteps(steps),
     ...checkEnv(steps),
     ...checkRuntime(steps),
     ...checkRepo(steps),

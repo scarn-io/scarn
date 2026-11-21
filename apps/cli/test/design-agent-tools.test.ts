@@ -1,4 +1,8 @@
 import { describe, expect, test } from "bun:test";
+import {
+  buildMcpToolLock,
+  type ListedMcpToolInput,
+} from "@scarn/sdk/mcp-tools/codegen";
 import type {
   AgentToolsManifest,
   DiscoveredAgentTools,
@@ -8,6 +12,7 @@ import {
   announceMcpToolListing,
   ensureAgentToolsManifest,
 } from "../src/lib/design-agent-tools";
+import type { LockedServer } from "../src/lib/mcp-pull-context";
 import {
   EMPTY_DISCOVERY,
   FAKE_AGENT_TOOLS_MANIFEST_PATH,
@@ -24,6 +29,18 @@ function server(name: string, requiredEnv: string[] = []): DiscoveredMcpServer {
     requiredEnv,
     inlineSecrets: [],
     shadowed: [],
+  };
+}
+
+function locked(name: string, tools: ListedMcpToolInput[]): LockedServer {
+  return {
+    ok: true,
+    file: `${name}.lock.json`,
+    lock: buildMcpToolLock({
+      server: name,
+      listedAt: "2026-11-01T00:00:00Z",
+      tools,
+    }),
   };
 }
 
@@ -134,6 +151,94 @@ describe("ensureAgentToolsManifest", () => {
       status: "failed",
       reason: "401 for token {env:SENTRY_TOKEN}",
     });
+  });
+
+  test("marks the servers `scarn mcp pull` has locked, and only those", async () => {
+    const query = { name: "query", inputSchema: { type: "object" } };
+    const { written } = await run({
+      discoverAgentTools: () =>
+        Promise.resolve({
+          ...EMPTY_DISCOVERY,
+          servers: [server("postgres"), server("sentry"), server("github")],
+        }),
+      mcpToolLister: { listTools: () => Promise.resolve([query]) },
+      readMcpToolLocks: () =>
+        Promise.resolve([
+          locked("postgres", [query]),
+          locked("sentry", [
+            { name: "issues", inputSchema: { type: "object" } },
+          ]),
+          locked("notion", [query]),
+          { ok: false, file: "broken.lock.json", reason: "not valid JSON" },
+        ]),
+    });
+
+    const [manifest] = written;
+    const byName = new Map(manifest?.servers.map((s) => [s.name, s.lock]));
+    expect(byName.get("postgres")).toMatchObject({
+      status: "locked",
+      file: "mcp/postgres.lock.json",
+      catalogFile: "mcp/postgres.tools.ts",
+      toolNames: ["query"],
+      drift: "matches",
+    });
+    expect(byName.get("sentry")).toMatchObject({ drift: "drifted" });
+    expect(byName.get("github")).toBeUndefined();
+    expect(
+      manifest?.locks?.map((lock) =>
+        lock.status === "locked" ? lock.server : lock.file,
+      ),
+    ).toEqual(["postgres", "sentry", "notion", "mcp/broken.lock.json"]);
+    expect(manifest?.locks?.[2]).toMatchObject({ drift: "unknown" });
+  });
+
+  test("a lock the preflight could not list against has unknown drift", async () => {
+    const { written } = await run({
+      discoverAgentTools: () =>
+        Promise.resolve({
+          ...EMPTY_DISCOVERY,
+          servers: [server("sentry", ["SENTRY_TOKEN"])],
+        }),
+      readMcpToolLocks: () => Promise.resolve([locked("sentry", [])]),
+    });
+
+    expect(written[0]?.servers[0]?.lock).toMatchObject({
+      status: "locked",
+      drift: "unknown",
+    });
+  });
+
+  test("warns about a drifted or unreadable lock, and still writes the manifest", async () => {
+    const { result, recorder } = await run({
+      discoverAgentTools: () =>
+        Promise.resolve({ ...EMPTY_DISCOVERY, servers: [server("postgres")] }),
+      mcpToolLister: { listTools: () => Promise.resolve([]) },
+      readMcpToolLocks: () =>
+        Promise.resolve([
+          locked("postgres", [{ name: "query", inputSchema: {} }]),
+          { ok: false, file: "broken.lock.json", reason: "not valid JSON" },
+        ]),
+    });
+
+    expect(result).toBe(FAKE_AGENT_TOOLS_MANIFEST_PATH);
+    expect(recorder.calls).toContainEqual({
+      method: "warn",
+      message:
+        "MCP server postgres's tools changed since mcp/postgres.lock.json; run `scarn mcp pull postgres` to update it.",
+    });
+    expect(recorder.calls).toContainEqual({
+      method: "warn",
+      message: "MCP tool lock mcp/broken.lock.json: not valid JSON",
+    });
+  });
+
+  test("leaves locks out when they cannot be read", async () => {
+    const { result, written } = await run({
+      readMcpToolLocks: () => Promise.reject(new Error("EACCES")),
+    });
+
+    expect(result).toBe(FAKE_AGENT_TOOLS_MANIFEST_PATH);
+    expect(written[0]?.locks).toBeUndefined();
   });
 
   test("a failure is reported, never fatal", async () => {

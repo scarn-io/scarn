@@ -24,7 +24,14 @@ import type {
   TargetData,
   TargetSpec,
 } from "./model";
-import { chainOf, eachOf, nodeOf, targetOf } from "./registry";
+import {
+  FOREIGN_SDK_HINT,
+  chainOf,
+  eachOf,
+  isForeignPipelineValue,
+  nodeOf,
+  targetOf,
+} from "./registry";
 import { useRef, withOwners } from "./refs";
 import type { SourceSite } from "./source";
 
@@ -55,6 +62,9 @@ function resolve(spec: TargetSpec, context: object | null): Resolved {
   const each = eachOf(value);
   if (each !== undefined) {
     return { each };
+  }
+  if (isForeignPipelineValue(value)) {
+    throw new AuthoringError(`this target isn't usable: ${FOREIGN_SDK_HINT}`);
   }
   throw new AuthoringError(
     chainOf(value) !== undefined
@@ -213,7 +223,9 @@ export function wireChain(
       state,
       site,
       [],
-      "flow only takes finished chains (ending in .next(...))",
+      isForeignPipelineValue(value)
+        ? `this chain isn't usable: ${FOREIGN_SDK_HINT}`
+        : "flow only takes finished chains (ending in .next(...))",
     );
     return;
   }

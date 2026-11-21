@@ -255,4 +255,27 @@ describe("build errors", () => {
       ),
     ]);
   });
+  test("a target or chain from another copy of @scarn/sdk", () => {
+    const foreignTarget = Object.freeze({
+      _tag: "pipeline_target",
+      to: "intake-step",
+    });
+    const foreignChain = Object.freeze({
+      _tag: "pipeline_chain",
+      node: "intake-step",
+    });
+    const errors = buildErrors({
+      key: "k",
+      start: foreignTarget as unknown as PipelineConfig["start"],
+      flow: [foreignChain as unknown as PipelineConfig["flow"][number]],
+    });
+    expect(errors).toEqual([
+      has(
+        "(/start): this target isn't usable: it was built by a different copy of @scarn/sdk",
+      ),
+      has(
+        "(/): this chain isn't usable: it was built by a different copy of @scarn/sdk",
+      ),
+    ]);
+  });
 });

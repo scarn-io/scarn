@@ -94,6 +94,9 @@ const buildStepDefinitionsClient = (stepDefinitions: StepDefinitions) => {
         grants: (spec.grants ?? []).map((grant) => ({ ...grant })),
         status: spec.status,
         projectId,
+        ...(spec.toolCall !== undefined
+          ? { toolCallJson: structuredClone(spec.toolCall) }
+          : {}),
       };
       const result = await stepDefinitions.upsertStepDefinition({
         body,

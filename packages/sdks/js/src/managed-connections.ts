@@ -34,3 +34,13 @@ export function normalizeMcpResourceUrl(url: string): string | null {
   const pathname = parsed.pathname.replace(/\/+$/u, "");
   return `${parsed.protocol}//${parsed.host}${pathname}`;
 }
+
+/** The path the CLI's loopback listener catches a managed connection's sign-in redirect on. */
+export const MANAGED_CONNECTION_LOOPBACK_CALLBACK_PATH = "/callback";
+
+/**
+ * The port the CLI catches a sign-in on when the authorization server won't
+ * let a loopback redirect's port vary (RFC 8252 §7.3). Unassigned in the IANA
+ * registry and below the Linux and macOS ephemeral ranges.
+ */
+export const MANAGED_CONNECTION_LOOPBACK_FALLBACK_PORT = 28418;

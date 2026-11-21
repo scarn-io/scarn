@@ -6,9 +6,11 @@ import type {
 import type { RepoConfig } from "@scarn/sdk/repo-config";
 import type { WorkItemChange } from "@scarn/sdk/contracts/work-item-changes";
 import type { AnyJsonValue } from "../../../common/contracts/json";
+import type { AgentRuntime, McpToolLaunch } from "./launched-runtime-handles";
 import type { UuidV7 } from "../../../common/contracts/uuid-v7";
 import type { ArtifactStore } from "../../../artifacts/artifact-store/domain/artifact-store";
 import type { RunCodeStepCommand } from "../application/execute-code-step";
+import type { McpToolCaller } from "../application/mcp-tool-caller";
 import type { FakeAiServer } from "../infra/fake-ai/fake-ai-server";
 import type {
   ManagedAuthorityStatus,
@@ -396,30 +398,6 @@ export type CommitAndPushWorkBranchResult = { pushed: boolean };
 export type CommitAndPushWorkBranchContext =
   { result: AnyJsonValue } | { yielded: true };
 
-/**
- * The running OpenCode server a prompt-driven step talks to. Present on a
- * {@link LaunchedRuntime} only when the launch started one.
- */
-export type AgentRuntime = {
-  /** Runtime-neutral agent base URL (formerly `aiBaseUrl`). */
-  baseUrl: string;
-  /** Basic-auth password the server was started with. */
-  password: string;
-  /** OpenCode version the server was launched as; readiness probes expect it. */
-  version: string;
-  /**
-   * Directory inside the runtime container where the agent's logs are written
-   * and `docker exec` tailing reads them from.
-   */
-  logDirectory: string;
-  /**
-   * Host log file the agent's stdout/stderr is written to for `no_workspace`
-   * runs (tailed directly from the host). `null`/absent for container runs,
-   * where {@link logDirectory} + `docker exec` tailing is used instead.
-   */
-  hostLogPath?: string | null | undefined;
-};
-
 export type LaunchedRuntime = {
   environmentDiagnostics?: EnvironmentDiagnostics | undefined;
   resolvedEnvironment: ResolvedEnvironment;
@@ -474,6 +452,8 @@ export type LaunchedRuntime = {
   runtimeContainerId: string | null;
   /** `null` when the launch did not start an agent. */
   agent: AgentRuntime | null;
+  /** Set only for an `mcp_tool` launch: what its one tool call needs. */
+  mcpTool?: McpToolLaunch | undefined;
   aiImage: string;
   networkName: string;
   /**
@@ -492,7 +472,7 @@ export type LaunchedRuntime = {
 export type LaunchedRuntimeOrchestrator = {
   launch(input: {
     environment: ResolvedEnvironmentRefInput;
-    taskKind?: "agent" | "code" | undefined;
+    taskKind?: TaskRunWorkerContextContract["task"]["kind"] | undefined;
     resolveEnvironmentEnv?:
       | ((environment: ResolvedEnvironment) => Promise<{
           resolved: ResolvedStepEnv;
@@ -802,4 +782,9 @@ export type ProcessProjectWorkDeps = {
    * provides. Defaults to `defaultRunCodeStepCommand` when omitted.
    */
   runCodeStepCommand?: RunCodeStepCommand | undefined;
+  /**
+   * Calls the tool of a `kind: "mcp_tool"` task run. Defaults to
+   * `SdkMcpToolCaller` when omitted; unit tests pass a fake.
+   */
+  mcpToolCaller?: McpToolCaller | undefined;
 };

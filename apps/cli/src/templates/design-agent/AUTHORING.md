@@ -21,6 +21,7 @@ scans **this directory only** — not subdirectories.
 | `environments.ts`                | Named environments (`defineEnvironment`) as **named** exports. Optional. |
 | `default.ts`                     | The project automation (`key: "default"`). Starts a pipeline when a work item is ready (§5). |
 | `push.ts`                        | Generated on every push. Never edit. Skipped by the scanner and by the typecheck. |
+| `mcp/<server>.lock.json`, `mcp/<server>.tools.ts` | Written by `scarn mcp pull` (§1, "MCP tool steps"). Never edit; pull again. Not scanned by push. |
 | `package.json`, `tsconfig.json`  | Scaffolded. `@scarn/sdk` + `zod` are the only deps; import `z` from the SDK, not from `zod`. |
 
 A pipeline has two halves. Its **steps** (`defineStep`, `codeStep`) are
@@ -445,6 +446,143 @@ that is new to this directory:
 `.scarn/.env` itself is never a file you create or edit — it holds real
 secret values, and it is the user's alone to write.
 
+### MCP tool steps — `.withTools()` and `.step()`
+
+A tool step calls one tool on one MCP server, with no LLM: the worker renders
+its arguments, calls the tool and returns the result. Use one when the work
+is a single call whose arguments come straight from earlier results or the
+work item: look up a record, search issues, file a ticket, post a comment.
+Use an agent step when the work needs judgement, reading free text, or
+several calls whose order depends on what comes back. A tool step is faster,
+cheaper and typed end to end; an agent step is flexible.
+
+**1. Pull the server's catalog.** Never write a tool's schema yourself. It
+runs from anywhere in the repository (`$SCARN_CLI` as in §9):
+
+```sh
+"$SCARN_CLI" mcp pull github
+```
+
+The name is the server's name in the repository's MCP config (the manifest's
+`servers`), or the `name` of a `defineMcp` in this directory; pass
+`--handle mcps.ts#github` to pull one handle by export. It lists the tools
+and writes `mcp/github.lock.json` and `mcp/github.tools.ts`, which exports
+`githubTools`. A manifest server with `lock` is already pulled: bind its
+catalog, and pull again only when `lock.drift` is `"drifted"` or the user
+asks. `--all` re-pulls every locked server; `--check` writes nothing and
+fails when a server's tools changed (for CI). If a pull fails, say why
+(the server is the same as for any step: env vars, availability) and do not
+write a catalog by hand.
+
+**2. Bind it** with `.withTools(catalog)` on the server's existing
+`defineMcp`, which stays the only place its connection is configured. A tool
+step runs no health checks, so a server with checks is rejected: bind
+`.disableAllChecks().withTools(...)` for tool steps and keep the checked
+handle for agent steps.
+
+**3. Write steps** with `.tools.<tool>.step()`:
+
+```ts
+import { defineMcp, z } from "@scarn/sdk/definitions/steps";
+import { githubTools } from "./mcp/github.tools";
+
+export const github = defineMcp({ type: "ref", name: "github" }).withTools(
+  githubTools,
+);
+
+// Pass-through: the step's input is the tool's arguments, and its result is
+// the tool's. Key: "github-search-issues" (`<server>-<tool>`).
+export const searchIssues = github.tools.searchIssues.step();
+
+// Adapted: the step's own input, mapped onto the tool's arguments.
+export const fileIssue = github.tools.createIssue.step({
+  key: "file-issue",
+  inputSchema: z.object({
+    title: z.string(),
+    summary: z.string(),
+    labels: z.array(z.string()),
+  }),
+  args: ({ input, env }) => ({
+    owner: env.GITHUB_OWNER,
+    repo: "app",
+    title: `Bug: ${input.title}`,
+    body: input.summary,
+    labels: input.labels,
+  }),
+  environment: { vars: { GITHUB_OWNER: "acme" } },
+});
+```
+
+- Without `args`, give no `inputSchema`. With `args`, `inputSchema` is
+  required (`z.object({})` when the step takes nothing). `args` is typed
+  against the tool, so a missing or misspelled argument is a type error.
+- `key` defaults to `<server>-<tool>`; `name` and `description` default to
+  the tool's. Set `key` when one tool backs several steps. `errors`,
+  `retry`, `repo`, `status` and `concurrency` are as for `codeStep`.
+- Runtime: a `local` server runs in the devcontainer, a `remote` server or
+  one with `auth` in `Runtime.managed.bun1()`, a plain `ref` in the
+  devcontainer. Only the server runs there; the worker host makes the call,
+  so a `remote` URL must be reachable from the worker, not `localhost` inside
+  the devcontainer.
+- Push publishes the tool steps your pipelines use, whether exported or not.
+
+**What `args` can express.** `args` runs once, at build time, with stand-ins
+for `input` and `env`, and is saved as a template:
+
+- A bare `input.labels` (or `env.X`) passes the value with its type: a
+  number stays a number, an array an array. A missing value drops the key.
+- Inside a template string (`` `Bug: ${input.title}` ``) the value is
+  interpolated as text; a missing or null value becomes `""`.
+- `env` is the step's declared non-secret vars. A secret can't be templated:
+  give it to the server through its `environment` or `headers` (§1).
+- Arithmetic, `<`/`>`/`==` comparisons, method calls
+  (`input.title.toUpperCase()`, `input.labels.map(...)`) and spreads
+  (`...input`) throw at build time. Compute the value in a `codeStep` before
+  the tool step.
+- **Truthiness and `===` are not caught.** The stand-in is always truthy,
+  never null, and equal to nothing, so `input.x ? a : b`, `input.x && a`,
+  `input.x || "default"`, `input.x ?? "default"` and `if (input.x)` build
+  without error as if `x` were always set, and `input.x === "a"` is always
+  false, whatever the value at run time. Never branch on `input` or `env`
+  inside `args`. Instead: make the field optional and pass it bare, so a
+  missing value drops the key and the tool's own default applies; or route in
+  the pipeline (§4) to two tool steps with different keys; or compute the
+  value in a `codeStep`.
+
+**The result.** When the catalog has an `output` (the server declares an
+output schema), the result is the tool's `structuredContent`, typed by it:
+`r.result.totalCount`. Without one, it is
+`{ content: ContentBlock[], structuredContent: object | null }`; to route on
+its text, add a `codeStep` that parses it. Either way it is the step's
+findings, like any step's result.
+
+**Errors** a tool step can raise, all built in for `.retry` and `.catch`
+(§4):
+
+| Error | When |
+| --- | --- |
+| `Scarn.ArgsError` | The rendered args don't match the tool's input schema; checked before connecting |
+| `Scarn.McpToolError` | The tool returned an error; the message is its text |
+| `Scarn.McpUnavailable` | The server could not start, connect or initialize, or has no such tool |
+| `Scarn.McpOutputInvalid` | `structuredContent` is missing or doesn't match the output schema, or the result is over 1 MiB |
+| `Scarn.Timeout` | The call ran past the handle's `timeout.execution` (10 minutes by default) |
+| `ManagedConnectionNotReady` | A server with `auth` whose connection isn't ready |
+
+A call that reached the server is never retried for you, because a tool may
+not be idempotent. `Scarn.McpUnavailable` is safe to retry; retry
+`Scarn.McpToolError` only for a read-only tool:
+
+```ts fragment
+searchIssues
+  .retry({ on: ["Scarn.McpUnavailable"], maxAttempts: 3 })
+  .catch(["Scarn.McpToolError", "Scarn.ArgsError"], (r) =>
+    reportFailure({ reason: r.error.message }),
+  )
+  .next(done),
+```
+
+A tool step takes no messages and has no transcript; its logs show the call.
+
 ## 2. Pipelines — `definePipeline` and `flow`
 
 A pipeline says which step runs first, and for each node, where to go when it
@@ -728,7 +866,9 @@ named errors. `.catch(on, target)` goes somewhere else instead; its callback's
 `r` has `error` and `input`, and no `result`. Both come after `.settings` and
 before `.next`. `on` lists built-in errors (`Scarn.All`,
 `Scarn.StepFailed`, `Scarn.HealthCheckFailed`, `Scarn.Timeout`, `Scarn.HeartbeatTimeout`,
-`Scarn.MaxRunsExceeded`, `Scarn.ConditionError`, `Scarn.ArgsError`) and
+`Scarn.MaxRunsExceeded`, `Scarn.ConditionError`, `Scarn.ArgsError`, and a
+tool step's `Scarn.McpToolError`, `Scarn.McpUnavailable`,
+`Scarn.McpOutputInvalid`) and
 the names in the step's own `errors`; anything else is a type error.
 
 ```ts fragment

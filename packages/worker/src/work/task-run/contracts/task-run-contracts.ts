@@ -30,7 +30,23 @@ export type TaskRunStatus =
  * `@scarn/core`; `task-kind-drift.test.ts` pins this union to the SDK's
  * generated API types so the two cannot drift.
  */
-export type TaskKind = "agent" | "code";
+export type TaskKind = "agent" | "code" | "mcp_tool";
+
+/**
+ * The one MCP tool call an `mcp_tool` task makes, with no LLM: render
+ * `argsTemplate` against the task input and call `tool` on `server`.
+ * `toolSchemas` are the tool's schemas as the SDK captured them at authoring
+ * time. `task-kind-drift.test.ts` pins this to the SDK's generated API types.
+ */
+export type TaskToolCall = {
+  server: string;
+  tool: string;
+  argsTemplate: unknown;
+  toolSchemas: {
+    input: Record<string, unknown> | boolean;
+    output: Record<string, unknown> | boolean | null;
+  };
+};
 
 export type TaskRunContract = {
   id: string;
@@ -42,15 +58,11 @@ export type TaskRunContract = {
  * launch pinned.
  */
 export type ManagedAuthorityLossReason =
-  | "disconnected"
-  | "replaced"
-  | "reconnect_required"
-  | "operation_unknown";
+  "disconnected" | "replaced" | "reconnect_required" | "operation_unknown";
 
 /** A heartbeat's `managedAuthority`: `ok`, or the reason the run lost it. */
 export type ManagedAuthorityStatus =
-  | "ok"
-  | { lost: ManagedAuthorityLossReason };
+  "ok" | { lost: ManagedAuthorityLossReason };
 
 export type TaskRunWorkerContextContract = {
   projectId: string;
@@ -107,6 +119,8 @@ export type TaskRunWorkerContextContract = {
     prompt: string | null;
     /** `kind === "code"` only. The module holding the step, found there by `key`. */
     entrypointJson: { sourceFile: string } | null;
+    /** `kind === "mcp_tool"` only; null for every other kind. */
+    toolCall: TaskToolCall | null;
     resultSchemaJson: Record<string, unknown> | null;
     /** How many more turns the agent may hand to a person; null outside a pipeline run. */
     turnsRemaining?: number | null;

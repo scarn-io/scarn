@@ -99,7 +99,7 @@ export type WorkItemRunPage = {
 
 export type ProjectTaskListItem = {
   id: string;
-  kind: "agent" | "code";
+  kind: "agent" | "code" | "mcp_tool";
   name: string | null;
   status: ProjectTaskStatus;
   createdAt: string;

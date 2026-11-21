@@ -1,0 +1,97 @@
+{
+  "version": 1,
+  "server": "edge-cases",
+  "listedAt": "2026-11-19T12:00:00.000Z",
+  "hash": "sha256:bfd62fa4f6e9bd68e3f84378bb0a0cd1df6c057129c3de980d35c1f60a8ea5b8",
+  "tools": [
+    {
+      "name": "get-item",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "const": "item"
+          },
+          "priority": {
+            "enum": [1, 2, "high", null]
+          },
+          "nullableCount": {
+            "type": "number",
+            "nullable": true
+          },
+          "tags": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "meta": {
+            "type": "object",
+            "patternProperties": {
+              "^x-": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "required": ["kind"]
+      }
+    },
+    {
+      "name": "get_item",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "name": "walk tree",
+      "description": "Walks a \"tree\" of nodes",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "root": {
+            "$ref": "#/definitions/node"
+          }
+        },
+        "required": ["root"],
+        "definitions": {
+          "node": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "children": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/definitions/node"
+                }
+              }
+            },
+            "required": ["name"]
+          }
+        }
+      },
+      "outputSchema": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "ok": {
+                "const": true
+              }
+            }
+          },
+          {
+            "type": "string"
+          }
+        ]
+      }
+    }
+  ]
+}

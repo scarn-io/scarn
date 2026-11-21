@@ -30,8 +30,11 @@ export const AGENT_TOOLS_MANIFEST_CAVEATS: readonly string[] = [
 /** One tool as its server listed it. */
 export type ListedMcpTool = {
   name: string;
+  title?: string;
   description?: string;
   inputSchema: AnyJsonObject;
+  /** The tool's declared structured-output JSON Schema, verbatim. */
+  outputSchema?: AnyJsonObject;
   /** The `readOnlyHint` annotation, when the server sets one. */
   readOnlyHint?: boolean;
 };
@@ -59,9 +62,36 @@ export type ManifestMcpServer = {
    * server is never started locally; its tools come from the connection.
    */
   connection?: ManifestServerConnection;
+  /** Set when `scarn mcp pull` has locked this server's tools. */
+  lock?: ManifestMcpToolLock;
   availability: McpServerAvailability;
   tools: ListedMcpTool[];
 };
+
+/**
+ * One `mcp/<server>.lock.json` in the pipeline builder directory, written by
+ * `scarn mcp pull` next to its generated `mcp/<server>.tools.ts` catalog.
+ * `drift` compares the lock with the tools listed for this manifest:
+ * `unknown` when the server wasn't listed (or isn't a repository server).
+ */
+export type ManifestMcpToolLock =
+  | {
+      status: "locked";
+      server: string;
+      /** Builder-directory-relative, e.g. `mcp/notion.lock.json`. */
+      file: string;
+      /** The generated catalog, e.g. `mcp/notion.tools.ts`. */
+      catalogFile: string;
+      hash: string;
+      listedAt: string;
+      toolNames: string[];
+      drift: "matches" | "drifted" | "unknown";
+    }
+  | {
+      status: "unreadable";
+      file: string;
+      reason: string;
+    };
 
 /**
  * The project's connection for a repository server's resource. `state` and
@@ -107,6 +137,12 @@ export type AgentToolsManifest = {
    * empty when the project has none.
    */
   connections?: ManifestManagedConnection[];
+  /**
+   * Every MCP tool lock in the builder's `mcp/`, including locks for servers
+   * that are not in the repository's MCP config (a `defineMcp` handle's own
+   * server, or a managed connection). Absent when they could not be read.
+   */
+  locks?: ManifestMcpToolLock[];
   skills: { name: string; description: string; path: string }[];
   /** Entries discovery found but could not use, with the reason. */
   skipped: SkippedAgentTool[];
@@ -148,8 +184,13 @@ export function buildAgentToolsManifest(input: {
   /** Per server name; a server with no entry is recorded as not listed. */
   listings: ReadonlyMap<string, ManifestServerListing>;
   connections?: ManifestManagedConnection[];
+  locks?: ManifestMcpToolLock[];
 }): AgentToolsManifest {
   const { discovered } = input;
+  const lockFor = (name: string): ManifestMcpToolLock | undefined =>
+    input.locks?.find(
+      (lock) => lock.status === "locked" && lock.server === name,
+    );
   return {
     version: 2,
     generatedAt: input.generatedAt.toISOString(),
@@ -160,6 +201,7 @@ export function buildAgentToolsManifest(input: {
         availability: { status: "failed", reason: "not listed" },
         tools: [],
       };
+      const lock = lockFor(server.name);
       return {
         name: server.name,
         source: server.source,
@@ -176,6 +218,7 @@ export function buildAgentToolsManifest(input: {
         ...(listing.connection === undefined
           ? {}
           : { connection: listing.connection }),
+        ...(lock === undefined ? {} : { lock }),
         availability: listing.availability,
         tools: listing.tools,
       };
@@ -183,6 +226,7 @@ export function buildAgentToolsManifest(input: {
     ...(input.connections === undefined
       ? {}
       : { connections: input.connections }),
+    ...(input.locks === undefined ? {} : { locks: input.locks }),
     skills: discovered.skills.map(({ name, description, path: file }) => ({
       name,
       description,

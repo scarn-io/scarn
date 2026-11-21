@@ -1,7 +1,5 @@
-import type {
-  AgentRuntime,
-  StartedClaimedTask,
-} from "../contracts/process-project-work-types";
+import type { AgentRuntime } from "../contracts/launched-runtime-handles";
+import type { StartedClaimedTask } from "../contracts/process-project-work-types";
 import { buildFindingsSubmissionPath } from "./process-project-work-findings";
 
 /**

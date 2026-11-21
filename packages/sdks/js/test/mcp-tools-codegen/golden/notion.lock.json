@@ -1,0 +1,111 @@
+{
+  "version": 1,
+  "server": "notion",
+  "listedAt": "2026-11-19T12:00:00.000Z",
+  "hash": "sha256:41becd5662764edf1517a858ef8022d5df53cf4012abbd9b5ec3bd6008044f0b",
+  "tools": [
+    {
+      "name": "notion-create-pages",
+      "description": "Create one or more pages",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "parent": {
+            "$ref": "#/$defs/parent"
+          },
+          "pages": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string"
+                },
+                "content": {
+                  "type": "string"
+                }
+              },
+              "required": ["title"]
+            }
+          }
+        },
+        "required": ["parent", "pages"],
+        "$defs": {
+          "parent": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "page_id": {
+                    "type": "string"
+                  }
+                },
+                "required": ["page_id"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "database_id": {
+                    "type": "string"
+                  }
+                },
+                "required": ["database_id"]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "notion-search",
+      "title": "Search",
+      "description": "Search the workspace",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "What to search for"
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "filter": {
+            "type": "string",
+            "enum": ["page", "database"]
+          }
+        },
+        "required": ["query"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "results": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "url": {
+                  "type": ["string", "null"]
+                }
+              },
+              "required": ["id", "title"]
+            }
+          },
+          "hasMore": {
+            "type": "boolean"
+          }
+        },
+        "required": ["results"]
+      }
+    }
+  ]
+}

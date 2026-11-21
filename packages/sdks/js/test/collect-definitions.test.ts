@@ -1,5 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import { mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
 import {
@@ -351,6 +357,69 @@ export const shared = defineEnvironment({ name: "shared" });
       );
       const collected = await collectDefinitionsFromDirectoryTolerant(dir);
       expect(collected.environments.map((e) => e.name)).toEqual(["shared"]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+const STEPS_INDEX_PATH = join(
+  import.meta.dir,
+  "../src/definitions/steps/index",
+);
+
+describe("collectDefinitionsFromDirectory — MCP tool steps", () => {
+  test("collects an exported tool step with its tool call and no entrypoint", async () => {
+    const dir = makeTempDir();
+    try {
+      const rel = relative(dir, STEPS_INDEX_PATH);
+      writeFileSync(
+        join(dir, "notion-steps.ts"),
+        `
+import { defineMcp, mcpTool, mcpToolCatalog, z } from "${rel.startsWith(".") ? rel : `./${rel}`}";
+
+const tools = mcpToolCatalog({
+  source: { server: "notion" },
+  tools: { search: mcpTool({ name: "search", input: z.object({ query: z.string() }) }) },
+});
+
+export const notionSearch = defineMcp({ type: "ref", name: "notion" })
+  .withTools(tools)
+  .tools.search.step();
+`,
+      );
+
+      const collected = await collectDefinitionsFromDirectory(dir);
+      const step = collected.steps.find((s) => s.key === "notion-search");
+
+      expect(step?.kind).toBe("mcp_tool");
+      expect(step?.toolCall).toMatchObject({
+        server: "notion",
+        tool: "search",
+      });
+      expect(step?.entrypointJson).toBeUndefined();
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("collectDefinitionsFromDirectory — the mcp/ subdirectory", () => {
+  test("never imports the generated catalogs and locks under mcp/", async () => {
+    const dir = makeTempDir();
+    try {
+      mkdirSync(join(dir, "mcp"));
+      writeFileSync(
+        join(dir, "mcp", "notion.tools.ts"),
+        "throw new Error('mcp/ must not be imported');\n",
+      );
+      writeFileSync(join(dir, "mcp", "notion.lock.json"), "{}");
+
+      const collected = await collectDefinitionsFromDirectory(dir);
+      const tolerant = await collectDefinitionsFromDirectoryTolerant(dir);
+
+      expect(collected.steps).toEqual([]);
+      expect(tolerant.brokenPipelines).toEqual([]);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

@@ -15,10 +15,12 @@ import {
   nodeKindStyle,
 } from "./graph-node-style";
 import { palette, tint } from "./graph-palette";
+import { McpToolBadge } from "./McpToolBadge";
 import type { StudioNodeData } from "./studio-graph-types";
 import {
   forkMarker,
   kindLabel,
+  mcpToolTarget,
   mergeBadge,
   nodeLayoutSize,
   pauseMarker,
@@ -347,6 +349,8 @@ export function GraphNode({ data, selected }: NodeProps<GraphNodeType>) {
   const fork = forkMarker(data);
   const merge = mergeBadge(data);
   const pause = pauseMarker(data);
+  const mcpTool = mcpToolTarget(data);
+  const cardIcon = mcpTool ? "mcpTool" : icon;
 
   return (
     <div
@@ -384,19 +388,23 @@ export function GraphNode({ data, selected }: NodeProps<GraphNodeType>) {
           justifyContent: "center",
         }}
       >
-        <GraphIcon name={icon} size={17} color={color} />
+        <GraphIcon name={cardIcon} size={17} color={color} />
       </div>
       <div style={{ minWidth: 0, flex: 1 }}>
-        <div
-          style={{
-            ...truncate,
-            fontWeight: 600,
-            fontSize: 13,
-            lineHeight: "17px",
-            color: palette.text,
-          }}
-        >
-          {data.label}
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <div
+            style={{
+              ...truncate,
+              minWidth: 0,
+              fontWeight: 600,
+              fontSize: 13,
+              lineHeight: "17px",
+              color: palette.text,
+            }}
+          >
+            {data.label}
+          </div>
+          {mcpTool ? <McpToolBadge target={mcpTool} color={color} /> : null}
         </div>
         <div
           title={caption}

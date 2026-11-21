@@ -31,7 +31,7 @@ These flags apply to every command:
 Neither env file overrides a variable that is already set.
 
 `--base-url <url>` is a per-command flag, accepted by `auth`, `init`, `pipelines design`, `pipelines pull`,
-`pipelines push`, and `work`. It overrides the API server URL; without it the CLI uses `SCARN_BASE_URL`,
+`pipelines push`, `connections`, and `work`. It overrides the API server URL; without it the CLI uses `SCARN_BASE_URL`,
 then `https://app.scarn.io`.
 
 ---
@@ -495,6 +495,94 @@ scarn pipelines show bug-pipeline --version 2 --json
 | `--version <n>`    | active  | Show this published version instead of the active one                        |
 | `--json`           | `false` | Print the pipeline version as one JSON document                              |
 | `--base-url <url>` | —       | Override the API server URL                                                  |
+
+---
+
+## `scarn mcp`
+
+Pull MCP servers' tools into typed catalogs for [MCP tool steps](/scarn/guides/mcp-tool-steps/).
+
+### `scarn mcp pull [server]`
+
+List a server's tools and write `<server>.lock.json` and the generated `<server>.tools.ts` into `.scarn/pipeline-builder/mcp/`. The server is a name in your repository's MCP config or a `defineMcp` handle's name. Pass exactly one of `[server]`, `--handle` and `--all`, or `--check` alone.
+
+```bash
+scarn mcp pull notion
+scarn mcp pull --handle mcps.ts#notion
+scarn mcp pull --all
+scarn mcp pull --check
+```
+
+| Flag                     | Description                                                                                        |
+| ------------------------ | -------------------------------------------------------------------------------------------------- |
+| `--handle <file#export>` | Pull the `defineMcp` handle a builder file exports, e.g. `mcps.ts#notion`                          |
+| `--all`                  | Re-pull every server that already has a lock                                                       |
+| `--check`                | Write nothing; exit non-zero when a locked server's tools differ from its lock (for CI)            |
+| `--project <owner/slug>` | For a server authenticated by a project connection (defaults to `project` in `.scarn/scarn.jsonc`) |
+| `--base-url <url>`       | Override the API server URL                                                                        |
+
+---
+
+## `scarn connections`
+
+Manage the project's [MCP connections](/scarn/connections/) and sign them in from your terminal. See [Connect from the CLI](/scarn/connections/cli/) for the full walkthrough. Every subcommand takes the project from `--project <owner/slug>`, which defaults to `project` in `.scarn/scarn.jsonc`.
+
+### `scarn connections list`
+
+Print one line per connection: its name, label and status, separated by tabs. The status is "Connected as …" for a working connection, otherwise its state, such as `reconnect required`.
+
+```bash
+scarn connections list
+```
+
+| Flag                     | Default | Description                 |
+| ------------------------ | ------- | --------------------------- |
+| `--project <owner/slug>` | config  | The project                 |
+| `--base-url <url>`       | —       | Override the API server URL |
+
+### `scarn connections connect <name>`
+
+Sign a connection in through your browser. The CLI listens for the sign-in redirect on your machine, and Scarn finishes the sign-in and stores the access; the CLI never sees a token. Needs `secrets:write`.
+
+```bash
+scarn connections connect linear
+scarn connections connect issues --preset linear
+scarn connections connect slack --scope users:read --scope channels:history
+```
+
+`<name>` is resolved in this order:
+
+1. With `--preset <key>`, the service `<key>`, ignoring your MCP config. The connection is named `<name>`.
+2. Otherwise, a remote server named `<name>` in the repository's MCP config (the files [repository references](/scarn/guides/steps/#referencing-a-server-from-your-repository) read). An entry with no `oauth.clientId` and no scopes whose URL is a listed service's uses that service.
+3. Otherwise, the service named `<name>`.
+
+For a server from your MCP config, Scarn checks the server first and the CLI shows its authorization server, endpoint origins, any discovery adjustments, which client signs in and the scopes, then asks `Continue?`. After signing in, it shows the account and granted scopes, and asks `Make this connection available to every step in <owner/slug>?`.
+
+| Flag                     | Default | Description                                                                                                                               |
+| ------------------------ | ------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `--preset <key>`         | —       | The service to connect, ignoring the MCP config (defaults to `<name>` when it is one)                                                     |
+| `--scope <scope>`        | —       | A scope to ask for, instead of the config's `oauth.scope`; repeat for more. Only for a server from your MCP config; refused for a service |
+| `--yes`, `-y`            | `false` | Continue and confirm without asking (required when not on a terminal)                                                                     |
+| `--no-browser`           | —       | Print the sign-in URL instead of opening a browser                                                                                        |
+| `--project <owner/slug>` | config  | The project                                                                                                                               |
+| `--base-url <url>`       | —       | Override the API server URL                                                                                                               |
+
+Scopes are fixed when the connection is created; a later `connect` or `reconnect` asks for the same ones. The CLI waits 5 minutes for the redirect.
+
+### `scarn connections reconnect <name>`
+
+Sign an existing connection in again, with its client and scopes, and confirm it as `connect` does. The current connection keeps working until you confirm. A connection whose client ID comes from your MCP config can only be reconnected this way.
+
+```bash
+scarn connections reconnect slack
+```
+
+| Flag                     | Default | Description                                              |
+| ------------------------ | ------- | -------------------------------------------------------- |
+| `--yes`, `-y`            | `false` | Confirm without asking (required when not on a terminal) |
+| `--no-browser`           | —       | Print the sign-in URL instead of opening a browser       |
+| `--project <owner/slug>` | config  | The project                                              |
+| `--base-url <url>`       | —       | Override the API server URL                              |
 
 ---
 
@@ -1290,6 +1378,13 @@ unless noted above.
 | `worker_version_mismatch`        | The running worker is another version or protocol than this CLI; run `worker stop && worker start`      |
 | `worker_unresponsive`            | The worker's process is alive but its control API does not answer                                       |
 | `worker_request_failed`          | The worker answered a control-API request with an error                                                 |
+| `loopback_port_in_use`           | `connections connect` or `reconnect` couldn't listen for the sign-in redirect: the port is in use       |
+| `loopback_timeout`               | No sign-in redirect arrived within 5 minutes                                                            |
+| `loopback_cancelled`             | The sign-in was cancelled with Ctrl-C before the redirect arrived                                       |
+| `connection_not_found`           | `connections reconnect` named a connection the project doesn't have                                     |
+| `connection_request_failed`      | The server rejected a `connections` request; its message is on stderr                                   |
+| `connection_completion_failed`   | Scarn couldn't finish the sign-in, e.g. access wasn't granted or the attempt expired                    |
+| `connection_client_required`     | The server lets Scarn register no client of its own: add `oauth.clientId` to your MCP config            |
 | `unknown`                        | Anything not classified above                                                                           |
 
 These are the CLI's own failures. A Task run the worker aborts has its own error code on the server: a run

@@ -23,9 +23,9 @@ export const TASK_STATUSES: readonly ProjectTaskStatus[] = [
   "cancelled",
 ];
 
-export type TaskKind = "agent" | "code";
+export type TaskKind = "agent" | "code" | "mcp_tool";
 
-export const TASK_KINDS: readonly TaskKind[] = ["agent", "code"];
+export const TASK_KINDS: readonly TaskKind[] = ["agent", "code", "mcp_tool"];
 
 /** Where a Task's instructions came from. */
 export type TaskSource =
@@ -37,7 +37,8 @@ export type TaskSource =
       version: number;
     }
   | { kind: "prompt"; promptPreview: string }
-  | { kind: "code"; name: string | null };
+  | { kind: "code"; name: string | null }
+  | { kind: "mcp_tool"; name: string | null };
 
 export type TaskWorkItemRef = {
   id: string;

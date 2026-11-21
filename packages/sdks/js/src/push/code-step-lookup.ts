@@ -16,6 +16,12 @@ import type { StepDefinitionSpec } from "../definitions/steps";
 
 type CodeStepFn = NonNullable<StepDefinitionSpec["entrypoint"]>["fn"];
 
+const STEP_DEFINITION_SPEC_KINDS: Record<StepDefinitionSpec["kind"], true> = {
+  user_defined: true,
+  code: true,
+  mcp_tool: true,
+};
+
 /**
  * A step spec, or a step handle: `defineStep` and `codeStep` return a function
  * carrying the spec's fields.
@@ -31,7 +37,8 @@ export function isStepDefinitionSpec(
     typeof obj["key"] === "string" &&
     typeof obj["name"] === "string" &&
     typeof obj["version"] === "number" &&
-    (obj["kind"] === "user_defined" || obj["kind"] === "code")
+    typeof obj["kind"] === "string" &&
+    Object.hasOwn(STEP_DEFINITION_SPEC_KINDS, obj["kind"])
   );
 }
 

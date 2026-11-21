@@ -16,9 +16,7 @@ export type RunPhase = "launching" | "running" | "tearing_down";
  * aborts with it, through {@link RunHandle.abortManagedAuthorityLost}.
  */
 export type RunAbortReason =
-  | "cancelled"
-  | "worker_stopped"
-  | "managed_authority_lost";
+  "cancelled" | "worker_stopped" | "managed_authority_lost";
 
 /** The abort reasons a run can be aborted with from outside it. */
 export type ExternalRunAbortReason = Exclude<
@@ -48,6 +46,11 @@ export type RunHandle = {
    * abort reason wins.
    */
   abortManagedAuthorityLost(reason: ManagedAuthorityAbortReason): void;
+  /**
+   * Aborts the run with `cancelled`, as when the server revoked its claim.
+   * The first abort reason wins.
+   */
+  abortCancelled(): void;
   setPhase(phase: RunPhase): void;
   setTaskName(taskName: string): void;
   /**
@@ -117,6 +120,9 @@ export class RunRegistry {
         if (run.reason !== null) return;
         run.managedAuthorityReason = reason;
         abortRun(run, "managed_authority_lost");
+      },
+      abortCancelled: () => {
+        abortRun(run, "cancelled");
       },
       setPhase: (phase) => {
         run.phase = phase;

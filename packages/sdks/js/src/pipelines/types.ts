@@ -270,3 +270,15 @@ export interface ConversationResult {
   conversationId: string;
   summary: string;
 }
+
+/** One MCP content block (`text`, `image`, `resource`, …) as the server sent it. */
+export interface McpContentBlock {
+  type: string;
+  [key: string]: unknown;
+}
+
+/** The result of an MCP tool step whose tool declares no output schema. */
+export interface McpToolContentResult {
+  content: McpContentBlock[];
+  structuredContent: Record<string, unknown> | null;
+}

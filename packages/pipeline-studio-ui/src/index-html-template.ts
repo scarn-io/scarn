@@ -249,6 +249,7 @@ ${TEMPLATE_PAGE_CSS}
         letter-spacing: 0.02em;
         margin-top: 2px;
       }
+      .studio-detail-mcp-tool { margin-top: 6px; font-size: 12px; }
       .studio-detail-title { margin: 0; font-size: 16px; color: var(--studio-text-strong); }
       .studio-detail-section { margin-top: 16px; }
       .studio-detail-section h3 {

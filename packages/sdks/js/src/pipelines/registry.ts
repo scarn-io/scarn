@@ -10,6 +10,7 @@ const nodes = new WeakMap<object, NodeDef>();
 const targets = new WeakMap<object, TargetData>();
 const eaches = new WeakMap<object, EachData>();
 const chains = new WeakMap<object, ChainData>();
+const stepSources = new WeakMap<NodeDef, object>();
 
 /** Chains finished since the last `definePipeline`, to warn about ones left out of `flow`. */
 export const pendingChains = new Set<ChainData>();
@@ -17,6 +18,18 @@ export const pendingChains = new Set<ChainData>();
 export function registerNode<T extends object>(value: T, node: NodeDef): T {
   nodes.set(value, node);
   return value;
+}
+
+/**
+ * Links a local step node to the step handle it came from, so a built
+ * pipeline can list the step specs it uses and push can publish them.
+ */
+export function registerStepSource(node: NodeDef, source: object): void {
+  stepSources.set(node, source);
+}
+
+export function stepSourceOf(node: NodeDef): object | undefined {
+  return stepSources.get(node);
 }
 
 export function registerTarget<T extends object>(
@@ -66,6 +79,33 @@ export function eachOf(value: unknown): EachData | undefined {
 export function chainOf(value: unknown): ChainData | undefined {
   return isObject(value) ? chains.get(value) : undefined;
 }
+
+const PIPELINE_VALUE_TAGS = new Set([
+  "pipeline_target",
+  "pipeline_partial",
+  "pipeline_chain",
+]);
+
+/**
+ * True for a target or chain built by another copy of `@scarn/sdk`: it
+ * carries a pipeline `_tag` but isn't in this copy's maps. That happens
+ * when a package's steps resolve their own `@scarn/sdk` instead of the
+ * builder directory's.
+ */
+// eslint-disable-next-line local/no-unknown-parameter-type -- inspects author values
+export function isForeignPipelineValue(value: unknown): boolean {
+  if (!isObject(value)) return false;
+  const tag = (value as { _tag?: unknown })._tag;
+  return (
+    typeof tag === "string" &&
+    PIPELINE_VALUE_TAGS.has(tag) &&
+    targetOf(value) === undefined &&
+    chainOf(value) === undefined
+  );
+}
+
+export const FOREIGN_SDK_HINT =
+  "it was built by a different copy of @scarn/sdk than definePipeline. A package that exports steps must list @scarn/sdk as a peerDependency, so it shares the builder directory's copy";
 
 // eslint-disable-next-line local/no-unknown-parameter-type -- inspects author values
 export function requireNode(value: unknown, what: string): NodeDef {

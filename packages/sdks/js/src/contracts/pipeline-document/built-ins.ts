@@ -18,6 +18,9 @@ export const BUILT_IN_ERRORS = [
   "Scarn.LogArchiveFailed",
   "Scarn.WorkItemChangesInvalid",
   "Scarn.WorkItemNotNative",
+  "Scarn.McpToolError",
+  "Scarn.McpUnavailable",
+  "Scarn.McpOutputInvalid",
   "ManagedConnectionAuthorityLost",
   "ManagedConnectionNotReady",
 ] as const;
@@ -73,6 +76,29 @@ export const CONVERSATION_RESULT_SCHEMA: JsonSchema = {
     summary: { type: "string" },
   },
   required: ["conversationId", "summary"],
+  additionalProperties: false,
+};
+
+/**
+ * The result of an MCP tool step whose tool declares no output schema: the
+ * content blocks of the `tools/call` result as the server sent them, and its
+ * `structuredContent` when there is one.
+ */
+export const MCP_TOOL_CONTENT_RESULT_SCHEMA: JsonSchema = {
+  title: "McpToolContentResult",
+  type: "object",
+  properties: {
+    content: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: { type: { type: "string" } },
+        required: ["type"],
+      },
+    },
+    structuredContent: { type: ["object", "null"] },
+  },
+  required: ["content", "structuredContent"],
   additionalProperties: false,
 };
 

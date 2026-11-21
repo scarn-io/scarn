@@ -85,7 +85,11 @@ Read first. Never ask for something you can discover.
   listed centrally, and `connection.state` says whether it is ready.
   `connections` lists the project's connections (`name`, `label`, `url`,
   `state`, `account`, `tools`); absent means they couldn't be listed.
-  `skipped` lists entries that could not be used and why; `caveats` says
+  A server with `lock` was already pulled with `scarn mcp pull`: its typed
+  catalog is `lock.catalogFile`, and `lock.drift` says whether its tools
+  still match (`matches`, `drifted`, or `unknown` when it wasn't listed).
+  `locks` lists every lock in `mcp/`, including servers outside the
+  repository's MCP config. `skipped` lists entries that could not be used and why; `caveats` says
   what a listing does not prove. If no manifest was written, read the repository's MCP config files
   yourself (`.opencode/opencode.json[c]`, `opencode.json[c]`, `.mcp.json`,
   `.cursor/mcp.json`, `.vscode/mcp.json`, `.codex/config.toml`) and the skill
@@ -338,6 +342,13 @@ the step everything else depends on. With no reachable app it gets no browser
 and writes no trace. Keep the shape unless the user asks for a different one;
 when the agreed deliverable drops a step (no fix, report only), remove that
 step and its state rather than leaving it unreachable.
+
+When a step is one tool call whose arguments come straight from earlier
+results (look up, search, file, post), make it an MCP tool step instead of
+an agent step (see the reference's "MCP tool steps"). Run
+`"$SCARN_CLI" mcp pull <server>` yourself to get its typed catalog, unless the
+manifest shows a `lock` that isn't `drifted`; never write a tool's schema by
+hand. Then bind the catalog with `.withTools()` on the server's `defineMcp`.
 
 Most of the value is in the `agentPrompt` text, not in the wiring. Spend your
 effort there: name the tools, say what to do when blocked, ask for an honest

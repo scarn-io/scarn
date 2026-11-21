@@ -588,7 +588,7 @@ Retries and continuations are more runs of a Task that already holds its place, 
 
 ## MCP servers
 
-Steps can be given access to MCP (Model Context Protocol) servers, giving the agent tools like database access, browser automation, or custom APIs. Every server is declared with `defineMcp`, together with the environment variables it needs and its health checks, and mounted on a step under `mcps`. The `mcps` key is the name the step runs the server under: a server mounted as `postgres` exposes its tools as `postgres_<tool>`, and only the step's agent may call them.
+Steps can be given access to MCP (Model Context Protocol) servers, giving the agent tools like database access, browser automation, or custom APIs. Every server is declared with `defineMcp`, together with the environment variables it needs and its health checks, and mounted on a step under `mcps`. The `mcps` key is the name the step runs the server under: a server mounted as `postgres` exposes its tools as `postgres_<tool>`, and only the step's agent may call them. To call one tool as a step of its own, with no agent, see [MCP tool steps](/scarn/guides/mcp-tool-steps/).
 
 `defineMcp` takes a `type`:
 

@@ -25,6 +25,7 @@
     "./push": "./src/push/index.ts",
     "./code-step-lookup": "./src/push/code-step-lookup.ts",
     "./opencode-mcp": "./src/opencode-mcp.ts",
+    "./mcp-tools/codegen": "./src/mcp-tools/codegen/index.ts",
     "./connectors": "./src/connectors/index.ts",
     "./health-checks": "./src/health-checks.ts",
     "./env-vars": "./src/env-vars.ts",

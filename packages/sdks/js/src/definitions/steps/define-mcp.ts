@@ -6,6 +6,12 @@ import {
   type McpServerConfig,
   type McpServerDefinition,
 } from "./mcp-server-config";
+import {
+  isMcpToolCatalog,
+  type McpTool,
+  type McpToolCatalog,
+} from "../mcp-tools/catalog";
+import { createMcpToolRef, type McpToolRefs } from "./define-mcp-tool-step";
 
 export type {
   McpLocalServerFields,
@@ -26,6 +32,10 @@ export type {
  *
  * Severity belongs to each health check (default `required`); a step changes
  * it with `overrideCheck(name, { severity })`. The server itself has none.
+ *
+ * `withTools(catalog)` binds a tool catalog to the server: the new handle's
+ * `tools` holds one tool reference per catalog entry, and
+ * `handle.tools.<name>.step(...)` builds an MCP tool step from it.
  *
  * A handle is immutable. Every builder method returns a new frozen handle with
  * one more entry in its op log (`overrides`); the log is resolved once, at
@@ -105,24 +115,47 @@ type McpHandleData = {
   readonly overrides: readonly McpOp[];
 };
 
-interface McpHandleMethods<TNames extends string> {
-  overrideCheck(name: TNames, patch: McpCheckPatch): McpHandle<TNames>;
-  disableCheck(name: TNames): McpHandle<TNames>;
-  enableCheck(name: TNames): McpHandle<TNames>;
+/** The tools a handle has: a catalog's tool map, or `undefined` before `withTools`. */
+export type McpHandleTools = Record<string, McpTool> | undefined;
+
+interface McpHandleMethods<
+  TNames extends string,
+  TTools extends McpHandleTools,
+> {
+  overrideCheck(name: TNames, patch: McpCheckPatch): McpHandle<TNames, TTools>;
+  disableCheck(name: TNames): McpHandle<TNames, TTools>;
+  enableCheck(name: TNames): McpHandle<TNames, TTools>;
   addCheck<N extends string>(
     name: N & Exclude<N, TNames>,
     check: McpCheckInput,
-  ): McpHandle<TNames | N>;
-  disableAllChecks(): McpHandle<TNames>;
+  ): McpHandle<TNames | N, TTools>;
+  disableAllChecks(): McpHandle<TNames, TTools>;
+  /**
+   * Binds `catalog` to this server and returns a new handle whose `tools`
+   * has one tool reference per catalog entry. Replaces any earlier catalog.
+   */
+  withTools<TCatalogTools extends Record<string, McpTool>>(
+    catalog: McpToolCatalog<TCatalogTools>,
+  ): McpHandle<TNames, TCatalogTools>;
 }
+
+type McpHandleToolRefs<TTools extends McpHandleTools> =
+  TTools extends Record<string, McpTool>
+    ? { readonly tools: McpToolRefs<TTools> }
+    : unknown;
 
 /**
  * An immutable `defineMcp` server: `type`, `name` and `server` (its OpenCode
- * fields; for a `ref`, only the shared ones), its env vars, checks and op log.
+ * fields; for a `ref`, only the shared ones), its env vars, checks and op log,
+ * and after `withTools`, its tool references.
  */
-export type McpHandle<TNames extends string = string> = McpServerDefinition &
+export type McpHandle<
+  TNames extends string = string,
+  TTools extends McpHandleTools = McpHandleTools,
+> = McpServerDefinition &
   McpHandleData &
-  McpHandleMethods<TNames>;
+  McpHandleMethods<TNames, TTools> &
+  McpHandleToolRefs<TTools>;
 
 export type ResolvedMcpCheck = {
   readonly name: string;
@@ -133,11 +166,19 @@ export type ResolvedMcpCheck = {
 type McpState = McpServerDefinition & McpHandleData;
 
 const handles = new WeakSet();
+const catalogs = new WeakMap<object, McpToolCatalog>();
 
 /** True for a handle built by `defineMcp` or one of its builder methods. */
 // eslint-disable-next-line local/no-unknown-parameter-type -- runtime guard over author-supplied `mcps` values
 export function isMcpHandle(value: unknown): value is McpHandle {
   return typeof value === "object" && value !== null && handles.has(value);
+}
+
+/** The catalog bound with `withTools`, or `undefined` when there is none. */
+export function mcpHandleCatalog(
+  handle: McpHandle,
+): McpToolCatalog | undefined {
+  return catalogs.get(handle);
 }
 
 function deepFreeze<T>(value: T): T {
@@ -245,15 +286,25 @@ function assertKnownCheck(state: McpState, method: string, name: string): void {
   );
 }
 
-function withOp(state: McpState, op: McpOp): McpHandle {
-  return createHandle({
-    ...state,
-    overrides: Object.freeze([...state.overrides, deepFreeze(op)]),
-  });
+function withOp(
+  state: McpState,
+  op: McpOp,
+  catalog: McpToolCatalog | undefined,
+): McpHandle {
+  return createHandle(
+    {
+      ...state,
+      overrides: Object.freeze([...state.overrides, deepFreeze(op)]),
+    },
+    catalog,
+  );
 }
 
-function createHandle(state: McpState): McpHandle {
-  const handle: McpHandle = {
+function createHandle(
+  state: McpState,
+  catalog: McpToolCatalog | undefined,
+): McpHandle {
+  const handle: McpState & McpHandleMethods<string, McpHandleTools> = {
     ...state,
     overrideCheck: (name, patch) => {
       assertKnownCheck(state, "overrideCheck", name);
@@ -263,19 +314,23 @@ function createHandle(state: McpState): McpHandle {
           `defineMcp "${state.name}".overrideCheck("${name}"): ${formatIssues(parsed.error)}`,
         );
       }
-      return withOp(state, {
-        op: "override",
-        name,
-        patch: structuredClone(patch),
-      });
+      return withOp(
+        state,
+        {
+          op: "override",
+          name,
+          patch: structuredClone(patch),
+        },
+        catalog,
+      );
     },
     disableCheck: (name) => {
       assertKnownCheck(state, "disableCheck", name);
-      return withOp(state, { op: "disable", name });
+      return withOp(state, { op: "disable", name }, catalog);
     },
     enableCheck: (name) => {
       assertKnownCheck(state, "enableCheck", name);
-      return withOp(state, { op: "enable", name });
+      return withOp(state, { op: "enable", name }, catalog);
     },
     addCheck: (name: string, check: McpCheckInput) => {
       assertCheckInput(state.name, name, check);
@@ -284,10 +339,33 @@ function createHandle(state: McpState): McpHandle {
           `defineMcp "${state.name}".addCheck: health check "${name}" already exists; use overrideCheck to change it.`,
         );
       }
-      return withOp(state, { op: "add", name, check: structuredClone(check) });
+      return withOp(
+        state,
+        { op: "add", name, check: structuredClone(check) },
+        catalog,
+      );
     },
-    disableAllChecks: () => withOp(state, { op: "disableAll" }),
+    disableAllChecks: () => withOp(state, { op: "disableAll" }, catalog),
+    withTools: ((next: McpToolCatalog) => {
+      if (!isMcpToolCatalog(next)) {
+        throw new Error(
+          `defineMcp "${state.name}".withTools: expected a catalog from mcpToolCatalog().`,
+        );
+      }
+      return createHandle(state, next);
+    }) as McpHandleMethods<string, McpHandleTools>["withTools"],
   };
+  if (catalog !== undefined) {
+    const tools: Record<string, unknown> = {};
+    for (const [key, tool] of Object.entries(catalog.tools)) {
+      tools[key] = createMcpToolRef(handle as McpHandle, key, tool);
+    }
+    Object.defineProperty(handle, "tools", {
+      value: Object.freeze(tools),
+      enumerable: true,
+    });
+    catalogs.set(handle, catalog);
+  }
   handles.add(handle);
   return Object.freeze(handle);
 }
@@ -299,7 +377,9 @@ function createHandle(state: McpState): McpHandle {
  */
 export function defineMcp<
   TChecks extends Record<string, McpCheckInput> = Record<never, never>,
->(config: DefineMcpConfig<TChecks>): McpHandle<keyof TChecks & string> {
+>(
+  config: DefineMcpConfig<TChecks>,
+): McpHandle<keyof TChecks & string, undefined> {
   const definition = parseMcpServer(config);
   if (config.env !== undefined) assertConnectionAuthFree(definition, "env");
   if (config.optionalEnv !== undefined) {
@@ -312,13 +392,16 @@ export function defineMcp<
   for (const [name, check] of Object.entries(checks)) {
     assertCheckInput(definition.name, name, check);
   }
-  return createHandle({
-    ...frozenCopy(definition),
-    env: frozenCopy([...env]),
-    optionalEnv: frozenCopy([...optionalEnv]),
-    checks: frozenCopy({ ...checks }),
-    overrides: Object.freeze([]),
-  });
+  return createHandle(
+    {
+      ...frozenCopy(definition),
+      env: frozenCopy([...env]),
+      optionalEnv: frozenCopy([...optionalEnv]),
+      checks: frozenCopy({ ...checks }),
+      overrides: Object.freeze([]),
+    },
+    undefined,
+  );
 }
 
 /**

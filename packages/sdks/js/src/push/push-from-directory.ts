@@ -68,7 +68,7 @@ const latestVersionSchema = z.object({ version: z.number() });
  *    exported `defineEnvironment` handle and each handle a collected step
  *    uses. Content matching the latest version publishes nothing.
  * 1. Upserts every step exported from the `.ts`/`.js` files (except the push
- *    script itself). A step naming an environment by string that isn't
+ *    script itself) and every local step their pipelines use. A step naming an environment by string that isn't
  *    collected must already exist on the server; that's checked with one
  *    list call before anything is uploaded.
  * 2. Publishes every built pipeline document (`<key>.json`, from

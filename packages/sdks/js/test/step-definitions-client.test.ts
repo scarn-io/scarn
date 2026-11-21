@@ -5,6 +5,7 @@ import {
   type StepDefinitionSpec,
 } from "../src/definitions/steps/define-step";
 import { Features } from "../src/definitions/steps/step-features";
+import { notion } from "./mcp-tool-step-fixtures";
 
 type CapturedRequest = {
   url: string;
@@ -347,6 +348,28 @@ describe("createStepDefinitionsClient.upsertFromSpec", () => {
       expect(captured[0]?.body).not.toHaveProperty(
         "signalExtractorDefinitions",
       );
+    } finally {
+      globalThis.fetch = prev;
+    }
+  });
+
+  test("sends an mcp_tool step's kind and toolCallJson", async () => {
+    const { mockFetch, captured } = createMockFetch([
+      { status: 200, body: { id: "step-id" } },
+    ]);
+    const prev = globalThis.fetch;
+    globalThis.fetch = mockFetch;
+    try {
+      const client = createStepDefinitionsClient(BASE_URL);
+      const step = notion.tools.search.step();
+      await client.upsertFromSpec("proj-1", step, { headers: AUTH_HEADER });
+
+      expect(captured[0]?.body).toMatchObject({
+        kind: "mcp_tool",
+        prompt: null,
+        toolCallJson: step.toolCall,
+        resultSchemaJson: step.resultSchemaJson,
+      });
     } finally {
       globalThis.fetch = prev;
     }

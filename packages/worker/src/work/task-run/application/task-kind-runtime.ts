@@ -12,6 +12,40 @@ export function taskKindUsesAgent(kind: TaskKind): boolean {
     case "agent":
       return true;
     case "code":
+    case "mcp_tool":
+      return false;
+    default:
+      return assertNever(kind);
+  }
+}
+
+/**
+ * Whether a launch of this kind resolves the step's MCP servers (refs,
+ * connectors, managed relay, the env they need). An agent hands them to
+ * OpenCode; an `mcp_tool` task calls one of them itself.
+ */
+export function taskKindResolvesMcpServers(kind: TaskKind): boolean {
+  switch (kind) {
+    case "agent":
+    case "mcp_tool":
+      return true;
+    case "code":
+      return false;
+    default:
+      return assertNever(kind);
+  }
+}
+
+/**
+ * Whether a managed runtime of this kind installs the pipeline-builder
+ * dependencies: only a code step runs pipeline-builder code.
+ */
+export function taskKindInstallsPipelineBuilder(kind: TaskKind): boolean {
+  switch (kind) {
+    case "code":
+      return true;
+    case "agent":
+    case "mcp_tool":
       return false;
     default:
       return assertNever(kind);

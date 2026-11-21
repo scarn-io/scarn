@@ -57,7 +57,10 @@ With `Runtime.host()`, local commands run on the worker host. See
 ## Use a project connection
 
 For a service in [MCP connections](/scarn/connections/), such as Notion or
-Cloudflare Observability, connect it in project settings, then let the
+Cloudflare Observability, connect it in project settings or with
+`scarn connections connect <name>`. A remote server in your MCP config that
+isn't in that list, such as Slack, can be connected from the CLI; see
+[Connect from the CLI](/scarn/connections/cli/). Then let the
 designer add `auth: { connection: "<name>" }` to a repository `ref` or inline
 `remote`. `connection` is the connection's name, and the server's URL must be
 the connection's MCP URL:

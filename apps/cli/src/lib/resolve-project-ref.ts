@@ -26,6 +26,8 @@ export const PROJECT_ACTIONS = {
   run: "run pipelines in",
   automations: "manage automations in",
   inspect: "inspect work items in",
+  mcp: "list MCP connection tools in",
+  connections: "manage MCP connections in",
 } as const;
 
 export type ProjectAction =

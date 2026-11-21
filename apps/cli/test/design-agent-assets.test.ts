@@ -18,6 +18,11 @@ import {
   PIPELINE_AUTHORING_REFERENCE,
   PIPELINE_DESIGNER_AGENT_DESCRIPTION,
 } from "../src/lib/design-agent-assets";
+import {
+  expectPhrase,
+  PHASE,
+  sectionBetween,
+} from "./design-agent-prompt-helpers";
 import { extractFencedBlocks } from "./template-harness";
 
 describe("design agent assets", () => {
@@ -146,6 +151,53 @@ describe("the commands the prompt documents still behave as documented", () => {
   });
 });
 
+describe("MCP tool steps in the prompt", () => {
+  const prompt = buildPipelineDesignerPrompt();
+
+  test("the agent pulls catalogs with a command that runs unattended", () => {
+    const pulls = extractFencedBlocks(prompt)
+      .filter((block) => block.tag === "sh")
+      .flatMap((block) => block.code.split("\n"))
+      .map((line) => line.trim())
+      .filter((line) => line.includes(" mcp pull "));
+
+    expect(pulls).toEqual(['"$SCARN_CLI" mcp pull github']);
+    for (const command of pulls) {
+      expect(
+        resolvePermission(
+          PIPELINE_DESIGNER_SHELL_PERMISSIONS,
+          "shell",
+          command,
+        ),
+      ).toBe("allow");
+    }
+    const build = sectionBetween(prompt, PHASE.build, PHASE.assignment);
+    expectPhrase(build, '"$SCARN_CLI" mcp pull <server>');
+    expectPhrase(build, "never write a tool's schema by hand");
+  });
+
+  test("documents the manifest's lock, the args limits, the result and the errors", () => {
+    for (const needle of [
+      "lock.catalogFile",
+      "lock.drift",
+      ".withTools(",
+      ".disableAllChecks().withTools(",
+      "Truthiness and `===` are not caught",
+      "Never branch on `input` or `env`",
+      "{ content: ContentBlock[], structuredContent: object | null }",
+      ...[
+        "Scarn.ArgsError",
+        "Scarn.McpToolError",
+        "Scarn.McpUnavailable",
+        "Scarn.McpOutputInvalid",
+        "Scarn.Timeout",
+      ].map((name) => `| \`${name}\` |`),
+    ]) {
+      expect(prompt, needle).toContain(needle);
+    }
+  });
+});
+
 describe("composed prompt size", () => {
   // Regression guard: catches an asset silently failing to inline (far too
   // small) and unbounded growth of a prompt that ships in an env var.
@@ -184,13 +236,15 @@ describe("composed prompt size", () => {
   // and route labels and overrules (§4's "Labels and overrules", §7, phase 6
   // and the template's labels and `overridable` marks) to ~105,700, and
   // connection-backed MCP servers (`connection`/`connections` in phase 1,
-  // both `auth` forms in phase 3 and §1) to ~107,200
+  // both `auth` forms in phase 3 and §1) to ~107,200, and MCP tool steps
+  // (§1's "MCP tool steps", the manifest's `lock`/`locks` in phase 1, and
+  // `scarn mcp pull` in phase 6) to ~114,700
   // — the lower bound is set just under the current value so any further
   // growth is a deliberate decision rather than a drift.
   test("stays within the expected envelope", () => {
     const length = buildPipelineDesignerPrompt().length;
-    expect(length).toBeGreaterThan(106_900);
-    expect(length).toBeLessThan(108_000);
+    expect(length).toBeGreaterThan(114_400);
+    expect(length).toBeLessThan(115_500);
   });
 
   test("survives a round trip through the injected TUI config", () => {

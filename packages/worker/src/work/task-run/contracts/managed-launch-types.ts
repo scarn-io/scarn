@@ -27,8 +27,9 @@ export type ManagedLaunchRegistration = ManagedLaunchServerUrls & {
 
 /**
  * Registers the run's managed launch once the launch knows its step uses a
- * managed connection; resolves the relay entries with each URL as OpenCode
- * reaches it from `runtimeKind`.
+ * managed connection; resolves the relay entries with each URL as the MCP
+ * client reaches it from `runtimeKind`. An `mcp_tool` launch passes `"host"`,
+ * since its client is the worker process itself.
  */
 export type RegisterManagedLaunch = (
   input: ManagedLaunchServerUrls & {

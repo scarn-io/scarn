@@ -25,6 +25,7 @@ export function fakeAgentToolsPorts(
     mcpToolLister: {
       listTools: () => Promise.reject(new Error("no server to list")),
     },
+    readMcpToolLocks: () => Promise.resolve([]),
     writeAgentToolsManifest: () =>
       Promise.resolve(FAKE_AGENT_TOOLS_MANIFEST_PATH),
     listManagedConnections: () =>

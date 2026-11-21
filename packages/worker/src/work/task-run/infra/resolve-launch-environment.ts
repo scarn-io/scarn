@@ -6,8 +6,40 @@ import {
   type EnvironmentDefinition,
 } from "@scarn/sdk/resolve-environment";
 import type { LaunchedRuntimeOrchestrator } from "../contracts/process-project-work-types";
+import type { TaskKind } from "../contracts/task-run-contracts";
+import {
+  taskKindInstallsPipelineBuilder,
+  taskKindResolvesMcpServers,
+} from "../application/task-kind-runtime";
 
 type LaunchInput = Parameters<LaunchedRuntimeOrchestrator["launch"]>[0];
+
+/**
+ * The launch's task kind. Launches that don't name one (dry runs) fall back
+ * to `startAgent`: an agent when it starts one, otherwise a code step.
+ */
+export function launchTaskKind(input: LaunchInput): TaskKind {
+  return input.taskKind ?? (input.startAgent ? "agent" : "code");
+}
+
+/**
+ * What a launch sets up besides the runtime: whether it resolves the step's
+ * MCP servers (agents and MCP tool steps) and whether a managed runtime
+ * installs the pipeline-builder dependencies (code steps only).
+ */
+export function launchPlan(input: LaunchInput): {
+  kind: TaskKind;
+  resolveMcpServers: boolean;
+  installPipelineBuilder: boolean;
+} {
+  const kind = launchTaskKind(input);
+  return {
+    kind,
+    resolveMcpServers: input.startAgent || taskKindResolvesMcpServers(kind),
+    installPipelineBuilder:
+      !input.startAgent && taskKindInstallsPipelineBuilder(kind),
+  };
+}
 
 export async function devcontainerExists(
   workspacePath: string,
@@ -52,7 +84,8 @@ export async function resolveLaunchEnvironment(
     );
   }
   const envPlan = await input.resolveEnvironmentEnv?.(resolvedEnvironment);
-  if (!input.startAgent) envPlan?.resolveMcpEnv?.([]);
+  const { resolveMcpServers } = launchPlan(input);
+  if (!resolveMcpServers) envPlan?.resolveMcpEnv?.([]);
   const resolveMcp = envPlan?.resolveMcpEnv ?? input.resolveMcpEnv;
   const resolveMcpEnv: typeof resolveMcp = resolveMcp
     ? (refs) => {
@@ -75,6 +108,7 @@ export async function resolveLaunchEnvironment(
   }
   return {
     resolvedEnvironment,
+    resolveMcpServers,
     stepEnv: envPlan?.resolved.stepEnv ?? input.stepEnv,
     setupEnv: envPlan?.resolved.setupEnv ?? input.setupEnv,
     resolveMcpEnv,

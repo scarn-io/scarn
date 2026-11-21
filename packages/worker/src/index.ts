@@ -111,6 +111,7 @@ export type {
   ListedMcpTool,
   ManifestManagedConnection,
   ManifestMcpServer,
+  ManifestMcpToolLock,
   ManifestServerConnection,
   ManifestServerListing,
   McpServerAvailability,

@@ -22,6 +22,8 @@ export function describeTaskSource(source: TaskSource): string {
       return `prompt "${source.promptPreview}"`;
     case "code":
       return source.name === null ? "code" : `code ${source.name}`;
+    case "mcp_tool":
+      return source.name === null ? "MCP tool" : `MCP tool ${source.name}`;
   }
 }
 
