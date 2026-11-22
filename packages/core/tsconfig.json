@@ -1,0 +1,25 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["bun-types", "node"],
+    "paths": {
+      "@/*": ["./src/*"],
+      "@/lib/*": ["./src/lib/*"],
+      "@/modules/*": ["./src/*"],
+      "@scarn/core": ["./src/index.ts"],
+      "@scarn/core/*": ["./src/*"],
+      "tests/*": ["./tests/*"]
+    }
+  },
+  "include": [
+    "drizzle.config.ts",
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "tests/**/*.ts",
+    "tests/**/*.tsx",
+    "tests/**/*.d.ts",
+    "../worker/src/pipelines/pipeline-studio/infra/tmpl.d.ts",
+    "../worker/src/types/process-off-fallback.d.ts"
+  ],
+  "exclude": ["node_modules"]
+}

@@ -1,0 +1,23 @@
+{
+  "identifiedRootCause": true,
+  "confidence": 1,
+  "rootCauseExplanation": "`POST /api/coupon` is handled in `server.mjs` by reading `{ code }`, calling `applyCoupon(code)`, and returning its result inside a top-level `try/catch`. On the first successful apply of `SAVE10`, `applyCoupon` does not find an existing coupon, so it executes `cart.coupons.push({ ...coupon, appliedAt: Date.now() })`. That means the stored cart state becomes an object like `{ code: \"SAVE10\", pct: 10, appliedAt: <number> }`, where `appliedAt` is a number timestamp, not an array. On the second apply of the same code, `applyCoupon` finds that existing object and enters the duplicate-coupon branch. That branch tries to 'refresh' the timestamp with `existing.appliedAt.push(Date.now())`. Because `existing.appliedAt` is the number written by the first call, `.push` is undefined on that value, so this line throws a TypeError during the second request specifically. The exception bubbles back to the server's outer `catch`, which converts it into the observed HTTP 500 `{ \"error\": \"Internal Server Error\" }`. The already-applied discount/coupon remains visible in the page because the first request already mutated the in-memory cart successfully, and the frontend's 500-error path only shows the red banner; it does not clear or rerender away the previously displayed applied coupon state.",
+  "implicatedCode": [
+    "server.mjs:28-30 \u2014 the cart keeps applied coupons in a persistent in-memory `coupons` array, so state from the first request is still present on the second request",
+    "server.mjs:63-77 \u2014 `applyCoupon` contains both the first-apply write and the repeat-apply branch; this is the exact execution path for `/api/coupon`",
+    "server.mjs:69-73 \u2014 when the same coupon is applied again, `existing` is found and `existing.appliedAt.push(Date.now())` is executed; this is the line that misbehaves because `appliedAt` is not an array",
+    "server.mjs:76 \u2014 the first successful apply stores `appliedAt: Date.now()`, i.e. a number timestamp, creating the bad state that the second call later operates on",
+    "server.mjs:116-127 \u2014 `POST /api/coupon` calls `applyCoupon(code)` inside a `try/catch`; the thrown error is caught here and returned as HTTP 500",
+    "server.mjs:48-60 \u2014 `serializeCart()` returns coupon codes, subtotal, discount, and total from the persisted `cart.coupons`, which is why the first successful discount remains part of cart state after the later failure",
+    "public/app.js:101-110 \u2014 on success the checkout UI renders the applied coupon, but on HTTP 500 it only shows the error banner and returns without clearing prior coupon/discount display, so the previously applied state remains visible"
+  ],
+  "evidence": [
+    "`cart.coupons` is initialized once as an array in module scope (`server.mjs:28-30`), so coupon state persists across requests in this demo app",
+    "The first-apply branch writes `{ ...coupon, appliedAt: Date.now() }` (`server.mjs:76`), proving `appliedAt` is a number value",
+    "The repeat-apply branch uses `existing.appliedAt.push(Date.now())` (`server.mjs:72`), proving the second call performs an array operation on that number",
+    "The handler for `POST /api/coupon` does not catch inside `applyCoupon`; instead, the outer server `catch` returns `500 Internal Server Error` for thrown exceptions (`server.mjs:116-127`)",
+    "The cart response serializer maps `cart.coupons` to coupon codes and recomputes discount/total from that same array (`server.mjs:48-60`), so the first successful coupon remains part of cart state after the failed second request",
+    "In the frontend, the HTTP >= 500 branch sets the red banner and returns without clearing the previously rendered coupon status (`public/app.js:107-110`)"
+  ],
+  "openQuestions": ""
+}

@@ -1,0 +1,6 @@
+{
+  "routeKey": "perf-bisect",
+  "reasoning": "The report is explicitly about something getting slower over time: '/api/search' regressed from under 1ms p95 to roughly 90-100ms, with a known-good commit `69b74f7` and an existing benchmark repro, which makes `perf-bisect` the right route. Impact is `high` because support reports the product search box 'appears to hang' and 'feels broken', which blocks a core search flow for affected users with no easy workaround.",
+  "confidence": 1,
+  "impactLevel": "high"
+}

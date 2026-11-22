@@ -1,0 +1,34 @@
+{
+  "Rules": [
+    {
+      "ID": "expire-step-execution-archives",
+      "Status": "Enabled",
+      "Filter": {
+        "Prefix": "step-executions/"
+      },
+      "Expiration": {
+        "Days": 30
+      }
+    },
+    {
+      "ID": "expire-step-execution-artifacts",
+      "Status": "Enabled",
+      "Filter": {
+        "Prefix": "artifacts/"
+      },
+      "Expiration": {
+        "Days": 30
+      }
+    },
+    {
+      "ID": "expire-task-sessions",
+      "Status": "Enabled",
+      "Filter": {
+        "Prefix": "tasks/"
+      },
+      "Expiration": {
+        "Days": 30
+      }
+    }
+  ]
+}

@@ -1,0 +1,59 @@
+{
+  "name": "@scarn/identity",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "bun": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./request-scoped-drizzle": {
+      "types": "./src/lib/db/request-scoped-drizzle.ts",
+      "bun": "./src/lib/db/request-scoped-drizzle.ts",
+      "default": "./src/lib/db/request-scoped-drizzle.ts"
+    },
+    "./testing": {
+      "types": "./tests/integration/helpers/create-test-user-and-session.ts",
+      "bun": "./tests/integration/helpers/create-test-user-and-session.ts",
+      "default": "./tests/integration/helpers/create-test-user-and-session.ts"
+    },
+    "./testing/access-jwt-signing-keys": {
+      "types": "./tests/integration/helpers/access-jwt-signing-keys.ts",
+      "bun": "./tests/integration/helpers/access-jwt-signing-keys.ts",
+      "default": "./tests/integration/helpers/access-jwt-signing-keys.ts"
+    },
+    "./*": {
+      "types": "./src/*",
+      "bun": "./src/*",
+      "default": "./src/*"
+    }
+  },
+  "scripts": {
+    "build": "tsgo -p tsconfig.json --noEmit",
+    "declarations": "tsgo -p tsconfig.build.json",
+    "test": "bun test",
+    "typecheck": "tsgo -p tsconfig.json --noEmit --incremental",
+    "db:generate": "bun --env-file=../../.env drizzle-kit generate --config=drizzle.config.ts",
+    "db:migrate": "bun --env-file=../../.env drizzle-kit migrate --config=drizzle.config.ts",
+    "db:push": "bun --env-file=../../.env drizzle-kit push --config=drizzle.config.ts"
+  },
+  "dependencies": {
+    "@scarn/observability": "workspace:*",
+    "better-auth": "catalog:",
+    "better-call": "catalog:",
+    "drizzle-orm": "catalog:",
+    "pg": "catalog:",
+    "uuid": "^13.0.0",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@scarn/local-dev": "workspace:*",
+    "@testcontainers/postgresql": "^11.14.0",
+    "@types/pg": "catalog:",
+    "bun-types": "^1.4.4",
+    "drizzle-kit": "catalog:",
+    "testcontainers": "^11.14.0"
+  }
+}

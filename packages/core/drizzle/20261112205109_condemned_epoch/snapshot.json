@@ -1,0 +1,255 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "570c2d35-c1c6-4d37-ada3-9835594352f0",
+  "prevIds": [
+    "445b9d6f-7558-4f2d-9797-9b8e4e140642"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "pipeline_runs",
+        "started_by_automation_id"
+      ],
+      "writes": [
+        "s|col|app.pipeline_runs.started_by_automation_id",
+        "n|col|app.pipeline_runs.started_by_automation_id",
+        "e|col|app.pipeline_runs.started_by_automation_id"
+      ],
+      "reads": [
+        "n|tbl|app.pipeline_runs",
+        "n|sch|app"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "tasks",
+        "started_by_automation_id"
+      ],
+      "writes": [
+        "s|col|app.tasks.started_by_automation_id",
+        "n|col|app.tasks.started_by_automation_id",
+        "e|col|app.tasks.started_by_automation_id"
+      ],
+      "reads": [
+        "n|tbl|app.tasks",
+        "n|sch|app"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "app",
+        "pipeline_runs",
+        "pipeline_runs_started_by_automation_id_idx"
+      ],
+      "writes": [
+        "s|idx|app.pipeline_runs_started_by_automation_id_idx",
+        "n|idx|app.pipeline_runs_started_by_automation_id_idx",
+        "e|idx|app.pipeline_runs_started_by_automation_id_idx",
+        "n|rel|app.pipeline_runs_started_by_automation_id_idx"
+      ],
+      "reads": [
+        "n|tbl|app.pipeline_runs",
+        "n|sch|app",
+        "n|col|app.pipeline_runs.started_by_automation_id"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "app",
+        "tasks",
+        "tasks_started_by_automation_id_idx"
+      ],
+      "writes": [
+        "s|idx|app.tasks_started_by_automation_id_idx",
+        "n|idx|app.tasks_started_by_automation_id_idx",
+        "e|idx|app.tasks_started_by_automation_id_idx",
+        "n|rel|app.tasks_started_by_automation_id_idx"
+      ],
+      "reads": [
+        "n|tbl|app.tasks",
+        "n|sch|app",
+        "n|col|app.tasks.started_by_automation_id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "app",
+        "pipeline_runs"
+      ],
+      "writes": [
+        "s|fk|app.pipeline_runs.pipeline_runs_started_by_automation_id_automations_id_fk",
+        "n|fk|app.pipeline_runs.pipeline_runs_started_by_automation_id_automations_id_fk",
+        "e|fk|app.pipeline_runs.pipeline_runs_started_by_automation_id_automations_id_fk",
+        "n|con|app.pipeline_runs.pipeline_runs_started_by_automation_id_automations_id_fk"
+      ],
+      "reads": [
+        "n|tbl|app.pipeline_runs",
+        "n|sch|app",
+        "n|tbl|app.automations",
+        "n|sch|app",
+        "n|col|app.pipeline_runs.started_by_automation_id",
+        "n|col|app.automations.id",
+        "e|uniqueness|app.automations.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "app",
+        "tasks"
+      ],
+      "writes": [
+        "s|fk|app.tasks.tasks_started_by_automation_id_automations_id_fk",
+        "n|fk|app.tasks.tasks_started_by_automation_id_automations_id_fk",
+        "e|fk|app.tasks.tasks_started_by_automation_id_automations_id_fk",
+        "n|con|app.tasks.tasks_started_by_automation_id_automations_id_fk"
+      ],
+      "reads": [
+        "n|tbl|app.tasks",
+        "n|sch|app",
+        "n|tbl|app.automations",
+        "n|sch|app",
+        "n|col|app.tasks.started_by_automation_id",
+        "n|col|app.automations.id",
+        "e|uniqueness|app.automations.id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "pipeline_runs",
+        "name": "started_by_automation_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "tasks",
+        "name": "started_by_automation_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "pipeline_runs",
+        "name": "pipeline_runs_started_by_automation_id_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "started_by_automation_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "tasks",
+        "name": "tasks_started_by_automation_id_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "started_by_automation_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "pipeline_runs",
+        "name": "pipeline_runs_started_by_automation_id_automations_id_fk",
+        "nameExplicit": false,
+        "columns": [
+          "started_by_automation_id"
+        ],
+        "schemaTo": "app",
+        "tableTo": "automations",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "SET NULL",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "tasks",
+        "name": "tasks_started_by_automation_id_automations_id_fk",
+        "nameExplicit": false,
+        "columns": [
+          "started_by_automation_id"
+        ],
+        "schemaTo": "app",
+        "tableTo": "automations",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "SET NULL",
+        "entityType": "fks"
+      }
+    }
+  ]
+}

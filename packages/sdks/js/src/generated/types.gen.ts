@@ -185,6 +185,7 @@ export type GetApiProjectsResolveResponses = {
         ownerUsername: string | null;
         memberships: Array<{
             userId: string;
+            role: string;
             permissions: Array<string>;
             createdAt: string;
             updatedAt: string;
@@ -869,6 +870,7 @@ export type GetApiProjectsByProjectIdResponses = {
         ownerUsername: string | null;
         memberships: Array<{
             userId: string;
+            role: string;
             permissions: Array<string>;
             createdAt: string;
             updatedAt: string;
@@ -946,6 +948,7 @@ export type GetApiProjectsResponses = {
         ownerUsername: string | null;
         memberships: Array<{
             userId: string;
+            role: string;
             permissions: Array<string>;
             createdAt: string;
             updatedAt: string;
@@ -1174,6 +1177,7 @@ export type PostApiProjectsResponses = {
         ownerUsername: string | null;
         memberships: Array<{
             userId: string;
+            role: string;
             permissions: Array<string>;
             createdAt: string;
             updatedAt: string;
@@ -1304,24 +1308,26 @@ export type GetApiProjectsByProjectIdMembersResponses = {
         userId: string;
         username: string | null;
         image: string | null;
+        role: string;
+        permissions: Array<string>;
     }>;
 };
 
 export type GetApiProjectsByProjectIdMembersResponse = GetApiProjectsByProjectIdMembersResponses[keyof GetApiProjectsByProjectIdMembersResponses];
 
-export type PutApiProjectsByProjectIdMembersByUserIdPermissionsData = {
+export type PutApiProjectsByProjectIdMembersByUserIdRoleData = {
     body: {
-        permissions: Array<string>;
+        role: 'read' | 'write' | 'admin';
     };
     path: {
         projectId: string;
         userId: string;
     };
     query?: never;
-    url: '/api/projects/{projectId}/members/{userId}/permissions';
+    url: '/api/projects/{projectId}/members/{userId}/role';
 };
 
-export type PutApiProjectsByProjectIdMembersByUserIdPermissionsErrors = {
+export type PutApiProjectsByProjectIdMembersByUserIdRoleErrors = {
     /**
      * Response for status 401
      */
@@ -1380,6 +1386,25 @@ export type PutApiProjectsByProjectIdMembersByUserIdPermissionsErrors = {
         };
     };
     /**
+     * Response for status 409
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
      * Response for status 422
      */
     422: {
@@ -1419,34 +1444,22 @@ export type PutApiProjectsByProjectIdMembersByUserIdPermissionsErrors = {
     };
 };
 
-export type PutApiProjectsByProjectIdMembersByUserIdPermissionsError = PutApiProjectsByProjectIdMembersByUserIdPermissionsErrors[keyof PutApiProjectsByProjectIdMembersByUserIdPermissionsErrors];
+export type PutApiProjectsByProjectIdMembersByUserIdRoleError = PutApiProjectsByProjectIdMembersByUserIdRoleErrors[keyof PutApiProjectsByProjectIdMembersByUserIdRoleErrors];
 
-export type PutApiProjectsByProjectIdMembersByUserIdPermissionsResponses = {
+export type PutApiProjectsByProjectIdMembersByUserIdRoleResponses = {
     /**
      * Response for status 200
      */
     200: {
-        id: string;
-        name: string;
-        slug: string;
-        description: string | null;
-        gitUrl: string;
-        createdByUserId: string;
-        orgId: string;
-        ownerUsername: string | null;
-        memberships: Array<{
-            userId: string;
-            permissions: Array<string>;
-            createdAt: string;
-            updatedAt: string;
-        }>;
-        visibility: 'private' | 'public';
+        userId: string;
+        role: string;
+        permissions: Array<string>;
         createdAt: string;
         updatedAt: string;
     };
 };
 
-export type PutApiProjectsByProjectIdMembersByUserIdPermissionsResponse = PutApiProjectsByProjectIdMembersByUserIdPermissionsResponses[keyof PutApiProjectsByProjectIdMembersByUserIdPermissionsResponses];
+export type PutApiProjectsByProjectIdMembersByUserIdRoleResponse = PutApiProjectsByProjectIdMembersByUserIdRoleResponses[keyof PutApiProjectsByProjectIdMembersByUserIdRoleResponses];
 
 export type GetApiStepDefinitionsData = {
     body?: never;
@@ -23842,7 +23855,7 @@ export type GetApiProjectInvitesByTokenResponses = {
         projectName: string;
         projectSlug: string;
         ownerUsername: string | null;
-        role: 'admin' | 'contributor' | 'reviewer';
+        role: 'read' | 'write' | 'admin';
         restriction: 'specific_email' | 'any_authenticated_user';
         permissions: Array<string>;
         status: 'pending' | 'accepted' | 'revoked' | 'expired';
@@ -23950,7 +23963,7 @@ export type GetApiProjectsByProjectIdInvitesResponses = {
         id: string;
         projectId: string;
         email: string | null;
-        role: 'admin' | 'contributor' | 'reviewer';
+        role: 'read' | 'write' | 'admin';
         restriction: 'specific_email' | 'any_authenticated_user';
         permissions: Array<string>;
         invitedByUserId: string;
@@ -23967,7 +23980,7 @@ export type GetApiProjectsByProjectIdInvitesResponse = GetApiProjectsByProjectId
 export type PostApiProjectsByProjectIdInvitesData = {
     body: {
         email?: string;
-        role: 'admin' | 'contributor' | 'reviewer';
+        role: 'read' | 'write' | 'admin';
         restriction: 'specific_email' | 'any_authenticated_user';
     };
     path: {
@@ -24105,7 +24118,7 @@ export type PostApiProjectsByProjectIdInvitesResponses = {
             id: string;
             projectId: string;
             email: string | null;
-            role: 'admin' | 'contributor' | 'reviewer';
+            role: 'read' | 'write' | 'admin';
             restriction: 'specific_email' | 'any_authenticated_user';
             permissions: Array<string>;
             invitedByUserId: string;
@@ -24239,7 +24252,7 @@ export type PostApiProjectsByProjectIdInvitesByInviteIdRevokeResponses = {
         id: string;
         projectId: string;
         email: string | null;
-        role: 'admin' | 'contributor' | 'reviewer';
+        role: 'read' | 'write' | 'admin';
         restriction: 'specific_email' | 'any_authenticated_user';
         permissions: Array<string>;
         invitedByUserId: string;
@@ -24408,7 +24421,7 @@ export type PostApiProjectInvitesByTokenAcceptResponses = {
         id: string;
         projectId: string;
         email: string | null;
-        role: 'admin' | 'contributor' | 'reviewer';
+        role: 'read' | 'write' | 'admin';
         restriction: 'specific_email' | 'any_authenticated_user';
         permissions: Array<string>;
         invitedByUserId: string;
@@ -24538,7 +24551,7 @@ export type GetApiOrgsByOrgIdUsageResponses = {
     200: {
         orgId: string;
         period: string;
-        planId: 'free';
+        planId: 'free' | 'unlimited';
         writes: number;
         reads: number;
         signalTokens: number;
@@ -24549,10 +24562,10 @@ export type GetApiOrgsByOrgIdUsageResponses = {
             sessionBytes: number;
         };
         limits: {
-            maxWritesPerMonth: number;
-            maxReadsPerMonth: number;
-            maxStorageBytes: number;
-            maxSignalTokensPerMonth: number;
+            maxWritesPerMonth: number | null;
+            maxReadsPerMonth: number | null;
+            maxStorageBytes: number | null;
+            maxSignalTokensPerMonth: number | null;
         };
         resetsAt: string;
         createdAt: string;

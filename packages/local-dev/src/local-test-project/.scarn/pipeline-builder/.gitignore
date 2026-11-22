@@ -1,0 +1,22 @@
+# Scarn scaffolds and manages this directory, but your pipeline and step
+# definitions are source code: commit and review them like any other file.
+# Only generated or vendored artifacts are ignored below.
+
+# Installed dependencies.
+node_modules/
+
+# Lockfiles. Unusually for a JS project these are NOT committed. This directory
+# is a tool-managed harness rather than a deployed artifact — nothing ships from
+# here, and `scarn pipelines push` uploads definitions, not builds. More
+# importantly, push picks its runtime from whichever lockfile it finds here, so
+# a committed lockfile would force every teammate onto one package manager. Each
+# developer installs with the tool they have.
+/bun.lock
+/bun.lockb
+/package-lock.json
+/pnpm-lock.yaml
+/yarn.lock
+/deno.lock
+
+# Regenerated from a template on every `scarn pipelines push`.
+/push.ts

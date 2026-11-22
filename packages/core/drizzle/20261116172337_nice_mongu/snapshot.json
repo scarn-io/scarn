@@ -1,0 +1,47 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "127db51b-1c9f-4fe8-a1b9-471db2f8c6e3",
+  "prevIds": [
+    "a65aab0e-d066-42a1-b71d-274725c597bf"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "tasks",
+        "environment_selection_json"
+      ],
+      "writes": [
+        "s|col|app.tasks.environment_selection_json",
+        "n|col|app.tasks.environment_selection_json",
+        "e|col|app.tasks.environment_selection_json"
+      ],
+      "reads": [
+        "n|tbl|app.tasks",
+        "n|sch|app"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "tasks",
+        "name": "environment_selection_json",
+        "type": "jsonb",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    }
+  ]
+}

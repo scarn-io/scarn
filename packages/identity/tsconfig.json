@@ -1,0 +1,24 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["bun-types", "node"],
+    "paths": {
+      "@/*": ["./src/*"],
+      "@/lib/*": ["./src/lib/*"],
+      "@/modules/*": ["./src/*"],
+      "@scarn/identity": ["./src/index.ts"],
+      "@scarn/identity/testing": [
+        "./tests/integration/helpers/create-test-user-and-session.ts"
+      ],
+      "@scarn/identity/*": ["./src/*"]
+    }
+  },
+  "include": [
+    "drizzle.config.ts",
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "tests/**/*.ts",
+    "tests/**/*.tsx"
+  ],
+  "exclude": ["node_modules"]
+}

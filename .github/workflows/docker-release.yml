@@ -1,10 +1,17 @@
-name: Docker Release (AI Worker)
+name: Docker Release
 
-# Manual-only. Run this when the AI container image needs to change.
-# After a successful push, update apps/cli/ai-image.txt to the new tag
-# so future CLI/canary builds pick it up.
+# Two kinds of image:
+#
+# - AI worker (ghcr.io/<repo>/ai-worker): manual-only. Run this when the AI
+#   container image needs to change. After a successful push, update
+#   apps/cli/ai-image.txt to the new tag so future CLI/canary builds pick it up.
+# - Self-hosted server (ghcr.io/<owner>/scarn-api and scarn-next, used by
+#   docker-compose.selfhost.yml): built on every `v*` release tag, or manually
+#   with `server_images`. Stable tags also move `latest`.
 
 on:
+  push:
+    tags: ["v*"]
   workflow_dispatch:
     inputs:
       image_tag:
@@ -16,6 +23,16 @@ on:
         required: true
         type: boolean
         default: false
+      ai_worker:
+        description: "Build the AI worker image?"
+        required: true
+        type: boolean
+        default: true
+      server_images:
+        description: "Build the self-hosted scarn-api and scarn-next images?"
+        required: true
+        type: boolean
+        default: false
 
 concurrency:
   group: docker-release
@@ -24,10 +41,12 @@ concurrency:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}/ai-worker
+  SERVER_IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/scarn
 
 jobs:
   build-push-docker:
     runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && inputs.ai_worker
     permissions:
       contents: read
       packages: write
@@ -114,3 +133,61 @@ jobs:
           echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"
           echo "${{ needs.build-push-docker.outputs.image_tag }}" >> "$GITHUB_STEP_SUMMARY"
           echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"
+
+  build-push-server:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || inputs.server_images
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: api
+            dockerfile: apps/api/Dockerfile
+          - image: next
+            dockerfile: apps/next/Dockerfile
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve image tags
+        id: meta
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            TAG="${{ github.ref_name }}"
+          else
+            TAG="${{ inputs.image_tag }}"
+          fi
+          REPO="${{ env.SERVER_IMAGE_PREFIX }}-${{ matrix.image }}"
+          TAGS="${REPO}:${TAG}"
+          if [ "${{ github.event_name }}" = "push" ]; then
+            if ! echo "$TAG" | grep -qE -- '-(alpha|beta|rc|next)'; then
+              TAGS="${TAGS},${REPO}:latest"
+            fi
+          elif [ "${{ inputs.promote_latest }}" = "true" ]; then
+            TAGS="${TAGS},${REPO}:latest"
+          fi
+          echo "tags=${TAGS}" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/setup-qemu-action@v3
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ steps.meta.outputs.tags }}
+          cache-from: type=gha,scope=server-${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=server-${{ matrix.image }}

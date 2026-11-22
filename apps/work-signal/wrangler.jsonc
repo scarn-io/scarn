@@ -1,0 +1,51 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "scarn-work-signal",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-09",
+  "workers_dev": true,
+  "preview_urls": false,
+  "observability": { "enabled": true },
+  "durable_objects": {
+    "bindings": [
+      { "name": "PROJECT_WORK_SIGNAL", "class_name": "ProjectWorkSignal" },
+      { "name": "TASK_RUN_LOG_FEED", "class_name": "TaskRunLogFeed" },
+    ],
+  },
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["ProjectWorkSignal"] },
+    { "tag": "v2", "new_sqlite_classes": ["TaskRunLogFeed"] },
+  ],
+  // Mirrors deploy.json; see src/limits.ts for what each one keys on.
+  "ratelimits": [
+    {
+      "name": "AUTH_FAIL_LIMITER",
+      "namespace_id": "1001",
+      "simple": { "limit": 30, "period": 60 },
+    },
+    {
+      "name": "WS_WORKER_LIMITER",
+      "namespace_id": "1002",
+      "simple": { "limit": 10, "period": 60 },
+    },
+    {
+      "name": "WS_ORG_LIMITER",
+      "namespace_id": "1003",
+      "simple": { "limit": 300, "period": 60 },
+    },
+    {
+      "name": "FEED_WRITER_LIMITER",
+      "namespace_id": "1004",
+      "simple": { "limit": 10, "period": 60 },
+    },
+    {
+      "name": "FEED_READER_LIMITER",
+      "namespace_id": "1005",
+      "simple": { "limit": 20, "period": 60 },
+    },
+  ],
+  // Mirrors deploy.json; see src/metering.ts for the event columns.
+  "analytics_engine_datasets": [
+    { "binding": "EDGE_EVENTS", "dataset": "edge_events" },
+  ],
+}

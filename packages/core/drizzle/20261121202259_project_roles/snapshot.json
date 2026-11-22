@@ -1,0 +1,91 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "0c253b4d-f2c6-448e-8fef-7fcffd6c6a43",
+  "prevIds": [
+    "73f4d55b-2b3a-49ef-9eb2-077469cbbba5"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "project_memberships",
+        "role"
+      ],
+      "writes": [
+        "s|col|app.project_memberships.role",
+        "n|col|app.project_memberships.role",
+        "e|col|app.project_memberships.role"
+      ],
+      "reads": [
+        "n|tbl|app.project_memberships",
+        "n|sch|app"
+      ]
+    },
+    {
+      "statementType": "drop_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "project_memberships",
+        "permissions"
+      ],
+      "writes": [
+        "s|col|app.project_memberships.permissions",
+        "n|col|app.project_memberships.permissions",
+        "e|col|app.project_memberships.permissions"
+      ],
+      "reads": [
+        "n|tbl|app.project_memberships",
+        "n|sch|app"
+      ]
+    },
+    {
+      "statementType": "drop_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "project_invites",
+        "permissions"
+      ],
+      "writes": [
+        "s|col|app.project_invites.permissions",
+        "n|col|app.project_invites.permissions",
+        "e|col|app.project_invites.permissions"
+      ],
+      "reads": [
+        "n|tbl|app.project_invites",
+        "n|sch|app"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "project_memberships",
+        "name": "role",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"app\",\"project_invites\",\"permissions\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"app\",\"project_memberships\",\"permissions\"]"
+    }
+  ]
+}

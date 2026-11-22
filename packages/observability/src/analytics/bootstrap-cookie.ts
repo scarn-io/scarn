@@ -13,9 +13,6 @@
  */
 export const BOOTSTRAP_COOKIE_NAME = "bb_ph_bootstrap";
 
-/** Must match `SHARE_LINK_COOKIE_DOMAIN` in the same API helper. */
-export const BOOTSTRAP_COOKIE_DOMAIN = ".scarn.io";
-
 export type BootstrapCookieRead = {
   present: boolean;
   distinctId: string | null;
@@ -61,28 +58,41 @@ export const hasPosthogCookie = (
     .some((pair) => pair.split("=")[0]?.trim() === wanted);
 };
 
-const isScarnHost = (hostname: string): boolean =>
-  hostname === "scarn.io" || hostname.endsWith(".scarn.io");
+const normalizeCookieDomain = (
+  cookieDomain: string | null | undefined,
+): string | null => {
+  const normalized = cookieDomain?.trim().toLowerCase().replace(/^\./u, "");
+  return normalized ? normalized : null;
+};
+
+const isWithinDomain = (hostname: string, domain: string): boolean =>
+  hostname === domain || hostname.endsWith(`.${domain}`);
 
 /**
  * The `document.cookie` assignment that expires the handoff cookie. It mirrors
- * how the server scoped it: `Domain=.scarn.io` on `scarn.io` hosts,
- * host-only elsewhere (localhost, preview deployments), and `Secure` over https.
+ * how the server scoped it: `Domain=.<cookieDomain>` when a shared cookie
+ * domain is configured and the page is on it, host-only otherwise (localhost,
+ * preview deployments, installs without a shared domain), and `Secure` over
+ * https.
  */
 export const buildBootstrapCookieDeletion = ({
   hostname,
   protocol,
+  cookieDomain,
 }: {
   hostname: string;
   protocol: string;
-}): string =>
-  [
+  cookieDomain?: string | null;
+}): string => {
+  const domain = normalizeCookieDomain(cookieDomain);
+  return [
     `${BOOTSTRAP_COOKIE_NAME}=`,
-    ...(isScarnHost(hostname.toLowerCase())
-      ? [`Domain=${BOOTSTRAP_COOKIE_DOMAIN}`]
+    ...(domain && isWithinDomain(hostname.toLowerCase(), domain)
+      ? [`Domain=.${domain}`]
       : []),
     "Path=/",
     "Max-Age=0",
     ...(protocol === "https:" ? ["Secure"] : []),
     "SameSite=Lax",
   ].join("; ");
+};

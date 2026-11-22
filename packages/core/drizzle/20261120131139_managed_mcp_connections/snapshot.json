@@ -1,0 +1,3803 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "8635fad0-7df0-487e-b8c0-1a623c348f84",
+  "prevIds": [
+    "127db51b-1c9f-4fe8-a1b9-471db2f8c6e3"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "managed_connection_event_type"
+      ],
+      "writes": [
+        "s|enum|public.managed_connection_event_type",
+        "n|enum|public.managed_connection_event_type",
+        "e|enum|public.managed_connection_event_type",
+        "n|type|public.managed_connection_event_type"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "managed_connection_state"
+      ],
+      "writes": [
+        "s|enum|public.managed_connection_state",
+        "n|enum|public.managed_connection_state",
+        "e|enum|public.managed_connection_state",
+        "n|type|public.managed_connection_state"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "managed_launch_connection_state"
+      ],
+      "writes": [
+        "s|enum|public.managed_launch_connection_state",
+        "n|enum|public.managed_launch_connection_state",
+        "e|enum|public.managed_launch_connection_state",
+        "n|type|public.managed_launch_connection_state"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "managed_oauth_attempt_kind"
+      ],
+      "writes": [
+        "s|enum|public.managed_oauth_attempt_kind",
+        "n|enum|public.managed_oauth_attempt_kind",
+        "e|enum|public.managed_oauth_attempt_kind",
+        "n|type|public.managed_oauth_attempt_kind"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "managed_oauth_attempt_status"
+      ],
+      "writes": [
+        "s|enum|public.managed_oauth_attempt_status",
+        "n|enum|public.managed_oauth_attempt_status",
+        "e|enum|public.managed_oauth_attempt_status",
+        "n|type|public.managed_oauth_attempt_status"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "managed_revocation_outcome"
+      ],
+      "writes": [
+        "s|enum|public.managed_revocation_outcome",
+        "n|enum|public.managed_revocation_outcome",
+        "e|enum|public.managed_revocation_outcome",
+        "n|type|public.managed_revocation_outcome"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "app",
+        "managed_connection_events"
+      ],
+      "writes": [
+        "s|tbl|app.managed_connection_events",
+        "n|tbl|app.managed_connection_events",
+        "e|tbl|app.managed_connection_events",
+        "n|rel|app.managed_connection_events",
+        "n|type|app.managed_connection_events",
+        "n|rel|app.managed_connection_events_pkey"
+      ],
+      "reads": [
+        "n|sch|app",
+        "n|enum|public.managed_connection_event_type",
+        "n|enum|public.managed_revocation_outcome"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "app",
+        "managed_mcp_connections"
+      ],
+      "writes": [
+        "s|tbl|app.managed_mcp_connections",
+        "n|tbl|app.managed_mcp_connections",
+        "e|tbl|app.managed_mcp_connections",
+        "n|rel|app.managed_mcp_connections",
+        "n|type|app.managed_mcp_connections",
+        "n|rel|app.managed_mcp_connections_pkey"
+      ],
+      "reads": [
+        "n|sch|app",
+        "n|enum|public.managed_connection_state"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "app",
+        "managed_mcp_launch_connections"
+      ],
+      "writes": [
+        "s|tbl|app.managed_mcp_launch_connections",
+        "n|tbl|app.managed_mcp_launch_connections",
+        "e|tbl|app.managed_mcp_launch_connections",
+        "n|rel|app.managed_mcp_launch_connections",
+        "n|type|app.managed_mcp_launch_connections",
+        "n|rel|app.managed_mcp_launch_connections_pkey"
+      ],
+      "reads": [
+        "n|sch|app",
+        "n|enum|public.managed_launch_connection_state"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "app",
+        "managed_mcp_operations"
+      ],
+      "writes": [
+        "s|tbl|app.managed_mcp_operations",
+        "n|tbl|app.managed_mcp_operations",
+        "e|tbl|app.managed_mcp_operations",
+        "n|rel|app.managed_mcp_operations",
+        "n|type|app.managed_mcp_operations",
+        "n|rel|app.managed_mcp_operations_pkey"
+      ],
+      "reads": [
+        "n|sch|app"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "app",
+        "managed_oauth_attempts"
+      ],
+      "writes": [
+        "s|tbl|app.managed_oauth_attempts",
+        "n|tbl|app.managed_oauth_attempts",
+        "e|tbl|app.managed_oauth_attempts",
+        "n|rel|app.managed_oauth_attempts",
+        "n|type|app.managed_oauth_attempts",
+        "n|rel|app.managed_oauth_attempts_pkey"
+      ],
+      "reads": [
+        "n|sch|app",
+        "n|enum|public.managed_oauth_attempt_kind",
+        "n|enum|public.managed_oauth_attempt_status"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "app",
+        "managed_oauth_clients"
+      ],
+      "writes": [
+        "s|tbl|app.managed_oauth_clients",
+        "n|tbl|app.managed_oauth_clients",
+        "e|tbl|app.managed_oauth_clients",
+        "n|rel|app.managed_oauth_clients",
+        "n|type|app.managed_oauth_clients",
+        "n|rel|app.managed_oauth_clients_pkey"
+      ],
+      "reads": [
+        "n|sch|app"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "app",
+        "managed_oauth_grants"
+      ],
+      "writes": [
+        "s|tbl|app.managed_oauth_grants",
+        "n|tbl|app.managed_oauth_grants",
+        "e|tbl|app.managed_oauth_grants",
+        "n|rel|app.managed_oauth_grants",
+        "n|type|app.managed_oauth_grants",
+        "n|rel|app.managed_oauth_grants_pkey"
+      ],
+      "reads": [
+        "n|sch|app"
+      ]
+    },
+    {
+      "statementType": "recreate_index",
+      "statementTarget": [
+        "index",
+        "app",
+        "pipeline_graphs",
+        "pipeline_graphs_project_key_unique"
+      ],
+      "writes": [
+        "s|idx|app.pipeline_graphs_project_key_unique",
+        "n|idx|app.pipeline_graphs_project_key_unique",
+        "e|idx|app.pipeline_graphs_project_key_unique",
+        "n|rel|app.pipeline_graphs_project_key_unique"
+      ],
+      "reads": [
+        "n|tbl|app.pipeline_graphs",
+        "n|sch|app",
+        "n|col|app.pipeline_graphs.project_id",
+        "n|col|app.pipeline_graphs.key"
+      ],
+      "sharedWrites": [],
+      "sqlHash": "9550846d2e9d235b"
+    },
+    {
+      "statementType": "recreate_index",
+      "statementTarget": [
+        "index",
+        "app",
+        "pipeline_graphs",
+        "pipeline_graphs_project_active_idx"
+      ],
+      "writes": [
+        "s|idx|app.pipeline_graphs_project_active_idx",
+        "n|idx|app.pipeline_graphs_project_active_idx",
+        "e|idx|app.pipeline_graphs_project_active_idx",
+        "n|rel|app.pipeline_graphs_project_active_idx"
+      ],
+      "reads": [
+        "n|tbl|app.pipeline_graphs",
+        "n|sch|app",
+        "n|col|app.pipeline_graphs.project_id"
+      ],
+      "sharedWrites": [],
+      "sqlHash": "2ffcecba3ada87b9"
+    },
+    {
+      "statementType": "recreate_index",
+      "statementTarget": [
+        "index",
+        "app",
+        "project_integrations",
+        "project_integrations_project_github_app_install_unique"
+      ],
+      "writes": [
+        "s|idx|app.project_integrations_project_github_app_install_unique",
+        "n|idx|app.project_integrations_project_github_app_install_unique",
+        "e|idx|app.project_integrations_project_github_app_install_unique",
+        "n|rel|app.project_integrations_project_github_app_install_unique"
+      ],
+      "reads": [
+        "n|tbl|app.project_integrations",
+        "n|sch|app",
+        "n|col|app.project_integrations.project_id",
+        "n|col|app.project_integrations.installation_id"
+      ],
+      "sharedWrites": [],
+      "sqlHash": "ab5424bd9d2d57a2"
+    },
+    {
+      "statementType": "recreate_index",
+      "statementTarget": [
+        "index",
+        "app",
+        "work_item_comments",
+        "work_item_comments_work_item_pinned_idx"
+      ],
+      "writes": [
+        "s|idx|app.work_item_comments_work_item_pinned_idx",
+        "n|idx|app.work_item_comments_work_item_pinned_idx",
+        "e|idx|app.work_item_comments_work_item_pinned_idx",
+        "n|rel|app.work_item_comments_work_item_pinned_idx"
+      ],
+      "reads": [
+        "n|tbl|app.work_item_comments",
+        "n|sch|app",
+        "n|col|app.work_item_comments.work_item_id"
+      ],
+      "sharedWrites": [],
+      "sqlHash": "ace5dd150c01112a"
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "app",
+        "managed_connection_events",
+        "managed_connection_events_connection_id_idx"
+      ],
+      "writes": [
+        "s|idx|app.managed_connection_events_connection_id_idx",
+        "n|idx|app.managed_connection_events_connection_id_idx",
+        "e|idx|app.managed_connection_events_connection_id_idx",
+        "n|rel|app.managed_connection_events_connection_id_idx"
+      ],
+      "reads": [
+        "n|tbl|app.managed_connection_events",
+        "n|sch|app",
+        "n|col|app.managed_connection_events.connection_id"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "app",
+        "managed_connection_events",
+        "managed_connection_events_created_at_idx"
+      ],
+      "writes": [
+        "s|idx|app.managed_connection_events_created_at_idx",
+        "n|idx|app.managed_connection_events_created_at_idx",
+        "e|idx|app.managed_connection_events_created_at_idx",
+        "n|rel|app.managed_connection_events_created_at_idx"
+      ],
+      "reads": [
+        "n|tbl|app.managed_connection_events",
+        "n|sch|app",
+        "n|col|app.managed_connection_events.created_at"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "app",
+        "managed_mcp_connections",
+        "managed_mcp_connections_project_name_unique"
+      ],
+      "writes": [
+        "s|idx|app.managed_mcp_connections_project_name_unique",
+        "n|idx|app.managed_mcp_connections_project_name_unique",
+        "e|idx|app.managed_mcp_connections_project_name_unique",
+        "n|rel|app.managed_mcp_connections_project_name_unique"
+      ],
+      "reads": [
+        "n|tbl|app.managed_mcp_connections",
+        "n|sch|app",
+        "n|col|app.managed_mcp_connections.project_id",
+        "n|col|app.managed_mcp_connections.name"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "app",
+        "managed_mcp_connections",
+        "managed_mcp_connections_project_resource_unique"
+      ],
+      "writes": [
+        "s|idx|app.managed_mcp_connections_project_resource_unique",
+        "n|idx|app.managed_mcp_connections_project_resource_unique",
+        "e|idx|app.managed_mcp_connections_project_resource_unique",
+        "n|rel|app.managed_mcp_connections_project_resource_unique"
+      ],
+      "reads": [
+        "n|tbl|app.managed_mcp_connections",
+        "n|sch|app",
+        "n|col|app.managed_mcp_connections.project_id",
+        "n|col|app.managed_mcp_connections.resource"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "app",
+        "managed_mcp_launch_connections",
+        "managed_mcp_launch_connections_capability_digest_unique"
+      ],
+      "writes": [
+        "s|idx|app.managed_mcp_launch_connections_capability_digest_unique",
+        "n|idx|app.managed_mcp_launch_connections_capability_digest_unique",
+        "e|idx|app.managed_mcp_launch_connections_capability_digest_unique",
+        "n|rel|app.managed_mcp_launch_connections_capability_digest_unique"
+      ],
+      "reads": [
+        "n|tbl|app.managed_mcp_launch_connections",
+        "n|sch|app",
+        "n|col|app.managed_mcp_launch_connections.capability_digest"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "app",
+        "managed_mcp_launch_connections",
+        "managed_mcp_launch_connections_run_claim_entry_unique"
+      ],
+      "writes": [
+        "s|idx|app.managed_mcp_launch_connections_run_claim_entry_unique",
+        "n|idx|app.managed_mcp_launch_connections_run_claim_entry_unique",
+        "e|idx|app.managed_mcp_launch_connections_run_claim_entry_unique",
+        "n|rel|app.managed_mcp_launch_connections_run_claim_entry_unique"
+      ],
+      "reads": [
+        "n|tbl|app.managed_mcp_launch_connections",
+        "n|sch|app",
+        "n|col|app.managed_mcp_launch_connections.task_run_id",
+        "n|col|app.managed_mcp_launch_connections.claim_token_digest",
+        "n|col|app.managed_mcp_launch_connections.entry_key"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "app",
+        "managed_mcp_launch_connections",
+        "managed_mcp_launch_connections_task_run_state_idx"
+      ],
+      "writes": [
+        "s|idx|app.managed_mcp_launch_connections_task_run_state_idx",
+        "n|idx|app.managed_mcp_launch_connections_task_run_state_idx",
+        "e|idx|app.managed_mcp_launch_connections_task_run_state_idx",
+        "n|rel|app.managed_mcp_launch_connections_task_run_state_idx"
+      ],
+      "reads": [
+        "n|tbl|app.managed_mcp_launch_connections",
+        "n|sch|app",
+        "n|col|app.managed_mcp_launch_connections.task_run_id",
+        "n|col|app.managed_mcp_launch_connections.state"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "app",
+        "managed_mcp_launch_connections",
+        "managed_mcp_launch_connections_connection_id_idx"
+      ],
+      "writes": [
+        "s|idx|app.managed_mcp_launch_connections_connection_id_idx",
+        "n|idx|app.managed_mcp_launch_connections_connection_id_idx",
+        "e|idx|app.managed_mcp_launch_connections_connection_id_idx",
+        "n|rel|app.managed_mcp_launch_connections_connection_id_idx"
+      ],
+      "reads": [
+        "n|tbl|app.managed_mcp_launch_connections",
+        "n|sch|app",
+        "n|col|app.managed_mcp_launch_connections.connection_id"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "app",
+        "managed_mcp_operations",
+        "managed_mcp_operations_launch_connection_id_idx"
+      ],
+      "writes": [
+        "s|idx|app.managed_mcp_operations_launch_connection_id_idx",
+        "n|idx|app.managed_mcp_operations_launch_connection_id_idx",
+        "e|idx|app.managed_mcp_operations_launch_connection_id_idx",
+        "n|rel|app.managed_mcp_operations_launch_connection_id_idx"
+      ],
+      "reads": [
+        "n|tbl|app.managed_mcp_operations",
+        "n|sch|app",
+        "n|col|app.managed_mcp_operations.launch_connection_id"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "app",
+        "managed_oauth_attempts",
+        "managed_oauth_attempts_state_digest_unique"
+      ],
+      "writes": [
+        "s|idx|app.managed_oauth_attempts_state_digest_unique",
+        "n|idx|app.managed_oauth_attempts_state_digest_unique",
+        "e|idx|app.managed_oauth_attempts_state_digest_unique",
+        "n|rel|app.managed_oauth_attempts_state_digest_unique"
+      ],
+      "reads": [
+        "n|tbl|app.managed_oauth_attempts",
+        "n|sch|app",
+        "n|col|app.managed_oauth_attempts.state_digest"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "app",
+        "managed_oauth_attempts",
+        "managed_oauth_attempts_connection_id_idx"
+      ],
+      "writes": [
+        "s|idx|app.managed_oauth_attempts_connection_id_idx",
+        "n|idx|app.managed_oauth_attempts_connection_id_idx",
+        "e|idx|app.managed_oauth_attempts_connection_id_idx",
+        "n|rel|app.managed_oauth_attempts_connection_id_idx"
+      ],
+      "reads": [
+        "n|tbl|app.managed_oauth_attempts",
+        "n|sch|app",
+        "n|col|app.managed_oauth_attempts.connection_id"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "app",
+        "managed_oauth_attempts",
+        "managed_oauth_attempts_expires_at_idx"
+      ],
+      "writes": [
+        "s|idx|app.managed_oauth_attempts_expires_at_idx",
+        "n|idx|app.managed_oauth_attempts_expires_at_idx",
+        "e|idx|app.managed_oauth_attempts_expires_at_idx",
+        "n|rel|app.managed_oauth_attempts_expires_at_idx"
+      ],
+      "reads": [
+        "n|tbl|app.managed_oauth_attempts",
+        "n|sch|app",
+        "n|col|app.managed_oauth_attempts.expires_at"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "app",
+        "managed_oauth_clients",
+        "managed_oauth_clients_issuer_redirect_uri_live_unique"
+      ],
+      "writes": [
+        "s|idx|app.managed_oauth_clients_issuer_redirect_uri_live_unique",
+        "n|idx|app.managed_oauth_clients_issuer_redirect_uri_live_unique",
+        "e|idx|app.managed_oauth_clients_issuer_redirect_uri_live_unique",
+        "n|rel|app.managed_oauth_clients_issuer_redirect_uri_live_unique"
+      ],
+      "reads": [
+        "n|tbl|app.managed_oauth_clients",
+        "n|sch|app",
+        "n|col|app.managed_oauth_clients.issuer",
+        "n|col|app.managed_oauth_clients.redirect_uri"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "app",
+        "managed_oauth_grants",
+        "managed_oauth_grants_connection_id_idx"
+      ],
+      "writes": [
+        "s|idx|app.managed_oauth_grants_connection_id_idx",
+        "n|idx|app.managed_oauth_grants_connection_id_idx",
+        "e|idx|app.managed_oauth_grants_connection_id_idx",
+        "n|rel|app.managed_oauth_grants_connection_id_idx"
+      ],
+      "reads": [
+        "n|tbl|app.managed_oauth_grants",
+        "n|sch|app",
+        "n|col|app.managed_oauth_grants.connection_id"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "app",
+        "managed_oauth_grants",
+        "managed_oauth_grants_retired_at_idx"
+      ],
+      "writes": [
+        "s|idx|app.managed_oauth_grants_retired_at_idx",
+        "n|idx|app.managed_oauth_grants_retired_at_idx",
+        "e|idx|app.managed_oauth_grants_retired_at_idx",
+        "n|rel|app.managed_oauth_grants_retired_at_idx"
+      ],
+      "reads": [
+        "n|tbl|app.managed_oauth_grants",
+        "n|sch|app",
+        "n|col|app.managed_oauth_grants.retired_at"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "app",
+        "managed_connection_events"
+      ],
+      "writes": [
+        "s|fk|app.managed_connection_events.managed_connection_events_project_id_projects_id_fkey",
+        "n|fk|app.managed_connection_events.managed_connection_events_project_id_projects_id_fkey",
+        "e|fk|app.managed_connection_events.managed_connection_events_project_id_projects_id_fkey",
+        "n|con|app.managed_connection_events.managed_connection_events_project_id_projects_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|app.managed_connection_events",
+        "n|sch|app",
+        "n|tbl|app.projects",
+        "n|sch|app",
+        "n|col|app.managed_connection_events.project_id",
+        "n|col|app.projects.id",
+        "e|uniqueness|app.projects.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "app",
+        "managed_connection_events"
+      ],
+      "writes": [
+        "s|fk|app.managed_connection_events.managed_connection_events_TeZnLvs169Uu_fkey",
+        "n|fk|app.managed_connection_events.managed_connection_events_TeZnLvs169Uu_fkey",
+        "e|fk|app.managed_connection_events.managed_connection_events_TeZnLvs169Uu_fkey",
+        "n|con|app.managed_connection_events.managed_connection_events_TeZnLvs169Uu_fkey"
+      ],
+      "reads": [
+        "n|tbl|app.managed_connection_events",
+        "n|sch|app",
+        "n|tbl|app.managed_mcp_connections",
+        "n|sch|app",
+        "n|col|app.managed_connection_events.connection_id",
+        "n|col|app.managed_mcp_connections.id",
+        "e|uniqueness|app.managed_mcp_connections.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "app",
+        "managed_mcp_connections"
+      ],
+      "writes": [
+        "s|fk|app.managed_mcp_connections.managed_mcp_connections_project_id_projects_id_fkey",
+        "n|fk|app.managed_mcp_connections.managed_mcp_connections_project_id_projects_id_fkey",
+        "e|fk|app.managed_mcp_connections.managed_mcp_connections_project_id_projects_id_fkey",
+        "n|con|app.managed_mcp_connections.managed_mcp_connections_project_id_projects_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|app.managed_mcp_connections",
+        "n|sch|app",
+        "n|tbl|app.projects",
+        "n|sch|app",
+        "n|col|app.managed_mcp_connections.project_id",
+        "n|col|app.projects.id",
+        "e|uniqueness|app.projects.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "app",
+        "managed_mcp_connections"
+      ],
+      "writes": [
+        "s|fk|app.managed_mcp_connections.managed_mcp_connections_TUuDwmG6oZXm_fkey",
+        "n|fk|app.managed_mcp_connections.managed_mcp_connections_TUuDwmG6oZXm_fkey",
+        "e|fk|app.managed_mcp_connections.managed_mcp_connections_TUuDwmG6oZXm_fkey",
+        "n|con|app.managed_mcp_connections.managed_mcp_connections_TUuDwmG6oZXm_fkey"
+      ],
+      "reads": [
+        "n|tbl|app.managed_mcp_connections",
+        "n|sch|app",
+        "n|tbl|app.managed_oauth_grants",
+        "n|sch|app",
+        "n|col|app.managed_mcp_connections.active_grant_id",
+        "n|col|app.managed_oauth_grants.id",
+        "e|uniqueness|app.managed_oauth_grants.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "app",
+        "managed_mcp_connections"
+      ],
+      "writes": [
+        "s|fk|app.managed_mcp_connections.managed_mcp_connections_14Y1K6OwfIdr_fkey",
+        "n|fk|app.managed_mcp_connections.managed_mcp_connections_14Y1K6OwfIdr_fkey",
+        "e|fk|app.managed_mcp_connections.managed_mcp_connections_14Y1K6OwfIdr_fkey",
+        "n|con|app.managed_mcp_connections.managed_mcp_connections_14Y1K6OwfIdr_fkey"
+      ],
+      "reads": [
+        "n|tbl|app.managed_mcp_connections",
+        "n|sch|app",
+        "n|tbl|app.managed_oauth_grants",
+        "n|sch|app",
+        "n|col|app.managed_mcp_connections.candidate_grant_id",
+        "n|col|app.managed_oauth_grants.id",
+        "e|uniqueness|app.managed_oauth_grants.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "app",
+        "managed_mcp_launch_connections"
+      ],
+      "writes": [
+        "s|fk|app.managed_mcp_launch_connections.managed_mcp_launch_connections_project_id_projects_id_fkey",
+        "n|fk|app.managed_mcp_launch_connections.managed_mcp_launch_connections_project_id_projects_id_fkey",
+        "e|fk|app.managed_mcp_launch_connections.managed_mcp_launch_connections_project_id_projects_id_fkey",
+        "n|con|app.managed_mcp_launch_connections.managed_mcp_launch_connections_project_id_projects_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|app.managed_mcp_launch_connections",
+        "n|sch|app",
+        "n|tbl|app.projects",
+        "n|sch|app",
+        "n|col|app.managed_mcp_launch_connections.project_id",
+        "n|col|app.projects.id",
+        "e|uniqueness|app.projects.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "app",
+        "managed_mcp_launch_connections"
+      ],
+      "writes": [
+        "s|fk|app.managed_mcp_launch_connections.managed_mcp_launch_connections_task_run_id_task_runs_id_fkey",
+        "n|fk|app.managed_mcp_launch_connections.managed_mcp_launch_connections_task_run_id_task_runs_id_fkey",
+        "e|fk|app.managed_mcp_launch_connections.managed_mcp_launch_connections_task_run_id_task_runs_id_fkey",
+        "n|con|app.managed_mcp_launch_connections.managed_mcp_launch_connections_task_run_id_task_runs_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|app.managed_mcp_launch_connections",
+        "n|sch|app",
+        "n|tbl|app.task_runs",
+        "n|sch|app",
+        "n|col|app.managed_mcp_launch_connections.task_run_id",
+        "n|col|app.task_runs.id",
+        "e|uniqueness|app.task_runs.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "app",
+        "managed_mcp_launch_connections"
+      ],
+      "writes": [
+        "s|fk|app.managed_mcp_launch_connections.managed_mcp_launch_connections_yNLy1zUhkTDk_fkey",
+        "n|fk|app.managed_mcp_launch_connections.managed_mcp_launch_connections_yNLy1zUhkTDk_fkey",
+        "e|fk|app.managed_mcp_launch_connections.managed_mcp_launch_connections_yNLy1zUhkTDk_fkey",
+        "n|con|app.managed_mcp_launch_connections.managed_mcp_launch_connections_yNLy1zUhkTDk_fkey"
+      ],
+      "reads": [
+        "n|tbl|app.managed_mcp_launch_connections",
+        "n|sch|app",
+        "n|tbl|app.managed_mcp_connections",
+        "n|sch|app",
+        "n|col|app.managed_mcp_launch_connections.connection_id",
+        "n|col|app.managed_mcp_connections.id",
+        "e|uniqueness|app.managed_mcp_connections.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "app",
+        "managed_mcp_operations"
+      ],
+      "writes": [
+        "s|fk|app.managed_mcp_operations.managed_mcp_operations_KHwaDenyeQIN_fkey",
+        "n|fk|app.managed_mcp_operations.managed_mcp_operations_KHwaDenyeQIN_fkey",
+        "e|fk|app.managed_mcp_operations.managed_mcp_operations_KHwaDenyeQIN_fkey",
+        "n|con|app.managed_mcp_operations.managed_mcp_operations_KHwaDenyeQIN_fkey"
+      ],
+      "reads": [
+        "n|tbl|app.managed_mcp_operations",
+        "n|sch|app",
+        "n|tbl|app.managed_mcp_launch_connections",
+        "n|sch|app",
+        "n|col|app.managed_mcp_operations.launch_connection_id",
+        "n|col|app.managed_mcp_launch_connections.id",
+        "e|uniqueness|app.managed_mcp_launch_connections.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "app",
+        "managed_oauth_attempts"
+      ],
+      "writes": [
+        "s|fk|app.managed_oauth_attempts.managed_oauth_attempts_NOsqzlI89DCs_fkey",
+        "n|fk|app.managed_oauth_attempts.managed_oauth_attempts_NOsqzlI89DCs_fkey",
+        "e|fk|app.managed_oauth_attempts.managed_oauth_attempts_NOsqzlI89DCs_fkey",
+        "n|con|app.managed_oauth_attempts.managed_oauth_attempts_NOsqzlI89DCs_fkey"
+      ],
+      "reads": [
+        "n|tbl|app.managed_oauth_attempts",
+        "n|sch|app",
+        "n|tbl|app.managed_mcp_connections",
+        "n|sch|app",
+        "n|col|app.managed_oauth_attempts.connection_id",
+        "n|col|app.managed_mcp_connections.id",
+        "e|uniqueness|app.managed_mcp_connections.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "app",
+        "managed_oauth_attempts"
+      ],
+      "writes": [
+        "s|fk|app.managed_oauth_attempts.managed_oauth_attempts_project_id_projects_id_fkey",
+        "n|fk|app.managed_oauth_attempts.managed_oauth_attempts_project_id_projects_id_fkey",
+        "e|fk|app.managed_oauth_attempts.managed_oauth_attempts_project_id_projects_id_fkey",
+        "n|con|app.managed_oauth_attempts.managed_oauth_attempts_project_id_projects_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|app.managed_oauth_attempts",
+        "n|sch|app",
+        "n|tbl|app.projects",
+        "n|sch|app",
+        "n|col|app.managed_oauth_attempts.project_id",
+        "n|col|app.projects.id",
+        "e|uniqueness|app.projects.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "app",
+        "managed_oauth_attempts"
+      ],
+      "writes": [
+        "s|fk|app.managed_oauth_attempts.managed_oauth_attempts_DsloKfT1zaVX_fkey",
+        "n|fk|app.managed_oauth_attempts.managed_oauth_attempts_DsloKfT1zaVX_fkey",
+        "e|fk|app.managed_oauth_attempts.managed_oauth_attempts_DsloKfT1zaVX_fkey",
+        "n|con|app.managed_oauth_attempts.managed_oauth_attempts_DsloKfT1zaVX_fkey"
+      ],
+      "reads": [
+        "n|tbl|app.managed_oauth_attempts",
+        "n|sch|app",
+        "n|tbl|app.managed_oauth_grants",
+        "n|sch|app",
+        "n|col|app.managed_oauth_attempts.candidate_grant_id",
+        "n|col|app.managed_oauth_grants.id",
+        "e|uniqueness|app.managed_oauth_grants.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "app",
+        "managed_oauth_grants"
+      ],
+      "writes": [
+        "s|fk|app.managed_oauth_grants.managed_oauth_grants_B5042XJiRidT_fkey",
+        "n|fk|app.managed_oauth_grants.managed_oauth_grants_B5042XJiRidT_fkey",
+        "e|fk|app.managed_oauth_grants.managed_oauth_grants_B5042XJiRidT_fkey",
+        "n|con|app.managed_oauth_grants.managed_oauth_grants_B5042XJiRidT_fkey"
+      ],
+      "reads": [
+        "n|tbl|app.managed_oauth_grants",
+        "n|sch|app",
+        "n|tbl|app.managed_mcp_connections",
+        "n|sch|app",
+        "n|col|app.managed_oauth_grants.connection_id",
+        "n|col|app.managed_mcp_connections.id",
+        "e|uniqueness|app.managed_mcp_connections.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "app",
+        "managed_oauth_grants"
+      ],
+      "writes": [
+        "s|fk|app.managed_oauth_grants.managed_oauth_grants_project_id_projects_id_fkey",
+        "n|fk|app.managed_oauth_grants.managed_oauth_grants_project_id_projects_id_fkey",
+        "e|fk|app.managed_oauth_grants.managed_oauth_grants_project_id_projects_id_fkey",
+        "n|con|app.managed_oauth_grants.managed_oauth_grants_project_id_projects_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|app.managed_oauth_grants",
+        "n|sch|app",
+        "n|tbl|app.projects",
+        "n|sch|app",
+        "n|col|app.managed_oauth_grants.project_id",
+        "n|col|app.projects.id",
+        "e|uniqueness|app.projects.id"
+      ]
+    },
+    {
+      "statementType": "alter_check",
+      "statementTarget": [
+        "table",
+        "app",
+        "project_integrations"
+      ],
+      "writes": [
+        "s|ck|app.project_integrations.project_integrations_kind_installation_check"
+      ],
+      "reads": [
+        "n|tbl|app.project_integrations",
+        "n|sch|app",
+        "n|col|app.project_integrations.kind",
+        "n|col|app.project_integrations.installation_id",
+        "e|col|app.project_integrations.kind",
+        "e|col|app.project_integrations.installation_id"
+      ],
+      "sqlHash": "74dfb65f5603a947"
+    },
+    {
+      "statementType": "alter_check",
+      "statementTarget": [
+        "table",
+        "app",
+        "task_execution_configs"
+      ],
+      "writes": [
+        "s|ck|app.task_execution_configs.task_execution_configs_schema_version_check"
+      ],
+      "reads": [
+        "n|tbl|app.task_execution_configs",
+        "n|sch|app",
+        "n|col|app.task_execution_configs.schema_version",
+        "e|col|app.task_execution_configs.schema_version"
+      ],
+      "sqlHash": "a4d22f9e81169d55"
+    },
+    {
+      "statementType": "alter_check",
+      "statementTarget": [
+        "table",
+        "app",
+        "tasks"
+      ],
+      "writes": [
+        "s|ck|app.tasks.tasks_kind_instructions_check"
+      ],
+      "reads": [
+        "n|tbl|app.tasks",
+        "n|sch|app",
+        "n|col|app.tasks.kind",
+        "n|col|app.tasks.prompt",
+        "n|col|app.tasks.entrypoint_json",
+        "e|col|app.tasks.kind",
+        "e|col|app.tasks.prompt",
+        "e|col|app.tasks.entrypoint_json"
+      ],
+      "sqlHash": "d2c28c126c778a53"
+    },
+    {
+      "statementType": "alter_check",
+      "statementTarget": [
+        "table",
+        "app",
+        "work_items"
+      ],
+      "writes": [
+        "s|ck|app.work_items.work_items_closure_matches_state_check"
+      ],
+      "reads": [
+        "n|tbl|app.work_items",
+        "n|sch|app",
+        "n|col|app.work_items.state",
+        "n|col|app.work_items.close_reason",
+        "n|col|app.work_items.closed_at",
+        "n|col|app.work_items.resolution",
+        "n|col|app.work_items.closed_by_user_id",
+        "n|col|app.work_items.closed_by_task_id",
+        "e|col|app.work_items.state",
+        "e|col|app.work_items.close_reason",
+        "e|col|app.work_items.closed_at",
+        "e|col|app.work_items.resolution",
+        "e|col|app.work_items.closed_by_user_id",
+        "e|col|app.work_items.closed_by_task_id"
+      ],
+      "sqlHash": "5d0169c8c4a25e15"
+    },
+    {
+      "statementType": "alter_check",
+      "statementTarget": [
+        "table",
+        "app",
+        "project_integrations"
+      ],
+      "writes": [
+        "s|ck|app.project_integrations.project_integrations_sync_secret_kind_check"
+      ],
+      "reads": [
+        "n|tbl|app.project_integrations",
+        "n|sch|app",
+        "n|col|app.project_integrations.sync_secret_id",
+        "n|col|app.project_integrations.kind",
+        "e|col|app.project_integrations.sync_secret_id",
+        "e|col|app.project_integrations.kind"
+      ],
+      "sqlHash": "07c6325ae46efcff"
+    },
+    {
+      "statementType": "alter_check",
+      "statementTarget": [
+        "table",
+        "app",
+        "project_integrations"
+      ],
+      "writes": [
+        "s|ck|app.project_integrations.project_integrations_auto_sync_paused_reason_check"
+      ],
+      "reads": [
+        "n|tbl|app.project_integrations",
+        "n|sch|app",
+        "n|col|app.project_integrations.auto_sync_paused_reason",
+        "e|col|app.project_integrations.auto_sync_paused_reason"
+      ],
+      "sqlHash": "0556867820af5a76"
+    },
+    {
+      "statementType": "alter_check",
+      "statementTarget": [
+        "table",
+        "app",
+        "tasks"
+      ],
+      "writes": [
+        "s|ck|app.tasks.tasks_work_item_or_conversation_check"
+      ],
+      "reads": [
+        "n|tbl|app.tasks",
+        "n|sch|app",
+        "n|col|app.tasks.work_item_id",
+        "n|col|app.tasks.conversation_id",
+        "e|col|app.tasks.work_item_id",
+        "e|col|app.tasks.conversation_id"
+      ],
+      "sqlHash": "e394f3ebcf686599"
+    },
+    {
+      "statementType": "alter_check",
+      "statementTarget": [
+        "table",
+        "app",
+        "environment_versions"
+      ],
+      "writes": [
+        "s|ck|app.environment_versions.environment_versions_schema_version_check"
+      ],
+      "reads": [
+        "n|tbl|app.environment_versions",
+        "n|sch|app",
+        "n|col|app.environment_versions.schema_version",
+        "e|col|app.environment_versions.schema_version"
+      ],
+      "sqlHash": "3a492018886cdc57"
+    },
+    {
+      "statementType": "alter_check",
+      "statementTarget": [
+        "table",
+        "app",
+        "secrets"
+      ],
+      "writes": [
+        "s|ck|app.secrets.secrets_exactly_one_owner_check"
+      ],
+      "reads": [
+        "n|tbl|app.secrets",
+        "n|sch|app",
+        "n|col|app.secrets.owner_user_id",
+        "n|col|app.secrets.owner_project_id",
+        "e|col|app.secrets.owner_user_id",
+        "e|col|app.secrets.owner_project_id"
+      ],
+      "sqlHash": "ee7ac29fe175a814"
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "name": "managed_connection_events",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "name": "managed_mcp_connections",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "name": "managed_mcp_launch_connections",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "name": "managed_mcp_operations",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "name": "managed_oauth_attempts",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "name": "managed_oauth_clients",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "name": "managed_oauth_grants",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "managed_connection_event_type",
+        "values": [
+          "connect_started",
+          "reconnect_started",
+          "attempt_failed",
+          "candidate_attached",
+          "candidate_confirmed",
+          "candidate_cancelled",
+          "candidate_expired",
+          "reconnect_required",
+          "disconnected",
+          "revocation_attempted",
+          "refresh_succeeded",
+          "refresh_failed",
+          "refresh_claim_recovered",
+          "launch_registered",
+          "authority_lost"
+        ],
+        "entityType": "enums"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "managed_connection_state",
+        "values": [
+          "disconnected",
+          "connecting",
+          "awaiting_confirmation",
+          "ready",
+          "ready_with_pending_reconnect",
+          "reconnect_required"
+        ],
+        "entityType": "enums"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "managed_launch_connection_state",
+        "values": [
+          "open",
+          "closed"
+        ],
+        "entityType": "enums"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "managed_oauth_attempt_kind",
+        "values": [
+          "connect",
+          "reconnect"
+        ],
+        "entityType": "enums"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "managed_oauth_attempt_status",
+        "values": [
+          "pending",
+          "exchanging",
+          "succeeded",
+          "failed",
+          "expired",
+          "cancelled"
+        ],
+        "entityType": "enums"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "managed_revocation_outcome",
+        "values": [
+          "accepted",
+          "failed",
+          "unconfirmed"
+        ],
+        "entityType": "enums"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_connection_events",
+        "name": "id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_connection_events",
+        "name": "project_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_connection_events",
+        "name": "connection_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_connection_events",
+        "name": "actor_user_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_connection_events",
+        "name": "task_run_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_connection_events",
+        "name": "type",
+        "type": "managed_connection_event_type",
+        "typeSchema": "public",
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_connection_events",
+        "name": "generation",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_connection_events",
+        "name": "reason_code",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_connection_events",
+        "name": "revocation_outcome",
+        "type": "managed_revocation_outcome",
+        "typeSchema": "public",
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_connection_events",
+        "name": "same_identity_as_active",
+        "type": "boolean",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_connection_events",
+        "name": "created_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_mcp_connections",
+        "name": "id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_mcp_connections",
+        "name": "project_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_mcp_connections",
+        "name": "name",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_mcp_connections",
+        "name": "label",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_mcp_connections",
+        "name": "resource",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_mcp_connections",
+        "name": "issuer_origin",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_mcp_connections",
+        "name": "client_registration",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_mcp_connections",
+        "name": "preset",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_mcp_connections",
+        "name": "state",
+        "type": "managed_connection_state",
+        "typeSchema": "public",
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_mcp_connections",
+        "name": "reason_code",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_mcp_connections",
+        "name": "generation",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "0",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_mcp_connections",
+        "name": "version",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "0",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_mcp_connections",
+        "name": "active_grant_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_mcp_connections",
+        "name": "candidate_grant_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_mcp_connections",
+        "name": "connected_by_user_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_mcp_connections",
+        "name": "created_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_mcp_connections",
+        "name": "updated_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_mcp_launch_connections",
+        "name": "id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_mcp_launch_connections",
+        "name": "project_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_mcp_launch_connections",
+        "name": "task_run_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_mcp_launch_connections",
+        "name": "claim_token_digest",
+        "type": "bytea",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_mcp_launch_connections",
+        "name": "entry_key",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_mcp_launch_connections",
+        "name": "connection_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_mcp_launch_connections",
+        "name": "generation",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_mcp_launch_connections",
+        "name": "grant_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_mcp_launch_connections",
+        "name": "capability_digest",
+        "type": "bytea",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_mcp_launch_connections",
+        "name": "mcp_session_id_digest",
+        "type": "bytea",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_mcp_launch_connections",
+        "name": "state",
+        "type": "managed_launch_connection_state",
+        "typeSchema": "public",
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_mcp_launch_connections",
+        "name": "created_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_mcp_launch_connections",
+        "name": "closed_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_mcp_operations",
+        "name": "id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_mcp_operations",
+        "name": "launch_connection_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_mcp_operations",
+        "name": "started_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_mcp_operations",
+        "name": "deadline_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_attempts",
+        "name": "id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_attempts",
+        "name": "connection_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_attempts",
+        "name": "project_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_attempts",
+        "name": "kind",
+        "type": "managed_oauth_attempt_kind",
+        "typeSchema": "public",
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_attempts",
+        "name": "expected_generation",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_attempts",
+        "name": "actor_user_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_attempts",
+        "name": "browser_session_digest",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_attempts",
+        "name": "state_digest",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_attempts",
+        "name": "pkce_verifier_ciphertext",
+        "type": "bytea",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_attempts",
+        "name": "pkce_verifier_iv",
+        "type": "bytea",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_attempts",
+        "name": "pkce_verifier_auth_tag",
+        "type": "bytea",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_attempts",
+        "name": "pkce_verifier_key_version",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_attempts",
+        "name": "client_id",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_attempts",
+        "name": "redirect_uri",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_attempts",
+        "name": "requested_scopes",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 1,
+        "default": "'{}'",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_attempts",
+        "name": "status",
+        "type": "managed_oauth_attempt_status",
+        "typeSchema": "public",
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_attempts",
+        "name": "expires_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_attempts",
+        "name": "candidate_grant_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_attempts",
+        "name": "failure_code",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_attempts",
+        "name": "created_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_attempts",
+        "name": "updated_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_clients",
+        "name": "id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_clients",
+        "name": "issuer",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_clients",
+        "name": "redirect_uri",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_clients",
+        "name": "client_id",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_clients",
+        "name": "registered_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_clients",
+        "name": "stale_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_grants",
+        "name": "id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_grants",
+        "name": "connection_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_grants",
+        "name": "project_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_grants",
+        "name": "client_id",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_grants",
+        "name": "issuer",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_grants",
+        "name": "resource",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_grants",
+        "name": "credential_version",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "1",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_grants",
+        "name": "credentials_ciphertext",
+        "type": "bytea",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_grants",
+        "name": "credentials_iv",
+        "type": "bytea",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_grants",
+        "name": "credentials_auth_tag",
+        "type": "bytea",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_grants",
+        "name": "credentials_key_version",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_grants",
+        "name": "identity_ciphertext",
+        "type": "bytea",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_grants",
+        "name": "identity_iv",
+        "type": "bytea",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_grants",
+        "name": "identity_auth_tag",
+        "type": "bytea",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_grants",
+        "name": "identity_key_version",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_grants",
+        "name": "granted_scopes",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 1,
+        "default": "'{}'",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_grants",
+        "name": "authorized_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_grants",
+        "name": "reconnect_by",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_grants",
+        "name": "retired_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_grants",
+        "name": "refresh_claim_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_grants",
+        "name": "refresh_claimed_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_grants",
+        "name": "created_by_user_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_grants",
+        "name": "created_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_grants",
+        "name": "updated_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_connection_events",
+        "name": "managed_connection_events_connection_id_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "connection_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_connection_events",
+        "name": "managed_connection_events_created_at_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "created_at",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_mcp_connections",
+        "name": "managed_mcp_connections_project_name_unique",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "project_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "name",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": true,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_mcp_connections",
+        "name": "managed_mcp_connections_project_resource_unique",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "project_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "resource",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": true,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_mcp_launch_connections",
+        "name": "managed_mcp_launch_connections_capability_digest_unique",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "capability_digest",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": true,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_mcp_launch_connections",
+        "name": "managed_mcp_launch_connections_run_claim_entry_unique",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "task_run_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "claim_token_digest",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "entry_key",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": true,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_mcp_launch_connections",
+        "name": "managed_mcp_launch_connections_task_run_state_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "task_run_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "state",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_mcp_launch_connections",
+        "name": "managed_mcp_launch_connections_connection_id_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "connection_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_mcp_operations",
+        "name": "managed_mcp_operations_launch_connection_id_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "launch_connection_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_attempts",
+        "name": "managed_oauth_attempts_state_digest_unique",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "state_digest",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": true,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_attempts",
+        "name": "managed_oauth_attempts_connection_id_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "connection_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_attempts",
+        "name": "managed_oauth_attempts_expires_at_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "expires_at",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_clients",
+        "name": "managed_oauth_clients_issuer_redirect_uri_live_unique",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "issuer",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "redirect_uri",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": true,
+        "where": "\"stale_at\" IS NULL",
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_grants",
+        "name": "managed_oauth_grants_connection_id_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "connection_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_grants",
+        "name": "managed_oauth_grants_retired_at_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "retired_at",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_connection_events",
+        "name": "managed_connection_events_project_id_projects_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "project_id"
+        ],
+        "schemaTo": "app",
+        "tableTo": "projects",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_connection_events",
+        "name": "managed_connection_events_TeZnLvs169Uu_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "connection_id"
+        ],
+        "schemaTo": "app",
+        "tableTo": "managed_mcp_connections",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_mcp_connections",
+        "name": "managed_mcp_connections_project_id_projects_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "project_id"
+        ],
+        "schemaTo": "app",
+        "tableTo": "projects",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_mcp_connections",
+        "name": "managed_mcp_connections_TUuDwmG6oZXm_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "active_grant_id"
+        ],
+        "schemaTo": "app",
+        "tableTo": "managed_oauth_grants",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_mcp_connections",
+        "name": "managed_mcp_connections_14Y1K6OwfIdr_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "candidate_grant_id"
+        ],
+        "schemaTo": "app",
+        "tableTo": "managed_oauth_grants",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_mcp_launch_connections",
+        "name": "managed_mcp_launch_connections_project_id_projects_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "project_id"
+        ],
+        "schemaTo": "app",
+        "tableTo": "projects",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_mcp_launch_connections",
+        "name": "managed_mcp_launch_connections_task_run_id_task_runs_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "task_run_id"
+        ],
+        "schemaTo": "app",
+        "tableTo": "task_runs",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_mcp_launch_connections",
+        "name": "managed_mcp_launch_connections_yNLy1zUhkTDk_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "connection_id"
+        ],
+        "schemaTo": "app",
+        "tableTo": "managed_mcp_connections",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_mcp_operations",
+        "name": "managed_mcp_operations_KHwaDenyeQIN_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "launch_connection_id"
+        ],
+        "schemaTo": "app",
+        "tableTo": "managed_mcp_launch_connections",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_attempts",
+        "name": "managed_oauth_attempts_NOsqzlI89DCs_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "connection_id"
+        ],
+        "schemaTo": "app",
+        "tableTo": "managed_mcp_connections",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_attempts",
+        "name": "managed_oauth_attempts_project_id_projects_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "project_id"
+        ],
+        "schemaTo": "app",
+        "tableTo": "projects",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_attempts",
+        "name": "managed_oauth_attempts_DsloKfT1zaVX_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "candidate_grant_id"
+        ],
+        "schemaTo": "app",
+        "tableTo": "managed_oauth_grants",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "SET NULL",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_grants",
+        "name": "managed_oauth_grants_B5042XJiRidT_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "connection_id"
+        ],
+        "schemaTo": "app",
+        "tableTo": "managed_mcp_connections",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_grants",
+        "name": "managed_oauth_grants_project_id_projects_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "project_id"
+        ],
+        "schemaTo": "app",
+        "tableTo": "projects",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_connection_events",
+        "name": "managed_connection_events_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_mcp_connections",
+        "name": "managed_mcp_connections_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_mcp_launch_connections",
+        "name": "managed_mcp_launch_connections_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_mcp_operations",
+        "name": "managed_mcp_operations_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_attempts",
+        "name": "managed_oauth_attempts_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_clients",
+        "name": "managed_oauth_clients_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_grants",
+        "name": "managed_oauth_grants_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_mcp_connections",
+        "name": "managed_mcp_connections_state_shape_check",
+        "value": "(\"state\" = 'disconnected' and \"active_grant_id\" is null and \"candidate_grant_id\" is null and \"connected_by_user_id\" is null)\n        or (\"state\" = 'connecting' and \"active_grant_id\" is null and \"candidate_grant_id\" is null and \"connected_by_user_id\" is null and \"reason_code\" is null)\n        or (\"state\" = 'awaiting_confirmation' and \"active_grant_id\" is null and \"candidate_grant_id\" is not null and \"connected_by_user_id\" is null and \"reason_code\" is null)\n        or (\"state\" = 'ready' and \"active_grant_id\" is not null and \"candidate_grant_id\" is null and \"connected_by_user_id\" is not null and \"reason_code\" is null)\n        or (\"state\" = 'ready_with_pending_reconnect' and \"active_grant_id\" is not null and \"candidate_grant_id\" is not null and \"connected_by_user_id\" is not null and \"reason_code\" is null)\n        or (\"state\" = 'reconnect_required' and \"active_grant_id\" is not null and \"connected_by_user_id\" is not null and \"reason_code\" is not null)",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_mcp_connections",
+        "name": "managed_mcp_connections_counters_check",
+        "value": "\"generation\" >= 0 and \"version\" >= 0",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_mcp_launch_connections",
+        "name": "managed_mcp_launch_connections_closed_shape_check",
+        "value": "(\"state\" = 'closed') = (\"closed_at\" is not null)",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_mcp_launch_connections",
+        "name": "managed_mcp_launch_connections_generation_check",
+        "value": "\"generation\" >= 0",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_mcp_operations",
+        "name": "managed_mcp_operations_deadline_check",
+        "value": "\"deadline_at\" > \"started_at\"",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_attempts",
+        "name": "managed_oauth_attempts_verifier_shape_check",
+        "value": "(\"status\" in ('pending', 'exchanging') and num_nonnulls(\"pkce_verifier_ciphertext\", \"pkce_verifier_iv\", \"pkce_verifier_auth_tag\", \"pkce_verifier_key_version\") = 4)\n        or (\"status\" not in ('pending', 'exchanging') and num_nonnulls(\"pkce_verifier_ciphertext\", \"pkce_verifier_iv\", \"pkce_verifier_auth_tag\", \"pkce_verifier_key_version\") = 0)",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_attempts",
+        "name": "managed_oauth_attempts_failure_code_check",
+        "value": "(\"status\" = 'failed') = (\"failure_code\" is not null)",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_grants",
+        "name": "managed_oauth_grants_refresh_claim_shape_check",
+        "value": "num_nonnulls(\"refresh_claim_id\", \"refresh_claimed_at\") in (0, 2)\n        and (\"retired_at\" is null or \"refresh_claim_id\" is null)",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_grants",
+        "name": "managed_oauth_grants_credentials_shape_check",
+        "value": "(\"retired_at\" is null and num_nonnulls(\"credentials_ciphertext\", \"credentials_iv\", \"credentials_auth_tag\", \"credentials_key_version\") = 4)\n        or (\"retired_at\" is not null and num_nonnulls(\"credentials_ciphertext\", \"credentials_iv\", \"credentials_auth_tag\", \"credentials_key_version\") = 0)",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "alter",
+      "key": "indexes\u0000[\"app\",\"pipeline_graphs_project_key_unique\"]",
+      "set": {
+        "where": "\"archived_at\" IS NULL"
+      }
+    },
+    {
+      "op": "alter",
+      "key": "indexes\u0000[\"app\",\"pipeline_graphs_project_active_idx\"]",
+      "set": {
+        "where": "\"archived_at\" IS NULL"
+      }
+    },
+    {
+      "op": "alter",
+      "key": "indexes\u0000[\"app\",\"project_integrations_project_github_app_install_unique\"]",
+      "set": {
+        "where": "\"kind\" = 'github_app'"
+      }
+    },
+    {
+      "op": "alter",
+      "key": "indexes\u0000[\"app\",\"work_item_comments_work_item_pinned_idx\"]",
+      "set": {
+        "where": "\"is_pinned\""
+      }
+    },
+    {
+      "op": "alter",
+      "key": "checks\u0000[\"app\",\"project_integrations\",\"project_integrations_kind_installation_check\"]",
+      "set": {
+        "value": "(\"kind\" = 'github_app') = (\"installation_id\" IS NOT NULL)"
+      }
+    },
+    {
+      "op": "alter",
+      "key": "checks\u0000[\"app\",\"task_execution_configs\",\"task_execution_configs_schema_version_check\"]",
+      "set": {
+        "value": "\"schema_version\" >= 1"
+      }
+    },
+    {
+      "op": "alter",
+      "key": "checks\u0000[\"app\",\"tasks\",\"tasks_kind_instructions_check\"]",
+      "set": {
+        "value": "(\"kind\" = 'agent' AND \"prompt\" IS NOT NULL AND \"entrypoint_json\" IS NULL) OR (\"kind\" = 'code' AND \"entrypoint_json\" IS NOT NULL AND \"prompt\" IS NULL)"
+      }
+    },
+    {
+      "op": "alter",
+      "key": "checks\u0000[\"app\",\"work_items\",\"work_items_closure_matches_state_check\"]",
+      "set": {
+        "value": "(\"state\" = 'closed' and \"close_reason\" is not null and \"closed_at\" is not null) or (\"state\" = 'open' and \"close_reason\" is null and \"resolution\" is null and \"closed_at\" is null and \"closed_by_user_id\" is null and \"closed_by_task_id\" is null)"
+      }
+    },
+    {
+      "op": "alter",
+      "key": "checks\u0000[\"app\",\"project_integrations\",\"project_integrations_sync_secret_kind_check\"]",
+      "set": {
+        "value": "\"sync_secret_id\" IS NULL OR \"kind\" IN ('jira', 'github_token')"
+      }
+    },
+    {
+      "op": "alter",
+      "key": "checks\u0000[\"app\",\"project_integrations\",\"project_integrations_auto_sync_paused_reason_check\"]",
+      "set": {
+        "value": "\"auto_sync_paused_reason\" IS NULL OR \"auto_sync_paused_reason\" IN ('key_removed', 'key_rejected', 'key_expired', 'owner_left_project', 'access_lost')"
+      }
+    },
+    {
+      "op": "alter",
+      "key": "checks\u0000[\"app\",\"tasks\",\"tasks_work_item_or_conversation_check\"]",
+      "set": {
+        "value": "\"work_item_id\" IS NOT NULL OR \"conversation_id\" IS NOT NULL"
+      }
+    },
+    {
+      "op": "alter",
+      "key": "checks\u0000[\"app\",\"environment_versions\",\"environment_versions_schema_version_check\"]",
+      "set": {
+        "value": "\"schema_version\" >= 1"
+      }
+    },
+    {
+      "op": "alter",
+      "key": "checks\u0000[\"app\",\"secrets\",\"secrets_exactly_one_owner_check\"]",
+      "set": {
+        "value": "num_nonnulls(\"owner_user_id\", \"owner_project_id\") = 1"
+      }
+    }
+  ]
+}

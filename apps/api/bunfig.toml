@@ -1,0 +1,6 @@
+[test]
+# Register the shared posthog-node fake before any test module (and therefore
+# before @scarn/observability/analytics/server) is evaluated, so the analytics capture
+# pipeline is exercised against the fake regardless of test file execution
+# order. See src/test/posthog-node-mock.ts for the full rationale.
+preload = ["./src/test/posthog-node-mock.ts"]

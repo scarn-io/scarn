@@ -1,0 +1,32 @@
+{
+  "reproduced": true,
+  "confidence": 1,
+  "observedBehavior": "On `http://localhost:4173/checkout.html`, after adding an item to the cart and applying coupon code `SAVE10` once, the page updated successfully to show `Applied: SAVE10`, a `\u2212$1.40` discount, and a `$12.60` total. Clicking `Apply` again with the same `SAVE10` code immediately showed the red banner `Something went wrong applying your coupon (HTTP 500). Please try again.` while the previously applied discount remained visible. The failure state was still present after waiting 4 seconds.",
+  "expectedBehavior": "Applying the same coupon a second time should not crash the checkout flow or show a 500 error banner; it should indicate that the coupon is already applied or otherwise handle the repeat action gracefully.",
+  "reproductionSteps": [
+    "Open `http://localhost:4173/`.",
+    "Click `Add to cart` on any product.",
+    "Open `Cart` to go to `http://localhost:4173/checkout.html`.",
+    "Enter coupon code `SAVE10` and click `Apply` once.",
+    "Click `Apply` again with the same `SAVE10` code still in the input.",
+    "Wait a few seconds and observe the red 500 error banner on the checkout page."
+  ],
+  "tracePath": "reproduce-in-browser-trace.zip",
+  "screenshotPath": "reproduce-in-browser-checkout-coupon-error.png",
+  "consoleErrors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:4173/favicon.ico:0",
+    "Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:4173/api/coupon:0"
+  ],
+  "networkEvidence": [
+    "[POST] http://localhost:4173/api/coupon => [500] Internal Server Error | response body: {\"error\":\"Internal Server Error\"}"
+  ],
+  "$scarn_notifications_v1": [
+    {
+      "kind": "result_ready",
+      "title": "Browser repro captured for coupon double-apply failure",
+      "body": "Reproduced the checkout failure in a real browser. The second `Apply` click on coupon `SAVE10` shows the red `Something went wrong applying your coupon (HTTP 500). Please try again.` banner while the prior discount remains visible. Trace and full-page screenshot were saved under `.scarn/step-artifacts/`.",
+      "priority": "normal",
+      "suggestedChannels": ["in_app", "work_item_platform_comment"]
+    }
+  ]
+}

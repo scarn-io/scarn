@@ -1,0 +1,357 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "00a14b79-bce4-41b6-bfa1-07a558e34428",
+  "prevIds": [
+    "402d473c-f9a1-421a-8704-ce14113ab281"
+  ],
+  "footprints": [
+    {
+      "statementType": "alter_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "user_notification_kind"
+      ],
+      "writes": [
+        "s|enum|public.user_notification_kind"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "project_integrations",
+        "sync_secret_id"
+      ],
+      "writes": [
+        "s|col|app.project_integrations.sync_secret_id",
+        "n|col|app.project_integrations.sync_secret_id",
+        "e|col|app.project_integrations.sync_secret_id"
+      ],
+      "reads": [
+        "n|tbl|app.project_integrations",
+        "n|sch|app"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "project_integrations",
+        "sync_locked_until"
+      ],
+      "writes": [
+        "s|col|app.project_integrations.sync_locked_until",
+        "n|col|app.project_integrations.sync_locked_until",
+        "e|col|app.project_integrations.sync_locked_until"
+      ],
+      "reads": [
+        "n|tbl|app.project_integrations",
+        "n|sch|app"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "project_integrations",
+        "auto_sync_paused_reason"
+      ],
+      "writes": [
+        "s|col|app.project_integrations.auto_sync_paused_reason",
+        "n|col|app.project_integrations.auto_sync_paused_reason",
+        "e|col|app.project_integrations.auto_sync_paused_reason"
+      ],
+      "reads": [
+        "n|tbl|app.project_integrations",
+        "n|sch|app"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "project_integrations",
+        "auto_sync_paused_at"
+      ],
+      "writes": [
+        "s|col|app.project_integrations.auto_sync_paused_at",
+        "n|col|app.project_integrations.auto_sync_paused_at",
+        "e|col|app.project_integrations.auto_sync_paused_at"
+      ],
+      "reads": [
+        "n|tbl|app.project_integrations",
+        "n|sch|app"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "project_integrations",
+        "auto_sync_paused_detail"
+      ],
+      "writes": [
+        "s|col|app.project_integrations.auto_sync_paused_detail",
+        "n|col|app.project_integrations.auto_sync_paused_detail",
+        "e|col|app.project_integrations.auto_sync_paused_detail"
+      ],
+      "reads": [
+        "n|tbl|app.project_integrations",
+        "n|sch|app"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "app",
+        "project_integrations",
+        "project_integrations_sync_secret_id_idx"
+      ],
+      "writes": [
+        "s|idx|app.project_integrations_sync_secret_id_idx",
+        "n|idx|app.project_integrations_sync_secret_id_idx",
+        "e|idx|app.project_integrations_sync_secret_id_idx",
+        "n|rel|app.project_integrations_sync_secret_id_idx"
+      ],
+      "reads": [
+        "n|tbl|app.project_integrations",
+        "n|sch|app",
+        "n|col|app.project_integrations.sync_secret_id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "app",
+        "project_integrations"
+      ],
+      "writes": [
+        "s|fk|app.project_integrations.project_integrations_sync_secret_id_secrets_id_fk",
+        "n|fk|app.project_integrations.project_integrations_sync_secret_id_secrets_id_fk",
+        "e|fk|app.project_integrations.project_integrations_sync_secret_id_secrets_id_fk",
+        "n|con|app.project_integrations.project_integrations_sync_secret_id_secrets_id_fk"
+      ],
+      "reads": [
+        "n|tbl|app.project_integrations",
+        "n|sch|app",
+        "n|tbl|app.secrets",
+        "n|sch|app",
+        "n|col|app.project_integrations.sync_secret_id",
+        "n|col|app.secrets.id",
+        "e|uniqueness|app.secrets.id"
+      ]
+    },
+    {
+      "statementType": "add_check",
+      "statementTarget": [
+        "table",
+        "app",
+        "project_integrations"
+      ],
+      "writes": [
+        "s|ck|app.project_integrations.project_integrations_sync_secret_kind_check",
+        "n|ck|app.project_integrations.project_integrations_sync_secret_kind_check",
+        "e|ck|app.project_integrations.project_integrations_sync_secret_kind_check",
+        "n|con|app.project_integrations.project_integrations_sync_secret_kind_check"
+      ],
+      "reads": [
+        "n|tbl|app.project_integrations",
+        "n|sch|app",
+        "n|col|app.project_integrations.sync_secret_id",
+        "n|col|app.project_integrations.kind"
+      ]
+    },
+    {
+      "statementType": "add_check",
+      "statementTarget": [
+        "table",
+        "app",
+        "project_integrations"
+      ],
+      "writes": [
+        "s|ck|app.project_integrations.project_integrations_auto_sync_paused_reason_check",
+        "n|ck|app.project_integrations.project_integrations_auto_sync_paused_reason_check",
+        "e|ck|app.project_integrations.project_integrations_auto_sync_paused_reason_check",
+        "n|con|app.project_integrations.project_integrations_auto_sync_paused_reason_check"
+      ],
+      "reads": [
+        "n|tbl|app.project_integrations",
+        "n|sch|app",
+        "n|col|app.project_integrations.auto_sync_paused_reason"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "project_integrations",
+        "name": "sync_secret_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "project_integrations",
+        "name": "sync_locked_until",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "project_integrations",
+        "name": "auto_sync_paused_reason",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "project_integrations",
+        "name": "auto_sync_paused_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "project_integrations",
+        "name": "auto_sync_paused_detail",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "project_integrations",
+        "name": "project_integrations_sync_secret_id_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "sync_secret_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "project_integrations",
+        "name": "project_integrations_sync_secret_id_secrets_id_fk",
+        "nameExplicit": false,
+        "columns": [
+          "sync_secret_id"
+        ],
+        "schemaTo": "app",
+        "tableTo": "secrets",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "SET NULL",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "project_integrations",
+        "name": "project_integrations_sync_secret_kind_check",
+        "value": "\"app\".\"project_integrations\".\"sync_secret_id\" IS NULL OR \"app\".\"project_integrations\".\"kind\" IN ('jira', 'github_token')",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "project_integrations",
+        "name": "project_integrations_auto_sync_paused_reason_check",
+        "value": "\"app\".\"project_integrations\".\"auto_sync_paused_reason\" IS NULL OR \"app\".\"project_integrations\".\"auto_sync_paused_reason\" IN ('key_removed', 'key_rejected', 'key_expired', 'owner_left_project', 'access_lost')",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "alter",
+      "key": "enums\u0000[\"public\",\"user_notification_kind\"]",
+      "set": {
+        "values": [
+          "feedback_request",
+          "status_update",
+          "blocked",
+          "result_ready",
+          "warning",
+          "integration_auto_sync_paused"
+        ]
+      }
+    }
+  ]
+}

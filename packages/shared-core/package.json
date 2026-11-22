@@ -2,6 +2,7 @@
   "name": "@scarn/shared-core",
   "description": "Logic shared by the server and the worker: pipeline document validation and evaluation, and execution and log formatting. Only code both sides need goes here; contracts belong in @scarn/sdk.",
   "private": true,
+  "license": "Apache-2.0",
   "type": "module",
   "exports": {
     ".": {

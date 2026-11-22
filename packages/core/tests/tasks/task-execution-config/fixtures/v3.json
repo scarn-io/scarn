@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 3,
+  "environmentJson": { "kind": "inline", "runtime": { "kind": "host" } },
+  "gitJson": { "mode": "readOnly", "gitCredentials": "none" },
+  "mcpJson": null,
+  "healthChecksJson": null
+}

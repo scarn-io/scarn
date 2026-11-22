@@ -1,0 +1,1 @@
+ALTER TABLE "app"."usage_meters" ADD COLUMN "signal_tokens" bigint DEFAULT 0 NOT NULL;

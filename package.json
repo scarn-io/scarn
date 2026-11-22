@@ -1,6 +1,7 @@
 {
   "name": "scarn",
   "private": true,
+  "license": "Apache-2.0",
   "workspaces": [
     "apps/*",
     "packages/*",
@@ -22,24 +23,47 @@
     "@opencode/client": "2.1.4",
     "@opencode/plugin": "2.1.4"
   },
+  "patchedDependencies": {
+    "@elysia/openapi@2.0.0-rc.1": "patches/@elysia%2Fopenapi@2.0.0-rc.1.patch"
+  },
   "devDependencies": {
-    "@eslint/js": "^10.0.1",
-    "@types/node": "^22.14.1",
+    "@eslint/js": "^9.39.5",
+    "@next/eslint-plugin-next": "^15.5.21",
+    "@types/node": "^22.20.1",
+    "@types/pg": "catalog:",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
     "@typescript/native-preview": "latest",
-    "eslint": "^10.4.0",
-    "typescript": "^5.8.3",
-    "typescript-eslint": "^8.59.4"
+    "eslint": "^9.39.5",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-import-resolver-typescript": "^4.4.5",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-unused-imports": "^4.4.1",
+    "globals": "^16.5.0",
+    "pg": "catalog:",
+    "prettier": "^3.9.6",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.65.0"
   },
   "scripts": {
+    "dev": "bun --elide-lines=0 --env-file=.env run --filter @scarn/next dev",
+    "api": "bun --elide-lines=0 --env-file=.env run --filter @scarn/api dev",
+    "docs": "bun --elide-lines=0 run --filter scarn-docs dev",
+    "work-signal": "bun --elide-lines=0 run --filter @scarn/work-signal dev",
+    "db:generate": "bun run --elide-lines=0 --sequential --filter @scarn/core --filter @scarn/identity db:generate",
+    "db:migrate": "bun --env-file=.env run ./scripts/db-migrate.ts",
+    "db:push": "bun run --elide-lines=0 --sequential --filter @scarn/core --filter @scarn/identity db:push",
     "clientGen:ts": "bun run --filter @scarn/sdk generate",
     "build": "bun run --filter '*' build",
-    "typecheck": "bun run --filter '@scarn/containers' --filter '@scarn/opencode-plugin' declarations && bun run --filter '*' typecheck",
-    "lint": "eslint .",
-    "test": "bun run --filter '*' test",
-    "validate": "bash scripts/validate.sh",
-    "release": "bash scripts/release.sh",
+    "typecheck": "bun run --filter '@scarn/identity' --filter '@scarn/core' --filter '@scarn/containers' declarations && bun run --filter '@scarn/api' declarations && bun run --filter '@scarn/opencode-plugin' declarations && bun run --filter '*' --filter '!@scarn/next' --filter '!@scarn/core' --filter '!scarn-docs' typecheck && bun run --filter '@scarn/next' --filter '@scarn/core' --filter 'scarn-docs' --sequential typecheck",
+    "lint": "NODE_OPTIONS=--max-old-space-size=8192 eslint . --cache --cache-location .eslintcache",
+    "lint:fix": "NODE_OPTIONS=--max-old-space-size=8192 eslint . --fix --cache --cache-location .eslintcache",
     "cli:link": "bun run --filter @scarn/cli build && bun run --filter @scarn/cli link",
     "cli:link:dev": "bash scripts/cli-link-dev.sh",
-    "cli:unlink": "cd apps/cli && npm unlink"
+    "cli:unlink": "cd apps/cli && npm unlink",
+    "release": "bash scripts/release.sh",
+    "test": "bun run --filter '*' test",
+    "test:unit": "bun run --filter '@scarn/core' --filter '@scarn/api' --sequential test:unit",
+    "validate": "bash scripts/validate.sh"
   }
 }

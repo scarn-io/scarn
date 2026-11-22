@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "runtimeJson": {
+    "type": "devcontainer",
+    "configPath": ".devcontainer/alt/devcontainer.json"
+  },
+  "envJson": [
+    {
+      "name": "LOG_LEVEL",
+      "source": "value",
+      "value": "debug",
+      "secret": false,
+      "applies": "both"
+    },
+    {
+      "name": "GITHUB_TOKEN",
+      "source": "inherit",
+      "from": "GITHUB_TOKEN",
+      "secret": true,
+      "optional": false,
+      "mcp": "github",
+      "applies": "agent"
+    }
+  ],
+  "gitJson": {
+    "mode": "readWrite",
+    "message": "fix: {{result.summary}}",
+    "onPushFailure": "warn"
+  },
+  "mcpJson": {
+    "github": { "type": "ref" },
+    "browser": {
+      "type": "local",
+      "command": ["npx", "-y", "@playwright/mcp"],
+      "environment": { "BROWSER_TOKEN": "{env:BROWSER_TOKEN}" }
+    },
+    "docs": {
+      "type": "remote",
+      "url": "https://example.com/mcp",
+      "headers": { "authorization": "Bearer {env:DOCS_TOKEN}" }
+    }
+  },
+  "healthChecksJson": [
+    {
+      "kind": "tool",
+      "tool": "list_issues",
+      "mcp": "github",
+      "severity": "warn",
+      "timeoutSeconds": 15
+    },
+    {
+      "kind": "cli",
+      "command": ["gh", "--version"],
+      "expectExitCode": 0,
+      "severity": "required",
+      "timeoutSeconds": 30,
+      "serialGroup": "gh"
+    }
+  ]
+}

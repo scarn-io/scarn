@@ -1,0 +1,39 @@
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+
+exports[`task worker context: step steering a steered run continues from the previous run's branch and findings 1`] = `
+"You are executing a Scarn step for project <projectId>.
+Task run id: <taskRunId>
+Work item id: <workItemId>
+Step key: <stepKey>
+
+Step instructions:
+__SCARN_STEP_INSTRUCTIONS__
+
+Messages from the user to this step, oldest first:
+[1] Sent before attempt 2 (the latest; act on this one now):
+    > Reproduces 9/10 under load.
+    That timeout is a symptom. Look at why the cart lock is never released.
+
+This run continues the previous run of this step (status: succeeded).
+Its findings: .scarn/previous-run/findings.json
+Its full transcript: .scarn/previous-run/transcript.txt. Its final message is at the end. If the file is missing, the transcript was unavailable.
+Search it for what you need; don't read it whole.
+Your work branch starts from that run's branch, scarn/fix-1.
+Start your final message with one line saying what changed since the previous run.
+
+Your work item is the one this Task runs on (its work item id is above). Read it live with \`scarn-get-work-item\` before you change it; leave out \`workItemId\` to read your own. Changes are recorded as you call the tools and applied when your run ends successfully.
+
+Step input JSON:
+\`\`\`json
+{}
+\`\`\`
+
+Current execution metadata file: \`.scarn/current-execution/execution.json\`
+It contains the current task run id, work item id and the findings result schema.
+If this step declares artifact fields, submit each file with \`scarn-submit-artifact\` before submitting findings.
+Before ending the task, call the Scarn completion tool \`scarn-submit-step-findings\`.
+Pass only \`findingsJson\`.
+The tool will load the current execution metadata file and validate the findings against the stored schema.
+
+If you're done, submit your findings. If you need something from a person, or they asked you something, end your turn: your final message is sent to them and you continue in this conversation when they reply. Ask only when the answer changes what you'd do and you can't find it in the repo, the work item or its comments. You can hand back 2 more times."
+`;

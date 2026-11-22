@@ -11,6 +11,33 @@ import scarnEslintPlugin from "./packages/sdks/js/src/eslint.ts";
 
 const maxFileLines = 400;
 
+// Hosted-only code lives in `hosted/` and `(hosted)/` folders that the public
+// mirror leaves out, so open code must not import from them, nor from the
+// private `@scarn/growth` package.
+const hostedFolderGlobs = ["**/hosted/**", "**/(hosted)/**"];
+const openCodeGlobs = [
+  "apps/api/src/**/*.{ts,tsx}",
+  "apps/next/**/*.{ts,tsx}",
+  "packages/core/**/*.{ts,tsx}",
+];
+const hostedImportPatterns = [
+  {
+    group: ["**/hosted", "**/hosted/**", "**/(hosted)", "**/(hosted)/**"],
+    message:
+      "Open code must not import hosted-only code: the public mirror excludes hosted/ folders.",
+  },
+  {
+    group: ["@scarn/growth", "@scarn/growth/*"],
+    message:
+      "@scarn/growth is private; only code under a hosted/ folder may import it.",
+  },
+];
+const posthogImportPath = {
+  name: "posthog-js",
+  message:
+    "Import from @scarn/observability/analytics/browser (initialized in components/analytics-provider.tsx) instead of posthog-js directly.",
+};
+
 export default defineConfig(
   {
     ignores: [
@@ -118,21 +145,29 @@ export default defineConfig(
     },
   },
   {
+    files: openCodeGlobs,
+    ignores: hostedFolderGlobs,
+    rules: {
+      "no-restricted-imports": ["error", { patterns: hostedImportPatterns }],
+    },
+  },
+  {
     files: ["apps/next/**/*.{ts,tsx}"],
-    ignores: ["apps/next/components/analytics-provider.tsx"],
+    ignores: [
+      "apps/next/components/analytics-provider.tsx",
+      ...hostedFolderGlobs,
+    ],
     rules: {
       "no-restricted-imports": [
         "error",
-        {
-          paths: [
-            {
-              name: "posthog-js",
-              message:
-                "Import from @scarn/observability/analytics/browser (initialized in components/analytics-provider.tsx) instead of posthog-js directly.",
-            },
-          ],
-        },
+        { paths: [posthogImportPath], patterns: hostedImportPatterns },
       ],
+    },
+  },
+  {
+    files: hostedFolderGlobs.map((glob) => `apps/next/${glob}`),
+    rules: {
+      "no-restricted-imports": ["error", { paths: [posthogImportPath] }],
     },
   },
   {
@@ -177,6 +212,7 @@ export default defineConfig(
               message:
                 "Integration tests must exercise the public API client boundary. Move direct application-layer tests into non-integration test files.",
             },
+            ...hostedImportPatterns,
           ],
         },
       ],
@@ -206,6 +242,7 @@ export default defineConfig(
               message:
                 "Colocated src tests are unit tests. Do not depend on shared test infra or the real database from src tests.",
             },
+            ...hostedImportPatterns,
           ],
         },
       ],

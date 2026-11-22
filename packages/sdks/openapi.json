@@ -108,6 +108,9 @@
                           "userId": {
                             "type": "string"
                           },
+                          "role": {
+                            "type": "string"
+                          },
                           "permissions": {
                             "type": "array",
                             "items": {
@@ -127,6 +130,7 @@
                         },
                         "required": [
                           "userId",
+                          "role",
                           "permissions",
                           "createdAt",
                           "updatedAt"
@@ -2582,6 +2586,9 @@
                           "userId": {
                             "type": "string"
                           },
+                          "role": {
+                            "type": "string"
+                          },
                           "permissions": {
                             "type": "array",
                             "items": {
@@ -2601,6 +2608,7 @@
                         },
                         "required": [
                           "userId",
+                          "role",
                           "permissions",
                           "createdAt",
                           "updatedAt"
@@ -3046,6 +3054,9 @@
                             "userId": {
                               "type": "string"
                             },
+                            "role": {
+                              "type": "string"
+                            },
                             "permissions": {
                               "type": "array",
                               "items": {
@@ -3065,6 +3076,7 @@
                           },
                           "required": [
                             "userId",
+                            "role",
                             "permissions",
                             "createdAt",
                             "updatedAt"
@@ -4355,6 +4367,9 @@
                           "userId": {
                             "type": "string"
                           },
+                          "role": {
+                            "type": "string"
+                          },
                           "permissions": {
                             "type": "array",
                             "items": {
@@ -4374,6 +4389,7 @@
                         },
                         "required": [
                           "userId",
+                          "role",
                           "permissions",
                           "createdAt",
                           "updatedAt"
@@ -4943,12 +4959,23 @@
                           "string",
                           "null"
                         ]
+                      },
+                      "role": {
+                        "type": "string"
+                      },
+                      "permissions": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
                       }
                     },
                     "required": [
                       "userId",
                       "username",
-                      "image"
+                      "image",
+                      "role",
+                      "permissions"
                     ],
                     "additionalProperties": false
                   }
@@ -5299,12 +5326,13 @@
         }
       }
     },
-    "/api/projects/{projectId}/members/{userId}/permissions": {
+    "/api/projects/{projectId}/members/{userId}/role": {
       "put": {
-        "operationId": "updateProjectMemberPermissions",
+        "operationId": "updateProjectMemberRole",
         "tags": [
           "Projects"
         ],
+        "description": "Sets the user's role on the project (`read`, `write` or `admin`) and returns the membership with its resolved permissions. Adds the user as a member when they have no membership. Requires `members:write`. 409 when it would demote the project's only admin.",
         "parameters": [
           {
             "name": "projectId",
@@ -5331,15 +5359,17 @@
                 "$schema": "https://json-schema.org/draft/2020-12/schema",
                 "type": "object",
                 "properties": {
-                  "permissions": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    }
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "read",
+                      "write",
+                      "admin"
+                    ]
                   }
                 },
                 "required": [
-                  "permissions"
+                  "role"
                 ]
               }
             },
@@ -5348,15 +5378,17 @@
                 "$schema": "https://json-schema.org/draft/2020-12/schema",
                 "type": "object",
                 "properties": {
-                  "permissions": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    }
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "read",
+                      "write",
+                      "admin"
+                    ]
                   }
                 },
                 "required": [
-                  "permissions"
+                  "role"
                 ]
               }
             },
@@ -5365,15 +5397,17 @@
                 "$schema": "https://json-schema.org/draft/2020-12/schema",
                 "type": "object",
                 "properties": {
-                  "permissions": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    }
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "read",
+                      "write",
+                      "admin"
+                    ]
                   }
                 },
                 "required": [
-                  "permissions"
+                  "role"
                 ]
               }
             }
@@ -5388,79 +5422,17 @@
                   "$schema": "https://json-schema.org/draft/2020-12/schema",
                   "type": "object",
                   "properties": {
-                    "id": {
+                    "userId": {
                       "type": "string"
                     },
-                    "name": {
-                      "type": "string",
-                      "minLength": 1
-                    },
-                    "slug": {
+                    "role": {
                       "type": "string"
                     },
-                    "description": {
-                      "type": [
-                        "string",
-                        "null"
-                      ],
-                      "minLength": 1
-                    },
-                    "gitUrl": {
-                      "type": "string"
-                    },
-                    "createdByUserId": {
-                      "type": "string"
-                    },
-                    "orgId": {
-                      "type": "string"
-                    },
-                    "ownerUsername": {
-                      "type": [
-                        "string",
-                        "null"
-                      ],
-                      "minLength": 1
-                    },
-                    "memberships": {
+                    "permissions": {
                       "type": "array",
                       "items": {
-                        "type": "object",
-                        "properties": {
-                          "userId": {
-                            "type": "string"
-                          },
-                          "permissions": {
-                            "type": "array",
-                            "items": {
-                              "type": "string"
-                            }
-                          },
-                          "createdAt": {
-                            "type": "string",
-                            "format": "date-time",
-                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
-                          },
-                          "updatedAt": {
-                            "type": "string",
-                            "format": "date-time",
-                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
-                          }
-                        },
-                        "required": [
-                          "userId",
-                          "permissions",
-                          "createdAt",
-                          "updatedAt"
-                        ],
-                        "additionalProperties": false
+                        "type": "string"
                       }
-                    },
-                    "visibility": {
-                      "type": "string",
-                      "enum": [
-                        "private",
-                        "public"
-                      ]
                     },
                     "createdAt": {
                       "type": "string",
@@ -5474,16 +5446,9 @@
                     }
                   },
                   "required": [
-                    "id",
-                    "name",
-                    "slug",
-                    "description",
-                    "gitUrl",
-                    "createdByUserId",
-                    "orgId",
-                    "ownerUsername",
-                    "memberships",
-                    "visibility",
+                    "userId",
+                    "role",
+                    "permissions",
                     "createdAt",
                     "updatedAt"
                   ],
@@ -5630,6 +5595,74 @@
           },
           "404": {
             "description": "Response for status 404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "path": {
+                            "type": "string"
+                          },
+                          "message": {
+                            "type": "string"
+                          },
+                          "summary": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "path",
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "title",
+                    "status"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Response for status 409",
             "content": {
               "application/json": {
                 "schema": {
@@ -105167,9 +105200,9 @@
                     "role": {
                       "type": "string",
                       "enum": [
-                        "admin",
-                        "contributor",
-                        "reviewer"
+                        "read",
+                        "write",
+                        "admin"
                       ]
                     },
                     "restriction": {
@@ -105454,9 +105487,9 @@
                   "role": {
                     "type": "string",
                     "enum": [
-                      "admin",
-                      "contributor",
-                      "reviewer"
+                      "read",
+                      "write",
+                      "admin"
                     ]
                   },
                   "restriction": {
@@ -105486,9 +105519,9 @@
                   "role": {
                     "type": "string",
                     "enum": [
-                      "admin",
-                      "contributor",
-                      "reviewer"
+                      "read",
+                      "write",
+                      "admin"
                     ]
                   },
                   "restriction": {
@@ -105518,9 +105551,9 @@
                   "role": {
                     "type": "string",
                     "enum": [
-                      "admin",
-                      "contributor",
-                      "reviewer"
+                      "read",
+                      "write",
+                      "admin"
                     ]
                   },
                   "restriction": {
@@ -105566,9 +105599,9 @@
                         "role": {
                           "type": "string",
                           "enum": [
-                            "admin",
-                            "contributor",
-                            "reviewer"
+                            "read",
+                            "write",
+                            "admin"
                           ]
                         },
                         "restriction": {
@@ -106092,9 +106125,9 @@
                       "role": {
                         "type": "string",
                         "enum": [
-                          "admin",
-                          "contributor",
-                          "reviewer"
+                          "read",
+                          "write",
+                          "admin"
                         ]
                       },
                       "restriction": {
@@ -106481,9 +106514,9 @@
                     "role": {
                       "type": "string",
                       "enum": [
-                        "admin",
-                        "contributor",
-                        "reviewer"
+                        "read",
+                        "write",
+                        "admin"
                       ]
                     },
                     "restriction": {
@@ -106929,9 +106962,9 @@
                     "role": {
                       "type": "string",
                       "enum": [
-                        "admin",
-                        "contributor",
-                        "reviewer"
+                        "read",
+                        "write",
+                        "admin"
                       ]
                     },
                     "restriction": {
@@ -107508,7 +107541,8 @@
                     "planId": {
                       "type": "string",
                       "enum": [
-                        "free"
+                        "free",
+                        "unlimited"
                       ]
                     },
                     "writes": {
@@ -107561,22 +107595,34 @@
                       "type": "object",
                       "properties": {
                         "maxWritesPerMonth": {
-                          "type": "integer",
+                          "type": [
+                            "integer",
+                            "null"
+                          ],
                           "minimum": 0,
                           "maximum": 9007199254740991
                         },
                         "maxReadsPerMonth": {
-                          "type": "integer",
+                          "type": [
+                            "integer",
+                            "null"
+                          ],
                           "minimum": 0,
                           "maximum": 9007199254740991
                         },
                         "maxStorageBytes": {
-                          "type": "integer",
+                          "type": [
+                            "integer",
+                            "null"
+                          ],
                           "minimum": 0,
                           "maximum": 9007199254740991
                         },
                         "maxSignalTokensPerMonth": {
-                          "type": "integer",
+                          "type": [
+                            "integer",
+                            "null"
+                          ],
                           "minimum": 0,
                           "maximum": 9007199254740991
                         }

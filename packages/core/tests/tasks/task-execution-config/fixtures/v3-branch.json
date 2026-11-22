@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 3,
+  "environmentJson": {
+    "kind": "inline",
+    "runtime": { "kind": "devcontainer" },
+    "branch": "develop"
+  },
+  "gitJson": {
+    "mode": "readWrite",
+    "message": "fix: {{result.summary}}",
+    "onPushFailure": "warn",
+    "gitCredentials": "auto"
+  },
+  "mcpJson": null,
+  "healthChecksJson": null
+}

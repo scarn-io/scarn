@@ -1,0 +1,81 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "e1cb24a9-b273-4ac7-bef0-7d13695d3b3e",
+  "prevIds": [
+    "991be451-c5ef-4835-a0d6-219d10f70fee"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "app",
+        "work_item_comments",
+        "work_item_comments_work_item_page_idx"
+      ],
+      "writes": [
+        "s|idx|app.work_item_comments_work_item_page_idx",
+        "n|idx|app.work_item_comments_work_item_page_idx",
+        "e|idx|app.work_item_comments_work_item_page_idx",
+        "n|rel|app.work_item_comments_work_item_page_idx"
+      ],
+      "reads": [
+        "n|tbl|app.work_item_comments",
+        "n|sch|app",
+        "n|col|app.work_item_comments.work_item_id",
+        "n|col|app.work_item_comments.is_pinned",
+        "n|col|app.work_item_comments.created_at",
+        "n|col|app.work_item_comments.id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "work_item_comments",
+        "name": "work_item_comments_work_item_page_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "work_item_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "is_pinned",
+            "isExpression": false,
+            "asc": false,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "created_at",
+            "isExpression": false,
+            "asc": false,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "id",
+            "isExpression": false,
+            "asc": false,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    }
+  ]
+}

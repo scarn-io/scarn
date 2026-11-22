@@ -104,10 +104,21 @@ describe("browser init share-link handoff", () => {
       return undefined as never;
     });
 
-    init(OPTIONS);
+    init({ ...OPTIONS, cookieDomain: "scarn.io" });
 
     expect(browser.writes).toEqual([
       "bb_ph_bootstrap=; Domain=.scarn.io; Path=/; Max-Age=0; Secure; SameSite=Lax",
+    ]);
+  });
+
+  test("deletes a host-only cookie when no cookie domain is configured", async () => {
+    const browser = installBrowser({ jar: `bb_ph_bootstrap=${ID}` });
+    const { init } = await freshBrowserModule();
+
+    init(OPTIONS);
+
+    expect(browser.writes).toEqual([
+      "bb_ph_bootstrap=; Path=/; Max-Age=0; Secure; SameSite=Lax",
     ]);
   });
 

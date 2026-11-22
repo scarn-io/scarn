@@ -1,0 +1,7 @@
+src/local-test-project/.scarn/scarn.jsonc
+src/local-test-project/.scarn/pipeline-builder/*.json
+!src/local-test-project/.scarn/pipeline-builder/package.json
+!src/local-test-project/.scarn/pipeline-builder/tsconfig.json
+src/local-test-project/.scarn/pipeline-builder/.scarn-studio-collect.mjs
+vendor/
+node_modules/

@@ -1,0 +1,208 @@
+# Self-hosted Scarn: Postgres + pgvector, S3-compatible storage (RustFS), the
+# API, the web app, a one-shot migration step and the maintenance scheduler.
+# The work-signal service (instant worker wake-up and live log streaming) is
+# optional: `docker compose -f docker-compose.selfhost.yml --profile work-signal up -d`.
+#
+#   docker compose -f docker-compose.selfhost.yml up -d
+#
+# Every service reads its configuration from `.env.selfhost` next to this file.
+# See the self-hosting docs for the variables.
+#
+# Images default to the published ones; set SCARN_VERSION to pin a release, or
+# build locally with `docker compose -f docker-compose.selfhost.yml build`.
+#
+# The project name keeps these containers, volumes and networks apart from the
+# development stack in docker-compose.yml (project `scarn`).
+name: scarn-selfhost
+
+x-scarn-api-image: &scarn-api-image
+  image: ghcr.io/scarn-io/scarn-api:${SCARN_VERSION:-latest}
+  build:
+    context: .
+    dockerfile: apps/api/Dockerfile
+
+services:
+  db:
+    image: pgvector/pgvector:pg17
+    restart: unless-stopped
+    # POSTGRES_USER, POSTGRES_PASSWORD and POSTGRES_DB come from .env.selfhost
+    # and must match DATABASE_URL (host `db`, port 5432).
+    env_file: .env.selfhost
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # S3-compatible object storage for log archives, artifacts and task sessions.
+  # Browsers and workers download and upload through presigned URLs built from
+  # S3_ENDPOINT, so S3_ENDPOINT must be reachable from them as well as from the
+  # api/next containers (a public hostname, or this host's LAN address and the
+  # published port). The root user is S3_ACCESS_KEY_ID / S3_SECRET_ACCESS_KEY.
+  storage:
+    image: rustfs/rustfs:latest
+    restart: unless-stopped
+    env_file: .env.selfhost
+    entrypoint:
+      - /bin/sh
+      - -c
+      - RUSTFS_ACCESS_KEY="$$S3_ACCESS_KEY_ID" RUSTFS_SECRET_KEY="$$S3_SECRET_ACCESS_KEY" exec /entrypoint.sh rustfs
+    ports:
+      - "${SCARN_STORAGE_PORT:-9100}:9000"
+    volumes:
+      - storage_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:9000/health/ready"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # One-shot: create S3_BUCKET, install the expiry rules and allow the web app
+  # (APP_URL) and the Playwright trace viewer to fetch presigned downloads.
+  # docker/selfhost/lifecycle.json is a copy of the rules derived from
+  # STORAGE_RETENTION_DAYS in packages/core (a test in apps/api keeps it in
+  # sync). Safe to re-run: every call replaces or tolerates existing state.
+  storage-init:
+    image: amazon/aws-cli:latest
+    env_file: .env.selfhost
+    depends_on:
+      storage:
+        condition: service_healthy
+    volumes:
+      - ./docker/selfhost/lifecycle.json:/config/lifecycle.json:ro
+    entrypoint:
+      - /bin/sh
+      - -ec
+      - |
+        export AWS_ACCESS_KEY_ID="$$S3_ACCESS_KEY_ID" AWS_SECRET_ACCESS_KEY="$$S3_SECRET_ACCESS_KEY" AWS_DEFAULT_REGION="$${S3_REGION:-us-east-1}"
+        s3="aws --endpoint-url http://storage:9000 s3api"
+        $$s3 head-bucket --bucket "$$S3_BUCKET" 2>/dev/null || $$s3 create-bucket --bucket "$$S3_BUCKET"
+        $$s3 put-bucket-lifecycle-configuration --bucket "$$S3_BUCKET" --lifecycle-configuration file:///config/lifecycle.json
+        cat > /tmp/cors.json <<EOF
+        {"CORSRules":[{"AllowedOrigins":["$${APP_URL%/}","https://trace.playwright.dev"],"AllowedMethods":["GET","HEAD","PUT"],"AllowedHeaders":["*"],"ExposeHeaders":["Content-Length","Content-Range","Content-Type","ETag","x-amz-checksum-crc32","x-amz-checksum-crc32c","x-amz-checksum-sha1","x-amz-checksum-sha256"],"MaxAgeSeconds":3600}]}
+        EOF
+        $$s3 put-bucket-cors --bucket "$$S3_BUCKET" --cors-configuration file:///tmp/cors.json
+        echo "bucket $$S3_BUCKET ready"
+
+  # One-shot: apply the core and identity database migrations. Runs on every
+  # `up`, so upgrading is pull + up.
+  migrate:
+    <<: *scarn-api-image
+    env_file: .env.selfhost
+    working_dir: /app
+    command: ["bun", "run", "scripts/db-migrate.ts"]
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # Standalone API (Bun). The web app also serves /api in-process, so browsers
+  # use the web app's origin; this service backs server-side rendering
+  # (SCARN_API_URL) and the scheduler.
+  api:
+    <<: *scarn-api-image
+    restart: unless-stopped
+    env_file: .env.selfhost
+    environment:
+      PORT: "3001"
+    ports:
+      - "${SCARN_API_PORT:-3001}:3001"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      storage-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "bun",
+          "-e",
+          "fetch('http://127.0.0.1:3001/api/openapi/json').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # Web app (Next.js standalone). Put your reverse proxy / TLS in front of this
+  # one; APP_URL and BETTER_AUTH_URL are its public URL.
+  next:
+    image: ghcr.io/scarn-io/scarn-next:${SCARN_VERSION:-latest}
+    build:
+      context: .
+      dockerfile: apps/next/Dockerfile
+    restart: unless-stopped
+    env_file: .env.selfhost
+    environment:
+      SCARN_API_URL: http://api:3001
+      PORT: "3000"
+    ports:
+      - "${SCARN_WEB_PORT:-3000}:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+
+  # Calls the API's maintenance routes on a schedule (storage reconciliation,
+  # log cleanup, integration sync, ...); replaces the hosted deploy's
+  # EventBridge rules. Jobs whose *_CRON_SECRET is unset are skipped, and the
+  # demo-project refresh runs only with SCARN_DEMO_PROJECT=true.
+  scheduler:
+    <<: *scarn-api-image
+    restart: unless-stopped
+    env_file: .env.selfhost
+    environment:
+      SCARN_API_URL: http://api:3001
+    command: ["bun", "run", "src/scheduler/run.ts"]
+    depends_on:
+      api:
+        condition: service_healthy
+
+  # Optional (profile `work-signal`): the Cloudflare Worker + Durable Objects in
+  # apps/work-signal under `wrangler dev`, the same way development runs it.
+  # Turn it on for the API by setting WORK_SIGNAL_URL / LOG_FEED_URL (and their
+  # secrets) in .env.selfhost; workers and browsers connect to that URL
+  # directly, so like S3_ENDPOINT it must be reachable from them, not just from
+  # the api container.
+  work-signal:
+    profiles: ["work-signal"]
+    image: node:22-slim
+    restart: unless-stopped
+    working_dir: /app
+    env_file: .env.selfhost
+    environment:
+      WRANGLER_SEND_METRICS: "false"
+    ports:
+      - "${SCARN_WORK_SIGNAL_PORT:-8787}:8787"
+    volumes:
+      - ./apps/work-signal:/app
+      - ./tsconfig.base.json:/tsconfig.base.json:ro
+      - work_signal_node_modules:/app/node_modules
+    command: >
+      /bin/sh -c "
+      ( [ -f /etc/ssl/certs/ca-certificates.crt ] || ( apt-get update && apt-get install -y --no-install-recommends ca-certificates ) ) &&
+      ( [ -x node_modules/.bin/wrangler ] || npm install --no-package-lock --no-audit --no-fund ) &&
+      exec node_modules/.bin/wrangler dev --ip 0.0.0.0 --port 8787
+      --var WORK_SIGNAL_NOTIFY_SECRET:$$WORK_SIGNAL_NOTIFY_SECRET
+      --var WORK_SIGNAL_TOKEN_SECRET:$$WORK_SIGNAL_TOKEN_SECRET
+      --var LOG_FEED_INTERNAL_SECRET:$$LOG_FEED_INTERNAL_SECRET
+      --var LOG_FEED_TOKEN_SECRET:$$LOG_FEED_TOKEN_SECRET
+      "
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:8787/health').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 180s
+
+volumes:
+  postgres_data:
+  storage_data:
+  work_signal_node_modules:

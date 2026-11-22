@@ -1,0 +1,18 @@
+{
+  "name": "@scarn/work-signal",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "build": "wrangler deploy --dry-run --outdir dist",
+    "dev": "wrangler dev --ip 0.0.0.0 --port 8787",
+    "test": "vitest run",
+    "typecheck": "tsgo -p tsconfig.json --noEmit --incremental && tsgo -p test/tsconfig.json --noEmit --incremental"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-plugin": "^1.6.0",
+    "@cloudflare/workers-types": "^5.20261109.1",
+    "vitest": "^5.1.0",
+    "wrangler": "^4.159.0"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 2,
+  "runtimeJson": { "type": "host" },
+  "envJson": null,
+  "gitJson": { "mode": "readOnly", "gitCredentials": "none" },
+  "mcpJson": null,
+  "healthChecksJson": null
+}

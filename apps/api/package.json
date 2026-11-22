@@ -1,0 +1,39 @@
+{
+  "name": "@scarn/api",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "exports": {
+    "./*": {
+      "types": "./src/*.ts",
+      "bun": "./src/*.ts",
+      "default": "./src/*.ts"
+    }
+  },
+  "scripts": {
+    "dev": "bun run src/index.ts",
+    "seed:demo-project": "bun --env-file=../../.env run src/seed-demo-project.ts",
+    "seed:demo-project:reset": "bun --env-file=../../.env run src/seed-demo-project.ts --reset",
+    "start": "bun run src/index.ts",
+    "build": "tsgo -p tsconfig.json --noEmit",
+    "declarations": "tsgo -p tsconfig.build.json",
+    "typecheck": "tsgo -p tsconfig.json --noEmit --incremental",
+    "test:unit": "bun test --path-ignore-patterns='**/*.integration.test.ts'"
+  },
+  "dependencies": {
+    "@scarn/core": "workspace:*",
+    "@scarn/identity": "workspace:*",
+    "@scarn/observability": "workspace:*",
+    "@elysia/openapi": "2.0.0-rc.1",
+    "elysia": "2.0.0-rc.3",
+    "openapi-types": "^12.1.3",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@scarn/local-dev": "workspace:*",
+    "@types/pg": "catalog:",
+    "bun-types": "^1.4.4",
+    "drizzle-orm": "catalog:",
+    "pg": "catalog:"
+  }
+}

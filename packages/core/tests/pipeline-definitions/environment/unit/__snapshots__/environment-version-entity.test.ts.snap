@@ -1,0 +1,30 @@
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+
+exports[`environment content validation accepts a full environment 1`] = `
+{
+  "connectors": [
+    "datadog",
+  ],
+  "description": "Frontend",
+  "runtime": {
+    "id": "bun1",
+    "kind": "managed",
+  },
+  "vars": [
+    {
+      "applies": "agent",
+      "name": "DD_API_KEY",
+      "secretName": "DD_API_KEY",
+      "source": "secret",
+    },
+    {
+      "applies": "agent",
+      "from": "DD_APPLICATION_KEY",
+      "name": "DD_APPLICATION_KEY",
+      "optional": false,
+      "secret": true,
+      "source": "inherit",
+    },
+  ],
+}
+`;

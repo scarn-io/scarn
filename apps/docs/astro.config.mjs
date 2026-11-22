@@ -227,6 +227,27 @@ export default defineConfig({
           ],
         },
         {
+          label: "Self-hosting",
+          items: [
+            {
+              label: "Quickstart",
+              slug: "self-hosting/quickstart",
+            },
+            {
+              label: "Use your own GitHub App",
+              slug: "self-hosting/github-app",
+            },
+            {
+              label: "Use the CLI with your server",
+              slug: "self-hosting/cli",
+            },
+            {
+              label: "Run the demo project",
+              slug: "self-hosting/demo-project",
+            },
+          ],
+        },
+        {
           label: "Reference",
           items: [{ autogenerate: { directory: "reference" } }],
         },

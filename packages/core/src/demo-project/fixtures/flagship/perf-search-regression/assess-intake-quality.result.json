@@ -1,0 +1,7 @@
+{
+  "restatedProblem": "Since last week’s deploy, product search has become much slower: support reports the search box appears to hang, and the `/api/search` synthetic benchmark regressed from under 1ms p95 to roughly 90-100ms. The ticket’s immediate goal is to identify which commit introduced the regression using the existing `bench/search-bench.mjs` repro and the known-good commit `69b74f7` as a baseline.",
+  "missingInformation": [],
+  "expectedBehaviorScore": 0.88,
+  "observedBehaviorScore": 0.93,
+  "$scarn_notifications_v1": []
+}

@@ -1,0 +1,168 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "402d473c-f9a1-421a-8704-ce14113ab281",
+  "prevIds": [
+    "28ff745b-c7ab-45a4-aaa1-c4875031f13f"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "step_definitions",
+        "grants_json"
+      ],
+      "writes": [
+        "s|col|app.step_definitions.grants_json",
+        "n|col|app.step_definitions.grants_json",
+        "e|col|app.step_definitions.grants_json"
+      ],
+      "reads": [
+        "n|tbl|app.step_definitions",
+        "n|sch|app"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "tasks",
+        "grants_json"
+      ],
+      "writes": [
+        "s|col|app.tasks.grants_json",
+        "n|col|app.tasks.grants_json",
+        "e|col|app.tasks.grants_json"
+      ],
+      "reads": [
+        "n|tbl|app.tasks",
+        "n|sch|app"
+      ]
+    },
+    {
+      "statementType": "drop_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "step_definitions",
+        "work_item_permissions_json"
+      ],
+      "writes": [
+        "s|col|app.step_definitions.work_item_permissions_json",
+        "n|col|app.step_definitions.work_item_permissions_json",
+        "e|col|app.step_definitions.work_item_permissions_json"
+      ],
+      "reads": [
+        "n|tbl|app.step_definitions",
+        "n|sch|app"
+      ]
+    },
+    {
+      "statementType": "drop_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "tasks",
+        "work_item_permissions"
+      ],
+      "writes": [
+        "s|col|app.tasks.work_item_permissions",
+        "n|col|app.tasks.work_item_permissions",
+        "e|col|app.tasks.work_item_permissions"
+      ],
+      "reads": [
+        "n|tbl|app.tasks",
+        "n|sch|app"
+      ]
+    },
+    {
+      "statementType": "drop_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "task_runs",
+        "yield_kind"
+      ],
+      "writes": [
+        "s|col|app.task_runs.yield_kind",
+        "n|col|app.task_runs.yield_kind",
+        "e|col|app.task_runs.yield_kind"
+      ],
+      "reads": [
+        "n|tbl|app.task_runs",
+        "n|sch|app"
+      ]
+    },
+    {
+      "statementType": "drop_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "task_run_yield_kind"
+      ],
+      "writes": [
+        "s|enum|public.task_run_yield_kind",
+        "n|enum|public.task_run_yield_kind",
+        "e|enum|public.task_run_yield_kind",
+        "n|type|public.task_run_yield_kind"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "step_definitions",
+        "name": "grants_json",
+        "type": "jsonb",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "'[]'",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "tasks",
+        "name": "grants_json",
+        "type": "jsonb",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "'[]'",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "drop",
+      "key": "enums\u0000[\"public\",\"task_run_yield_kind\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"app\",\"step_definitions\",\"work_item_permissions_json\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"app\",\"task_runs\",\"yield_kind\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"app\",\"tasks\",\"work_item_permissions\"]"
+    }
+  ]
+}

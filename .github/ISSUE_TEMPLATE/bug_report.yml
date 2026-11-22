@@ -1,0 +1,58 @@
+name: Bug report
+description: Something in Scarn doesn't work as expected
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. For security problems, don't open an issue: see [SECURITY.md](https://github.com/scarn-io/scarn/blob/main/SECURITY.md).
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Run `scarn work` in ...
+        2. ...
+    validations:
+      required: true
+  - type: dropdown
+    id: deployment
+    attributes:
+      label: Where are you running Scarn?
+      options:
+        - Hosted (app.scarn.io)
+        - Self-hosted
+        - Local development from this repository
+    validations:
+      required: true
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      multiple: true
+      options:
+        - CLI / worker
+        - Web app
+        - API
+        - SDK
+        - Self-host setup (Docker Compose)
+        - Docs
+        - Other
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Output of `scarn --version`, the image tag you run, or a commit SHA.
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Relevant output. Remove tokens, secrets and personal data first.
+      render: shell

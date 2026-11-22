@@ -1,0 +1,25 @@
+{
+  "confidence": 0.93,
+  "bisectSteps": 3,
+  "culpritDate": "2026-08-13T19:06:28-05:00",
+  "explanation": "Commit `967b418eef381bb97d80494904c44e8ada806024` changed search from an inverted-index lookup to a per-request full scan of `CATALOG`. In `searchProducts()`, the call switched from `matchPositions(POSTINGS, tokens)` to `matchPositions(CATALOG, tokens)`, and `matchPositions()` stopped intersecting postings lists and instead normalized every product, split it into words, then for every query token checked both substring matches and a Levenshtein-distance fallback against every word. That moved work from a small precomputed index into nested request-time loops over all products and words, making each search O(products * words * token comparisons * edit-distance cost)` instead of mostly touching only matching postings.",
+  "suggestedFix": "Keep fuzzy/partial matching, but move candidate generation back onto an index. I would restore the postings-list path for exact tokens and add a separate token dictionary or n-gram/prefix index to expand each query token into a bounded candidate set before scoring, only running edit-distance checks on those candidates. That preserves the typo-tolerance feature, but costs some extra memory at startup and a more complex index build path.",
+  "culpritAuthor": "Unknown <redacted@example.com>",
+  "culpritCommit": "967b418eef381bb97d80494904c44e8ada806024",
+  "revertedP95Ms": 59.481,
+  "culpritSubject": "fix: match partial words and common misspellings in search",
+  "p95AtCulpritMs": 60.827,
+  "skippedCommits": [],
+  "verifiedByRevert": false,
+  "deltaPctAtCulprit": 10979.599271402549,
+  "p95BeforeCulpritMs": 0.549,
+  "$scarn_notifications_v1": [
+    {
+      "body": "`git bisect run` isolated commit `967b418eef381bb97d80494904c44e8ada806024` (`fix: match partial words and common misspellings in search`) as the first revision where GET /api/search crossed the 5.24ms p95 threshold. Parent commit p95 was 0.549ms; culprit commit p95 was 60.827ms.",
+      "kind": "result_ready",
+      "title": "Search regression culprit identified",
+      "priority": "normal",
+      "suggestedChannels": ["in_app", "work_item_platform_comment"]
+    }
+  ]
+}

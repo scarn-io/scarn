@@ -107,59 +107,72 @@ describe("hasPosthogCookie", () => {
 });
 
 describe("buildBootstrapCookieDeletion", () => {
-  test.concurrent(
-    "scopes to the parent domain on scarn.io over https",
-    () => {
-      expect(
-        buildBootstrapCookieDeletion({
-          hostname: "scarn.io",
-          protocol: "https:",
-        }),
-      ).toBe(
-        `${BOOTSTRAP_COOKIE_NAME}=; Domain=.scarn.io; Path=/; Max-Age=0; Secure; SameSite=Lax`,
-      );
-    },
-  );
+  test.concurrent("scopes to the configured parent domain over https", () => {
+    expect(
+      buildBootstrapCookieDeletion({
+        hostname: "example.com",
+        protocol: "https:",
+        cookieDomain: "example.com",
+      }),
+    ).toBe(
+      `${BOOTSTRAP_COOKIE_NAME}=; Domain=.example.com; Path=/; Max-Age=0; Secure; SameSite=Lax`,
+    );
+  });
 
   test.concurrent(
-    "uses the parent domain on every scarn.io subdomain",
+    "uses the parent domain on every subdomain of the configured domain",
     () => {
       for (const hostname of [
-        "app.scarn.io",
-        "docs.scarn.io",
-        "A.Scarn.Io",
+        "app.example.com",
+        "docs.example.com",
+        "A.Example.Com",
       ]) {
         expect(
-          buildBootstrapCookieDeletion({ hostname, protocol: "https:" }),
-        ).toContain("Domain=.scarn.io");
+          buildBootstrapCookieDeletion({
+            hostname,
+            protocol: "https:",
+            cookieDomain: ".Example.com ",
+          }),
+        ).toContain("Domain=.example.com");
       }
     },
   );
+
+  test.concurrent("is host-only when no cookie domain is configured", () => {
+    for (const cookieDomain of [undefined, null, "", "  "]) {
+      expect(
+        buildBootstrapCookieDeletion({
+          hostname: "app.example.com",
+          protocol: "https:",
+          cookieDomain,
+        }),
+      ).not.toContain("Domain=");
+    }
+  });
 
   test.concurrent("is host-only on localhost over http", () => {
     expect(
       buildBootstrapCookieDeletion({
         hostname: "localhost",
         protocol: "http:",
+        cookieDomain: "example.com",
       }),
     ).toBe(`${BOOTSTRAP_COOKIE_NAME}=; Path=/; Max-Age=0; SameSite=Lax`);
   });
 
-  test.concurrent(
-    "is host-only on preview deployments and lookalike hosts",
-    () => {
-      for (const hostname of [
-        "scarn-git-feat.vercel.app",
-        "evilscarn.io",
-        "scarn.io.example.com",
-      ]) {
-        const cookie = buildBootstrapCookieDeletion({
-          hostname,
-          protocol: "https:",
-        });
-        expect(cookie).not.toContain("Domain=");
-        expect(cookie).toContain("Secure");
-      }
-    },
-  );
+  test.concurrent("is host-only on hosts outside the configured domain", () => {
+    for (const hostname of [
+      "example-git-feat.vercel.app",
+      "evilexample.com",
+      "example.com.attacker.test",
+    ]) {
+      const cookie = buildBootstrapCookieDeletion({
+        hostname,
+        protocol: "https:",
+        cookieDomain: "example.com",
+      });
+      expect(cookie).not.toContain("Domain=");
+      expect(cookie).toContain("Secure");
+    }
+  });
 });

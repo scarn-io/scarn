@@ -1,0 +1,22 @@
+{
+  "confidence": 1,
+  "setupNotes": "No extra install or seed step was required in this workspace; node_modules was already present. Measured with Node v24.14.1. The harness starts node server.mjs from the current working directory, auto-selects a free port in 4319-4358 unless --port is given, and fails with exit 125 if the endpoint or server is not measurable. For the baseline measurement I checked out commit 69b74f7 in a separate git worktree so the current branch remained untouched.",
+  "baselineRef": "69b74f7b64bbb3046550d3a4a2059bc1d48e9509",
+  "endpointPath": "GET /api/search",
+  "p95CurrentMs": 56.998,
+  "noiseFloorPct": 16.116354959823152,
+  "p95BaselineMs": 0.482,
+  "regressionPct": 11725.311203319503,
+  "benchmarkCommand": "node bench/search-bench.mjs --json --requests 2000 --warmup 200",
+  "measurementNotes": "Confirmed. I reused the existing harness at bench/search-bench.mjs, which warms up, emits JSON percentiles, enforces a free port, and follows git-bisect exit codes. Baseline runs at 69b74f7 (using the current harness from outside the old checkout) produced p95 values of 0.482ms, 0.318ms, and 0.484ms; median 0.482ms. Current HEAD runs produced p95 values of 50.161ms, 56.998ms, and 59.347ms; median 56.998ms. noiseFloorPct is the run-to-run spread on the same commit using those repeated HEAD runs: (59.347 - 50.161) / 56.998 * 100 = 16.12%. Baseline also shows some relative spread because the absolute latencies are below 1ms and close to timer-resolution effects, but even the slowest known-good run is over 100x faster than the fastest HEAD run. Initial 400-request runs showed the same shape: baseline below 1ms p95 and HEAD around 48-58ms p95.",
+  "suggestedThresholdP95Ms": 5.24147269381421,
+  "$scarn_notifications_v1": [
+    {
+      "body": "Measured GET /api/search on known-good commit 69b74f7 and current HEAD using the existing search benchmark. Median p95 moved from 0.482ms to 56.998ms, a 11725.31% regression, with a 16.12% same-commit noise floor on repeated HEAD runs. This exceeds the 10% confirmation threshold by a wide margin.",
+      "kind": "result_ready",
+      "title": "Search latency regression measured",
+      "priority": "normal",
+      "suggestedChannels": ["in_app", "work_item_platform_comment"]
+    }
+  ]
+}

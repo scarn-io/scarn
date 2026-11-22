@@ -1,0 +1,453 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "73f4d55b-2b3a-49ef-9eb2-077469cbbba5",
+  "prevIds": [
+    "8635fad0-7df0-487e-b8c0-1a623c348f84"
+  ],
+  "footprints": [
+    {
+      "statementType": "alter_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "step_definition_kind"
+      ],
+      "writes": [
+        "s|enum|public.step_definition_kind"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "alter_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "task_kind"
+      ],
+      "writes": [
+        "s|enum|public.task_kind"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "managed_mcp_connections",
+        "supplied_client_id"
+      ],
+      "writes": [
+        "s|col|app.managed_mcp_connections.supplied_client_id",
+        "n|col|app.managed_mcp_connections.supplied_client_id",
+        "e|col|app.managed_mcp_connections.supplied_client_id"
+      ],
+      "reads": [
+        "n|tbl|app.managed_mcp_connections",
+        "n|sch|app"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "managed_mcp_connections",
+        "supplied_redirect_uri"
+      ],
+      "writes": [
+        "s|col|app.managed_mcp_connections.supplied_redirect_uri",
+        "n|col|app.managed_mcp_connections.supplied_redirect_uri",
+        "e|col|app.managed_mcp_connections.supplied_redirect_uri"
+      ],
+      "reads": [
+        "n|tbl|app.managed_mcp_connections",
+        "n|sch|app"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "managed_mcp_connections",
+        "discovery"
+      ],
+      "writes": [
+        "s|col|app.managed_mcp_connections.discovery",
+        "n|col|app.managed_mcp_connections.discovery",
+        "e|col|app.managed_mcp_connections.discovery"
+      ],
+      "reads": [
+        "n|tbl|app.managed_mcp_connections",
+        "n|sch|app"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "managed_mcp_connections",
+        "scopes"
+      ],
+      "writes": [
+        "s|col|app.managed_mcp_connections.scopes",
+        "n|col|app.managed_mcp_connections.scopes",
+        "e|col|app.managed_mcp_connections.scopes"
+      ],
+      "reads": [
+        "n|tbl|app.managed_mcp_connections",
+        "n|sch|app"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "managed_oauth_attempts",
+        "completion"
+      ],
+      "writes": [
+        "s|col|app.managed_oauth_attempts.completion",
+        "n|col|app.managed_oauth_attempts.completion",
+        "e|col|app.managed_oauth_attempts.completion"
+      ],
+      "reads": [
+        "n|tbl|app.managed_oauth_attempts",
+        "n|sch|app"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "managed_oauth_attempts",
+        "completion_secret_digest"
+      ],
+      "writes": [
+        "s|col|app.managed_oauth_attempts.completion_secret_digest",
+        "n|col|app.managed_oauth_attempts.completion_secret_digest",
+        "e|col|app.managed_oauth_attempts.completion_secret_digest"
+      ],
+      "reads": [
+        "n|tbl|app.managed_oauth_attempts",
+        "n|sch|app"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "step_definitions",
+        "tool_call_json"
+      ],
+      "writes": [
+        "s|col|app.step_definitions.tool_call_json",
+        "n|col|app.step_definitions.tool_call_json",
+        "e|col|app.step_definitions.tool_call_json"
+      ],
+      "reads": [
+        "n|tbl|app.step_definitions",
+        "n|sch|app"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "tasks",
+        "tool_call_json"
+      ],
+      "writes": [
+        "s|col|app.tasks.tool_call_json",
+        "n|col|app.tasks.tool_call_json",
+        "e|col|app.tasks.tool_call_json"
+      ],
+      "reads": [
+        "n|tbl|app.tasks",
+        "n|sch|app"
+      ]
+    },
+    {
+      "statementType": "alter_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "managed_oauth_attempts",
+        "browser_session_digest"
+      ],
+      "writes": [
+        "s|colprop|app.managed_oauth_attempts.browser_session_digest.notNull"
+      ],
+      "reads": [
+        "n|tbl|app.managed_oauth_attempts",
+        "n|sch|app",
+        "n|col|app.managed_oauth_attempts.browser_session_digest"
+      ],
+      "sqlHash": "79c7adb337077081"
+    },
+    {
+      "statementType": "add_check",
+      "statementTarget": [
+        "table",
+        "app",
+        "managed_mcp_connections"
+      ],
+      "writes": [
+        "s|ck|app.managed_mcp_connections.managed_mcp_connections_supplied_client_check",
+        "n|ck|app.managed_mcp_connections.managed_mcp_connections_supplied_client_check",
+        "e|ck|app.managed_mcp_connections.managed_mcp_connections_supplied_client_check",
+        "n|con|app.managed_mcp_connections.managed_mcp_connections_supplied_client_check"
+      ],
+      "reads": [
+        "n|tbl|app.managed_mcp_connections",
+        "n|sch|app",
+        "n|col|app.managed_mcp_connections.client_registration",
+        "n|col|app.managed_mcp_connections.supplied_client_id",
+        "n|col|app.managed_mcp_connections.supplied_redirect_uri"
+      ]
+    },
+    {
+      "statementType": "add_check",
+      "statementTarget": [
+        "table",
+        "app",
+        "managed_oauth_attempts"
+      ],
+      "writes": [
+        "s|ck|app.managed_oauth_attempts.managed_oauth_attempts_completion_check",
+        "n|ck|app.managed_oauth_attempts.managed_oauth_attempts_completion_check",
+        "e|ck|app.managed_oauth_attempts.managed_oauth_attempts_completion_check",
+        "n|con|app.managed_oauth_attempts.managed_oauth_attempts_completion_check"
+      ],
+      "reads": [
+        "n|tbl|app.managed_oauth_attempts",
+        "n|sch|app",
+        "n|col|app.managed_oauth_attempts.completion",
+        "n|col|app.managed_oauth_attempts.browser_session_digest",
+        "n|col|app.managed_oauth_attempts.completion_secret_digest"
+      ]
+    },
+    {
+      "statementType": "alter_check",
+      "statementTarget": [
+        "table",
+        "app",
+        "tasks"
+      ],
+      "writes": [
+        "s|ck|app.tasks.tasks_kind_instructions_check"
+      ],
+      "reads": [
+        "n|tbl|app.tasks",
+        "n|sch|app",
+        "n|col|app.tasks.kind",
+        "n|col|app.tasks.prompt",
+        "n|col|app.tasks.entrypoint_json",
+        "n|col|app.tasks.tool_call_json",
+        "e|col|app.tasks.kind",
+        "e|col|app.tasks.prompt",
+        "e|col|app.tasks.entrypoint_json"
+      ],
+      "sqlHash": "f67202a4fd51ecb8"
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_mcp_connections",
+        "name": "supplied_client_id",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_mcp_connections",
+        "name": "supplied_redirect_uri",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_mcp_connections",
+        "name": "discovery",
+        "type": "jsonb",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "'{}'",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_mcp_connections",
+        "name": "scopes",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 1,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_attempts",
+        "name": "completion",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "'server_callback'",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_attempts",
+        "name": "completion_secret_digest",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "step_definitions",
+        "name": "tool_call_json",
+        "type": "jsonb",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "tasks",
+        "name": "tool_call_json",
+        "type": "jsonb",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_mcp_connections",
+        "name": "managed_mcp_connections_supplied_client_check",
+        "value": "(\"client_registration\" = 'supplied' and \"supplied_client_id\" is not null and \"supplied_redirect_uri\" is not null)\n        or (\"client_registration\" <> 'supplied' and \"supplied_client_id\" is null and \"supplied_redirect_uri\" is null)",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "managed_oauth_attempts",
+        "name": "managed_oauth_attempts_completion_check",
+        "value": "(\"completion\" = 'server_callback' and \"browser_session_digest\" is not null and \"completion_secret_digest\" is null)\n        or (\"completion\" = 'loopback' and \"browser_session_digest\" is null and \"completion_secret_digest\" is not null)",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "alter",
+      "key": "enums\u0000[\"public\",\"step_definition_kind\"]",
+      "set": {
+        "values": [
+          "built_in",
+          "user_defined",
+          "code",
+          "mcp_tool"
+        ]
+      }
+    },
+    {
+      "op": "alter",
+      "key": "enums\u0000[\"public\",\"task_kind\"]",
+      "set": {
+        "values": [
+          "agent",
+          "code",
+          "mcp_tool"
+        ]
+      }
+    },
+    {
+      "op": "alter",
+      "key": "columns\u0000[\"app\",\"managed_oauth_attempts\",\"browser_session_digest\"]",
+      "set": {
+        "notNull": false
+      }
+    },
+    {
+      "op": "alter",
+      "key": "checks\u0000[\"app\",\"tasks\",\"tasks_kind_instructions_check\"]",
+      "set": {
+        "value": "(\"kind\" = 'agent' AND \"prompt\" IS NOT NULL AND \"entrypoint_json\" IS NULL AND \"tool_call_json\" IS NULL) OR (\"kind\" = 'code' AND \"entrypoint_json\" IS NOT NULL AND \"prompt\" IS NULL AND \"tool_call_json\" IS NULL) OR (\"kind\"::text = 'mcp_tool' AND \"tool_call_json\" IS NOT NULL AND \"prompt\" IS NULL AND \"entrypoint_json\" IS NULL)"
+      }
+    }
+  ]
+}

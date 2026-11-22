@@ -27,6 +27,7 @@ import Default from "@astrojs/starlight/components/Head.astro";
   const key = import.meta.env["PUBLIC_POSTHOG_KEY"];
   const host = import.meta.env["PUBLIC_POSTHOG_HOST"];
   const uiHost = import.meta.env["PUBLIC_POSTHOG_UI_HOST"];
+  const cookieDomain = import.meta.env["PUBLIC_ANALYTICS_COOKIE_DOMAIN"];
 
   const SHELL_LANGUAGES = new Set(["bash", "sh", "shell", "zsh", "console"]);
   const DEPTHS: readonly DocsQuickstartScrollDepth[] = ["25", "50", "75", "100"];
@@ -83,7 +84,7 @@ import Default from "@astrojs/starlight/components/Head.astro";
     });
   }
 
-  if (key && host && analytics.init({ key, host, uiHost })) {
+  if (key && host && analytics.init({ key, host, uiHost, cookieDomain })) {
     analytics.pageView(window.location.href);
     if (isQuickstart()) {
       analytics.capture(AnalyticsEvents.DocsQuickstartViewed);

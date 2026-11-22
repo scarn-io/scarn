@@ -1,0 +1,32 @@
+{
+  "name": "@scarn/local-dev",
+  "version": "0.0.0",
+  "license": "Apache-2.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./test-db": {
+      "types": "./src/test-db/index.ts",
+      "bun": "./src/test-db/index.ts",
+      "default": "./src/test-db/index.ts"
+    }
+  },
+  "scripts": {
+    "seed": "bun --env-file=../../.env src/seed.ts",
+    "work": "bun --env-file=../../.env src/work.ts",
+    "worker": "bun --env-file=../../.env src/worker.ts",
+    "typecheck": "tsgo -p tsconfig.json --noEmit --incremental"
+  },
+  "dependencies": {
+    "@scarn/core": "workspace:*",
+    "@scarn/sdk": "workspace:*",
+    "@testcontainers/postgresql": "^11.14.0",
+    "pg": "catalog:",
+    "testcontainers": "^11.14.0"
+  },
+  "devDependencies": {
+    "@types/pg": "catalog:",
+    "bun-types": "^1.4.4",
+    "zod": "catalog:"
+  }
+}

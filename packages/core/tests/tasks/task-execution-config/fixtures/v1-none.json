@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "runtimeJson": { "type": "none" },
+  "envJson": null,
+  "gitJson": { "mode": "none" },
+  "mcpJson": null,
+  "healthChecksJson": null
+}

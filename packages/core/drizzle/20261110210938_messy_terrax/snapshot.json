@@ -1,0 +1,358 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "445b9d6f-7558-4f2d-9797-9b8e4e140642",
+  "prevIds": [
+    "e1cb24a9-b273-4ac7-bef0-7d13695d3b3e"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "app",
+        "storage_sweeps"
+      ],
+      "writes": [
+        "s|tbl|app.storage_sweeps",
+        "n|tbl|app.storage_sweeps",
+        "e|tbl|app.storage_sweeps",
+        "n|rel|app.storage_sweeps",
+        "n|type|app.storage_sweeps",
+        "n|rel|app.storage_sweeps_pkey"
+      ],
+      "reads": [
+        "n|sch|app"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "task_runs",
+        "base_commit"
+      ],
+      "writes": [
+        "s|col|app.task_runs.base_commit",
+        "n|col|app.task_runs.base_commit",
+        "e|col|app.task_runs.base_commit"
+      ],
+      "reads": [
+        "n|tbl|app.task_runs",
+        "n|sch|app"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "task_runs",
+        "session_size_bytes"
+      ],
+      "writes": [
+        "s|col|app.task_runs.session_size_bytes",
+        "n|col|app.task_runs.session_size_bytes",
+        "e|col|app.task_runs.session_size_bytes"
+      ],
+      "reads": [
+        "n|tbl|app.task_runs",
+        "n|sch|app"
+      ]
+    },
+    {
+      "statementType": "alter_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "task_runs",
+        "work_item_id"
+      ],
+      "writes": [
+        "s|colprop|app.task_runs.work_item_id.notNull"
+      ],
+      "reads": [
+        "n|tbl|app.task_runs",
+        "n|sch|app",
+        "n|col|app.task_runs.work_item_id"
+      ],
+      "sqlHash": "460ffbeeca11a90c"
+    },
+    {
+      "statementType": "alter_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "tasks",
+        "work_item_id"
+      ],
+      "writes": [
+        "s|colprop|app.tasks.work_item_id.notNull"
+      ],
+      "reads": [
+        "n|tbl|app.tasks",
+        "n|sch|app",
+        "n|col|app.tasks.work_item_id"
+      ],
+      "sqlHash": "ce1529ca247c61a1"
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "app",
+        "storage_sweeps",
+        "storage_sweeps_not_before_idx"
+      ],
+      "writes": [
+        "s|idx|app.storage_sweeps_not_before_idx",
+        "n|idx|app.storage_sweeps_not_before_idx",
+        "e|idx|app.storage_sweeps_not_before_idx",
+        "n|rel|app.storage_sweeps_not_before_idx"
+      ],
+      "reads": [
+        "n|tbl|app.storage_sweeps",
+        "n|sch|app",
+        "n|col|app.storage_sweeps.not_before"
+      ]
+    },
+    {
+      "statementType": "add_check",
+      "statementTarget": [
+        "table",
+        "app",
+        "tasks"
+      ],
+      "writes": [
+        "s|ck|app.tasks.tasks_work_item_or_conversation_check",
+        "n|ck|app.tasks.tasks_work_item_or_conversation_check",
+        "e|ck|app.tasks.tasks_work_item_or_conversation_check",
+        "n|con|app.tasks.tasks_work_item_or_conversation_check"
+      ],
+      "reads": [
+        "n|tbl|app.tasks",
+        "n|sch|app",
+        "n|col|app.tasks.work_item_id",
+        "n|col|app.tasks.conversation_id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "name": "storage_sweeps",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "storage_sweeps",
+        "name": "id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "storage_sweeps",
+        "name": "project_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "storage_sweeps",
+        "name": "task_run_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "storage_sweeps",
+        "name": "not_before",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "storage_sweeps",
+        "name": "attempts",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "0",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "storage_sweeps",
+        "name": "last_error",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "storage_sweeps",
+        "name": "created_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "task_runs",
+        "name": "base_commit",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "task_runs",
+        "name": "session_size_bytes",
+        "type": "bigint",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "storage_sweeps",
+        "name": "storage_sweeps_not_before_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "not_before",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "storage_sweeps",
+        "name": "storage_sweeps_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "tasks",
+        "name": "tasks_work_item_or_conversation_check",
+        "value": "\"app\".\"tasks\".\"work_item_id\" IS NOT NULL OR \"app\".\"tasks\".\"conversation_id\" IS NOT NULL",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "alter",
+      "key": "columns\u0000[\"app\",\"task_runs\",\"work_item_id\"]",
+      "set": {
+        "notNull": false
+      }
+    },
+    {
+      "op": "alter",
+      "key": "columns\u0000[\"app\",\"tasks\",\"work_item_id\"]",
+      "set": {
+        "notNull": false
+      }
+    }
+  ]
+}

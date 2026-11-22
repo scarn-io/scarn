@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "contentJson": {
+    "description": "Frontend app with Datadog",
+    "runtime": {
+      "kind": "devcontainer",
+      "config": ".devcontainer/frontend/devcontainer.json"
+    },
+    "vars": [
+      {
+        "name": "LOG_LEVEL",
+        "source": "value",
+        "value": "debug",
+        "secret": false,
+        "applies": "both"
+      },
+      {
+        "name": "DD_API_KEY",
+        "source": "secret",
+        "secretName": "DD_API_KEY",
+        "applies": "agent"
+      },
+      {
+        "name": "DD_APPLICATION_KEY",
+        "source": "inherit",
+        "from": "DD_APPLICATION_KEY",
+        "secret": true,
+        "optional": false,
+        "applies": "agent"
+      }
+    ],
+    "connectors": ["datadog"]
+  }
+}

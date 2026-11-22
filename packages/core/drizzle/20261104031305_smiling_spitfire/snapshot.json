@@ -1,0 +1,1459 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "28ff745b-c7ab-45a4-aaa1-c4875031f13f",
+  "prevIds": [
+    "8bb7427a-0a14-4847-a53a-4aec21517508"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "automation_scope"
+      ],
+      "writes": [
+        "s|enum|public.automation_scope",
+        "n|enum|public.automation_scope",
+        "e|enum|public.automation_scope",
+        "n|type|public.automation_scope"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "work_item_activity_kind"
+      ],
+      "writes": [
+        "s|enum|public.work_item_activity_kind",
+        "n|enum|public.work_item_activity_kind",
+        "e|enum|public.work_item_activity_kind",
+        "n|type|public.work_item_activity_kind"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "alter_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "task_lifecycle_status"
+      ],
+      "writes": [
+        "s|enum|public.task_lifecycle_status"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "app",
+        "automation_versions"
+      ],
+      "writes": [
+        "s|tbl|app.automation_versions",
+        "n|tbl|app.automation_versions",
+        "e|tbl|app.automation_versions",
+        "n|rel|app.automation_versions",
+        "n|type|app.automation_versions",
+        "n|rel|app.automation_versions_pkey"
+      ],
+      "reads": [
+        "n|sch|app"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "app",
+        "automations"
+      ],
+      "writes": [
+        "s|tbl|app.automations",
+        "n|tbl|app.automations",
+        "e|tbl|app.automations",
+        "n|rel|app.automations",
+        "n|type|app.automations",
+        "n|rel|app.automations_pkey"
+      ],
+      "reads": [
+        "n|sch|app",
+        "n|enum|public.automation_scope"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "app",
+        "work_item_activity"
+      ],
+      "writes": [
+        "s|tbl|app.work_item_activity",
+        "n|tbl|app.work_item_activity",
+        "e|tbl|app.work_item_activity",
+        "n|rel|app.work_item_activity",
+        "n|type|app.work_item_activity",
+        "n|rel|app.work_item_activity_pkey"
+      ],
+      "reads": [
+        "n|sch|app",
+        "n|enum|public.work_item_activity_kind"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "app",
+        "work_item_automations"
+      ],
+      "writes": [
+        "s|tbl|app.work_item_automations",
+        "n|tbl|app.work_item_automations",
+        "e|tbl|app.work_item_automations",
+        "n|rel|app.work_item_automations",
+        "n|type|app.work_item_automations",
+        "n|rel|app.work_item_automations_work_item_id_automation_id_pk"
+      ],
+      "reads": [
+        "n|sch|app"
+      ]
+    },
+    {
+      "statementType": "drop_fk",
+      "statementTarget": [
+        "table",
+        "app",
+        "projects"
+      ],
+      "writes": [
+        "s|fk|app.projects.projects_default_pipeline_id_pipeline_graphs_id_fk",
+        "n|fk|app.projects.projects_default_pipeline_id_pipeline_graphs_id_fk",
+        "e|fk|app.projects.projects_default_pipeline_id_pipeline_graphs_id_fk",
+        "n|con|app.projects.projects_default_pipeline_id_pipeline_graphs_id_fk"
+      ],
+      "reads": [
+        "n|tbl|app.projects",
+        "n|sch|app",
+        "e|col|app.projects.default_pipeline_id"
+      ]
+    },
+    {
+      "statementType": "drop_check",
+      "statementTarget": [
+        "table",
+        "app",
+        "projects"
+      ],
+      "writes": [
+        "s|ck|app.projects.projects_default_assignment_single_target",
+        "n|ck|app.projects.projects_default_assignment_single_target",
+        "e|ck|app.projects.projects_default_assignment_single_target",
+        "n|con|app.projects.projects_default_assignment_single_target"
+      ],
+      "reads": [
+        "n|tbl|app.projects",
+        "n|sch|app",
+        "e|col|app.projects.default_pipeline_id",
+        "e|col|app.projects.default_step_definition_key"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "step_definitions",
+        "concurrency_json"
+      ],
+      "writes": [
+        "s|col|app.step_definitions.concurrency_json",
+        "n|col|app.step_definitions.concurrency_json",
+        "e|col|app.step_definitions.concurrency_json"
+      ],
+      "reads": [
+        "n|tbl|app.step_definitions",
+        "n|sch|app"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "work_items",
+        "labels"
+      ],
+      "writes": [
+        "s|col|app.work_items.labels",
+        "n|col|app.work_items.labels",
+        "e|col|app.work_items.labels"
+      ],
+      "reads": [
+        "n|tbl|app.work_items",
+        "n|sch|app"
+      ]
+    },
+    {
+      "statementType": "drop_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "projects",
+        "default_pipeline_assignment_json"
+      ],
+      "writes": [
+        "s|col|app.projects.default_pipeline_assignment_json",
+        "n|col|app.projects.default_pipeline_assignment_json",
+        "e|col|app.projects.default_pipeline_assignment_json"
+      ],
+      "reads": [
+        "n|tbl|app.projects",
+        "n|sch|app"
+      ]
+    },
+    {
+      "statementType": "drop_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "projects",
+        "default_pipeline_id"
+      ],
+      "writes": [
+        "s|col|app.projects.default_pipeline_id",
+        "n|col|app.projects.default_pipeline_id",
+        "e|col|app.projects.default_pipeline_id"
+      ],
+      "reads": [
+        "n|tbl|app.projects",
+        "n|sch|app"
+      ]
+    },
+    {
+      "statementType": "drop_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "projects",
+        "default_pipeline_event_type"
+      ],
+      "writes": [
+        "s|col|app.projects.default_pipeline_event_type",
+        "n|col|app.projects.default_pipeline_event_type",
+        "e|col|app.projects.default_pipeline_event_type"
+      ],
+      "reads": [
+        "n|tbl|app.projects",
+        "n|sch|app"
+      ]
+    },
+    {
+      "statementType": "drop_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "projects",
+        "default_pipeline_allowed_event_types"
+      ],
+      "writes": [
+        "s|col|app.projects.default_pipeline_allowed_event_types",
+        "n|col|app.projects.default_pipeline_allowed_event_types",
+        "e|col|app.projects.default_pipeline_allowed_event_types"
+      ],
+      "reads": [
+        "n|tbl|app.projects",
+        "n|sch|app"
+      ]
+    },
+    {
+      "statementType": "drop_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "projects",
+        "default_pipeline_rules_json"
+      ],
+      "writes": [
+        "s|col|app.projects.default_pipeline_rules_json",
+        "n|col|app.projects.default_pipeline_rules_json",
+        "e|col|app.projects.default_pipeline_rules_json"
+      ],
+      "reads": [
+        "n|tbl|app.projects",
+        "n|sch|app"
+      ]
+    },
+    {
+      "statementType": "drop_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "projects",
+        "default_pipeline_event_params_json"
+      ],
+      "writes": [
+        "s|col|app.projects.default_pipeline_event_params_json",
+        "n|col|app.projects.default_pipeline_event_params_json",
+        "e|col|app.projects.default_pipeline_event_params_json"
+      ],
+      "reads": [
+        "n|tbl|app.projects",
+        "n|sch|app"
+      ]
+    },
+    {
+      "statementType": "drop_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "projects",
+        "default_step_definition_key"
+      ],
+      "writes": [
+        "s|col|app.projects.default_step_definition_key",
+        "n|col|app.projects.default_step_definition_key",
+        "e|col|app.projects.default_step_definition_key"
+      ],
+      "reads": [
+        "n|tbl|app.projects",
+        "n|sch|app"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "app",
+        "automation_versions",
+        "automation_versions_automation_version_unique"
+      ],
+      "writes": [
+        "s|idx|app.automation_versions_automation_version_unique",
+        "n|idx|app.automation_versions_automation_version_unique",
+        "e|idx|app.automation_versions_automation_version_unique",
+        "n|rel|app.automation_versions_automation_version_unique"
+      ],
+      "reads": [
+        "n|tbl|app.automation_versions",
+        "n|sch|app",
+        "n|col|app.automation_versions.automation_id",
+        "n|col|app.automation_versions.version"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "app",
+        "automations",
+        "automations_project_key_unique"
+      ],
+      "writes": [
+        "s|idx|app.automations_project_key_unique",
+        "n|idx|app.automations_project_key_unique",
+        "e|idx|app.automations_project_key_unique",
+        "n|rel|app.automations_project_key_unique"
+      ],
+      "reads": [
+        "n|tbl|app.automations",
+        "n|sch|app",
+        "n|col|app.automations.project_id",
+        "n|col|app.automations.key"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "app",
+        "work_item_activity",
+        "work_item_activity_work_item_idx"
+      ],
+      "writes": [
+        "s|idx|app.work_item_activity_work_item_idx",
+        "n|idx|app.work_item_activity_work_item_idx",
+        "e|idx|app.work_item_activity_work_item_idx",
+        "n|rel|app.work_item_activity_work_item_idx"
+      ],
+      "reads": [
+        "n|tbl|app.work_item_activity",
+        "n|sch|app",
+        "n|col|app.work_item_activity.work_item_id",
+        "n|col|app.work_item_activity.created_at"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "app",
+        "work_item_automations",
+        "work_item_automations_automation_id_idx"
+      ],
+      "writes": [
+        "s|idx|app.work_item_automations_automation_id_idx",
+        "n|idx|app.work_item_automations_automation_id_idx",
+        "e|idx|app.work_item_automations_automation_id_idx",
+        "n|rel|app.work_item_automations_automation_id_idx"
+      ],
+      "reads": [
+        "n|tbl|app.work_item_automations",
+        "n|sch|app",
+        "n|col|app.work_item_automations.automation_id"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "app",
+        "work_items",
+        "work_items_labels_idx"
+      ],
+      "writes": [
+        "s|idx|app.work_items_labels_idx",
+        "n|idx|app.work_items_labels_idx",
+        "e|idx|app.work_items_labels_idx",
+        "n|rel|app.work_items_labels_idx"
+      ],
+      "reads": [
+        "n|tbl|app.work_items",
+        "n|sch|app",
+        "n|col|app.work_items.labels"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "app",
+        "automation_versions"
+      ],
+      "writes": [
+        "s|fk|app.automation_versions.automation_versions_automation_id_automations_id_fk",
+        "n|fk|app.automation_versions.automation_versions_automation_id_automations_id_fk",
+        "e|fk|app.automation_versions.automation_versions_automation_id_automations_id_fk",
+        "n|con|app.automation_versions.automation_versions_automation_id_automations_id_fk"
+      ],
+      "reads": [
+        "n|tbl|app.automation_versions",
+        "n|sch|app",
+        "n|tbl|app.automations",
+        "n|sch|app",
+        "n|col|app.automation_versions.automation_id",
+        "n|col|app.automations.id",
+        "e|uniqueness|app.automations.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "app",
+        "automations"
+      ],
+      "writes": [
+        "s|fk|app.automations.automations_project_id_projects_id_fk",
+        "n|fk|app.automations.automations_project_id_projects_id_fk",
+        "e|fk|app.automations.automations_project_id_projects_id_fk",
+        "n|con|app.automations.automations_project_id_projects_id_fk"
+      ],
+      "reads": [
+        "n|tbl|app.automations",
+        "n|sch|app",
+        "n|tbl|app.projects",
+        "n|sch|app",
+        "n|col|app.automations.project_id",
+        "n|col|app.projects.id",
+        "e|uniqueness|app.projects.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "app",
+        "work_item_activity"
+      ],
+      "writes": [
+        "s|fk|app.work_item_activity.work_item_activity_project_id_projects_id_fk",
+        "n|fk|app.work_item_activity.work_item_activity_project_id_projects_id_fk",
+        "e|fk|app.work_item_activity.work_item_activity_project_id_projects_id_fk",
+        "n|con|app.work_item_activity.work_item_activity_project_id_projects_id_fk"
+      ],
+      "reads": [
+        "n|tbl|app.work_item_activity",
+        "n|sch|app",
+        "n|tbl|app.projects",
+        "n|sch|app",
+        "n|col|app.work_item_activity.project_id",
+        "n|col|app.projects.id",
+        "e|uniqueness|app.projects.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "app",
+        "work_item_activity"
+      ],
+      "writes": [
+        "s|fk|app.work_item_activity.work_item_activity_work_item_id_work_items_id_fk",
+        "n|fk|app.work_item_activity.work_item_activity_work_item_id_work_items_id_fk",
+        "e|fk|app.work_item_activity.work_item_activity_work_item_id_work_items_id_fk",
+        "n|con|app.work_item_activity.work_item_activity_work_item_id_work_items_id_fk"
+      ],
+      "reads": [
+        "n|tbl|app.work_item_activity",
+        "n|sch|app",
+        "n|tbl|app.work_items",
+        "n|sch|app",
+        "n|col|app.work_item_activity.work_item_id",
+        "n|col|app.work_items.id",
+        "e|uniqueness|app.work_items.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "app",
+        "work_item_automations"
+      ],
+      "writes": [
+        "s|fk|app.work_item_automations.work_item_automations_work_item_id_work_items_id_fk",
+        "n|fk|app.work_item_automations.work_item_automations_work_item_id_work_items_id_fk",
+        "e|fk|app.work_item_automations.work_item_automations_work_item_id_work_items_id_fk",
+        "n|con|app.work_item_automations.work_item_automations_work_item_id_work_items_id_fk"
+      ],
+      "reads": [
+        "n|tbl|app.work_item_automations",
+        "n|sch|app",
+        "n|tbl|app.work_items",
+        "n|sch|app",
+        "n|col|app.work_item_automations.work_item_id",
+        "n|col|app.work_items.id",
+        "e|uniqueness|app.work_items.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "app",
+        "work_item_automations"
+      ],
+      "writes": [
+        "s|fk|app.work_item_automations.work_item_automations_automation_id_automations_id_fk",
+        "n|fk|app.work_item_automations.work_item_automations_automation_id_automations_id_fk",
+        "e|fk|app.work_item_automations.work_item_automations_automation_id_automations_id_fk",
+        "n|con|app.work_item_automations.work_item_automations_automation_id_automations_id_fk"
+      ],
+      "reads": [
+        "n|tbl|app.work_item_automations",
+        "n|sch|app",
+        "n|tbl|app.automations",
+        "n|sch|app",
+        "n|col|app.work_item_automations.automation_id",
+        "n|col|app.automations.id",
+        "e|uniqueness|app.automations.id"
+      ]
+    },
+    {
+      "statementType": "drop_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "default_pipeline_assignment_event_type"
+      ],
+      "writes": [
+        "s|enum|public.default_pipeline_assignment_event_type",
+        "n|enum|public.default_pipeline_assignment_event_type",
+        "e|enum|public.default_pipeline_assignment_event_type",
+        "n|type|public.default_pipeline_assignment_event_type"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "name": "automation_versions",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "name": "automations",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "name": "work_item_activity",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "name": "work_item_automations",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "automation_scope",
+        "values": [
+          "workItem",
+          "project"
+        ],
+        "entityType": "enums"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "work_item_activity_kind",
+        "values": [
+          "automation"
+        ],
+        "entityType": "enums"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "automation_versions",
+        "name": "id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "automation_versions",
+        "name": "automation_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "automation_versions",
+        "name": "version",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "automation_versions",
+        "name": "document",
+        "type": "jsonb",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "automation_versions",
+        "name": "schema_version",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "automation_versions",
+        "name": "content_hash",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "automation_versions",
+        "name": "published_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "automations",
+        "name": "id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "automations",
+        "name": "project_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "automations",
+        "name": "key",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "automations",
+        "name": "title",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "automations",
+        "name": "scope",
+        "type": "automation_scope",
+        "typeSchema": "public",
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "automations",
+        "name": "enabled",
+        "type": "boolean",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "false",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "automations",
+        "name": "created_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "automations",
+        "name": "updated_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "step_definitions",
+        "name": "concurrency_json",
+        "type": "jsonb",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "work_item_activity",
+        "name": "id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "work_item_activity",
+        "name": "project_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "work_item_activity",
+        "name": "work_item_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "work_item_activity",
+        "name": "kind",
+        "type": "work_item_activity_kind",
+        "typeSchema": "public",
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "work_item_activity",
+        "name": "message",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "work_item_activity",
+        "name": "created_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "work_item_automations",
+        "name": "work_item_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "work_item_automations",
+        "name": "automation_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "work_item_automations",
+        "name": "attached_by_user_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "work_item_automations",
+        "name": "attached_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "work_items",
+        "name": "labels",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 1,
+        "default": "'{}'",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "automation_versions",
+        "name": "automation_versions_automation_version_unique",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "automation_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "version",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": true,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "automations",
+        "name": "automations_project_key_unique",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "project_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "key",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": true,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "work_item_activity",
+        "name": "work_item_activity_work_item_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "work_item_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "created_at",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "work_item_automations",
+        "name": "work_item_automations_automation_id_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "automation_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "work_items",
+        "name": "work_items_labels_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "labels",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "gin",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "automation_versions",
+        "name": "automation_versions_automation_id_automations_id_fk",
+        "nameExplicit": false,
+        "columns": [
+          "automation_id"
+        ],
+        "schemaTo": "app",
+        "tableTo": "automations",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "automations",
+        "name": "automations_project_id_projects_id_fk",
+        "nameExplicit": false,
+        "columns": [
+          "project_id"
+        ],
+        "schemaTo": "app",
+        "tableTo": "projects",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "work_item_activity",
+        "name": "work_item_activity_project_id_projects_id_fk",
+        "nameExplicit": false,
+        "columns": [
+          "project_id"
+        ],
+        "schemaTo": "app",
+        "tableTo": "projects",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "work_item_activity",
+        "name": "work_item_activity_work_item_id_work_items_id_fk",
+        "nameExplicit": false,
+        "columns": [
+          "work_item_id"
+        ],
+        "schemaTo": "app",
+        "tableTo": "work_items",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "work_item_automations",
+        "name": "work_item_automations_work_item_id_work_items_id_fk",
+        "nameExplicit": false,
+        "columns": [
+          "work_item_id"
+        ],
+        "schemaTo": "app",
+        "tableTo": "work_items",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "work_item_automations",
+        "name": "work_item_automations_automation_id_automations_id_fk",
+        "nameExplicit": false,
+        "columns": [
+          "automation_id"
+        ],
+        "schemaTo": "app",
+        "tableTo": "automations",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "automation_versions",
+        "name": "automation_versions_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "automations",
+        "name": "automations_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "work_item_activity",
+        "name": "work_item_activity_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "work_item_automations",
+        "name": "work_item_automations_work_item_id_automation_id_pk",
+        "columns": [
+          "work_item_id",
+          "automation_id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "drop",
+      "key": "enums\u0000[\"public\",\"default_pipeline_assignment_event_type\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"app\",\"projects\",\"default_pipeline_assignment_json\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"app\",\"projects\",\"default_pipeline_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"app\",\"projects\",\"default_pipeline_event_type\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"app\",\"projects\",\"default_pipeline_allowed_event_types\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"app\",\"projects\",\"default_pipeline_rules_json\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"app\",\"projects\",\"default_pipeline_event_params_json\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"app\",\"projects\",\"default_step_definition_key\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"app\",\"projects\",\"projects_default_pipeline_id_pipeline_graphs_id_fk\"]"
+    },
+    {
+      "op": "drop",
+      "key": "checks\u0000[\"app\",\"projects\",\"projects_default_assignment_single_target\"]"
+    },
+    {
+      "op": "alter",
+      "key": "enums\u0000[\"public\",\"task_lifecycle_status\"]",
+      "set": {
+        "values": [
+          "waiting_for_concurrency_slot",
+          "waiting_for_work",
+          "queued",
+          "running",
+          "waiting_for_person",
+          "succeeded",
+          "failed",
+          "cancelled"
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,1 @@
+CREATE INDEX "work_item_comments_work_item_page_idx" ON "app"."work_item_comments" USING btree ("work_item_id","is_pinned" DESC NULLS LAST,"created_at" DESC NULLS LAST,"id" DESC NULLS LAST);

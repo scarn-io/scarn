@@ -1,0 +1,997 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "a65aab0e-d066-42a1-b71d-274725c597bf",
+  "prevIds": [
+    "6d46b205-cc6c-4274-8cf6-c4e2ec75e70a"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "secret_value_kind"
+      ],
+      "writes": [
+        "s|enum|public.secret_value_kind",
+        "n|enum|public.secret_value_kind",
+        "e|enum|public.secret_value_kind",
+        "n|type|public.secret_value_kind"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "alter_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "secret_kind"
+      ],
+      "writes": [
+        "s|enum|public.secret_kind"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "app",
+        "environment_versions"
+      ],
+      "writes": [
+        "s|tbl|app.environment_versions",
+        "n|tbl|app.environment_versions",
+        "e|tbl|app.environment_versions",
+        "n|rel|app.environment_versions",
+        "n|type|app.environment_versions",
+        "n|rel|app.environment_versions_pkey"
+      ],
+      "reads": [
+        "n|sch|app"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "app",
+        "environments"
+      ],
+      "writes": [
+        "s|tbl|app.environments",
+        "n|tbl|app.environments",
+        "e|tbl|app.environments",
+        "n|rel|app.environments",
+        "n|type|app.environments",
+        "n|rel|app.environments_pkey"
+      ],
+      "reads": [
+        "n|sch|app"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "secrets",
+        "owner_project_id"
+      ],
+      "writes": [
+        "s|col|app.secrets.owner_project_id",
+        "n|col|app.secrets.owner_project_id",
+        "e|col|app.secrets.owner_project_id"
+      ],
+      "reads": [
+        "n|tbl|app.secrets",
+        "n|sch|app"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "secrets",
+        "value_kind"
+      ],
+      "writes": [
+        "s|col|app.secrets.value_kind",
+        "n|col|app.secrets.value_kind",
+        "e|col|app.secrets.value_kind"
+      ],
+      "reads": [
+        "n|tbl|app.secrets",
+        "n|sch|app",
+        "n|enum|public.secret_value_kind"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "secrets",
+        "updated_by_user_id"
+      ],
+      "writes": [
+        "s|col|app.secrets.updated_by_user_id",
+        "n|col|app.secrets.updated_by_user_id",
+        "e|col|app.secrets.updated_by_user_id"
+      ],
+      "reads": [
+        "n|tbl|app.secrets",
+        "n|sch|app"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "task_execution_configs",
+        "environment_json"
+      ],
+      "writes": [
+        "s|col|app.task_execution_configs.environment_json",
+        "n|col|app.task_execution_configs.environment_json",
+        "e|col|app.task_execution_configs.environment_json"
+      ],
+      "reads": [
+        "n|tbl|app.task_execution_configs",
+        "n|sch|app"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "task_runs",
+        "environment_version_id"
+      ],
+      "writes": [
+        "s|col|app.task_runs.environment_version_id",
+        "n|col|app.task_runs.environment_version_id",
+        "e|col|app.task_runs.environment_version_id"
+      ],
+      "reads": [
+        "n|tbl|app.task_runs",
+        "n|sch|app"
+      ]
+    },
+    {
+      "statementType": "drop_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "task_execution_configs",
+        "runtime_json"
+      ],
+      "writes": [
+        "s|col|app.task_execution_configs.runtime_json",
+        "n|col|app.task_execution_configs.runtime_json",
+        "e|col|app.task_execution_configs.runtime_json"
+      ],
+      "reads": [
+        "n|tbl|app.task_execution_configs",
+        "n|sch|app"
+      ]
+    },
+    {
+      "statementType": "drop_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "task_execution_configs",
+        "env_json"
+      ],
+      "writes": [
+        "s|col|app.task_execution_configs.env_json",
+        "n|col|app.task_execution_configs.env_json",
+        "e|col|app.task_execution_configs.env_json"
+      ],
+      "reads": [
+        "n|tbl|app.task_execution_configs",
+        "n|sch|app"
+      ]
+    },
+    {
+      "statementType": "alter_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "secrets",
+        "owner_user_id"
+      ],
+      "writes": [
+        "s|colprop|app.secrets.owner_user_id.notNull"
+      ],
+      "reads": [
+        "n|tbl|app.secrets",
+        "n|sch|app",
+        "n|col|app.secrets.owner_user_id"
+      ],
+      "sqlHash": "6330258337e33d7c"
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "app",
+        "environment_versions",
+        "environment_versions_environment_version_unique"
+      ],
+      "writes": [
+        "s|idx|app.environment_versions_environment_version_unique",
+        "n|idx|app.environment_versions_environment_version_unique",
+        "e|idx|app.environment_versions_environment_version_unique",
+        "n|rel|app.environment_versions_environment_version_unique"
+      ],
+      "reads": [
+        "n|tbl|app.environment_versions",
+        "n|sch|app",
+        "n|col|app.environment_versions.environment_id",
+        "n|col|app.environment_versions.version"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "app",
+        "environments",
+        "environments_project_name_unique"
+      ],
+      "writes": [
+        "s|idx|app.environments_project_name_unique",
+        "n|idx|app.environments_project_name_unique",
+        "e|idx|app.environments_project_name_unique",
+        "n|rel|app.environments_project_name_unique"
+      ],
+      "reads": [
+        "n|tbl|app.environments",
+        "n|sch|app",
+        "n|col|app.environments.project_id",
+        "n|col|app.environments.name"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "app",
+        "secrets",
+        "secrets_owner_project_name_unique"
+      ],
+      "writes": [
+        "s|idx|app.secrets_owner_project_name_unique",
+        "n|idx|app.secrets_owner_project_name_unique",
+        "e|idx|app.secrets_owner_project_name_unique",
+        "n|rel|app.secrets_owner_project_name_unique"
+      ],
+      "reads": [
+        "n|tbl|app.secrets",
+        "n|sch|app",
+        "n|col|app.secrets.owner_project_id",
+        "n|col|app.secrets.name"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "app",
+        "environment_versions"
+      ],
+      "writes": [
+        "s|fk|app.environment_versions.environment_versions_environment_id_environments_id_fk",
+        "n|fk|app.environment_versions.environment_versions_environment_id_environments_id_fk",
+        "e|fk|app.environment_versions.environment_versions_environment_id_environments_id_fk",
+        "n|con|app.environment_versions.environment_versions_environment_id_environments_id_fk"
+      ],
+      "reads": [
+        "n|tbl|app.environment_versions",
+        "n|sch|app",
+        "n|tbl|app.environments",
+        "n|sch|app",
+        "n|col|app.environment_versions.environment_id",
+        "n|col|app.environments.id",
+        "e|uniqueness|app.environments.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "app",
+        "environments"
+      ],
+      "writes": [
+        "s|fk|app.environments.environments_project_id_projects_id_fk",
+        "n|fk|app.environments.environments_project_id_projects_id_fk",
+        "e|fk|app.environments.environments_project_id_projects_id_fk",
+        "n|con|app.environments.environments_project_id_projects_id_fk"
+      ],
+      "reads": [
+        "n|tbl|app.environments",
+        "n|sch|app",
+        "n|tbl|app.projects",
+        "n|sch|app",
+        "n|col|app.environments.project_id",
+        "n|col|app.projects.id",
+        "e|uniqueness|app.projects.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "app",
+        "secrets"
+      ],
+      "writes": [
+        "s|fk|app.secrets.secrets_owner_project_id_projects_id_fk",
+        "n|fk|app.secrets.secrets_owner_project_id_projects_id_fk",
+        "e|fk|app.secrets.secrets_owner_project_id_projects_id_fk",
+        "n|con|app.secrets.secrets_owner_project_id_projects_id_fk"
+      ],
+      "reads": [
+        "n|tbl|app.secrets",
+        "n|sch|app",
+        "n|tbl|app.projects",
+        "n|sch|app",
+        "n|col|app.secrets.owner_project_id",
+        "n|col|app.projects.id",
+        "e|uniqueness|app.projects.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "app",
+        "task_runs"
+      ],
+      "writes": [
+        "s|fk|app.task_runs.task_runs_environment_version_id_environment_versions_id_fk",
+        "n|fk|app.task_runs.task_runs_environment_version_id_environment_versions_id_fk",
+        "e|fk|app.task_runs.task_runs_environment_version_id_environment_versions_id_fk",
+        "n|con|app.task_runs.task_runs_environment_version_id_environment_versions_id_fk"
+      ],
+      "reads": [
+        "n|tbl|app.task_runs",
+        "n|sch|app",
+        "n|tbl|app.environment_versions",
+        "n|sch|app",
+        "n|col|app.task_runs.environment_version_id",
+        "n|col|app.environment_versions.id",
+        "e|uniqueness|app.environment_versions.id"
+      ]
+    },
+    {
+      "statementType": "add_check",
+      "statementTarget": [
+        "table",
+        "app",
+        "secrets"
+      ],
+      "writes": [
+        "s|ck|app.secrets.secrets_exactly_one_owner_check",
+        "n|ck|app.secrets.secrets_exactly_one_owner_check",
+        "e|ck|app.secrets.secrets_exactly_one_owner_check",
+        "n|con|app.secrets.secrets_exactly_one_owner_check"
+      ],
+      "reads": [
+        "n|tbl|app.secrets",
+        "n|sch|app",
+        "n|col|app.secrets.owner_user_id",
+        "n|col|app.secrets.owner_project_id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "name": "environment_versions",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "name": "environments",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "secret_value_kind",
+        "values": [
+          "static"
+        ],
+        "entityType": "enums"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "environment_versions",
+        "name": "id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "environment_versions",
+        "name": "environment_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "environment_versions",
+        "name": "version",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "environment_versions",
+        "name": "schema_version",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "environment_versions",
+        "name": "content_json",
+        "type": "jsonb",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "environment_versions",
+        "name": "content_hash",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "environment_versions",
+        "name": "created_by_user_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "environment_versions",
+        "name": "created_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "environments",
+        "name": "id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "environments",
+        "name": "project_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "environments",
+        "name": "name",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "environments",
+        "name": "latest_version",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "environments",
+        "name": "deleted_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "environments",
+        "name": "created_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "environments",
+        "name": "updated_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "secrets",
+        "name": "owner_project_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "secrets",
+        "name": "value_kind",
+        "type": "secret_value_kind",
+        "typeSchema": "public",
+        "notNull": true,
+        "dimensions": 0,
+        "default": "'static'",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "secrets",
+        "name": "updated_by_user_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "task_execution_configs",
+        "name": "environment_json",
+        "type": "jsonb",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "task_runs",
+        "name": "environment_version_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "environment_versions",
+        "name": "environment_versions_environment_version_unique",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "environment_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "version",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": true,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "environments",
+        "name": "environments_project_name_unique",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "project_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "name",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": true,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "secrets",
+        "name": "secrets_owner_project_name_unique",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "owner_project_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "name",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": true,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "environment_versions",
+        "name": "environment_versions_environment_id_environments_id_fk",
+        "nameExplicit": false,
+        "columns": [
+          "environment_id"
+        ],
+        "schemaTo": "app",
+        "tableTo": "environments",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "environments",
+        "name": "environments_project_id_projects_id_fk",
+        "nameExplicit": false,
+        "columns": [
+          "project_id"
+        ],
+        "schemaTo": "app",
+        "tableTo": "projects",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "secrets",
+        "name": "secrets_owner_project_id_projects_id_fk",
+        "nameExplicit": false,
+        "columns": [
+          "owner_project_id"
+        ],
+        "schemaTo": "app",
+        "tableTo": "projects",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "task_runs",
+        "name": "task_runs_environment_version_id_environment_versions_id_fk",
+        "nameExplicit": false,
+        "columns": [
+          "environment_version_id"
+        ],
+        "schemaTo": "app",
+        "tableTo": "environment_versions",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "SET NULL",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "environment_versions",
+        "name": "environment_versions_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "environments",
+        "name": "environments_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "environment_versions",
+        "name": "environment_versions_schema_version_check",
+        "value": "\"app\".\"environment_versions\".\"schema_version\" >= 1",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "secrets",
+        "name": "secrets_exactly_one_owner_check",
+        "value": "num_nonnulls(\"app\".\"secrets\".\"owner_user_id\", \"app\".\"secrets\".\"owner_project_id\") = 1",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"app\",\"task_execution_configs\",\"runtime_json\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"app\",\"task_execution_configs\",\"env_json\"]"
+    },
+    {
+      "op": "alter",
+      "key": "enums\u0000[\"public\",\"secret_kind\"]",
+      "set": {
+        "values": [
+          "jira_api_key",
+          "github_token",
+          "bitbucket_api_token",
+          "project_secret"
+        ]
+      }
+    },
+    {
+      "op": "alter",
+      "key": "columns\u0000[\"app\",\"secrets\",\"owner_user_id\"]",
+      "set": {
+        "notNull": false
+      }
+    }
+  ]
+}

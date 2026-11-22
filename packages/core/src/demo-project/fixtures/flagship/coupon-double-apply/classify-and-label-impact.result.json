@@ -1,0 +1,6 @@
+{
+  "routeKey": "browser-repro-investigate",
+  "reasoning": "The report describes a shopper-visible checkout failure: applying the same coupon code a second time shows an error banner after the coupon API returns HTTP 500, so it fits a browser flow investigation. Because this crashes part of checkout, a core user flow, for affected shoppers and the expected behavior is to handle the duplicate apply gracefully, the impact is high.",
+  "confidence": 0.99,
+  "impactLevel": "high"
+}

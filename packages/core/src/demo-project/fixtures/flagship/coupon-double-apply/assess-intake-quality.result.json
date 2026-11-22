@@ -1,0 +1,7 @@
+{
+  "restatedProblem": "Applying the same coupon code a second time during checkout causes the coupon API to return HTTP 500 and the checkout page shows an error banner. The expected behavior is to handle the duplicate apply gracefully by telling the shopper the coupon is already applied instead of crashing.",
+  "missingInformation": [],
+  "expectedBehaviorScore": 1,
+  "observedBehaviorScore": 1,
+  "$scarn_notifications_v1": []
+}

@@ -1,0 +1,5 @@
+# Local-only values. Copy to .dev.vars for `wrangler dev`.
+WORK_SIGNAL_NOTIFY_SECRET=local-notify-secret
+WORK_SIGNAL_TOKEN_SECRET=local-token-secret
+LOG_FEED_INTERNAL_SECRET=local-log-feed-internal-secret
+LOG_FEED_TOKEN_SECRET=local-log-feed-token-secret

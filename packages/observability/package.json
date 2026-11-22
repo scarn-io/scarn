@@ -1,6 +1,7 @@
 {
   "name": "@scarn/observability",
   "private": true,
+  "license": "Apache-2.0",
   "type": "module",
   "exports": {
     "./analytics/browser": {

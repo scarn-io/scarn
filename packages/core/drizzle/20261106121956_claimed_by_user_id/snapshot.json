@@ -1,0 +1,47 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "991be451-c5ef-4835-a0d6-219d10f70fee",
+  "prevIds": [
+    "00a14b79-bce4-41b6-bfa1-07a558e34428"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "task_runs",
+        "claimed_by_user_id"
+      ],
+      "writes": [
+        "s|col|app.task_runs.claimed_by_user_id",
+        "n|col|app.task_runs.claimed_by_user_id",
+        "e|col|app.task_runs.claimed_by_user_id"
+      ],
+      "reads": [
+        "n|tbl|app.task_runs",
+        "n|sch|app"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "task_runs",
+        "name": "claimed_by_user_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    }
+  ]
+}

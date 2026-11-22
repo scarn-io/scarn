@@ -1,0 +1,1 @@
+ALTER TABLE "app"."tasks" ADD COLUMN "environment_selection_json" jsonb;

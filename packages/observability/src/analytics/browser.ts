@@ -9,6 +9,8 @@ export type BrowserInitOptions = {
   key: string;
   host: string;
   uiHost?: string;
+  /** Parent domain the share-link handoff cookie is scoped to, if any. */
+  cookieDomain?: string;
 };
 
 let initialized = false;
@@ -50,7 +52,11 @@ export function init(options: BrowserInitOptions): boolean {
       : {}),
   });
   if (handoff.present) {
-    document.cookie = buildBootstrapCookieDeletion(window.location);
+    document.cookie = buildBootstrapCookieDeletion({
+      hostname: window.location.hostname,
+      protocol: window.location.protocol,
+      cookieDomain: options.cookieDomain,
+    });
   }
   initialized = true;
   return true;

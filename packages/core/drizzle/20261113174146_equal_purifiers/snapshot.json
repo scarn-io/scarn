@@ -1,0 +1,47 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "6d46b205-cc6c-4274-8cf6-c4e2ec75e70a",
+  "prevIds": [
+    "570c2d35-c1c6-4d37-ada3-9835594352f0"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "usage_meters",
+        "signal_tokens"
+      ],
+      "writes": [
+        "s|col|app.usage_meters.signal_tokens",
+        "n|col|app.usage_meters.signal_tokens",
+        "e|col|app.usage_meters.signal_tokens"
+      ],
+      "reads": [
+        "n|tbl|app.usage_meters",
+        "n|sch|app"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "usage_meters",
+        "name": "signal_tokens",
+        "type": "bigint",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "0",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    }
+  ]
+}

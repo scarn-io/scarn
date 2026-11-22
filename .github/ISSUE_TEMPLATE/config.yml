@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/scarn-io/scarn/blob/main/SECURITY.md
+    about: Please report vulnerabilities privately, as described in SECURITY.md.
+  - name: Questions and documentation
+    url: https://scarn-io.github.io/scarn/
+    about: Setup, self-hosting and usage questions are often answered in the docs.

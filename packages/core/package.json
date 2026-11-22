@@ -1,0 +1,65 @@
+{
+  "name": "@scarn/core",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "bun": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./lib/db": {
+      "types": "./src/lib/db/index.ts",
+      "bun": "./src/lib/db/index.ts",
+      "default": "./src/lib/db/index.ts"
+    },
+    "./*": {
+      "types": "./src/*.ts",
+      "bun": "./src/*.ts",
+      "default": "./src/*.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsgo -p tsconfig.json --noEmit",
+    "declarations": "tsgo -p tsconfig.build.json",
+    "typecheck": "tsgo -p tsconfig.test.json --noEmit --incremental --checkers 1",
+    "test": "bun test --parallel --no-isolate",
+    "test:unit": "bun test $(find tests -type d -name unit | sort)",
+    "test:integration": "for dir in $(find tests -type d -name integration | sort); do bun test --preload ./tests/test-setup.ts \"$dir\" || exit 1; done",
+    "db:generate": "bun --env-file=../../.env drizzle-kit generate --config=drizzle.config.ts",
+    "db:migrate": "bun --env-file=../../.env drizzle-kit migrate --config=drizzle.config.ts",
+    "db:push": "bun --env-file=../../.env drizzle-kit push --config=drizzle.config.ts"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.658.0",
+    "@aws-sdk/s3-request-presigner": "^3.658.0",
+    "@modelcontextprotocol/sdk": "1.30.0",
+    "@scarn/api": "workspace:*",
+    "@scarn/identity": "workspace:*",
+    "@scarn/observability": "workspace:*",
+    "@scarn/sdk": "catalog:",
+    "@scarn/shared-core": "workspace:*",
+    "ajv": "^8.17.1",
+    "drizzle-orm": "catalog:",
+    "mdast-util-from-markdown": "^2.0.3",
+    "mdast-util-gfm": "^3.1.0",
+    "micromark-extension-gfm": "^3.0.0",
+    "pg": "catalog:",
+    "uuid": "^13.0.0",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@elysia/eden": "2.0.0-rc.1",
+    "@scarn/local-dev": "workspace:*",
+    "@scarn/worker": "workspace:*",
+    "@testcontainers/postgresql": "^11.14.0",
+    "@types/mdast": "^4.0.4",
+    "@types/pg": "catalog:",
+    "bun-types": "^1.4.4",
+    "dotenv": "^17.4.2",
+    "drizzle-kit": "catalog:",
+    "elysia": "2.0.0-rc.3",
+    "testcontainers": "^11.14.0"
+  }
+}

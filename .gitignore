@@ -1,10 +1,20 @@
-node_modules
-dist
-.env
-.env.local
-*.local
+.DS_Store
+node_modules/
+.next/
+.astro/
+dist/
+coverage/
+*.tsbuildinfo
+.eslintcache
+
+.env*
+!.env.example
+!.env.selfhost.example
+
+.vercel
+playwright-report/
+.playwright-mcp/
+test-results/
 
 # build artifacts
-*.tsbuildinfo
 packages/sdks/js/.artifacts/
-

@@ -1,0 +1,11 @@
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+
+exports[`task worker context steering: continuing a yielded run a continuation of a yielded run continues from its branch with no findings 1`] = `
+"This run continues the previous run of this step (status: yielded).
+It handed the conversation to a person, so it has no findings.
+Its full transcript: .scarn/previous-run/transcript.txt. Its final message is at the end. If the file is missing, the transcript was unavailable.
+Search it for what you need; don't read it whole.
+Your work branch starts from that run's branch, scarn/propose-fix-1.
+Start your final message with one line saying what changed since the previous run.
+"
+`;

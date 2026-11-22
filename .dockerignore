@@ -1,0 +1,31 @@
+# Build context for apps/api/Dockerfile and apps/next/Dockerfile (context = repo root).
+.git
+.github
+.agent-notes
+.devcontainer
+.opencode
+.vercel
+.DS_Store
+**/node_modules
+**/.next
+**/.astro
+**/.turbo
+**/dist
+**/coverage
+**/*.tsbuildinfo
+**/.eslintcache
+**/playwright-report
+**/test-results
+.playwright-mcp
+
+# Secrets and local config. Images get configuration at runtime.
+**/.env
+**/.env.*
+!**/.env.example
+**/.dev.vars
+
+# Private infrastructure and local tooling never ship in an image.
+infra
+docker-compose*.yml
+public-overlay
+docs

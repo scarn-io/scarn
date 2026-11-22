@@ -1,0 +1,24 @@
+diff --git a/dist/openapi.js b/dist/openapi.js
+index c347589caec845925849168f33483a5ddd045c13..a52ccfbff3efef9dd42caa6ba001749ad670020b 100644
+--- a/dist/openapi.js
++++ b/dist/openapi.js
+@@ -402,6 +402,7 @@ const normalizeNullableSchemaForOAS31 = (schema) => {
+ 		delete normalized[key];
+ 		Object.assign(normalized, nonNull);
+ 		normalized.type = [nonNullType, "null"];
++		if (Array.isArray(normalized.enum) && !normalized.enum.includes(null)) normalized.enum = [...normalized.enum, null];
+ 	};
+ 	rewriteNullUnion("anyOf");
+ 	rewriteNullUnion("oneOf");
+diff --git a/dist/openapi.mjs b/dist/openapi.mjs
+index 7a7072f19bb453d3f4627e1a54eed937c00322ff..a26d19bf589ae253c1dd6f8f5e5807f6502c839c 100644
+--- a/dist/openapi.mjs
++++ b/dist/openapi.mjs
+@@ -401,6 +401,7 @@ const normalizeNullableSchemaForOAS31 = (schema) => {
+ 		delete normalized[key];
+ 		Object.assign(normalized, nonNull);
+ 		normalized.type = [nonNullType, "null"];
++		if (Array.isArray(normalized.enum) && !normalized.enum.includes(null)) normalized.enum = [...normalized.enum, null];
+ 	};
+ 	rewriteNullUnion("anyOf");
+ 	rewriteNullUnion("oneOf");

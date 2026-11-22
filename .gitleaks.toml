@@ -1,0 +1,36 @@
+title = "scarn gitleaks config"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Dependencies, build output and lockfiles"
+paths = [
+  '''(^|/)node_modules/''',
+  '''(^|/)\.next/''',
+  '''(^|/)dist/''',
+  '''(^|/)bun\.lock$''',
+]
+
+[[allowlists]]
+description = "Fake credentials used as fixtures in test files"
+condition = "AND"
+paths = [
+  '''(^|/)tests?/.*\.test\.tsx?$''',
+  '''\.test\.tsx?$''',
+]
+regexes = [
+  '''^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$''',
+  '''^test-[a-z]+-secret-abcdef0123456789$''',
+  '''^ghp_(pasted_1234|rejected_9876|0123456789abcdefghijABCDEFGHIJ012345)$''',
+  '''^ghs_relay(Integration)?Secret[0-9]+$''',
+  '''^glpat-abcdefghij1234567890$''',
+  '''^sk_live_abc123$''',
+  '''^abcd1234efgh5678$''',
+]
+
+[[allowlists]]
+description = "Git commit SHAs in recorded demo-project run logs"
+condition = "AND"
+paths = ['''(^|/)demo-project/fixtures/.*\.jsonl$''']
+regexes = ['''^[0-9a-f]{40}$''']

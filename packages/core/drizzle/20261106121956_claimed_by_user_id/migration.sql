@@ -1,0 +1,1 @@
+ALTER TABLE "app"."task_runs" ADD COLUMN "claimed_by_user_id" uuid;

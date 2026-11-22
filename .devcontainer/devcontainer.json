@@ -1,6 +1,26 @@
 {
   "name": "scarn",
-  "image": "mcr.microsoft.com/devcontainers/typescript-node:24",
-  "remoteUser": "node",
-  "postCreateCommand": "curl -fsSL https://bun.sh/install | BUN_INSTALL_VERSION=1.3.12 bash && export PATH=\"$HOME/.bun/bin:$PATH\" && bun install --frozen-lockfile"
+  // Bun, Node (for native install scripts) and Playwright Chromium are baked
+  // into the image. Rebuild the container when you bump the Playwright
+  // version in the Dockerfile.
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "features": {
+    // A `docker` CLI wired to the host daemon, for the testcontainers-based
+    // integration tests that start their own Postgres.
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
+  },
+  // Makes `host.docker.internal` resolve on native Linux Docker Engine too.
+  "runArgs": ["--add-host=host.docker.internal:host-gateway"],
+  "mounts": [
+    "type=volume,source=scarn-bun-cache,target=/home/vscode/.bun/install/cache"
+  ],
+  "remoteEnv": {
+    "PLAYWRIGHT_BROWSERS_PATH": "/usr/local/ms-playwright"
+  },
+  "containerEnv": {
+    "BUN_INSTALL_CACHE_DIR": "/home/vscode/.bun/install/cache"
+  },
+  "postCreateCommand": "bun install --frozen-lockfile"
 }
