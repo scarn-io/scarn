@@ -80,6 +80,7 @@ describe("POST /projects/:projectId/integrations/:integrationId/sync with projec
     await h.publish(
       projectAutomation(key, [
         {
+          key: "work-item-ready",
           event: "workItem.ready",
           next: {
             routes: [{ kind: "pipeline", to: pipeline.key, on: "workItem" }],
@@ -146,6 +147,7 @@ describe("POST /projects/:projectId/integrations/:integrationId/sync with projec
       await h.publish(
         workItemAutomation(wayfinderKey, [
           {
+            key: "self-attached",
             event: "self.attached",
             next: { routes: [{ kind: "step", to: plan.key, on: "workItem" }] },
           },
@@ -154,6 +156,7 @@ describe("POST /projects/:projectId/integrations/:integrationId/sync with projec
       await h.publish(
         projectAutomation(routerKey, [
           {
+            key: "work-item-label-added",
             event: "workItem.label.added",
             next: {
               routes: [

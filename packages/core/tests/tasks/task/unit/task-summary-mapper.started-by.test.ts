@@ -10,9 +10,18 @@ import type { TaskSummaryRecord } from "@/tasks/task/application/task-summary-re
 const viewerUserId = createUuidV7();
 const userId = createUuidV7();
 const automationId = createUuidV7();
+const scheduleId = createUuidV7();
 
 const record = (
-  starter: Pick<TaskSummaryRecord, "startedByUserId" | "startedByAutomation">,
+  starter: Partial<
+    Pick<
+      TaskSummaryRecord,
+      | "startedByUserId"
+      | "startedByAutomation"
+      | "startedBySchedule"
+      | "scheduledFor"
+    >
+  >,
 ): TaskSummaryRecord => ({
   id: createUuidV7(),
   projectId: createUuidV7(),
@@ -20,6 +29,10 @@ const record = (
   name: null,
   status: "queued",
   prompt: "Do the thing.",
+  startedByUserId: null,
+  startedByAutomation: null,
+  startedBySchedule: null,
+  scheduledFor: null,
   ...starter,
   conversationId: null,
   waitingOnUserIds: [],
@@ -49,20 +62,15 @@ const usernameReader: UsernameReader = {
     ),
 };
 
+const automation = { id: automationId, key: "triage-bugs", title: null };
+
 describe("task summary startedBy", () => {
   test("names the user, the automation, or the system", async () => {
     const summaries = await taskSummariesToContracts(
       [
-        record({ startedByUserId: userId, startedByAutomation: null }),
-        record({
-          startedByUserId: null,
-          startedByAutomation: {
-            id: automationId,
-            key: "triage-bugs",
-            title: null,
-          },
-        }),
-        record({ startedByUserId: null, startedByAutomation: null }),
+        record({ startedByUserId: userId }),
+        record({ startedByAutomation: automation }),
+        record({}),
       ],
       viewerUserId,
       usernameReader,
@@ -73,5 +81,40 @@ describe("task summary startedBy", () => {
       { kind: "automation", automationId, key: "triage-bugs", title: null },
       { kind: "system" },
     ]);
+  });
+
+  test("names the schedule rule, with the person for Run now", async () => {
+    const schedule = { id: scheduleId, key: "nightly", removed: true };
+    const scheduledFor = new Date("2026-11-01T02:00:00.000Z");
+    const summaries = await taskSummariesToContracts(
+      [
+        record({
+          startedByAutomation: automation,
+          startedBySchedule: schedule,
+          scheduledFor,
+        }),
+        record({
+          startedByUserId: userId,
+          startedByAutomation: automation,
+          startedBySchedule: schedule,
+          scheduledFor,
+        }),
+      ],
+      viewerUserId,
+      usernameReader,
+    );
+
+    const base = {
+      kind: "schedule" as const,
+      automationId,
+      key: "triage-bugs",
+      title: null,
+      schedule,
+    };
+    expect(summaries.map((summary) => summary.startedBy)).toEqual([
+      { ...base, user: null },
+      { ...base, user: { userId, username: "alice" } },
+    ]);
+    expect(summaries[0]?.scheduledFor).toBe("2026-11-01T02:00:00.000Z");
   });
 });

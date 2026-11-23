@@ -170,8 +170,13 @@ export default defineAutomation({
   title: "Triage children",
   scope: "workItem",
   rules: [
-    onEvent({ event: "self.attached", to: (r) => ticket().on(r.workItem) }),
     onEvent({
+      key: "ticket-on-attach",
+      event: "self.attached",
+      to: (r) => ticket().on(r.workItem),
+    }),
+    onEvent({
+      key: "classify-bugs",
       event: "child.ready",
       routes: [
         {
@@ -193,10 +198,12 @@ const EXPECTED_AUTOMATION_JSON = {
   scope: "workItem",
   rules: [
     {
+      key: "ticket-on-attach",
       event: "self.attached",
       next: { routes: [{ kind: "step", to: "ticket", on: "workItem" }] },
     },
     {
+      key: "classify-bugs",
       event: "child.ready",
       next: {
         routes: [
@@ -219,7 +226,7 @@ const AUTOMATION_ERROR = `import { defineAutomation, onEvent, skip } from "@scar
 export default defineAutomation({
   key: "wrong-scope",
   scope: "project",
-  rules: [onEvent({ event: "child.ready", to: skip }) as never],
+  rules: [onEvent({ key: "skip-children", event: "child.ready", to: skip }) as never],
 });
 `;
 

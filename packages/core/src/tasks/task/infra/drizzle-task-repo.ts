@@ -1,4 +1,13 @@
-import { and, asc, desc, eq, inArray, notInArray, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  inArray,
+  isNotNull,
+  notInArray,
+  sql,
+} from "drizzle-orm";
 import { getDb } from "@scarn/core/lib/db";
 import type { DbExecutor } from "@scarn/core/lib/db/db-executor";
 import { stepDefinitions, taskRuns, tasks } from "@scarn/core/lib/db/schema";
@@ -12,7 +21,11 @@ import type {
   TaskEntrypoint,
   TaskToolCall,
 } from "@scarn/core/tasks/task-run/domain/task-run-entity";
-import type { ConcurrencyGroupKey, TaskRepo } from "../application/task-repo";
+import {
+  isScheduleConcurrencyGroup,
+  type ConcurrencyGroupKey,
+  type TaskRepo,
+} from "../application/task-repo";
 import { TaskEntity, type TaskStatus } from "../domain/task-entity";
 import type { Grant } from "../domain/grants";
 import {
@@ -79,6 +92,8 @@ const toEntity = (row: TaskRow): TaskEntity =>
     startedByAutomationId: optionalUuid(row.startedByAutomationId),
     previousTaskId: optionalUuid(row.previousTaskId),
     conversationId: optionalUuid(row.conversationId),
+    startedByScheduleId: optionalUuid(row.startedByScheduleId),
+    scheduledFor: row.scheduledFor,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   });
@@ -139,11 +154,33 @@ export class DrizzleTaskRepo implements TaskRepo {
     return toEntity(row);
   }
 
+  async findLatestSucceededScheduledFor(
+    scheduleId: UuidV7,
+    dbExecutor?: DbExecutor,
+  ) {
+    const db = dbExecutor ?? getDb();
+    const [row] = await db
+      .select({ scheduledFor: tasks.scheduledFor })
+      .from(tasks)
+      .where(
+        and(
+          eq(tasks.startedByScheduleId, scheduleId),
+          eq(tasks.status, "succeeded"),
+          isNotNull(tasks.scheduledFor),
+        ),
+      )
+      .orderBy(desc(tasks.scheduledFor))
+      .limit(1);
+    return row?.scheduledFor ?? null;
+  }
+
   async lockConcurrencyGroup(
     group: ConcurrencyGroupKey,
     dbExecutor: DbExecutor,
   ) {
-    const key = `task-concurrency:${group.projectId}:${group.workItemId}:${group.stepKey}`;
+    const key = isScheduleConcurrencyGroup(group)
+      ? `task-concurrency-schedule:${group.projectId}:${group.scheduleId}`
+      : `task-concurrency:${group.projectId}:${group.workItemId}:${group.stepKey}`;
     await dbExecutor.execute(
       sql`select pg_advisory_xact_lock(hashtextextended(${key}, 0))`,
     );
@@ -160,6 +197,20 @@ export class DrizzleTaskRepo implements TaskRepo {
     group: ConcurrencyGroupKey,
     dbExecutor: DbExecutor,
   ) {
+    if (isScheduleConcurrencyGroup(group)) {
+      const rows = await dbExecutor
+        .select()
+        .from(tasks)
+        .where(
+          and(
+            eq(tasks.projectId, group.projectId),
+            eq(tasks.startedByScheduleId, group.scheduleId),
+            notInArray(tasks.status, [...ENDED_STATUSES]),
+          ),
+        )
+        .orderBy(asc(tasks.createdAt), asc(tasks.id));
+      return rows.map(toEntity);
+    }
     const rows = await dbExecutor
       .select({ task: tasks })
       .from(tasks)
@@ -183,23 +234,30 @@ export class DrizzleTaskRepo implements TaskRepo {
     group: ConcurrencyGroupKey,
     dbExecutor: DbExecutor,
   ) {
-    const stepVersionIds = dbExecutor
-      .select({ id: stepDefinitions.id })
-      .from(stepDefinitions)
-      .where(
-        and(
-          eq(stepDefinitions.projectId, group.projectId),
-          eq(stepDefinitions.key, group.stepKey),
-        ),
-      );
+    const membership = isScheduleConcurrencyGroup(group)
+      ? eq(tasks.startedByScheduleId, group.scheduleId)
+      : and(
+          eq(tasks.workItemId, group.workItemId),
+          inArray(
+            tasks.stepDefinitionId,
+            dbExecutor
+              .select({ id: stepDefinitions.id })
+              .from(stepDefinitions)
+              .where(
+                and(
+                  eq(stepDefinitions.projectId, group.projectId),
+                  eq(stepDefinitions.key, group.stepKey),
+                ),
+              ),
+          ),
+        );
     const rows = await dbExecutor
       .select()
       .from(tasks)
       .where(
         and(
           eq(tasks.projectId, group.projectId),
-          eq(tasks.workItemId, group.workItemId),
-          inArray(tasks.stepDefinitionId, stepVersionIds),
+          membership,
           eq(tasks.status, "waiting_for_concurrency_slot"),
         ),
       )

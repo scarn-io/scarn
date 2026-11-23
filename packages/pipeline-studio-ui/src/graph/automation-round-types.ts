@@ -7,12 +7,28 @@ import type {
 
 type AutomationMatchMode = NonNullable<AutomationNext["match"]>;
 
+type WorkItemEvent = Exclude<AutomationEvent, "schedule">;
+
 /** One rule, shown with its event as one node. Two rules on one event stay apart. */
 export type RoundJunctionNode = {
   id: string;
   kind: "junction";
-  label: AutomationEvent;
-  event: AutomationEvent;
+  label: WorkItemEvent;
+  event: WorkItemEvent;
+  ruleKey: string;
+  ruleIndex: number;
+  match: AutomationMatchMode;
+};
+
+/** A `schedule` rule: its cron (and timezone when not UTC) starting steps for no work item. */
+export type RoundTriggerNode = {
+  id: string;
+  kind: "trigger";
+  /** `cron`, or `cron timezone` when the timezone isn't UTC. */
+  label: string;
+  cron: string;
+  timezone: string;
+  ruleKey: string;
   ruleIndex: number;
   match: AutomationMatchMode;
 };
@@ -22,7 +38,8 @@ export type RoundStepNode = {
   kind: "step";
   label: string;
   stepKey: string;
-  on: AutomationSubject;
+  /** `null` for a schedule rule's step, which runs for no work item. */
+  on: AutomationSubject | null;
 };
 
 export type RoundPipelineNode = {
@@ -59,6 +76,7 @@ export type RoundEndNode = {
 
 export type RoundNode =
   | RoundJunctionNode
+  | RoundTriggerNode
   | RoundStepNode
   | RoundPipelineNode
   | RoundAttachNode
@@ -67,7 +85,7 @@ export type RoundNode =
 
 export type RoundNodeKind = RoundNode["kind"];
 
-/** An edge the document declares, from a junction to a target. The engine follows it. */
+/** An edge the document declares, from a junction or trigger to a target. The engine follows it. */
 export type RoundRouteEdge = {
   id: string;
   kind: "route";
@@ -102,7 +120,7 @@ export type RoundEdgeKind = RoundEdge["kind"];
 
 export type AutomationRoundModel = {
   automationKey: string;
-  /** Junctions in rule order, then targets in document order, then person and end nodes. */
+  /** Junctions and triggers in rule order, then targets in document order, then person and end nodes. */
   nodes: RoundNode[];
   edges: RoundEdge[];
 };
@@ -111,8 +129,10 @@ export const END_NODE_ID = "end:closed";
 
 export const junctionNodeId = (ruleIndex: number) =>
   `junction:${String(ruleIndex)}`;
-export const stepNodeId = (key: string, on: AutomationSubject) =>
-  `step:${key}@${on}`;
+export const triggerNodeId = (ruleIndex: number) =>
+  `trigger:${String(ruleIndex)}`;
+export const stepNodeId = (key: string, on: AutomationSubject | null) =>
+  `step:${key}@${on ?? "project"}`;
 export const pipelineNodeId = (key: string, on: AutomationSubject) =>
   `pipeline:${key}@${on}`;
 export const attachNodeId = (automation: string) => `attach:${automation}`;

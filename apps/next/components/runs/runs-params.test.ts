@@ -12,6 +12,7 @@ import {
 const pipelineId = parseUuidV7("019e9a92-b432-73e8-9341-3519156fa600");
 const automationId = parseUuidV7("019e9a92-b432-73e8-9341-3519156fa601");
 const itemId = parseUuidV7("019e9a92-b432-73e8-9341-3519156fa602");
+const scheduleId = parseUuidV7("019e9a92-b432-73e8-9341-3519156fa603");
 
 const parse = (search: string) => parseRunsNav(new URLSearchParams(search));
 
@@ -54,6 +55,21 @@ describe("parseRunsNav", () => {
       whatRan: "task",
       by: "me",
     });
+  });
+
+  test("reads a schedule's history and the Scheduled facet", () => {
+    const nav = parse(`status=all&by=scheduled&schedule=${scheduleId}`);
+    expect(nav).toEqual({
+      status: "all",
+      by: "scheduled",
+      schedule: scheduleId,
+    });
+    expect(runsQueryOf(nav)).toEqual({
+      status: "all",
+      startedBy: "scheduled",
+      scheduleId,
+    });
+    expect(parse("schedule=nope")).toEqual({ status: "open" });
   });
 
   test("an old `whatRan=chat` link reads as `task`", () => {

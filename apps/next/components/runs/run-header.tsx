@@ -3,7 +3,7 @@
 /**
  * The header every run's page shares: a breadcrumb back to the Runs list
  * and what ran, the run's title with its status pill and outcome, and a
- * caption (parent › key · steps so far · places at once · who started it ·
+ * caption (parent › key, or a scheduled Task's schedule · steps so far · places at once · who started it ·
  * when it last changed). It reads the run's Runs-list row, so a run never
  * looks different here and in the list.
  */
@@ -13,7 +13,16 @@ import Link from "next/link";
 import { Fragment, type ReactNode } from "react";
 import { formatDateTime } from "@/components/executions/format-datetime";
 import { useProjectPath } from "@/components/project-route-context";
-import { KindIcon, compactAge, startedByText } from "./run-row-parts";
+import {
+  KindIcon,
+  RemovedBadge,
+  ScheduleIcon,
+  compactAge,
+  runNowByText,
+  scheduleLabel,
+  startedByText,
+  useScheduleHistoryHref,
+} from "./run-row-parts";
 import { OutcomeChip, StatusPill } from "./run-status";
 import type { ProjectRun } from "./runs-api";
 import { useRunsBackTarget } from "./runs-back-target";
@@ -44,9 +53,11 @@ export function updatedText(value: string, now: number = Date.now()): string {
 function captionParts(
   props: RunHeaderProps & { run: ProjectRun },
   workItemHref: (id: string) => string,
+  scheduleHref: (scheduleId: string) => string,
 ): ReactNode[] {
   const { run, viewerUserId, stepsSoFar, placesAtOnce } = props;
   const parts: ReactNode[] = [];
+  const { startedBy } = run;
   if (run.workItem) {
     const { parent } = run.workItem;
     parts.push(
@@ -68,6 +79,20 @@ function captionParts(
       </Box>,
     );
   }
+  if (startedBy.kind === "schedule") {
+    parts.push(
+      <Box component="span" key="schedule" data-testid="run-header-schedule">
+        <ScheduleIcon title="Started on a schedule" />
+        <CrumbLink
+          href={scheduleHref(startedBy.schedule.id)}
+          title="This schedule's runs"
+        >
+          {scheduleLabel(startedBy)}
+        </CrumbLink>
+        {startedBy.schedule.removed ? <RemovedBadge /> : null}
+      </Box>,
+    );
+  }
   if (stepsSoFar !== undefined) {
     parts.push(
       `${String(stepsSoFar)} ${stepsSoFar === 1 ? "step" : "steps"} so far`,
@@ -76,7 +101,11 @@ function captionParts(
   if (placesAtOnce !== undefined && placesAtOnce > 1) {
     parts.push(`in ${String(placesAtOnce)} places at once`);
   }
-  parts.push(`started by ${startedByText(run.startedBy, viewerUserId)}`);
+  if (startedBy.kind !== "schedule") {
+    parts.push(`started by ${startedByText(startedBy, viewerUserId)}`);
+  } else if (startedBy.user !== null) {
+    parts.push(`run now by ${runNowByText(startedBy.user, viewerUserId)}`);
+  }
   parts.push(
     <Box
       component="time"
@@ -117,6 +146,7 @@ export function RunHeader(props: RunHeaderProps) {
   const projectPath = useProjectPath();
   const back = useRunsBackTarget();
   const workItemHref = (id: string) => projectPath("work-items", id);
+  const scheduleHref = useScheduleHistoryHref();
 
   return (
     <Box
@@ -202,7 +232,7 @@ export function RunHeader(props: RunHeaderProps) {
             data-testid="run-header-caption"
             sx={{ color: "text.disabled", mt: 0.25 }}
           >
-            {captionParts({ ...props, run }, workItemHref).map(
+            {captionParts({ ...props, run }, workItemHref, scheduleHref).map(
               (part, index) => (
                 <Fragment key={index}>
                   {index > 0 ? " · " : null}

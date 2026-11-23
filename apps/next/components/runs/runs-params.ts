@@ -11,17 +11,19 @@ import { uuidV7Schema } from "@scarn/core/common/contracts/uuid-v7";
 
 /**
  * The Runs list's state, held in the URL so every view is linkable and Back
- * works: `?status&whatRan&by&item&at&q`. A junk value falls back to its
+ * works: `?status&whatRan&by&item&schedule&at&q`. A junk value falls back to its
  * default rather than turning into a 422.
  */
 export type RunsNav = {
   /** A status tab or a single status; `open` (In progress) when absent. */
   status: ProjectRunStatusFilter;
   whatRan?: ProjectRunWhatRanFilter;
-  /** `startedBy`: an automation id, or `me`. */
+  /** `startedBy`: an automation id, `me`, or `scheduled`. */
   by?: ProjectRunStartedByFilter;
   /** `workItemId`: the work item or any of its children. */
   item?: string;
+  /** `scheduleId`: the Tasks one schedule rule started. */
+  schedule?: string;
   /** `atNode`: only meaningful with a pipeline `whatRan`. */
   at?: string;
   q?: string;
@@ -35,7 +37,15 @@ const LEGACY_CHAT_WHAT_RAN = "chat";
 /** How long the search box waits after the last keystroke before writing `q`. */
 export const RUNS_SEARCH_DEBOUNCE_MS = 300;
 
-const RUNS_NAV_KEYS = ["status", "whatRan", "by", "item", "at", "q"] as const;
+const RUNS_NAV_KEYS = [
+  "status",
+  "whatRan",
+  "by",
+  "item",
+  "schedule",
+  "at",
+  "q",
+] as const;
 
 type SearchParamsLike = Pick<URLSearchParams, "get">;
 
@@ -67,11 +77,13 @@ export function parseRunsNav(searchParams: SearchParamsLike): RunsNav {
   );
   const by = parseWith(projectRunStartedByFilterSchema, searchParams.get("by"));
   const item = parseWith(uuidV7Schema, searchParams.get("item"));
+  const schedule = parseWith(uuidV7Schema, searchParams.get("schedule"));
   const at = parseText(searchParams.get("at"));
   const q = parseText(searchParams.get("q"), MAX_PROJECT_RUNS_SEARCH_LENGTH);
   if (whatRan !== undefined) nav.whatRan = whatRan;
   if (by !== undefined) nav.by = by;
   if (item !== undefined) nav.item = item;
+  if (schedule !== undefined) nav.schedule = schedule;
   if (at !== undefined && whatRan !== undefined) nav.at = at;
   if (q !== undefined) nav.q = q;
   return nav;
@@ -114,6 +126,7 @@ export type RunsQuery = {
   whatRan?: ProjectRunWhatRanFilter;
   startedBy?: ProjectRunStartedByFilter;
   workItemId?: string;
+  scheduleId?: string;
   atNode?: string;
   q?: string;
 };
@@ -123,6 +136,7 @@ export function runsQueryOf(nav: RunsNav): RunsQuery {
   if (nav.whatRan !== undefined) query.whatRan = nav.whatRan;
   if (nav.by !== undefined) query.startedBy = nav.by;
   if (nav.item !== undefined) query.workItemId = nav.item;
+  if (nav.schedule !== undefined) query.scheduleId = nav.schedule;
   if (nav.at !== undefined) query.atNode = nav.at;
   if (nav.q !== undefined) query.q = nav.q;
   return query;

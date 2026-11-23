@@ -4,7 +4,7 @@ import type { RoundEdge, RoundNode } from "./automation-round-types";
 
 /**
  * Edges that point back up the flow, found depth-first from the junctions
- * first (the automation's entry points), then every other node in document
+ * and triggers first (the automation's entry points), then every other node in document
  * order.
  */
 export function findBackEdges(
@@ -26,7 +26,9 @@ export function findBackEdges(
     }
     state.set(id, "done");
   };
-  const junctions = nodes.filter((node) => node.kind === "junction");
+  const junctions = nodes.filter(
+    (node) => node.kind === "junction" || node.kind === "trigger",
+  );
   for (const node of [...junctions, ...nodes]) {
     if (!state.has(node.id)) visit(node.id);
   }

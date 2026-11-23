@@ -166,7 +166,9 @@ describe("retryTask", () => {
     "a full group returns the existing error without creating or deferring a run",
     async () => {
       const fixture = setup();
-      const full = new ConcurrencyGroupFullError("fix", [createUuidV7()]);
+      const full = new ConcurrencyGroupFullError({ stepKey: "fix" }, [
+        createUuidV7(),
+      ]);
       fixture.reacquire.mockRejectedValue(full);
       expect(await rejection(retryTask(fixture.input, fixture.deps))).toBe(
         full,

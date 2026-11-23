@@ -1,6 +1,6 @@
 import {
   WORK_ITEM_FIELD_FILTER_PREFIX,
-  type AutomationContract,
+  type AutomationListItemContract,
   type PipelineRunStatus,
   type WorkItemAgentFilter,
   type WorkItemContract,
@@ -206,10 +206,10 @@ export async function fetchProjectPipelineDefinitions(
   return data;
 }
 
-/** The project's automations, in key order. */
+/** The project's automations with their schedule summaries, in key order. */
 export async function fetchProjectAutomations(
   projectId: string,
-): Promise<AutomationContract[]> {
+): Promise<AutomationListItemContract[]> {
   const apiClient = getBrowserScarnApiClient();
   const { data, error } = await apiClient.api
     .projects({ projectId })

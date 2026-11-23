@@ -86,8 +86,8 @@ server, so its worker, logs and saved settings stay apart from an installed
 8. **Pipelines.** Runs `pipelines build`, commits and pushes to
    `acme-shop.git`, then runs `pipelines push`, which publishes the
    `local-secrets` environment before the steps and also publishes the
-   pipelines and the `default` project automation, then enables it with
-   `automations enable default`.
+   pipelines and the `default` and `ld-schedule` project automations, then
+   enables both with `automations enable`.
 9. **Work items.** Upserts 25 work items. The default automation routes and
    queues each one as it becomes ready.
 10. **Prints** the project URL and a table of each item's key, pipeline,
@@ -128,6 +128,9 @@ steps, so those branches are exact.
 | `ld-grill`       | Agent conversation, `maxTurns`, `catch(Scarn.MaxTurnsExceeded)`                   | The work item title is the topic; you answer in the UI        |
 | `ld-secrets`     | Named environment (`local-secrets`) with a `secret` var, log masking              | The `LOCAL_DEV_API_KEY` project secret seed saves             |
 
+`ld-schedule.ts` is a project automation rather than a pipeline; see
+[Schedules](#schedules).
+
 Routing items are seeded too: a closed item (never ready), a
 `status: "resolved"` item (skipped) and one with no `demo` field (runs
 `ld-linear`).
@@ -135,6 +138,52 @@ Routing items are seeded too: a closed item (never ready), a
 These items stop and wait for you in the UI: `decision-required`
 (`review-fix`), `reply-thin` (`ask-for-details`), `lanes-clean` and
 `lanes-tolerated` (`approve-edits`), and `grill`.
+
+### Schedules
+
+`ld-schedule.ts` holds the `ld-schedule` project automation. Its
+`sweep-coupons` rule runs every 5 minutes (UTC) and starts the
+`sweep-coupons` step as a scheduled Task, with no work item. The agent finds
+the shop's coupon codes and creates a work item for each with its `create`
+grant on `project`, keyed `coupon:<CODE>` and labelled `coupons`. The
+`default` automation then routes each new item to `ld-linear`. Run it again
+and it finds the same keys, so it creates nothing new.
+
+Seed enables it, but nothing fires on its own until the minutely tick runs,
+and the tick is off locally. To try it, start the worker (`work`), then
+either:
+
+- **Run now:** select **Run now** next to the schedule on the _Pipelines &
+  Automations_ tab, or run
+  `bun apps/cli/src/index.ts automations run ld-schedule sweep-coupons` from
+  `~/.scarn-local-dev/acme-shop` with `SCARN_BASE_URL` set to the local
+  server. This starts a run right away and doesn't change when the next
+  scheduled run is.
+- **The tick:** set `AUTOMATION_SCHEDULE_TICK_CRON_SECRET` in the root `.env`,
+  restart `bun run dev`, and call the route the scheduler calls:
+
+  ```sh
+  curl -X POST -H "Authorization: Bearer $AUTOMATION_SCHEDULE_TICK_CRON_SECRET" \
+    http://localhost:3000/api/internal/automations/schedules/tick
+  ```
+
+  It only fires schedules that are due, so outside a 5-minute mark it
+  returns `fired: 0`. To have it fire on its own, call it every minute, as
+  EventBridge does in production:
+
+  ```sh
+  while true; do
+    curl -s -X POST -H "Authorization: Bearer $AUTOMATION_SCHEDULE_TICK_CRON_SECRET" \
+      http://localhost:3000/api/internal/automations/schedules/tick; echo
+    sleep 60
+  done
+  ```
+
+  The previous run must have finished before the next one starts; a run that
+  comes due while one is still open is recorded as a skip.
+
+Follow it with **History** on the _Pipelines & Automations_ tab, the
+**Scheduled** filter on _Runs_, or `automations list`.
 
 ### Adding a demo
 

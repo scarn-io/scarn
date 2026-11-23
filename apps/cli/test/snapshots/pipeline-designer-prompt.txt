@@ -696,7 +696,10 @@ The read-only database is at ${env.READONLY_DB_URL}.
     missing the comment is not drafted.
 - **`features`** — `Features.notifications()` adds the `$scarn_notifications_v1`
   result field and the matching prompt section. Use it instead of
-  hand-writing a notification schema.
+  hand-writing a notification schema. `Features.workItems.*` grants the
+  agent work item actions; a step started by a schedule (§5) may only have
+  `project` grants, such as
+  `Features.workItems.create({ scope: "project", labels: ["acme"] })`.
 - **`environment`** — `{ runtime?, vars?, repo? }` inline, or a named
   environment (see "Named environments" below), how the step runs. Declare `vars`
   before `agentPrompt` so its keys are typed into the prompt's `env`.
@@ -1498,6 +1501,7 @@ export default defineAutomation({
   scope: "project",
   rules: [
     onEvent({
+      key: "route-ready",
       event: "workItem.ready",
       routes: [
         { when: (r) => contains(r.workItem.labels, "wontfix"), to: skip },
@@ -1515,9 +1519,80 @@ export default defineAutomation({
 - `r.workItem`: `title`, `description`, `labels`, `state`, `fields.<name>`.
 - Targets: a pipeline (a file's default export), a step call, or `skip`.
   First matching route wins, else `otherwise`.
+- Every rule needs a `key`, unique within the automation (letters, digits,
+  `_`, `-`; not starting with `_` or `-`).
 - Started pipelines must be published (§9).
 - Push publishes it **disabled**; the user runs
   `scarn automations enable default`.
+
+### Schedules — `event: "schedule"`
+
+Only when the user wants something to run on a timer, such as polling an
+external system for new items. A project automation's `schedule` rule starts
+one step on a cron, as a Task with **no work item**. Put it in its own file
+(one automation per file, `export default`), not in `default.ts`.
+
+```ts
+import { defineAutomation, onEvent } from "@scarn/sdk/automations";
+import { defineStep, Features, Runtime, z } from "@scarn/sdk/definitions/steps";
+
+export const pollAcme = defineStep({
+  key: "poll-acme-api",
+  name: "Poll Acme",
+  status: "active",
+  environment: { runtime: Runtime.host() },
+  agentPrompt: `
+List Acme tickets updated after \`since\` (all open ones when it is null) and
+up to \`until\`. Create a work item for each, with the ticket's id as its
+platformKey.
+`,
+  input: z.object({ since: z.string().nullable(), until: z.string() }),
+  result: z.object({ found: z.number() }),
+  features: [Features.workItems.create({ scope: "project", labels: ["acme"] })],
+});
+
+export default defineAutomation({
+  key: "acme-intake",
+  title: "Acme intake",
+  scope: "project",
+  rules: [
+    onEvent({
+      key: "poll-acme",
+      event: "schedule",
+      cron: "*/15 * * * *",
+      timezone: "UTC",
+      to: (r) =>
+        pollAcme({
+          since: r.schedule.previousScheduledFor,
+          until: r.schedule.scheduledFor,
+        }),
+    }),
+  ],
+});
+```
+
+- `cron`: 5 fields or `@hourly`, `@daily`, `@weekly`, `@monthly`,
+  `@yearly`. No seconds field, no `?`, `L`, `W`, `#`. `timezone`: IANA name,
+  default `"UTC"`. `concurrency`: `{ max, waiting }`, default
+  `{ max: 1, waiting: 0 }`, which skips a run while the last one is open.
+- Targets: a step, **without `.on(...)`**, or `skip`. Never a pipeline or
+  `attach`: both need a work item. To start a pipeline, have the step create
+  work items and route them with a `workItem.ready` rule.
+- `r.schedule`: `key`, `scheduledFor` (the cron time this run is for),
+  `previousScheduledFor` (the last **succeeded** run's `scheduledFor`, `null`
+  before the first) and `timezone`. Pass both times as the window to poll;
+  a failed run widens the next window, so nothing is lost.
+- The step may only have `project` grants: `self` and `children` grants fail
+  publishing. `Features.workItems.create({ scope: "project", labels })` lets
+  it create top-level work items; tell the agent to give each a `platformKey`,
+  the source system's stable id. A key the project already has returns the
+  existing item and fires nothing, so the agent need not check for duplicates.
+  At most 100 per run.
+- At most 20 schedules across a project's enabled automations.
+- Missed times collapse into one run; nothing is backfilled. Publishing or
+  enabling never fires at once.
+- To test it, the user runs `scarn automations run acme-intake poll-acme`
+  (works while disabled), then `scarn automations enable acme-intake`.
 
 ## 6. Invariants — the things that actually break
 

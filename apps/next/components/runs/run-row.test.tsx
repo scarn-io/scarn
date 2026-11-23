@@ -221,6 +221,52 @@ describe("RunRow", () => {
     ).toBe("—");
   });
 
+  test("a scheduled Task shows its schedule, linked to its history", async () => {
+    const scheduleId = id("801");
+    const scheduled = (user: { userId: string; username: string } | null) =>
+      buildRun({
+        type: "task",
+        href: `runs/tasks/${runId}`,
+        whatRan: { kind: "task", name: "Task" },
+        workItem: null,
+        startedBy: {
+          kind: "schedule",
+          automationId: id("800"),
+          key: "poller",
+          title: "Poller",
+          schedule: { id: scheduleId, key: "hourly", removed: true },
+          user: user && { ...user, userId: parseUuidV7(user.userId) },
+        },
+      });
+
+    const ticked = await renderRow(scheduled(null));
+    const cell = ticked
+      .getByTestId("run-row")
+      .querySelector('[data-column="work-item"]') as HTMLElement;
+    expect(
+      within(cell)
+        .getByRole("link", { name: "Poller · hourly" })
+        .getAttribute("href"),
+    ).toBe(`/alice/demo/runs?status=all&schedule=${scheduleId}`);
+    expect(within(cell).getByTestId("schedule-removed")).toBeTruthy();
+    expect(
+      ticked.getByTestId("run-row").querySelector('[data-column="started-by"]')
+        ?.textContent,
+    ).toBe("Schedule");
+    cleanup();
+
+    const ranNow = await renderRow(
+      scheduled({ userId: id("901"), username: "bob" }),
+    );
+    expect(
+      ranNow.getByTestId("run-row").querySelector('[data-column="started-by"]')
+        ?.textContent,
+    ).toBe("Run now by bob");
+    expect(ranNow.getByTestId("run-row-meta").textContent).toContain(
+      "Poller · hourly",
+    );
+  });
+
   test("status mark is filled for needs-you, failed and ended only; outcome shows", async () => {
     const view = await renderRow(
       buildRun({

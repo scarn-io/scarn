@@ -14,6 +14,7 @@ import {
   conversationTaskStatusLine,
   conversationTaskTitle,
   projectRunHref,
+  scheduledTaskTitle,
   standaloneTaskOutcome,
   standaloneTaskTitle,
   standaloneTaskType,
@@ -204,7 +205,12 @@ const hydrateTasks = async (
           : standaloneTaskTitle({
               stepDefinition: record.stepDefinition,
               prompt: record.prompt,
-              workItemTitle: record.workItem?.title ?? "",
+              workItemTitle:
+                record.workItem?.title ??
+                scheduledTaskTitle(
+                  record.startedByAutomation,
+                  record.startedBySchedule,
+                ),
             }),
         whatRan: standaloneTaskWhatRan(record),
         workItem: key.workItem,
@@ -221,7 +227,14 @@ const hydrateTasks = async (
         waitingOnUserIds,
         starterUserId: record.startedByUserId,
         startedBy: (usernames, starterUserId) =>
-          toStartedBy(starterUserId, record.startedByAutomation, usernames),
+          toStartedBy(
+            {
+              userId: starterUserId,
+              automation: record.startedByAutomation,
+              schedule: record.startedBySchedule,
+            },
+            usernames,
+          ),
         createdAt: record.createdAt.toISOString(),
         updatedAt: conversation
           ? new Date(key.updatedAt).toISOString()

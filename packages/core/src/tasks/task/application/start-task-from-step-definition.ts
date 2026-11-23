@@ -16,6 +16,7 @@ import type { TaskRunRepo } from "@scarn/core/tasks/task-run/application/task-ru
 import type { WorkNotifier } from "@scarn/core/tasks/task-run/application/work-notifier";
 import type { TaskRunEntity } from "@scarn/core/tasks/task-run/domain/task-run-entity";
 import type { WorkItemBlockRepo } from "@scarn/core/work-items/work-item-block/application/work-item-block-repo";
+import type { ScheduleConcurrency } from "@scarn/sdk/contracts/automation-document";
 import { TaskEntity, type TaskStatus } from "../domain/task-entity";
 import { DEFAULT_STANDALONE_MAX_TURNS } from "../domain/task-turns";
 import type { Grant } from "../domain/grants";
@@ -51,9 +52,18 @@ export type StandaloneTaskSpec = TaskInstructions & {
   environmentSelection?: TaskEnvironmentSelection | null | undefined;
 };
 
-/** What a standalone Task runs on: a work item, or a chat's conversation. */
+/** The schedule that owns a scheduled Task, the cron time it runs for, and the schedule's concurrency limit. */
+export type TaskSchedule = {
+  scheduleId: UuidV7;
+  scheduledFor: Date;
+  concurrency: ScheduleConcurrency;
+};
+
+/** What a standalone Task runs on: a work item, a chat's conversation, or nothing but its schedule. */
 export type StandaloneTaskSubject =
-  { workItemId: UuidV7 } | { workItemId: null; conversationId: UuidV7 };
+  | { workItemId: UuidV7 }
+  | { workItemId: null; conversationId: UuidV7 }
+  | { workItemId: null; schedule: TaskSchedule };
 
 export type StandaloneTaskStart = StandaloneTaskSubject & {
   projectId: UuidV7;
@@ -67,10 +77,12 @@ export type StandaloneTaskStart = StandaloneTaskSubject & {
 export type StartedTask = { task: TaskEntity; run: TaskRunEntity | null };
 
 /**
- * Creates a standalone Task on `workItemId`, or a chat's Task on its
- * conversation (no blockers or concurrency group), in `tx`. Its input is the
- * caller's input as given; the agent reads the work item live. A step-definition Task
- * first arrives at its concurrency group (`TaskGroup.arrive`): a full group
+ * Creates a standalone Task on `workItemId`, a chat's Task on its
+ * conversation (no blockers or concurrency group), or a schedule's Task (no
+ * blockers; the schedule's concurrency group instead of the step's), in
+ * `tx`. Its input is the caller's input as given; the agent reads the work
+ * item live. A step-definition or scheduled Task first arrives at its
+ * concurrency group (`TaskGroup.arrive`): a full group
  * creates nothing and returns `ConcurrencyGroupFullError`, and one with no
  * place but room to wait creates the Task `waiting_for_concurrency_slot`,
  * with no run. Otherwise, on a ready item it gets its first run (`initial`);
@@ -85,8 +97,17 @@ export const startTask = async (
 ): Promise<Result<StartedTask, ConcurrencyGroupFullError>> => {
   const { concurrencyGroup, ...instructions } = spec;
   const { workItemId } = start;
-  const arrival =
-    concurrencyGroup && workItemId !== null
+  const schedule = "schedule" in start ? start.schedule : null;
+  const arrival = schedule
+    ? await deps.taskGroup.arrive(
+        {
+          projectId: start.projectId,
+          scheduleId: schedule.scheduleId,
+          concurrency: schedule.concurrency,
+        },
+        tx,
+      )
+    : concurrencyGroup && workItemId !== null
       ? await deps.taskGroup.arrive(
           { projectId: start.projectId, workItemId, ...concurrencyGroup },
           tx,
@@ -95,7 +116,9 @@ export const startTask = async (
   if (arrival.decision === "drop") {
     return Result.err(
       new ConcurrencyGroupFullError(
-        concurrencyGroup?.stepKey ?? "",
+        schedule
+          ? { scheduleId: schedule.scheduleId }
+          : { stepKey: concurrencyGroup?.stepKey ?? "" },
         arrival.heldBy,
       ),
     );
@@ -122,6 +145,8 @@ export const startTask = async (
       status,
       startedByUserId: start.startedByUserId,
       startedByAutomationId: start.startedByAutomationId ?? null,
+      startedByScheduleId: schedule?.scheduleId ?? null,
+      scheduledFor: schedule?.scheduledFor ?? null,
       createdAt: now,
     }),
     tx,

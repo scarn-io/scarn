@@ -18,6 +18,7 @@ import {
   singleStepPipelineDocument,
 } from "../../pipeline-test-support";
 import { allGrants } from "tests/tasks/task/grants-test-support";
+import type { Grant } from "@/tasks/task/domain/grants";
 
 const CHILD_LABELS = ["kind:research"];
 
@@ -25,6 +26,7 @@ type StepOptions = {
   inputSchemaJson?: AnyJsonObject;
   concurrency?: { max: number; waiting: number };
   children?: boolean;
+  grants?: Grant[];
 };
 
 export type Step = { id: UuidV7; version: number; key: string };
@@ -78,12 +80,15 @@ export const createRunnerHarness = async (label: string) => {
           resultSchemaJson: { type: "object" },
           status: "active",
           repo: { mode: "readOnly" },
-          grants: options.children
-            ? [
-                ...allGrants("self", CHILD_LABELS),
-                ...allGrants("children", CHILD_LABELS),
-              ]
-            : [],
+          grants: [
+            ...(options.children
+              ? [
+                  ...allGrants("self", CHILD_LABELS),
+                  ...allGrants("children", CHILD_LABELS),
+                ]
+              : []),
+            ...(options.grants ?? []),
+          ],
           ...(options.concurrency ? { concurrency: options.concurrency } : {}),
         },
         { headers },
@@ -368,6 +373,7 @@ export const createRunnerHarness = async (label: string) => {
   return {
     apiClient,
     headers,
+    ownerId: parseUuidV7(owner.userId),
     projectId,
     createStep,
     publish,

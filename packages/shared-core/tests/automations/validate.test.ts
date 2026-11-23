@@ -50,6 +50,7 @@ const project = (rules: object[]) => ({
 });
 
 const research = (args: object, event = "child.ready") => ({
+  key: "research",
   event,
   next: { routes: [{ kind: "step", to: "research", args, on: "workItem" }] },
 });
@@ -59,10 +60,12 @@ describe("validateAutomation", () => {
     const result = validateAutomation(
       wayfinder([
         {
+          key: "self-attached",
           event: "self.attached",
           next: { routes: [{ kind: "step", to: "plan", on: "workItem" }] },
         },
         {
+          key: "child-ready",
           event: "child.ready",
           next: {
             routes: [
@@ -91,10 +94,45 @@ describe("validateAutomation", () => {
     expect(result.ok).toBe(true);
   });
 
+  test.concurrent("reports a rule without a key", () => {
+    const result = validateAutomation(
+      wayfinder([
+        { event: "child.ready", next: { routes: [{ kind: "skip" }] } },
+      ]),
+      catalog,
+    );
+    expect(result.ok).toBe(false);
+    expectError(result.errors, { path: "/rules/0/key", code: "schema" });
+  });
+
+  test.concurrent("reports two rules with the same key", () => {
+    const result = validateAutomation(
+      wayfinder([
+        {
+          key: "same",
+          event: "child.ready",
+          next: { routes: [{ kind: "skip" }] },
+        },
+        {
+          key: "same",
+          event: "child.closed",
+          next: { routes: [{ kind: "skip" }] },
+        },
+      ]),
+      catalog,
+    );
+    expect(result.ok).toBe(false);
+    expectError(result.errors, { path: "/rules/1/key", code: "schema" });
+  });
+
   test.concurrent("reports schema errors", () => {
     const result = validateAutomation(
       wayfinder([
-        { event: "workItem.created", next: { routes: [{ kind: "skip" }] } },
+        {
+          key: "work-item-created",
+          event: "workItem.created",
+          next: { routes: [{ kind: "skip" }] },
+        },
       ]),
       catalog,
     );
@@ -105,6 +143,7 @@ describe("validateAutomation", () => {
     const result = validateAutomation(
       project([
         {
+          key: "work-item-created",
           event: "workItem.created",
           next: {
             routes: [
@@ -189,6 +228,7 @@ describe("validateAutomation", () => {
     const label = validateAutomation(
       project([
         {
+          key: "work-item-created",
           event: "workItem.created",
           next: {
             routes: [
@@ -226,7 +266,9 @@ describe("validateAutomation", () => {
   test.concurrent("types conditions against the event", () => {
     const withWhen = (when: object, event = "child.ready") =>
       validateAutomation(
-        wayfinder([{ event, next: { routes: [{ when, kind: "skip" }] } }]),
+        wayfinder([
+          { key: "when", event, next: { routes: [{ when, kind: "skip" }] } },
+        ]),
         catalog,
       );
     const at = "/rules/0/next/routes/0/when";
@@ -248,6 +290,125 @@ describe("validateAutomation", () => {
       withWhen({ path: "event.workItem.title", op: "greaterThan", value: 1 })
         .errors,
       { path: `${at}/value`, code: "type_mismatch" },
+    );
+  });
+
+  describe("schedule rules", () => {
+    const schedule = (args: object, when?: object) =>
+      project([
+        {
+          key: "poll",
+          event: "schedule",
+          cron: "*/15 * * * *",
+          next: {
+            routes: [
+              {
+                ...(when === undefined ? {} : { when }),
+                kind: "step",
+                to: "poll",
+                args,
+              },
+            ],
+          },
+        },
+      ]);
+    const scheduleCatalog: AutomationCatalog = {
+      ...catalog,
+      steps: {
+        ...catalog.steps,
+        poll: {
+          inputSchema: {
+            type: "object",
+            properties: {
+              key: { type: "string" },
+              since: { type: ["string", "null"] },
+              until: { type: "string" },
+              timezone: { type: "string" },
+            },
+            additionalProperties: false,
+          },
+          resultSchema: { type: "object" },
+          errors: [],
+        },
+      },
+    };
+    const at = "/rules/0/next/routes/0/args";
+
+    test.concurrent("accepts event.schedule refs in args and when", () => {
+      const result = validateAutomation(
+        schedule(
+          {
+            key: "event.schedule.key",
+            since: "event.schedule.previousScheduledFor",
+            until: "event.schedule.scheduledFor",
+            timezone: "event.schedule.timezone",
+          },
+          { path: "event.schedule.previousScheduledFor", op: "exists" },
+        ),
+        scheduleCatalog,
+      );
+      expect(result.errors).toEqual([]);
+      expect(result.ok).toBe(true);
+    });
+
+    test.concurrent("types event.schedule refs", () => {
+      const result = validateAutomation(
+        schedule({ until: "event.schedule.previousScheduledFor" }),
+        scheduleCatalog,
+      );
+      expectError(result.errors, {
+        path: `${at}/until`,
+        code: "type_mismatch",
+      });
+    });
+
+    test.concurrent("reports unknown and work-item refs", () => {
+      const unknown = validateAutomation(
+        schedule({ until: "event.schedule.scheduledFro" }),
+        scheduleCatalog,
+      );
+      expectError(unknown.errors, {
+        path: `${at}/until`,
+        code: "unknown_path",
+        hint: 'Did you mean "event.schedule.scheduledFor"?',
+      });
+      const workItem = validateAutomation(
+        schedule({ until: "event.workItem.title" }),
+        scheduleCatalog,
+      );
+      expectError(workItem.errors, {
+        path: `${at}/until`,
+        code: "reference_not_allowed",
+      });
+    });
+
+    test.concurrent("event.schedule refs only exist on schedule rules", () => {
+      const result = validateAutomation(
+        wayfinder([research({ question: "event.schedule.key" })]),
+        catalog,
+      );
+      expectError(result.errors, {
+        path: "/rules/0/next/routes/0/args/question",
+        code: "reference_not_allowed",
+      });
+    });
+
+    test.concurrent(
+      "reports a schedule rule's bad cron as a schema error",
+      () => {
+        const result = validateAutomation(
+          project([
+            {
+              key: "poll",
+              event: "schedule",
+              cron: "0 0 L * *",
+              next: { routes: [{ kind: "skip" }] },
+            },
+          ]),
+          scheduleCatalog,
+        );
+        expectError(result.errors, { path: "/rules/0/cron", code: "schema" });
+      },
     );
   });
 });

@@ -238,13 +238,14 @@ describe("composed prompt size", () => {
   // connection-backed MCP servers (`connection`/`connections` in phase 1,
   // both `auth` forms in phase 3 and §1) to ~107,200, and MCP tool steps
   // (§1's "MCP tool steps", the manifest's `lock`/`locks` in phase 1, and
-  // `scarn mcp pull` in phase 6) to ~114,700
+  // `scarn mcp pull` in phase 6) to ~114,700, and schedules (§1's `project`
+  // grants and §5's "Schedules") to ~118,100
   // — the lower bound is set just under the current value so any further
   // growth is a deliberate decision rather than a drift.
   test("stays within the expected envelope", () => {
     const length = buildPipelineDesignerPrompt().length;
-    expect(length).toBeGreaterThan(114_400);
-    expect(length).toBeLessThan(115_500);
+    expect(length).toBeGreaterThan(117_800);
+    expect(length).toBeLessThan(119_000);
   });
 
   test("survives a round trip through the injected TUI config", () => {

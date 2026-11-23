@@ -19,6 +19,7 @@ const group = (
   whatRanName: "Review",
   startedByAutomation: null,
   startedByActor: false,
+  scheduled: false,
   atNode: true,
   count: 1,
   ...overrides,
@@ -92,6 +93,38 @@ describe("projectRunsCounts", () => {
       },
     ]);
     expect(counts.startedBy).toHaveLength(2);
+  });
+
+  test("scheduled Tasks get a Scheduled facet and filter", () => {
+    const scheduledGroups = [
+      ...groups,
+      group({
+        status: "running",
+        type: "task",
+        whatRanFilter: "task",
+        whatRanName: "Task",
+        startedByAutomation: automation,
+        scheduled: true,
+        atNode: false,
+        count: 5,
+      }),
+    ];
+    expect(
+      projectRunsCounts(scheduledGroups, {}, true).startedBy.map(
+        (entry) => [entry.filter, entry.inProgress] as const,
+      ),
+    ).toEqual([
+      ["me", 2],
+      ["scheduled", 5],
+      [automation.id, 5],
+    ]);
+    const filtered = projectRunsCounts(
+      scheduledGroups,
+      { startedBy: "scheduled" },
+      true,
+    );
+    expect(filtered.tabs.all).toBe(5);
+    expect(projectRunsCounts(groups, {}, true).startedBy).toHaveLength(2);
   });
 });
 

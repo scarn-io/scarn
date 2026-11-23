@@ -6,7 +6,7 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import type { ReactNode } from "react";
 import type {
-  AutomationContract,
+  AutomationListItemContract,
   PipelineDefinitionContract,
 } from "@scarn/api/frontend-contracts";
 import { installDom } from "@/tests/support/install-dom";
@@ -21,16 +21,25 @@ Object.assign(globalThis, {
 
 const {
   AUTOMATION_ID,
+  HELD_TASK_ID,
   IDLE_AUTOMATION_ID,
   PIPELINE_ID,
   PROJECT_ID,
+  SCHEDULE_ID,
+  STARTED_TASK_ID,
+  poller,
   shipIt,
   triage,
   wayfinder,
 } = await import("./pipeline-page-tabs-fixtures");
 
 const state = {
-  automations: [] as AutomationContract[],
+  automations: [] as AutomationListItemContract[],
+  runNow: [] as { key: string; ruleKey: string }[],
+  runNowResponse: { data: null, error: null } as {
+    data: unknown;
+    error: unknown;
+  },
   definitions: [] as PipelineDefinitionContract[],
   toggles: [] as { key: string; enabled: boolean }[],
   pushed: [] as string[],
@@ -55,6 +64,14 @@ void mock.module("@/app/_lib/scarn-browser-api-client", () => ({
           ({ key }: { key: string }) => ({
             enable: { post: toggle(key, true) },
             disable: { post: toggle(key, false) },
+            schedules: ({ ruleKey }: { ruleKey: string }) => ({
+              runs: {
+                post: () => {
+                  state.runNow.push({ key, ruleKey });
+                  return Promise.resolve(state.runNowResponse);
+                },
+              },
+            }),
           }),
           {
             get: () =>
@@ -227,6 +244,7 @@ describe("PipelinePageTabs", () => {
     state.automations = [triage, wayfinder];
     state.definitions = [shipIt];
     state.toggles = [];
+    state.runNow = [];
     state.pushed = [];
     state.runsQueries = [];
     state.liveCountCalls = 0;
@@ -284,6 +302,73 @@ describe("PipelinePageTabs", () => {
     });
     expect(state.toggles).toEqual([{ key: "triage", enabled: true }]);
     expect(section.queryByLabelText("Enable Wayfinder")).toBeNull();
+  });
+
+  test("shows a schedule rule's summary with its history link", async () => {
+    state.automations = [triage, poller];
+    const view = await renderPage();
+    const schedule = within(await view.findByTestId("automation-schedule"));
+
+    expect(schedule.getByText("hourly")).toBeTruthy();
+    expect(schedule.getByText("0 * * * * Europe/Paris")).toBeTruthy();
+    expect(schedule.getByText(/^next /)).toBeTruthy();
+    expect(schedule.getByText("Failed")).toBeTruthy();
+    expect(schedule.getByTestId("schedule-failure-streak").textContent).toBe(
+      "3 failures in a row",
+    );
+    expect(
+      schedule.getByTestId("schedule-last-error").getAttribute("title"),
+    ).toContain("Step poll-linear has no active version");
+    expect(schedule.getByText(/2× since it fired/)).toBeTruthy();
+    expect(
+      schedule.getByRole("link", { name: "History" }).getAttribute("href"),
+    ).toBe(`/alice/demo/runs?status=all&schedule=${SCHEDULE_ID}`);
+    expect(schedule.queryByRole("button", { name: "Run now" })).toBeNull();
+  });
+
+  test("Run now links the started Task", async () => {
+    state.automations = [triage, poller];
+    state.runNowResponse = {
+      data: { taskId: STARTED_TASK_ID, scheduledFor: "2026-11-01T12:00:00Z" },
+      error: null,
+    };
+    const view = await renderPage({ permissions: ["executions:write"] });
+    const schedule = within(await view.findByTestId("automation-schedule"));
+
+    fireEvent.click(schedule.getByRole("button", { name: "Run now" }));
+
+    const link = await view.findByRole("link", { name: "Open the Task →" });
+    expect(link.getAttribute("href")).toBe(
+      `/alice/demo/runs/tasks/${STARTED_TASK_ID}`,
+    );
+    expect(state.runNow).toEqual([{ key: "poller", ruleKey: "hourly" }]);
+  });
+
+  test("Run now names the Tasks holding a full concurrency group", async () => {
+    state.automations = [triage, poller];
+    state.runNowResponse = {
+      data: null,
+      error: {
+        status: 409,
+        value: {
+          status: 409,
+          code: "Scarn.ConcurrencyGroupFull",
+          detail: "full",
+          meta: { scheduleId: SCHEDULE_ID, heldBy: [HELD_TASK_ID] },
+        },
+      },
+    };
+    const view = await renderPage({ permissions: ["executions:write"] });
+    const schedule = within(await view.findByTestId("automation-schedule"));
+
+    fireEvent.click(schedule.getByRole("button", { name: "Run now" }));
+
+    expect(await view.findByText(/concurrency group is full/)).toBeTruthy();
+    expect(
+      view
+        .getByRole("link", { name: HELD_TASK_ID.slice(-8) })
+        .getAttribute("href"),
+    ).toBe(`/alice/demo/runs/tasks/${HELD_TASK_ID}`);
   });
 
   test("disables the switch without pipelines:write", async () => {

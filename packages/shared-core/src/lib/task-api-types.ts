@@ -46,6 +46,27 @@ export type TaskWorkItemRef = {
   title: string;
 };
 
+type StartedByPerson = { userId: string; username: string | null };
+
+/** Who started a Task: a person, an automation, a schedule rule, or the system. */
+export type TaskStartedBy =
+  | ({ kind: "user" } & StartedByPerson)
+  | {
+      kind: "automation";
+      automationId: string;
+      key: string;
+      title: string | null;
+    }
+  | {
+      kind: "schedule";
+      automationId: string;
+      key: string;
+      title: string | null;
+      schedule: { id: string; key: string; removed: boolean };
+      user: StartedByPerson | null;
+    }
+  | { kind: "system" };
+
 /** One row of `GET /projects/{id}/tasks`. */
 export type TaskSummary = {
   id: string;
@@ -60,6 +81,8 @@ export type TaskSummary = {
   source: TaskSource;
   pipelineRunId: string | null;
   nodeId: string | null;
+  startedBy: TaskStartedBy;
+  scheduledFor: string | null;
 };
 
 /** `GET /projects/{id}/tasks`. */
@@ -89,7 +112,8 @@ export type TaskDetail = {
   source: TaskSource;
   pipelineRunId: string | null;
   nodeId: string | null;
-  startedBy: { userId: string; username: string | null } | null;
+  startedBy: TaskStartedBy;
+  scheduledFor: string | null;
   waitingOn: { userId: string; username: string | null }[];
   conversationId: string | null;
 };

@@ -80,10 +80,13 @@ async function main(): Promise<void> {
   log(`committed and pushed ${paths.checkout}`);
 
   await runCliChecked(["pipelines", "push"], paths.checkout);
-  log("pushed steps, pipelines and the default automation");
+  log("pushed steps, pipelines and the default and ld-schedule automations");
 
   await runCliChecked(["automations", "enable", "default"], paths.checkout);
   log("enabled the default automation");
+
+  await runCliChecked(["automations", "enable", "ld-schedule"], paths.checkout);
+  log("enabled the ld-schedule automation");
 
   const seeded = await seedWorkItems({
     auth,

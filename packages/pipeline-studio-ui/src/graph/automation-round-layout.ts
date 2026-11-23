@@ -25,18 +25,20 @@ const LANE_EXTRA_WIDTH = 20;
 const ROW_GAP = 16;
 const BACK_EDGE_SPREAD = 18;
 
-export type RoundLane = "automation" | "workItem" | "child";
+export type RoundLane = "automation" | "workItem" | "child" | "noWorkItem";
 
 export const LANE_ORDER: readonly RoundLane[] = [
   "automation",
   "workItem",
   "child",
+  "noWorkItem",
 ];
 
 export const LANE_TITLE: Record<RoundLane, string> = {
   automation: "Automation · events & rules",
   workItem: "This work item",
   child: "Child work items",
+  noWorkItem: "Scheduled · no work item",
 };
 
 /** Node handle ids every round node carries: forward edges run right to left, back edges leave and enter from the top. */
@@ -92,10 +94,15 @@ export type AutomationRoundLayout = {
   edges: RoundLayoutEdge[];
 };
 
-/** Which lane a node sits in: the work item its target runs `on`, or the automation itself. */
+/**
+ * Which lane a node sits in: the work item its target runs `on`, no work item
+ * for a schedule rule's step, or the automation itself.
+ */
 export function laneOf(node: RoundNode): RoundLane {
   switch (node.kind) {
     case "step":
+      if (node.on === null) return "noWorkItem";
+      return node.on === "child" ? "child" : "workItem";
     case "pipeline":
       return node.on === "child" ? "child" : "workItem";
     case "person":
@@ -103,6 +110,7 @@ export function laneOf(node: RoundNode): RoundLane {
     case "end":
       return "workItem";
     case "junction":
+    case "trigger":
     case "attach":
       return "automation";
   }
@@ -119,6 +127,7 @@ export function roundNodeSize(node: RoundNode): {
 } {
   switch (node.kind) {
     case "junction":
+    case "trigger":
       return { ...JUNCTION_SIZE };
     case "person":
       return { ...PERSON_SIZE };

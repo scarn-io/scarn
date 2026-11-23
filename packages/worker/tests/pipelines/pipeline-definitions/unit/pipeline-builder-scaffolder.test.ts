@@ -389,7 +389,7 @@ describe("scaffoldPipelineBuilderDirectory", () => {
         expect(content).toContain('scope: "project"');
         expect(content).toContain('key: "default"');
         expect(content).toContain(
-          'onEvent({ event: "workItem.ready", to: bugPipeline })',
+          'onEvent({ key: "start-on-ready", event: "workItem.ready", to: bugPipeline })',
         );
         expect(content).toContain('import bugPipeline from "./bug-pipeline";');
       } finally {

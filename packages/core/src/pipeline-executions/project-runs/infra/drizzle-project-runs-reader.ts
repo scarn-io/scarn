@@ -63,7 +63,9 @@ const facetConditions = (
     : [
         filter.startedBy === "me"
           ? sql`x.started_by_user_id = ${scope.actorUserId}::uuid`
-          : sql`x.started_by_user_id is null and x.started_by_automation_id = ${filter.startedBy}::uuid`,
+          : filter.startedBy === "scheduled"
+            ? sql`x.started_by_schedule_id is not null`
+            : sql`x.started_by_user_id is null and x.started_by_automation_id = ${filter.startedBy}::uuid`,
       ]),
   ...(filter.atNode === undefined ? [] : [sql`x.at_node`]),
 ];
@@ -121,6 +123,7 @@ type RawCountRow = {
   automation_key: string | null;
   automation_title: string | null;
   by_actor: boolean;
+  scheduled: boolean;
   at_node: boolean;
   count: number;
 };
@@ -139,6 +142,7 @@ const toCountGroup = (row: RawCountRow): ProjectRunCountGroup => ({
           title: row.automation_title,
         },
   startedByActor: row.by_actor,
+  scheduled: row.scheduled,
   atNode: row.at_node,
   count: row.count,
 });
@@ -220,12 +224,13 @@ export class DrizzleProjectRunsReader implements ProjectRunsReader {
       select x.status, x.type, x.what_ran_key, x.what_ran_name,
         a.id as automation_id, a.key as automation_key, a.title as automation_title,
         coalesce(x.started_by_user_id = ${scope.actorUserId}::uuid, false) as by_actor,
+        x.started_by_schedule_id is not null as scheduled,
         x.at_node, count(*)::int as count
       from (${projectRunRowsSql(scope, atNode)}) x
       left join ${automations} a
         on a.id = x.started_by_automation_id and x.started_by_user_id is null
       group by x.status, x.type, x.what_ran_key, x.what_ran_name, a.id, a.key,
-        a.title, by_actor, x.at_node
+        a.title, by_actor, scheduled, x.at_node
     `);
     return rows.rows.map(toCountGroup);
   }

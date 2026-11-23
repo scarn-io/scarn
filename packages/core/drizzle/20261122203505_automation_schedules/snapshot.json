@@ -1,0 +1,433 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "3410c7b9-c36d-4e10-bb94-ff11860ac422",
+  "prevIds": [
+    "0c253b4d-f2c6-448e-8fef-7fcffd6c6a43"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "app",
+        "automation_schedules"
+      ],
+      "writes": [
+        "s|tbl|app.automation_schedules",
+        "n|tbl|app.automation_schedules",
+        "e|tbl|app.automation_schedules",
+        "n|rel|app.automation_schedules",
+        "n|type|app.automation_schedules",
+        "n|rel|app.automation_schedules_pkey"
+      ],
+      "reads": [
+        "n|sch|app"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "app",
+        "automation_schedules",
+        "automation_schedules_automation_key_live_unique"
+      ],
+      "writes": [
+        "s|idx|app.automation_schedules_automation_key_live_unique",
+        "n|idx|app.automation_schedules_automation_key_live_unique",
+        "e|idx|app.automation_schedules_automation_key_live_unique",
+        "n|rel|app.automation_schedules_automation_key_live_unique"
+      ],
+      "reads": [
+        "n|tbl|app.automation_schedules",
+        "n|sch|app",
+        "n|col|app.automation_schedules.automation_id",
+        "n|col|app.automation_schedules.key"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "app",
+        "automation_schedules",
+        "automation_schedules_next_run_at_live_idx"
+      ],
+      "writes": [
+        "s|idx|app.automation_schedules_next_run_at_live_idx",
+        "n|idx|app.automation_schedules_next_run_at_live_idx",
+        "e|idx|app.automation_schedules_next_run_at_live_idx",
+        "n|rel|app.automation_schedules_next_run_at_live_idx"
+      ],
+      "reads": [
+        "n|tbl|app.automation_schedules",
+        "n|sch|app",
+        "n|col|app.automation_schedules.next_run_at"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "app",
+        "automation_schedules"
+      ],
+      "writes": [
+        "s|fk|app.automation_schedules.automation_schedules_automation_id_automations_id_fkey",
+        "n|fk|app.automation_schedules.automation_schedules_automation_id_automations_id_fkey",
+        "e|fk|app.automation_schedules.automation_schedules_automation_id_automations_id_fkey",
+        "n|con|app.automation_schedules.automation_schedules_automation_id_automations_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|app.automation_schedules",
+        "n|sch|app",
+        "n|tbl|app.automations",
+        "n|sch|app",
+        "n|col|app.automation_schedules.automation_id",
+        "n|col|app.automations.id",
+        "e|uniqueness|app.automations.id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "name": "automation_schedules",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "automation_schedules",
+        "name": "id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "automation_schedules",
+        "name": "automation_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "automation_schedules",
+        "name": "key",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "automation_schedules",
+        "name": "cron",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "automation_schedules",
+        "name": "timezone",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "automation_schedules",
+        "name": "concurrency_json",
+        "type": "jsonb",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "automation_schedules",
+        "name": "next_run_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "automation_schedules",
+        "name": "last_fired_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "automation_schedules",
+        "name": "last_skipped_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "automation_schedules",
+        "name": "skipped_count_since_fire",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "0",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "automation_schedules",
+        "name": "last_error",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "automation_schedules",
+        "name": "last_error_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "automation_schedules",
+        "name": "removed_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "automation_schedules",
+        "name": "created_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "automation_schedules",
+        "name": "updated_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "automation_schedules",
+        "name": "automation_schedules_automation_key_live_unique",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "automation_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "key",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": true,
+        "where": "\"removed_at\" IS NULL",
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "automation_schedules",
+        "name": "automation_schedules_next_run_at_live_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "next_run_at",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": "\"removed_at\" IS NULL",
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "automation_schedules",
+        "name": "automation_schedules_automation_id_automations_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "automation_id"
+        ],
+        "schemaTo": "app",
+        "tableTo": "automations",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "automation_schedules",
+        "name": "automation_schedules_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    }
+  ]
+}

@@ -15,9 +15,12 @@ import {
   detachWorkItemAutomation,
   listWorkItemAutomations,
 } from "@scarn/core/pipeline-definitions/automation/application/work-item-automations";
+import { runScheduleNow } from "@scarn/core/pipeline-definitions/automation/application/run-schedule-now";
 import {
+  automationListItemSchema,
   automationSchema,
   publishAutomationResultSchema,
+  runAutomationScheduleResultSchema,
   workItemAutomationSchema,
 } from "@scarn/core/pipeline-definitions/automation/contracts/automation-contracts";
 import { apiErrorResponseSchema } from "../../contracts";
@@ -30,6 +33,9 @@ import { responseSchemas } from "../response-schemas";
 const keySchema = z.string().trim().min(1);
 const projectParamsSchema = z.object({ projectId: uuidV7Schema });
 const automationParamsSchema = projectParamsSchema.extend({ key: keySchema });
+const scheduleParamsSchema = automationParamsSchema.extend({
+  ruleKey: keySchema,
+});
 const workItemParamsSchema = z.object({ workItemId: workItemIdSchema });
 const workItemAutomationParamsSchema = workItemParamsSchema.extend({
   key: keySchema,
@@ -49,7 +55,7 @@ const tags = ["Automations"];
 
 /**
  * Automations: publish, list and enable/disable a project's automations,
- * and attach work-item automations to work items. The two lists run on
+ * run a schedule now, and attach work-item automations to work items. The two lists run on
  * `createOptionallyAuthenticated`, like the pipeline definition reads, so a
  * public project's readers can see them.
  */
@@ -67,7 +73,7 @@ export const createAutomationRoutes = (appContext: AppContext) =>
           {
             params: projectParamsSchema,
             response: responseSchemas({
-              200: z.array(automationSchema),
+              200: z.array(automationListItemSchema),
               ...errorResponses,
             }),
             detail: { operationId: "listAutomations", tags },
@@ -76,6 +82,7 @@ export const createAutomationRoutes = (appContext: AppContext) =>
             await listAutomations(projectParamsSchema.parse(params).projectId, {
               userAuthz: auth.userAuthz,
               automationRepo: appContext.automationRepo,
+              automationScheduleRepo: appContext.automationScheduleRepo,
             }),
         )
         .get(
@@ -121,6 +128,7 @@ export const createAutomationRoutes = (appContext: AppContext) =>
                 {
                   userAuthz: auth.userAuthz,
                   automationRepo: appContext.automationRepo,
+                  automationScheduleRepo: appContext.automationScheduleRepo,
                   stepDefinitionRepo: appContext.stepDefinitionRepo,
                   pipelineGraphRepo: appContext.pipelineGraphRepo,
                   timeProvider: appContext.timeProvider,
@@ -163,6 +171,33 @@ export const createAutomationRoutes = (appContext: AppContext) =>
                 { ...appContext, userAuthz: auth.userAuthz },
               ),
             ),
+        )
+        .post(
+          "/projects/:projectId/automations/:key/schedules/:ruleKey/runs",
+          {
+            params: scheduleParamsSchema,
+            response: responseSchemas({
+              201: runAutomationScheduleResultSchema,
+              409: apiErrorResponseSchema,
+              ...errorResponses,
+            }),
+            detail: {
+              operationId: "runAutomationSchedule",
+              description:
+                "Run now: fires the schedule rule `ruleKey` of the project automation `key` once, for `scheduledFor` = now, through the same path and concurrency check as the minutely tick. Requires `executions:write`. Works while the automation is disabled and does not change the schedule's next run. `taskId` is null when the rule routed to `skip`. Responds 409 `Scarn.ConcurrencyGroupFull` when the schedule's concurrency group is full: no Task is created, `meta.heldBy` names the Tasks that hold the group, and the schedule summary does not count a skip. Responds 409 `AUTOMATION_SCHEDULE_RUN_CONFLICT` when another Run now landed on the same instant.",
+              tags,
+            },
+          },
+          async ({ params, auth, set }) => {
+            const result = Result.unwrap(
+              await runScheduleNow(scheduleParamsSchema.parse(params), {
+                ...appContext,
+                userAuthz: auth.userAuthz,
+              }),
+            );
+            set.status = 201;
+            return result;
+          },
         )
         .post(
           "/work-items/:workItemId/automations/:key",

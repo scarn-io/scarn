@@ -181,9 +181,16 @@ const loadTaskFacts = async (
   extraConnectors: ExtraConnector[];
 }> => {
   const task = await deps.taskRepo.load(run.taskId);
-  const grants = task ? [...task.grants] : taskGrants([], run.workItemId);
+  const grants = task
+    ? [...task.grants]
+    : taskGrants([], {
+        workItemId: run.workItemId,
+        startedByScheduleId: null,
+      });
   const chatConversationId =
-    task && task.workItemId === null ? task.conversationId : null;
+    task && task.workItemId === null && task.startedByScheduleId === null
+      ? task.conversationId
+      : null;
   const extraConnectors = task?.environmentSelection?.extraConnectors ?? [];
   if (!task || task.maxTurns === null) {
     return {

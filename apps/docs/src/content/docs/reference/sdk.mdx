@@ -512,13 +512,14 @@ const step = defineStep({
 });
 ```
 
-| Feature                                                                     | Effect                                                                                                                                                                                                                         |
-| --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `Features.notifications()`                                                  | Adds an optional `$scarn_notifications_v1` result array and prompt text for emitting user notifications.                                                                                                                       |
-| `Features.feedbackRequests()`                                               | A real specialization of `notifications()` (not an alias): narrows every emitted item to `kind: "feedback_request"`, in the same `$scarn_notifications_v1` array.                                                              |
-| `Features.workItems.read \| update \| comment \| block \| close({ scope })` | Grants the step's Tasks that action on their work item (`scope: "self"`) or its children (`scope: "children"`), and adds a prompt section naming the tool. `read` also takes `scope: "project"`: any work item in the project. |
-| `Features.workItems.label({ scope, labels })`                               | Grants adding or removing only the listed labels.                                                                                                                                                                              |
-| `Features.workItems.create({ scope: "children", labels })`                  | Grants creating child work items with labels from `labels` only.                                                                                                                                                               |
+| Feature                                                                     | Effect                                                                                                                                                                                                                                     |
+| --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `Features.notifications()`                                                  | Adds an optional `$scarn_notifications_v1` result array and prompt text for emitting user notifications.                                                                                                                                   |
+| `Features.feedbackRequests()`                                               | A real specialization of `notifications()` (not an alias): narrows every emitted item to `kind: "feedback_request"`, in the same `$scarn_notifications_v1` array.                                                                          |
+| `Features.workItems.read \| update \| comment \| block \| close({ scope })` | Grants the step's Tasks that action on their work item (`scope: "self"`) or its children (`scope: "children"`), and adds a prompt section naming the tool. `read` also takes `scope: "project"`: any work item in the project.             |
+| `Features.workItems.label({ scope, labels })`                               | Grants adding or removing only the listed labels.                                                                                                                                                                                          |
+| `Features.workItems.create({ scope: "children", labels })`                  | Grants creating child work items with labels from `labels` only.                                                                                                                                                                           |
+| `Features.workItems.create({ scope: "project", labels })`                   | Grants creating top-level work items in the project, each keyed by a `platformKey` from its source system; a key the project already has returns the existing item. For [scheduled steps](/scarn/guides/automations/#creating-work-items). |
 
 Work item features add nothing to the result; they collect into the step's `grants`. Attach each action and scope at most once. See [`Features.workItems.*`](/scarn/guides/steps/#featuresworkitems) for the guide.
 
@@ -835,6 +836,7 @@ export default defineAutomation({
   scope: "project",
   rules: [
     onEvent({
+      key: "route-ready",
       event: "workItem.ready",
       routes: [
         { when: (r) => contains(r.workItem.labels, "bug"), to: bugTriage },
@@ -845,14 +847,22 @@ export default defineAutomation({
 });
 ```
 
-| Field   | Type                      | Description                                                                         |
-| ------- | ------------------------- | ----------------------------------------------------------------------------------- |
-| `key`   | `string`                  | Stable identity; `default` for the project's default automation                     |
-| `title` | `string` (optional)       | Display name                                                                        |
-| `scope` | `"project" \| "workItem"` | Project automations react to project events; work-item ones are attached to an item |
-| `rules` | `onEvent(...)[]`          | `onEvent({ event, to })`, or `onEvent({ event, match?, routes, otherwise? })`       |
+| Field   | Type                      | Description                                                                                                                              |
+| ------- | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `key`   | `string`                  | Stable identity; `default` for the project's default automation                                                                          |
+| `title` | `string` (optional)       | Display name                                                                                                                             |
+| `scope` | `"project" \| "workItem"` | Project automations react to project events; work-item ones are attached to an item                                                      |
+| `rules` | `onEvent(...)[]`          | `onEvent({ key, event, to })`, or `onEvent({ key, event, match?, routes, otherwise? })`; each rule `key` is unique within the automation |
 
 A rule's target is a pipeline, `attach(automation)` (project scope only) or `skip`. See [Project Automations](/scarn/guides/automations/) for the events and what `r` holds.
+
+A project automation's `onEvent({ key, event: "schedule", cron, timezone?, concurrency?, ... })` starts a step on a cron instead. Its target is a step, without `.on(...)`, or `skip`, and `r` holds `r.schedule` (`key`, `scheduledFor`, `previousScheduledFor`, `timezone`). See [Schedules](/scarn/guides/automations/#schedules).
+
+| Schedule option | Type                                          | Description                                                                                                  |
+| --------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `cron`          | `string`                                      | 5-field cron or an `@` alias such as `"@hourly"`; no seconds field and no Quartz syntax                      |
+| `timezone`      | `string` (optional)                           | IANA timezone the cron is read in; defaults to `"UTC"`                                                       |
+| `concurrency`   | `{ max: number; waiting: number }` (optional) | Runs of the schedule open at once; defaults to `{ max: 1, waiting: 0 }`, which skips a run while one is open |
 
 ---
 

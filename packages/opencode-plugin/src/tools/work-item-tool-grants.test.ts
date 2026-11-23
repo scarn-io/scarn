@@ -99,6 +99,41 @@ describe("work item tools follow the grants", () => {
     ).toEqual([]);
   });
 
+  test("a scheduled run with a create grant on project gets only the create tool, in its project form", () => {
+    const tools = createWorkItemTools("/unused", {
+      taskRunId: "task-run-1",
+      resultSchemaJson: null,
+      turnsRemaining: 3,
+      workItemId: null,
+      grants: [grant("create", "project", ["intake"])],
+      api: null,
+      workItemLinks: null,
+    });
+
+    expect(tools.map((tool) => tool.name)).toEqual([
+      SCARN_CREATE_WORK_ITEM_TOOL,
+    ]);
+    const input = tools[0]?.input as {
+      properties: Record<string, unknown>;
+      required: string[];
+    };
+    expect(Object.keys(input.properties)).toContain("platformKey");
+    expect(Object.keys(input.properties)).toContain("url");
+    expect(Object.keys(input.properties)).not.toContain("blockedBy");
+    expect(input.required).toEqual(["platformKey", "title", "description"]);
+    expect(tools[0]?.description).toContain("`platformKey` is required.");
+  });
+
+  test("a create grant on children only offers blockedBy, not platformKey", () => {
+    const input = toolsFor([grant("create", "children")]).get(
+      SCARN_CREATE_WORK_ITEM_TOOL,
+    )?.input as { properties: Record<string, unknown>; required: string[] };
+
+    expect(Object.keys(input.properties)).toContain("blockedBy");
+    expect(Object.keys(input.properties)).not.toContain("platformKey");
+    expect(input.required).toEqual(["title", "description"]);
+  });
+
   test("descriptions name the scopes granted", () => {
     expect(
       toolsFor([grant("comment", "children")]).get(

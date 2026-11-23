@@ -1,6 +1,7 @@
 /**
  * What the Runs list is scoped to, in words: the header's title, the tab a
- * narrowed status belongs to, and the work item an `item` filter names.
+ * narrowed status belongs to, and the work item an `item` filter or the
+ * schedule a `schedule` filter names.
  */
 import {
   PROJECT_RUN_STATUS_TABS,
@@ -49,17 +50,40 @@ export function scopedWorkItem(
   return null;
 }
 
+/** `<automation title or key> · <rule key>`, e.g. `Poll Linear · hourly`. */
+export type ScopedSchedule = { label: string; removed: boolean };
+
+/** The schedule `nav.schedule` names, found on the loaded rows. */
+export function scopedSchedule(
+  scheduleId: string | undefined,
+  runs: readonly ProjectRun[],
+): ScopedSchedule | null {
+  if (scheduleId === undefined) return null;
+  for (const { startedBy } of runs) {
+    if (startedBy.kind === "schedule" && startedBy.schedule.id === scheduleId) {
+      return {
+        label: `${startedBy.title ?? startedBy.key} · ${startedBy.schedule.key}`,
+        removed: startedBy.schedule.removed,
+      };
+    }
+  }
+  return null;
+}
+
 /** The header title for the list's scope. */
 export function runsTitle(
   nav: RunsNav,
   counts: RunsCounts | null,
   item: ScopedWorkItem | null,
   automationLabel: (id: string) => string | undefined,
+  schedule: ScopedSchedule | null = null,
 ): string {
   if (nav.item !== undefined) {
     return item ? `${item.platformKey} · ${item.title}` : "Runs";
   }
+  if (nav.schedule !== undefined) return schedule?.label ?? "Scheduled";
   if (nav.by === "me") return "Started by you";
+  if (nav.by === "scheduled") return "Scheduled";
   if (nav.whatRan === "task") return "Tasks";
   if (nav.by !== undefined) {
     const label =

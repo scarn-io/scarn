@@ -48,10 +48,12 @@ const DOCUMENT = {
   scope: "workItem",
   rules: [
     {
+      key: "plan-on-attach",
       event: "self.attached",
       next: { routes: [{ kind: "step", to: "plan", on: "workItem" }] },
     },
     {
+      key: "route-ready-children",
       event: "child.ready",
       next: {
         routes: [
@@ -69,6 +71,7 @@ const DOCUMENT = {
       },
     },
     {
+      key: "replan-on-child-closed",
       event: "child.closed",
       next: { routes: [{ kind: "step", to: "plan", on: "workItem" }] },
     },
@@ -82,6 +85,7 @@ const DEFAULT_DOCUMENT = {
   scope: "project",
   rules: [
     {
+      key: "on-work-item-ready",
       event: "workItem.ready",
       next: {
         routes: [{ kind: "pipeline", to: "build", on: "workItem" }],
@@ -214,6 +218,7 @@ describe("AutomationGraphPanel", () => {
           scope: "project",
           rules: [
             {
+              key: "on-work-item-created",
               event: "workItem.created",
               next: { routes: [{ kind: "skip" }] },
             },

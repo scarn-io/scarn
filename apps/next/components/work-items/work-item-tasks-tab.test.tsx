@@ -43,6 +43,7 @@ const buildTask = (overrides: Partial<TaskSummary> = {}): TaskSummary => ({
   name: null,
   status: "running",
   createdAt: "2026-10-01T12:00:00.000Z",
+  scheduledFor: null,
   updatedAt: "2026-10-01T12:00:00.000Z",
   waitingOnYou: false,
   waitingOn: [],

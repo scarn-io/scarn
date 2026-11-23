@@ -49,11 +49,12 @@ const toDisplaySourceIdentityKey = (workItem: {
 
 /**
  * What an agent Task's create sets that a person's can't: the id the worker
- * made, the parent (the Task's item) and the Task that spawned it.
+ * made, the parent (the Task's item, or none for a top-level item in the
+ * project) and the Task that spawned it.
  */
 export type SpawnedWorkItemProps = {
   id: WorkItemId;
-  parentWorkItemId: WorkItemId;
+  parentWorkItemId: WorkItemId | null;
   spawnedByTaskId: UuidV7;
 };
 

@@ -1,9 +1,10 @@
 import type { AnyJsonValue } from "@scarn/core/common/contracts/json";
 import type { WorkItemEntity } from "@scarn/core/work-items/work-item/domain/work-item-entity";
 import type {
-  AutomationEvent,
   AutomationRoute,
+  AutomationRule,
   AutomationTargetJson,
+  WorkItemEvent,
 } from "@scarn/sdk/contracts/automation-document";
 import type {
   ComputedSource,
@@ -27,16 +28,32 @@ export type EventWorkItemValues = {
 };
 
 /**
- * One event as a rule sees it: `workItem` is the work item the rule is about
- * (the parent on `child.*` events), `child` the child work item, and `label`
- * the added label on `workItem.label.added`.
+ * An event about a work item as a rule sees it: `workItem` is the work item
+ * the rule is about (the parent on `child.*` events), `child` the child work
+ * item, and `label` the added label on `workItem.label.added`.
  */
-export type AutomationEventContext = {
-  event: AutomationEvent;
+export type WorkItemEventContext = {
+  event: WorkItemEvent;
   workItem: WorkItemEntity;
   child: WorkItemEntity | null;
   label: string | null;
 };
+
+/** The plain values a `schedule` rule's `event.schedule` refs read; times are ISO strings. */
+export type ScheduleEventValues = {
+  key: string;
+  scheduledFor: string;
+  previousScheduledFor: string | null;
+  timezone: string;
+};
+
+/** A schedule's fire as its rule sees it: about no work item. */
+export type ScheduleEventContext = {
+  event: "schedule";
+  schedule: ScheduleEventValues;
+};
+
+export type AutomationEventContext = WorkItemEventContext | ScheduleEventContext;
 
 const valuesOf = (workItem: WorkItemEntity): EventWorkItemValues => ({
   title: workItem.title,
@@ -52,13 +69,16 @@ const valuesOf = (workItem: WorkItemEntity): EventWorkItemValues => ({
  */
 const toReferenceContext = (
   context: AutomationEventContext,
-): ReferenceContext => ({
-  item: {
-    workItem: valuesOf(context.workItem),
-    ...(context.child ? { child: valuesOf(context.child) } : {}),
-    ...(context.label === null ? {} : { label: context.label }),
-  },
-});
+): ReferenceContext =>
+  context.event === "schedule"
+    ? { item: { schedule: { ...context.schedule } } }
+    : {
+        item: {
+          workItem: valuesOf(context.workItem),
+          ...(context.child ? { child: valuesOf(context.child) } : {}),
+          ...(context.label === null ? {} : { label: context.label }),
+        },
+      };
 
 const EVENT_PREFIX = "event.";
 
@@ -146,4 +166,21 @@ export const resolveTargetArgs = (
     Object.entries(args).map(([name, arg]) => [name, rewriteArg(arg)]),
   );
   return resolveArgs(rewritten, toReferenceContext(context));
+};
+
+/** The targets a rule's `next` picks for the event: the first matching route, every one with `match: "all"`, else `otherwise`. */
+export const selectTargets = (
+  rule: AutomationRule,
+  context: AutomationEventContext,
+): AutomationTargetJson[] => {
+  const matching =
+    rule.next.match === "all"
+      ? rule.next.routes.filter((route) => routeMatches(route, context))
+      : rule.next.routes
+          .filter((route) => routeMatches(route, context))
+          .slice(0, 1);
+  if (matching.length > 0) {
+    return matching;
+  }
+  return rule.next.otherwise ? [rule.next.otherwise] : [];
 };

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import NextLink from "next/link";
-import type { AutomationContract } from "@scarn/api/frontend-contracts";
+import type { AutomationListItemContract } from "@scarn/api/frontend-contracts";
 import { Alert, Box, Link, Stack, Switch, Typography } from "@mui/material";
 import { fetchProjectAutomations } from "@/app/(protected)/projects/_lib/project-work-items";
 import { getBrowserScarnApiClient } from "@/app/_lib/scarn-browser-api-client";
@@ -14,9 +14,10 @@ import {
   useProjectPath,
 } from "@/components/project-route-context";
 import { runsNavHref } from "@/components/runs/runs-params";
+import { AutomationSchedules } from "./automation-schedules";
 import { automationStarts } from "./automation-targets";
 
-const SCOPE_TAGS: Record<AutomationContract["scope"], string> = {
+const SCOPE_TAGS: Record<AutomationListItemContract["scope"], string> = {
   project: "whole project",
   workItem: "one work item",
 };
@@ -24,12 +25,14 @@ const SCOPE_TAGS: Record<AutomationContract["scope"], string> = {
 type LoadState =
   | { status: "loading" }
   | { status: "error" }
-  | { status: "ready"; automations: AutomationContract[] };
+  | { status: "ready"; automations: AutomationListItemContract[] };
 
-const byKey = (left: AutomationContract, right: AutomationContract) =>
-  left.key.localeCompare(right.key);
+const byKey = (
+  left: AutomationListItemContract,
+  right: AutomationListItemContract,
+) => left.key.localeCompare(right.key);
 
-function ScopeTag({ scope }: { scope: AutomationContract["scope"] }) {
+function ScopeTag({ scope }: { scope: AutomationListItemContract["scope"] }) {
   return (
     <Box
       component="span"
@@ -51,6 +54,7 @@ function ScopeTag({ scope }: { scope: AutomationContract["scope"] }) {
 }
 
 function AutomationRow({
+  projectId,
   automation,
   starts,
   inProgress,
@@ -58,15 +62,20 @@ function AutomationRow({
   canToggle,
   pending,
   onToggle,
+  canRun,
+  onRan,
   isFirst,
 }: {
-  automation: AutomationContract;
+  projectId: string;
+  automation: AutomationListItemContract;
   starts: string[];
   inProgress: number;
   showSwitch: boolean;
   canToggle: boolean;
   pending: boolean;
   onToggle: (enabled: boolean) => void;
+  canRun: boolean;
+  onRan: () => void;
   isFirst: boolean;
 }) {
   const buildPath = useProjectPath();
@@ -80,7 +89,7 @@ function AutomationRow({
   return (
     <Stack
       direction="row"
-      alignItems="center"
+      alignItems={automation.schedules.length > 0 ? "flex-start" : "center"}
       spacing={2}
       sx={{
         px: 2,
@@ -121,6 +130,13 @@ function AutomationRow({
             Starts {starts.join(" · ")}
           </Typography>
         ) : null}
+        <AutomationSchedules
+          projectId={projectId}
+          automationKey={automation.key}
+          schedules={automation.schedules}
+          canRun={canRun}
+          onRan={onRan}
+        />
       </Box>
       <Link
         component={NextLink}
@@ -140,10 +156,10 @@ function AutomationRow({
 
 /**
  * The Automations section: one row per automation with its on/off switch
- * (project automations; members see it, those with `executions:write`
- * can flip it), scope tag, what
- * it starts and a link to the runs it has in progress. This is the only
- * place the switch lives.
+ * (project automations; members see it, those with `pipelines:write`
+ * can flip it), scope tag, what it starts, its schedule rules (with Run now
+ * for those with `executions:write`) and a link to the runs it has in
+ * progress. This is the only place the switch lives.
  */
 export function PipelinesAutomationsSection({
   projectId,
@@ -158,9 +174,14 @@ export function PipelinesAutomationsSection({
 }) {
   const isMember = useIsProjectMember();
   const canToggle = useHasProjectPermission("pipelines:write");
+  const canRun = useHasProjectPermission("executions:write");
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const [pendingKey, setPendingKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loads, setLoads] = useState(0);
+  const reload = () => {
+    setLoads((count) => count + 1);
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -179,7 +200,7 @@ export function PipelinesAutomationsSection({
     return () => {
       cancelled = true;
     };
-  }, [projectId]);
+  }, [projectId, loads]);
 
   const setEnabled = async (key: string, enabled: boolean) => {
     setError(null);
@@ -202,11 +223,15 @@ export function PipelinesAutomationsSection({
         ? {
             status: "ready",
             automations: current.automations.map((entry) =>
-              entry.key === data.key ? data : entry,
+              entry.key === data.key ? { ...entry, ...data } : entry,
             ),
           }
         : current,
     );
+    if (state.status === "ready") {
+      const changed = state.automations.find((entry) => entry.key === key);
+      if (changed && changed.schedules.length > 0) reload();
+    }
   };
 
   return (
@@ -244,6 +269,7 @@ export function PipelinesAutomationsSection({
           {state.automations.map((automation, index) => (
             <AutomationRow
               key={automation.id}
+              projectId={projectId}
               automation={automation}
               starts={automationStarts(automation, pipelineNames)}
               inProgress={inProgress.get(automation.id) ?? 0}
@@ -253,6 +279,8 @@ export function PipelinesAutomationsSection({
               onToggle={(enabled) => {
                 void setEnabled(automation.key, enabled);
               }}
+              canRun={isMember && canRun}
+              onRan={reload}
               isFirst={index === 0}
             />
           ))}

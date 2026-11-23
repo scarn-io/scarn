@@ -69,6 +69,7 @@ describe("automation-triggered runs notify the work signal", () => {
       await h.publish(
         projectAutomation(key, [
           {
+            key: "work-item-created",
             event: "workItem.created",
             next: { routes: [{ kind: "step", to: plan.key, on: "workItem" }] },
           },

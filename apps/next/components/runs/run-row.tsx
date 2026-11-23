@@ -11,7 +11,8 @@
  *
  * The whole row is one link (the title's `::after` stretches over it), so
  * middle-click opens the run in a new tab while the work item keys stay
- * their own links on top.
+ * their own links on top. A scheduled Task has no work item; its schedule
+ * takes that place, linking to the schedule's history.
  */
 
 import { Box, Typography } from "@mui/material";
@@ -24,6 +25,7 @@ import {
   ItemKey,
   KindIcon,
   Mono,
+  ScheduleRef,
   StartedBy,
   Updated,
   runStatusText,
@@ -136,6 +138,7 @@ export function RunRow({
   const parent = workItem?.parent ?? null;
   const itemHref = (id: string) => buildPath("work-items", id);
   const started = startedByText(run.startedBy, viewerUserId);
+  const schedule = run.startedBy.kind === "schedule" ? run.startedBy : null;
 
   return (
     <Box
@@ -220,7 +223,19 @@ export function RunRow({
               {" · "}
             </>
           ) : null}
-          {started}
+          {schedule ? (
+            <>
+              <ScheduleRef startedBy={schedule} />
+              {schedule.user ? " · " : null}
+            </>
+          ) : null}
+          {schedule ? (
+            schedule.user ? (
+              <StartedBy startedBy={schedule} viewerUserId={viewerUserId} />
+            ) : null
+          ) : (
+            started
+          )}
         </Typography>
         <StatusLine status={run.status}>{runStatusText(run)}</StatusLine>
       </Box>
@@ -235,7 +250,9 @@ export function RunRow({
         title={
           workItem
             ? `${workItem.platformKey} ${workItem.title}${parent ? `, in ${parent.platformKey}` : ""}`
-            : undefined
+            : schedule
+              ? started
+              : undefined
         }
       >
         {workItem ? (
@@ -256,6 +273,8 @@ export function RunRow({
               </Box>
             ) : null}
           </>
+        ) : schedule ? (
+          <ScheduleRef startedBy={schedule} />
         ) : (
           <Box component="span" sx={{ color: "text.disabled" }}>
             —

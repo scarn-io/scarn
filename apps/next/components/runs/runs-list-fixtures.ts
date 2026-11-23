@@ -69,3 +69,25 @@ export const buildRun = (overrides: Partial<ProjectRun> = {}): ProjectRun => ({
   updatedAt: new Date().toISOString(),
   ...overrides,
 });
+
+export const scheduleId = id("660");
+
+/** A Task the `poller` automation's `hourly` rule started on its own. */
+export const buildScheduledRun = (
+  overrides: Partial<ProjectRun> = {},
+): ProjectRun =>
+  buildRun({
+    type: "task",
+    href: `runs/tasks/${id("520")}`,
+    whatRan: { kind: "task", name: "Task" },
+    workItem: null,
+    startedBy: {
+      kind: "schedule",
+      automationId,
+      key: "poller",
+      title: "Poller",
+      schedule: { id: scheduleId, key: "hourly", removed: false },
+      user: null,
+    },
+    ...overrides,
+  });

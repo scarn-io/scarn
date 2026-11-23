@@ -12,6 +12,13 @@ import {
 
 /** At most this many items spawned by one Task, across all its runs. */
 export const MAX_WORK_ITEMS_CREATED_PER_TASK = 10;
+/**
+ * The same cap for a Task creating top-level items in its project, such as a
+ * scheduled poller: higher, since one run may find many new items.
+ */
+export const MAX_PROJECT_WORK_ITEMS_CREATED_PER_TASK = 100;
+/** The platform of every item a Task creates in its project. */
+export const PROJECT_WORK_ITEM_PLATFORM = "custom";
 /** At most this many open children under one parent. */
 export const MAX_OPEN_CHILD_WORK_ITEMS = 50;
 /** Fixed page size for posted comments in an agent's work-item read. */
@@ -25,21 +32,61 @@ export const readTaskRunWorkItemInputSchema = z.object({
 });
 
 /**
- * A child work item a running Task's agent creates under the Task's item.
- * `workItemId` is the UUIDv7 the agent's tool made, so a retry names the same
- * item.
+ * A work item a running Task's agent creates. `workItemId` is the UUIDv7 the
+ * agent's tool made, so a retry names the same item.
+ *
+ * - `scope: "children"` (the default): a child of the Task's work item.
+ * - `scope: "project"`: a top-level item in the Task's project, keyed by
+ *   `platformKey`, a stable id from the system the item comes from. A key the
+ *   project already has returns that item unchanged. Takes no `blockedBy`.
  */
-export const createTaskRunWorkItemInputSchema = z.object({
-  claimToken: z.string().trim().min(1),
-  workItemId: workItemIdSchema,
-  title: z.string().trim().min(1).max(500),
-  description: z.string().trim().min(1).max(50_000),
-  fields: anyJsonObjectSchema.optional(),
-  labels: labelsSchema.optional(),
-  blockedBy: z.array(workItemIdSchema).max(50).optional(),
-});
+export const createTaskRunWorkItemInputSchema = z
+  .object({
+    claimToken: z.string().trim().min(1),
+    workItemId: workItemIdSchema,
+    scope: z.enum(["children", "project"]).default("children"),
+    platformKey: z.string().trim().min(1).max(500).optional(),
+    url: z.url().optional(),
+    title: z.string().trim().min(1).max(500),
+    description: z.string().trim().min(1).max(50_000),
+    fields: anyJsonObjectSchema.optional(),
+    labels: labelsSchema.optional(),
+    blockedBy: z.array(workItemIdSchema).max(50).optional(),
+  })
+  .superRefine((value, context) => {
+    if (value.scope === "project") {
+      if (value.platformKey === undefined) {
+        context.addIssue({
+          code: "custom",
+          message:
+            "A project create needs a platformKey: a stable id from the system the item comes from",
+          path: ["platformKey"],
+        });
+      }
+      if (value.blockedBy !== undefined && value.blockedBy.length > 0) {
+        context.addIssue({
+          code: "custom",
+          message: "A project create takes no blockedBy",
+          path: ["blockedBy"],
+        });
+      }
+      return;
+    }
+    for (const key of ["platformKey", "url"] as const) {
+      if (value[key] !== undefined) {
+        context.addIssue({
+          code: "custom",
+          message: `Only a project create takes ${key}`,
+          path: [key],
+        });
+      }
+    }
+  });
 
-/** `created` is false when the id already named this Task's child (a replay). */
+/**
+ * `created` is false when the id already named this Task's child (a replay),
+ * or, for a project create, when the project already had its `platformKey`.
+ */
 export const createdTaskRunWorkItemSchema = z.object({
   workItemId: workItemIdSchema,
   created: z.boolean(),

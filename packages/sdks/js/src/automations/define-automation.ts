@@ -2,19 +2,18 @@
  * `defineAutomation` and `onEvent`: runs each rule's callbacks once, with an
  * `r` of placeholders for the event, and compiles the rules to an automation
  * JSON document (format in `contracts/automation-document/schema.ts`). It
- * throws `PipelineBuildError` when a rule can't be compiled; whether its
+ * throws `PipelineBuildError` when a rule can't be compiled (including a
+ * `schedule` rule's cron and timezone, checked as at publish); whether its
  * targets exist is checked when the automation is published.
  */
 import {
   eventHasChild,
+  RULE_KEY_PATTERN,
   scopeOfEvent,
   type AutomationDocument,
   type AutomationEvent,
   type AutomationScope,
-  type AutomationSubject,
 } from "../contracts/automation-document";
-import type { ArgValue, JsonSchema } from "../contracts/pipeline-document";
-import { argEntries, compileArg } from "../pipelines/compile-args";
 import {
   issue,
   mapSource,
@@ -24,13 +23,14 @@ import {
 import type { CompileState, Segment } from "../pipelines/compile-state";
 import { compileCondition, conditionData } from "../pipelines/condition-data";
 import { AuthoringError, PipelineBuildError } from "../pipelines/errors";
-import type { TargetData } from "../pipelines/model";
 import { nodeOf, targetOf } from "../pipelines/registry";
-import { rootPlaceholder, withOwners, withTracker } from "../pipelines/refs";
+import { withOwners, withTracker } from "../pipelines/refs";
 import { captureSite, type SourceSite } from "../pipelines/source";
+import { compileSchedule, scheduleOptionsOf } from "./compile-schedule";
+import { compileStep } from "./compile-step";
+import { eventContext } from "./event-context";
 import {
   automationTargetOf,
-  markSubject,
   registerAutomationTarget,
   type AutomationTargetData,
 } from "./targets";
@@ -41,6 +41,7 @@ import type {
   EventOf,
   Rule,
   RuleOptions,
+  ScheduleOptions,
 } from "./types";
 
 type Json = Record<string, unknown>;
@@ -51,51 +52,16 @@ interface RouteData {
 }
 
 interface RuleData {
+  key: string;
   event: AutomationEvent;
   match: "first" | "all" | undefined;
   routes: readonly RouteData[];
   otherwise: object | undefined;
+  schedule: ScheduleOptions | undefined;
   site: SourceSite | null;
 }
 
 const rules = new WeakMap<object, RuleData>();
-
-const PROPERTY_SCHEMAS: Record<string, JsonSchema | undefined> = {
-  title: { type: "string" },
-  description: { type: ["string", "null"] },
-  fields: undefined,
-  labels: { type: "array", items: { type: "string" } },
-  state: { type: "string", enum: ["open", "closed"] },
-};
-
-function eventWorkItem(subject: AutomationSubject, owner: object): object {
-  const value: Record<string, unknown> = {};
-  for (const [property, schema] of Object.entries(PROPERTY_SCHEMAS)) {
-    Object.defineProperty(value, property, {
-      get: () =>
-        rootPlaceholder(`event.${subject}.${property}`, schema, { owner }),
-      enumerable: true,
-    });
-  }
-  return markSubject(value, subject);
-}
-
-/** The `r` for a rule's callbacks: placeholders over what the event carries. */
-function eventContext(event: AutomationEvent): object {
-  const context: Record<string, unknown> = {};
-  context["workItem"] = eventWorkItem("workItem", context);
-  if (eventHasChild(event)) {
-    context["child"] = eventWorkItem("child", context);
-  }
-  if (event === "workItem.label.added") {
-    Object.defineProperty(context, "label", {
-      get: () =>
-        rootPlaceholder("event.label", { type: "string" }, { owner: context }),
-      enumerable: true,
-    });
-  }
-  return context;
-}
 
 /** Does nothing: a route that matches and starts nothing. */
 export const skip: AutomationTarget<AutomationScope> = registerAutomationTarget(
@@ -127,16 +93,20 @@ export function onEvent<const E extends AutomationEvent>(
   options: RuleOptions<E>,
 ): Rule<E> {
   const site = captureSite();
+  const schedule = scheduleOptionsOf(options);
   const rule: RuleData =
     options.routes === undefined
       ? {
+          key: options.key,
           event: options.event,
           match: undefined,
           routes: [{ when: undefined, target: options.to }],
           otherwise: undefined,
+          schedule,
           site,
         }
       : {
+          key: options.key,
           event: options.event,
           match: options.match,
           routes: options.routes.map((route) => ({
@@ -144,10 +114,12 @@ export function onEvent<const E extends AutomationEvent>(
             target: route.to,
           })),
           otherwise: options.otherwise,
+          schedule,
           site,
         };
   const value = Object.freeze({
     _tag: "automation_rule",
+    key: options.key,
     event: options.event,
   });
   rules.set(value, rule);
@@ -167,7 +139,7 @@ function resolveTarget(spec: object, context: object): AutomationTargetData {
     return {
       kind: "step",
       target: { node: handle, args: undefined, site: null },
-      on: "workItem",
+      on: undefined,
       site: null,
     };
   }
@@ -181,36 +153,15 @@ function resolveTarget(spec: object, context: object): AutomationTargetData {
   }
   const target = targetOf(value);
   if (target?.node.kind === "step" && target.partial !== true) {
-    return { kind: "step", target, on: "workItem", site: target.site };
+    return { kind: "step", target, on: undefined, site: target.site };
   }
   const pipeline = pipelineKeyOf(value);
   if (pipeline !== undefined) {
-    return { kind: "pipeline", pipeline, on: "workItem", site: null };
+    return { kind: "pipeline", pipeline, on: undefined, site: null };
   }
   throw new AuthoringError(
     "this isn't an automation target: use a step call (step({ ... })), a pipeline, attach(automation) or skip",
   );
-}
-
-function compileArgs(
-  state: CompileState,
-  target: TargetData,
-  pointer: readonly Segment[],
-  owners: readonly object[],
-): Record<string, ArgValue> | undefined {
-  if (target.args === undefined) {
-    return undefined;
-  }
-  const out: Record<string, ArgValue> = {};
-  for (const [name, value] of argEntries(target.args)) {
-    const compiled = attempt(state, [...pointer, name], target.site, () =>
-      withOwners(owners, () => compileArg(name, value)),
-    );
-    if (compiled !== undefined) {
-      out[name] = compiled;
-    }
-  }
-  return out;
 }
 
 function compileTarget(
@@ -231,6 +182,9 @@ function compileTarget(
   const report = (message: string): void => {
     issue(state, target.site ?? rule.site, pointer, message);
   };
+  if (rule.event === "schedule") {
+    return compileScheduleTarget(state, target, context, pointer, report);
+  }
   if (
     (target.kind === "step" || target.kind === "pipeline") &&
     target.on === "child" &&
@@ -253,23 +207,43 @@ function compileTarget(
       }
       return { kind: "attach", automation: target.automation };
     case "pipeline":
-      return { kind: "pipeline", to: target.pipeline, on: target.on };
-    case "step": {
-      const args = compileArgs(
-        state,
-        target.target,
-        [...pointer, "args"],
-        [context],
-      );
-      const step =
-        target.target.node.kind === "step" ? target.target.node.step : "";
       return {
-        kind: "step",
-        to: step,
-        ...(args === undefined ? {} : { args }),
-        on: target.on,
+        kind: "pipeline",
+        to: target.pipeline,
+        on: target.on ?? "workItem",
       };
-    }
+    case "step":
+      return {
+        ...compileStep(state, target, context, pointer),
+        on: target.on ?? "workItem",
+      };
+  }
+}
+
+function compileScheduleTarget(
+  state: CompileState,
+  target: AutomationTargetData,
+  context: object,
+  pointer: readonly Segment[],
+  report: (message: string) => void,
+): Json | undefined {
+  switch (target.kind) {
+    case "skip":
+      return { kind: "skip" };
+    case "attach":
+    case "pipeline":
+      report(
+        `a schedule rule can only start a step or skip; ${target.kind === "attach" ? "attach(...)" : "a pipeline"} needs a work item, so start a step that creates one instead`,
+      );
+      return undefined;
+    case "step":
+      if (target.on !== undefined) {
+        report(
+          "a schedule rule's step runs for no work item, so it takes no .on(...)",
+        );
+        return undefined;
+      }
+      return compileStep(state, target, context, pointer);
   }
 }
 
@@ -336,7 +310,43 @@ function compileRule(
       "otherwise",
     ]);
   }
-  return { event: rule.event, next };
+  return {
+    key: rule.key,
+    event: rule.event,
+    ...compileSchedule(state, rule.event, rule.schedule, rule.site, base),
+    next,
+  };
+}
+
+function checkRuleKeys(
+  state: CompileState,
+  compiled: readonly (RuleData | undefined)[],
+): void {
+  const seen = new Set<string>();
+  compiled.forEach((rule, index) => {
+    if (rule === undefined) {
+      return;
+    }
+    const pointer: Segment[] = ["rules", index, "key"];
+    if (typeof rule.key !== "string" || !RULE_KEY_PATTERN.test(rule.key)) {
+      issue(
+        state,
+        rule.site,
+        pointer,
+        `every rule needs a key of letters, digits, '_' and '-' (got ${JSON.stringify(rule.key)})`,
+      );
+      return;
+    }
+    if (seen.has(rule.key)) {
+      issue(
+        state,
+        rule.site,
+        pointer,
+        `another rule already has the key "${rule.key}"; rule keys must be unique within an automation`,
+      );
+    }
+    seen.add(rule.key);
+  });
 }
 
 /** Compiles an automation to its JSON document. Throws `PipelineBuildError`. */
@@ -345,9 +355,12 @@ export function defineAutomation<const S extends AutomationScope>(
 ): AutomationDefinition<S> {
   const site = captureSite();
   const state = newState();
+  const ruleData = config.rules.map((value: Rule<EventOf<S>>) =>
+    rules.get(value),
+  );
+  checkRuleKeys(state, ruleData);
   const compiled = withTracker(state.tracker, () =>
-    config.rules.map((value: Rule<EventOf<S>>, index) => {
-      const rule = rules.get(value);
+    ruleData.map((rule, index) => {
       if (rule === undefined) {
         issue(
           state,

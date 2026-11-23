@@ -25,6 +25,7 @@ describe("attaching and enabling automations", () => {
         fixture,
         workItemAutomationDocument(workKey, [
           {
+            key: "self-attached",
             event: "self.attached",
             next: {
               routes: [
@@ -41,6 +42,7 @@ describe("attaching and enabling automations", () => {
         fixture,
         projectAutomationDocument(projectKey, [
           {
+            key: "work-item-created",
             event: "workItem.created",
             next: { routes: [{ kind: "attach", automation: workKey }] },
           },
@@ -111,6 +113,7 @@ describe("attaching and enabling automations", () => {
     const document = (to: string) =>
       workItemAutomationDocument(key, [
         {
+          key: "self-attached",
           event: "self.attached",
           next: { routes: [{ kind: "step", to, on: "workItem" }] },
         },
@@ -131,6 +134,7 @@ describe("attaching and enabling automations", () => {
           ...document(fixture.researchStepKey),
           rules: [
             {
+              key: "self-attached",
               event: "self.attached",
               next: {
                 routes: [
@@ -198,7 +202,11 @@ describe("attaching and enabling automations", () => {
       publishAutomationRequest(
         fixture,
         projectAutomationDocument(key, [
-          { event: "workItem.created", next: { routes: [{ kind: "skip" }] } },
+          {
+            key: "work-item-created",
+            event: "workItem.created",
+            next: { routes: [{ kind: "skip" }] },
+          },
         ]),
         fixture.headers,
       ),

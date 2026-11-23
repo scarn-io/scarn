@@ -430,7 +430,7 @@ class CommandWriter {
     );
     if (arrival.decision === "drop") {
       const error = new ConcurrencyGroupFullError(
-        stepDefinition.key,
+        { stepKey: stepDefinition.key },
         arrival.heldBy,
       );
       this.droppedVisits.push({

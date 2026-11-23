@@ -18,7 +18,10 @@ export function grant(
   labels: string[] = TEST_GRANT_LABELS,
 ): Grant {
   if (action === "create") {
-    return { resource: "workItem", action, scope: "children", labels };
+    if (scope === "self") {
+      throw new Error("No create grant covers self");
+    }
+    return { resource: "workItem", action, scope, labels };
   }
   if (action === "read") {
     return { resource: "workItem", action, scope };

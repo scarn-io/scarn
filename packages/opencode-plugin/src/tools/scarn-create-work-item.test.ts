@@ -1,6 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import { readWorkItemChanges } from "@scarn/sdk/contracts/work-item-changes";
 import {
+  bodyOf,
+  created,
+  fakeFetch,
+  UUID_V7,
+} from "./_shared/create-work-item-test-fetch";
+import {
   grant,
   workItemTestWorkspace,
 } from "./_shared/work-item-test-workspace";
@@ -13,36 +19,6 @@ import {
   createWorkItem,
   NO_API_MESSAGE,
 } from "./scarn-create-work-item";
-
-const UUID_V7 =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
-
-type Call = { url: string; init: RequestInit | undefined };
-
-function fakeFetch(...outcomes: (Response | Error)[]): {
-  fetch: typeof fetch;
-  calls: Call[];
-} {
-  const calls: Call[] = [];
-  const fetchImpl = ((url: string, init?: RequestInit) => {
-    const outcome = outcomes[Math.min(calls.length, outcomes.length - 1)];
-    calls.push({ url, init });
-    return outcome instanceof Error
-      ? Promise.reject(outcome)
-      : Promise.resolve(outcome?.clone());
-  }) as unknown as typeof fetch;
-  return { fetch: fetchImpl, calls };
-}
-
-function created(workItemId = "ignored"): Response {
-  return new Response(JSON.stringify({ workItemId, created: true }), {
-    status: 201,
-  });
-}
-
-function bodyOf(call: Call | undefined): Record<string, unknown> {
-  return JSON.parse(call?.init?.body as string) as Record<string, unknown>;
-}
 
 describe("createWorkItem", () => {
   test.concurrent(

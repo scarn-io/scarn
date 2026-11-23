@@ -883,6 +883,47 @@ export const automationVersions = appSchema.table(
   ],
 );
 
+/**
+ * A `schedule` rule of a project automation, mirrored from its latest
+ * published version so the tick can find due schedules. Publishing syncs
+ * rows by rule key; a removed key sets `removed_at`, and publishing it again
+ * inserts a new row. Rows are never deleted on their own.
+ */
+export const automationSchedules = appSchema.table(
+  "automation_schedules",
+  {
+    id: uuid("id").primaryKey(),
+    automationId: uuid("automation_id")
+      .references(() => automations.id, { onDelete: "cascade" })
+      .notNull(),
+    key: text("key").notNull(),
+    cron: text("cron").notNull(),
+    timezone: text("timezone").notNull(),
+    concurrencyJson: jsonb("concurrency_json")
+      .$type<{ max: number; waiting: number }>()
+      .notNull(),
+    nextRunAt: timestamp("next_run_at", { withTimezone: true }).notNull(),
+    lastFiredAt: timestamp("last_fired_at", { withTimezone: true }),
+    lastSkippedAt: timestamp("last_skipped_at", { withTimezone: true }),
+    skippedCountSinceFire: integer("skipped_count_since_fire")
+      .notNull()
+      .default(0),
+    lastError: text("last_error"),
+    lastErrorAt: timestamp("last_error_at", { withTimezone: true }),
+    removedAt: timestamp("removed_at", { withTimezone: true }),
+    createdAt: createdAtColumn(),
+    updatedAt: updatedAtColumn(),
+  },
+  (table) => [
+    uniqueIndex("automation_schedules_automation_key_live_unique")
+      .on(table.automationId, table.key)
+      .where(sql`${table.removedAt} IS NULL`),
+    index("automation_schedules_next_run_at_live_idx")
+      .on(table.nextRunAt)
+      .where(sql`${table.removedAt} IS NULL`),
+  ],
+);
+
 /** A work-item automation attached to a work item. It follows the automation's latest version. */
 export const workItemAutomations = appSchema.table(
   "work_item_automations",
@@ -915,7 +956,8 @@ export const tasks = appSchema.table(
     projectId: uuid("project_id")
       .references(() => projects.id, { onDelete: "cascade" })
       .notNull(),
-    // Null for a chat Task, which has a conversation instead.
+    // Null for a chat Task, which has a conversation instead, and for a
+    // scheduled Task, which its schedule owns.
     workItemId: uuid("work_item_id").references(() => workItems.id, {
       onDelete: "restrict",
     }),
@@ -966,11 +1008,28 @@ export const tasks = appSchema.table(
       (): AnyPgColumn => conversations.id,
       { onDelete: "set null" },
     ),
+    // The schedule that started the Task and owns it; a scheduled Task has
+    // no work item. Schedules are soft-deleted, so this never dangles.
+    startedByScheduleId: uuid("started_by_schedule_id").references(
+      () => automationSchedules.id,
+      { onDelete: "no action" },
+    ),
+    // The cron time a scheduled Task runs for.
+    scheduledFor: timestamp("scheduled_for", { withTimezone: true }),
     createdAt: createdAtColumn(),
     updatedAt: updatedAtColumn(),
   },
   (table) => [
     index("tasks_project_id_idx").on(table.projectId),
+    uniqueIndex("tasks_started_by_schedule_id_scheduled_for_unique").on(
+      table.startedByScheduleId,
+      table.scheduledFor,
+    ),
+    index("tasks_started_by_schedule_id_status_scheduled_for_idx").on(
+      table.startedByScheduleId,
+      table.status,
+      table.scheduledFor.desc(),
+    ),
     uniqueIndex("tasks_conversation_id_unique").on(table.conversationId),
     index("tasks_work_item_id_idx").on(table.workItemId),
     index("tasks_status_idx").on(table.status),
@@ -983,8 +1042,8 @@ export const tasks = appSchema.table(
       sql`(${table.kind} = 'agent' AND ${table.prompt} IS NOT NULL AND ${table.entrypointJson} IS NULL AND ${table.toolCallJson} IS NULL) OR (${table.kind} = 'code' AND ${table.entrypointJson} IS NOT NULL AND ${table.prompt} IS NULL AND ${table.toolCallJson} IS NULL) OR (${table.kind}::text = 'mcp_tool' AND ${table.toolCallJson} IS NOT NULL AND ${table.prompt} IS NULL AND ${table.entrypointJson} IS NULL)`,
     ),
     check(
-      "tasks_work_item_or_conversation_check",
-      sql`${table.workItemId} IS NOT NULL OR ${table.conversationId} IS NOT NULL`,
+      "tasks_owner_check",
+      sql`${table.workItemId} IS NOT NULL OR ${table.conversationId} IS NOT NULL OR ${table.startedByScheduleId} IS NOT NULL`,
     ),
   ],
 );

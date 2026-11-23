@@ -37,10 +37,12 @@ const childRoute = (label: string, step: string) => ({
 
 export const WAYFINDER = automation("wayfinder", "workItem", [
   {
+    key: "plan-on-attach",
     event: "self.attached",
     next: { routes: [{ kind: "step", to: "plan", on: "workItem" }] },
   },
   {
+    key: "route-ready-children",
     event: "child.ready",
     next: {
       routes: [
@@ -51,6 +53,7 @@ export const WAYFINDER = automation("wayfinder", "workItem", [
     },
   },
   {
+    key: "replan-on-child-closed",
     event: "child.closed",
     next: { routes: [{ kind: "step", to: "plan", on: "workItem" }] },
   },
@@ -86,4 +89,26 @@ export const WAYFINDER_GRANTS: ReadonlyMap<string, readonly Grant[]> = new Map([
   ["research", WORKER_GRANTS],
   ["prototype", WORKER_GRANTS],
   ["grilling", WORKER_GRANTS],
+]);
+
+/** A project automation polling an API hourly and in Paris on weekdays. */
+export const POLLER = automation("poller", "project", [
+  {
+    key: "hourly",
+    event: "schedule",
+    cron: "0 * * * *",
+    next: { routes: [{ kind: "step", to: "poll-linear" }] },
+  },
+  {
+    key: "weekday-digest",
+    event: "schedule",
+    cron: "0 9 * * 1-5",
+    timezone: "Europe/Paris",
+    next: { routes: [{ kind: "step", to: "digest" }] },
+  },
+  {
+    key: "triage-new",
+    event: "workItem.created",
+    next: { routes: [{ kind: "step", to: "triage", on: "workItem" }] },
+  },
 ]);

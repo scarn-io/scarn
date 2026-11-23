@@ -7,7 +7,9 @@ import {
   createdTaskRunWorkItemSchema,
   createTaskRunWorkItemInputSchema,
   MAX_OPEN_CHILD_WORK_ITEMS,
+  MAX_PROJECT_WORK_ITEMS_CREATED_PER_TASK,
   MAX_WORK_ITEMS_CREATED_PER_TASK,
+  PROJECT_WORK_ITEM_PLATFORM,
   readTaskRunWorkItemInputSchema,
   taskRunWorkItemSchema,
 } from "@scarn/core/tasks/task-run/contracts/task-run-work-item-contracts";
@@ -73,7 +75,7 @@ export const createTaskRunWorkItemRoutes = (appContext: AppContext) =>
         detail: {
           operationId: "createTaskRunWorkItem",
           tags: ["TaskRuns"],
-          description: `Creates a child of the running task run's work item for its agent, committed at once, as the user who claimed the run. Needs the Task's \`create\` grant on \`children\`, covering every label; \`blockedBy\` must name existing items that are the Task's own item or its children. At most ${String(MAX_WORK_ITEMS_CREATED_PER_TASK)} items per Task and ${String(MAX_OPEN_CHILD_WORK_ITEMS)} open children per item. Returns 201, or 200 with \`created: false\` when \`workItemId\` already names this Task's child (a retry). Authorized by the claim token alone; no session.`,
+          description: `Creates a work item for the running task run's agent, committed at once, as the user who claimed the run. With \`scope: "children"\` (the default) it is a child of the run's work item: needs the Task's \`create\` grant on \`children\`, covering every label; \`blockedBy\` must name existing items that are the Task's own item or its children; at most ${String(MAX_WORK_ITEMS_CREATED_PER_TASK)} items per Task and ${String(MAX_OPEN_CHILD_WORK_ITEMS)} open children per item. With \`scope: "project"\` it is a top-level item in the Task's project on platform \`${PROJECT_WORK_ITEM_PLATFORM}\`, keyed by the required \`platformKey\`: needs the \`create\` grant on \`project\`, covering every label; takes no \`blockedBy\`; at most ${String(MAX_PROJECT_WORK_ITEMS_CREATED_PER_TASK)} items per Task. Returns 201, or 200 with \`created: false\` when \`workItemId\` already names this Task's child (a retry) or the project already has the \`platformKey\` (the existing item, unchanged). Authorized by the claim token alone; no session.`,
         },
       },
       async ({ params, body, set }) => {

@@ -61,7 +61,7 @@ describe("grantSchema", () => {
     ).toBe(false);
   });
 
-  test("accepts project only on read", () => {
+  test("accepts project only on read and create", () => {
     expect(
       grantSchema.safeParse({
         resource: "workItem",
@@ -84,6 +84,32 @@ describe("grantSchema", () => {
         action: "label",
         scope: "project",
         labels: ["a"],
+      }).success,
+    ).toBe(false);
+  });
+
+  test("accepts create on project with labels", () => {
+    expect(
+      grantSchema.safeParse({
+        resource: "workItem",
+        action: "create",
+        scope: "project",
+        labels: ["intake"],
+      }).success,
+    ).toBe(true);
+    expect(
+      grantSchema.safeParse({
+        resource: "workItem",
+        action: "create",
+        scope: "project",
+      }).success,
+    ).toBe(false);
+    expect(
+      grantSchema.safeParse({
+        resource: "workItem",
+        action: "create",
+        scope: "project",
+        labels: [],
       }).success,
     ).toBe(false);
   });
@@ -185,7 +211,32 @@ describe("grantsSchema", () => {
 });
 
 describe("taskGrants", () => {
-  const WORK_ITEM_ID = "01900000-0000-7000-8000-000000000001";
+  const ON_WORK_ITEM = {
+    workItemId: "01900000-0000-7000-8000-000000000001",
+    startedByScheduleId: null,
+  };
+  const CHAT = { workItemId: null, startedByScheduleId: null };
+  const SCHEDULED = {
+    workItemId: null,
+    startedByScheduleId: "01900000-0000-7000-8000-000000000002",
+  };
+  const CREATE_PROJECT: Grant = {
+    resource: "workItem",
+    action: "create",
+    scope: "project",
+    labels: ["intake"],
+  };
+  const READ_PROJECT: Grant = {
+    resource: "workItem",
+    action: "read",
+    scope: "project",
+  };
+  const CREATE_CHILDREN: Grant = {
+    resource: "workItem",
+    action: "create",
+    scope: "children",
+    labels: ["a"],
+  };
 
   test("adds read on self", () => {
     const close: Grant = {
@@ -193,22 +244,32 @@ describe("taskGrants", () => {
       action: "close",
       scope: "self",
     };
-    expect(taskGrants([], WORK_ITEM_ID)).toEqual([READ_SELF]);
-    expect(taskGrants([close], WORK_ITEM_ID)).toEqual([READ_SELF, close]);
+    expect(taskGrants([], ON_WORK_ITEM)).toEqual([READ_SELF]);
+    expect(taskGrants([close], ON_WORK_ITEM)).toEqual([READ_SELF, close]);
   });
 
   test("is idempotent", () => {
     const once = taskGrants(
       [{ resource: "workItem", action: "update", scope: "self" }],
-      WORK_ITEM_ID,
+      ON_WORK_ITEM,
     );
-    expect(taskGrants(once, WORK_ITEM_ID)).toEqual(once);
-    expect(taskGrants([READ_SELF], WORK_ITEM_ID)).toEqual([READ_SELF]);
+    expect(taskGrants(once, ON_WORK_ITEM)).toEqual(once);
+    expect(taskGrants([READ_SELF], ON_WORK_ITEM)).toEqual([READ_SELF]);
   });
 
-  test("is empty for a Task without a work item", () => {
-    expect(taskGrants([], null)).toEqual([]);
-    expect(taskGrants([READ_SELF], null)).toEqual([]);
+  test("is empty for a chat", () => {
+    expect(taskGrants([], CHAT)).toEqual([]);
+    expect(taskGrants([READ_SELF, CREATE_PROJECT], CHAT)).toEqual([]);
+  });
+
+  test("keeps only project grants for a scheduled Task, with no read on self", () => {
+    expect(
+      taskGrants(
+        [READ_SELF, CREATE_CHILDREN, READ_PROJECT, CREATE_PROJECT],
+        SCHEDULED,
+      ),
+    ).toEqual([READ_PROJECT, CREATE_PROJECT]);
+    expect(taskGrants([], SCHEDULED)).toEqual([]);
   });
 });
 

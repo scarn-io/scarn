@@ -1,11 +1,13 @@
 import type { AnyJsonObject } from "@scarn/core/common/contracts/json";
 import type {
   AutomationContract,
+  AutomationScheduleSummaryContract,
   AutomationVersionContract,
   WorkItemAutomationContract,
 } from "../contracts/automation-contracts";
 import type { AutomationVersionEntity } from "../domain/automation-version-entity";
 import type { ResolvedAutomation } from "./automation-repo";
+import type { AutomationScheduleSummaryRecord } from "./automation-schedule-repo";
 import type { ResolvedWorkItemAutomation } from "./work-item-automation-repo";
 
 const requiredIsoString = (value: Date | null | undefined): string =>
@@ -37,6 +39,37 @@ export const automationToContract = ({
     : null,
   createdAt: requiredIsoString(automation.createdAt),
   updatedAt: requiredIsoString(automation.updatedAt),
+});
+
+/** `nextRunAt` reads `null` while the automation is disabled: the tick won't fire it. */
+export const automationScheduleSummaryToContract = (
+  { schedule, lastTask, failureStreak }: AutomationScheduleSummaryRecord,
+  automationEnabled: boolean,
+): AutomationScheduleSummaryContract => ({
+  id: schedule.id,
+  key: schedule.key,
+  cron: schedule.cron,
+  timezone: schedule.timezone,
+  concurrency: schedule.concurrency,
+  nextRunAt: automationEnabled ? schedule.nextRunAt.toISOString() : null,
+  lastFiredAt: schedule.lastFiredAt?.toISOString() ?? null,
+  lastTask: lastTask
+    ? {
+        id: lastTask.id,
+        status: lastTask.status,
+        scheduledFor: lastTask.scheduledFor.toISOString(),
+      }
+    : null,
+  failureStreak,
+  lastSkippedAt: schedule.lastSkippedAt?.toISOString() ?? null,
+  skippedCountSinceFire: schedule.skippedCountSinceFire,
+  lastError:
+    schedule.lastError !== null && schedule.lastErrorAt !== null
+      ? {
+          message: schedule.lastError,
+          at: schedule.lastErrorAt.toISOString(),
+        }
+      : null,
 });
 
 export const workItemAutomationToContract = (

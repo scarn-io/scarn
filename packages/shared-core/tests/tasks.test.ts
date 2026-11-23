@@ -100,6 +100,33 @@ describe("tasks list", () => {
     `);
   });
 
+  test("names the schedule rule of a scheduled Task, and a removed one", () => {
+    const text = formatTaskList({
+      tasks: [
+        makeTaskSummary({
+          workItem: null,
+          pipelineRunId: null,
+          nodeId: null,
+          latest: null,
+          startedBy: {
+            kind: "schedule",
+            automationId: "a1",
+            key: "nightly",
+            title: "Nightly",
+            schedule: { id: "s1", key: "sweep", removed: true },
+            user: null,
+          },
+          scheduledFor: "2026-11-22T02:00:00.000Z",
+        }),
+      ],
+      nextCursor: null,
+      counts: {},
+    });
+    expect(text).toContain(
+      "      scheduled: nightly/sweep (removed) for 2026-11-22T02:00:00.000Z",
+    );
+  });
+
   test("says so when nothing matches", () => {
     expect(formatTaskList({ tasks: [], nextCursor: null, counts: {} })).toBe(
       "No Tasks match.",

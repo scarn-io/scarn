@@ -5,6 +5,7 @@ import {
   labelled,
   NO_GRANTS,
   NO_PIPELINES,
+  POLLER,
   selfGrant as self,
   WAYFINDER,
   WAYFINDER_GRANTS,
@@ -15,6 +16,7 @@ import type { AutomationRoundModel } from "./automation-round-types";
 
 const DEFAULT = automation("default", "project", [
   {
+    key: "on-work-item-ready",
     event: "workItem.ready",
     next: {
       routes: [
@@ -155,10 +157,12 @@ describe("buildAutomationRound", () => {
     const model = buildAutomationRound(
       automation("sweep", "workItem", [
         {
+          key: "on-self-attached",
           event: "self.attached",
           next: { routes: [{ kind: "step", to: "sweep", on: "workItem" }] },
         },
         {
+          key: "on-child-closed",
           event: "child.closed",
           next: { routes: [{ kind: "step", to: "sweep", on: "workItem" }] },
         },
@@ -186,10 +190,12 @@ describe("buildAutomationRound", () => {
     const model = buildAutomationRound(
       automation("spawn", "workItem", [
         {
+          key: "on-self-attached",
           event: "self.attached",
           next: { routes: [{ kind: "step", to: "plan", on: "workItem" }] },
         },
         {
+          key: "on-child-created",
           event: "child.created",
           next: { routes: [{ kind: "step", to: "notify", on: "child" }] },
         },
@@ -232,6 +238,7 @@ describe("buildAutomationRound", () => {
     const model = buildAutomationRound(
       automation("fanout", "workItem", [
         {
+          key: "fan-out-on-child-closed",
           event: "child.closed",
           next: {
             match: "all",
@@ -242,6 +249,7 @@ describe("buildAutomationRound", () => {
           },
         },
         {
+          key: "on-child-closed",
           event: "child.closed",
           next: { routes: [{ kind: "step", to: "plan", on: "workItem" }] },
         },
@@ -267,6 +275,7 @@ describe("buildAutomationRound", () => {
     const model = buildAutomationRound(
       automation("skippy", "workItem", [
         {
+          key: "on-child-ready",
           event: "child.ready",
           next: {
             routes: [{ when: labelled("a"), kind: "skip" }],
@@ -285,6 +294,7 @@ describe("buildAutomationRound", () => {
     const model = buildAutomationRound(
       automation("triage", "project", [
         {
+          key: "on-work-item-label-added",
           event: "workItem.label.added",
           next: {
             routes: [
@@ -325,6 +335,45 @@ describe("buildAutomationRound", () => {
         (edge) => edge.kind === "soft" && edge.source === "step:research@child",
       ),
     ).toEqual([]);
+  });
+
+  test("schedule rules are triggers with their cron feeding steps for no work item", () => {
+    const model = buildAutomationRound(
+      POLLER,
+      new Map([
+        [
+          "poll-linear",
+          [
+            {
+              resource: "workItem",
+              action: "create",
+              scope: "project",
+              labels: ["linear"],
+            },
+          ],
+        ],
+      ]),
+      NO_PIPELINES,
+    );
+    expect(nodesOf(model)).toEqual([
+      ["trigger:0", "trigger", "0 * * * *"],
+      ["step:poll-linear@project", "step", "poll-linear"],
+      ["trigger:1", "trigger", "0 9 * * 1-5 Europe/Paris"],
+      ["step:digest@project", "step", "digest"],
+      ["junction:2", "junction", "workItem.created"],
+      ["step:triage@workItem", "step", "triage"],
+    ]);
+    expect(model.nodes[0]).toMatchObject({
+      ruleKey: "hourly",
+      cron: "0 * * * *",
+      timezone: "UTC",
+    });
+    expect(model.nodes[1]).toMatchObject({ on: null });
+    expect(edgesOf(model)).toEqual([
+      ["route", "trigger:0", "step:poll-linear@project", undefined, null],
+      ["route", "trigger:1", "step:digest@project", undefined, null],
+      ["route", "junction:2", "step:triage@workItem", undefined, null],
+    ]);
   });
 
   test("an invalid document throws AutomationGraphError", () => {

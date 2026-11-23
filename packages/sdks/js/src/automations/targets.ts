@@ -12,17 +12,18 @@ import { captureSite, type SourceSite } from "../pipelines/source";
 
 const SUBJECT = Symbol("scarn.automation.subject");
 
+/** `on` is undefined when the author didn't call `.on(...)`. */
 export type AutomationTargetData =
   | {
       kind: "step";
       target: TargetData;
-      on: AutomationSubject;
+      on: AutomationSubject | undefined;
       site: SourceSite | null;
     }
   | {
       kind: "pipeline";
       pipeline: string;
-      on: AutomationSubject;
+      on: AutomationSubject | undefined;
       site: SourceSite | null;
     }
   | { kind: "attach"; automation: string; site: SourceSite | null }

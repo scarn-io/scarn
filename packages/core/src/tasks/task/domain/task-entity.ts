@@ -60,7 +60,7 @@ export type TaskStatus = (typeof taskStatusValues)[number];
 export type TaskEntityProps = {
   id: UuidV7;
   projectId: UuidV7;
-  /** The work item the Task works on; null for a chat Task, which has a conversation instead. */
+  /** The work item the Task works on; null for a chat Task, which has a conversation instead, and for a scheduled Task. */
   workItemId: UuidV7 | null;
   /** The step definition the instructions were copied from, if any. */
   stepDefinitionId: UuidV7 | null;
@@ -84,7 +84,7 @@ export type TaskEntityProps = {
    * definition's for a standalone Task.
    */
   retryJson: AnyJsonValue | null;
-  /** The step definition's grants when the Task was created, plus `read` on `self`; none for a Task without a work item (`taskGrants`). */
+  /** The step definition's grants when the Task was created, plus `read` on `self`; a scheduled Task keeps only its `project` grants and a chat has none (`taskGrants`). */
   grants: readonly Grant[];
   /**
    * How many times the agent may hand over: the pipeline node's `maxTurns`,
@@ -105,12 +105,16 @@ export type TaskEntityProps = {
   previousTaskId: UuidV7 | null;
   /** The Task's conversation, set when its agent first hands over. */
   conversationId: UuidV7 | null;
+  /** The schedule that started the Task and owns it; a scheduled Task has no work item. */
+  startedByScheduleId: UuidV7 | null;
+  /** The cron time a scheduled Task runs for. */
+  scheduledFor: Date | null;
   createdAt: Date;
   updatedAt: Date;
 };
 
-export type CreateTaskEntityProps = Omit<
-  TaskEntityProps,
+/** The props `TaskEntity.create` may leave out; it defaults them to null (or empty). */
+type OptionalOnCreate =
   | "id"
   | "stepDefinitionId"
   | "name"
@@ -126,39 +130,19 @@ export type CreateTaskEntityProps = Omit<
   | "maxTurns"
   | "heartbeatSeconds"
   | "executionTimeoutSeconds"
-  | "resultJson"
-  | "errorJson"
   | "startedByUserId"
   | "startedByAutomationId"
   | "previousTaskId"
   | "conversationId"
-  | "updatedAt"
+  | "startedByScheduleId"
+  | "scheduledFor"
+  | "updatedAt";
+
+export type CreateTaskEntityProps = Omit<
+  TaskEntityProps,
+  OptionalOnCreate | "resultJson" | "errorJson"
 > &
-  Partial<
-    Pick<
-      TaskEntityProps,
-      | "id"
-      | "stepDefinitionId"
-      | "name"
-      | "prompt"
-      | "entrypointJson"
-      | "toolCallJson"
-      | "resultSchemaJson"
-      | "taskExecutionConfigId"
-      | "environmentSelection"
-      | "inputJson"
-      | "retryJson"
-      | "grants"
-      | "maxTurns"
-      | "heartbeatSeconds"
-      | "executionTimeoutSeconds"
-      | "startedByUserId"
-      | "startedByAutomationId"
-      | "previousTaskId"
-      | "conversationId"
-      | "updatedAt"
-    >
-  >;
+  Partial<Pick<TaskEntityProps, OptionalOnCreate>>;
 
 const positiveIntegerOrNull = (
   value: number | null,
@@ -200,6 +184,8 @@ export class TaskEntity {
   public readonly startedByAutomationId: UuidV7 | null;
   public readonly previousTaskId: UuidV7 | null;
   public readonly conversationId: UuidV7 | null;
+  public readonly startedByScheduleId: UuidV7 | null;
+  public readonly scheduledFor: Date | null;
   public readonly createdAt: Date;
   public readonly updatedAt: Date;
 
@@ -208,7 +194,7 @@ export class TaskEntity {
 
     this.id = parseUuidV7(props.id);
     this.projectId = parseUuidV7(props.projectId);
-    const subject = validTaskSubject(props.workItemId, props.conversationId);
+    const subject = validTaskSubject(props);
     this.workItemId = subject.workItemId;
     this.stepDefinitionId =
       props.stepDefinitionId === null
@@ -262,6 +248,8 @@ export class TaskEntity {
       );
     }
     this.conversationId = subject.conversationId;
+    this.startedByScheduleId = subject.startedByScheduleId;
+    this.scheduledFor = normalizeDate(props.scheduledFor) ?? null;
     this.createdAt = normalizeDate(props.createdAt) ?? new Date(0);
     this.updatedAt = normalizeDate(props.updatedAt) ?? this.createdAt;
   }
@@ -282,7 +270,10 @@ export class TaskEntity {
       environmentSelection: props.environmentSelection ?? null,
       inputJson: props.inputJson ?? null,
       retryJson: props.retryJson ?? null,
-      grants: taskGrants(props.grants ?? [], props.workItemId),
+      grants: taskGrants(props.grants ?? [], {
+        workItemId: props.workItemId,
+        startedByScheduleId: props.startedByScheduleId ?? null,
+      }),
       maxTurns: props.maxTurns ?? null,
       heartbeatSeconds: props.heartbeatSeconds ?? null,
       executionTimeoutSeconds: props.executionTimeoutSeconds ?? null,
@@ -293,6 +284,8 @@ export class TaskEntity {
       startedByAutomationId: props.startedByAutomationId ?? null,
       previousTaskId: props.previousTaskId ?? null,
       conversationId: props.conversationId ?? null,
+      startedByScheduleId: props.startedByScheduleId ?? null,
+      scheduledFor: props.scheduledFor ?? null,
       createdAt: props.createdAt,
       updatedAt: props.updatedAt ?? props.createdAt,
     });
@@ -468,6 +461,8 @@ export class TaskEntity {
       startedByAutomationId: this.startedByAutomationId,
       previousTaskId: this.previousTaskId,
       conversationId: this.conversationId,
+      startedByScheduleId: this.startedByScheduleId,
+      scheduledFor: this.scheduledFor,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
     };

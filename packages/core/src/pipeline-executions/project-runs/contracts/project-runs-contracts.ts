@@ -148,10 +148,15 @@ export const projectRunWhatRanFilterSchema = z.union([
   z.literal("task"),
 ]);
 
-/** An automation id, or `me` for runs the viewer started. */
+/**
+ * An automation id (runs it started without a person), `me` for runs the
+ * viewer started, or `scheduled` for Tasks a schedule rule started (by the
+ * tick or Run now).
+ */
 export const projectRunStartedByFilterSchema = z.union([
   uuidV7Schema,
   z.literal("me"),
+  z.literal("scheduled"),
 ]);
 
 export const listProjectRunsQuerySchema = z.object({
@@ -160,6 +165,8 @@ export const listProjectRunsQuerySchema = z.object({
   startedBy: projectRunStartedByFilterSchema.optional(),
   /** The work item or any of its children. */
   workItemId: uuidV7Schema.optional(),
+  /** Only the Tasks this schedule started, removed or not: the schedule's history. */
+  scheduleId: uuidV7Schema.optional(),
   /** With a pipeline `whatRan`: runs whose `openNodeIds` include it. */
   atNode: z.string().min(1).optional(),
   /** Matches the title, key, pipeline name, status line and node ids. */
@@ -195,7 +202,7 @@ export const projectRunsCountsSchema = z.object({
     facetCountSchema.extend({
       /** The `startedBy` filter value. */
       filter: projectRunStartedByFilterSchema,
-      /** The automation's title or key, or `You`. */
+      /** The automation's title or key, `You`, or `Scheduled`. */
       label: z.string(),
     }),
   ),

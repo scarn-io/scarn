@@ -12,7 +12,11 @@ import {
 /** Publishes and enables a project automation with one `workItem.ready` rule. */
 const enableOnReady = async (h: RunnerHarness, next: object) => {
   const key = uniqueKey("default");
-  await h.publish(projectAutomation(key, [{ event: "workItem.ready", next }]));
+  await h.publish(
+    projectAutomation(key, [
+      { key: "work-item-ready", event: "workItem.ready", next },
+    ]),
+  );
   await h.enable(key);
   return key;
 };

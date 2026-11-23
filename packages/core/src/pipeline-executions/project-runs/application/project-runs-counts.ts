@@ -38,7 +38,9 @@ const matchesStartedBy = (
   filter.startedBy === undefined ||
   (filter.startedBy === "me"
     ? group.startedByActor
-    : group.startedByAutomation?.id === filter.startedBy);
+    : filter.startedBy === "scheduled"
+      ? group.scheduled
+      : group.startedByAutomation?.id === filter.startedBy);
 
 const whatRanOf = (group: ProjectRunCountGroup): ProjectRunWhatRan => {
   switch (group.type) {
@@ -81,6 +83,8 @@ export const projectRunsCounts = (
   ) as ProjectRunsCountsContract["tabs"];
   const overall = emptyFacet();
   const you = emptyFacet();
+  const scheduled = emptyFacet();
+  let anyScheduled = false;
   const automations = new Map<
     string,
     FacetCount & {
@@ -114,6 +118,10 @@ export const projectRunsCounts = (
       if (group.startedByActor) {
         addTo(you, group);
       }
+      if (group.scheduled) {
+        anyScheduled = true;
+        addTo(scheduled, group);
+      }
       const automation = group.startedByAutomation;
       if (automation) {
         const entry = automations.get(automation.id) ?? {
@@ -141,6 +149,9 @@ export const projectRunsCounts = (
     startedBy: [
       ...(includeViewer
         ? [{ ...you, filter: "me" as const, label: "You" }]
+        : []),
+      ...(anyScheduled || filter.startedBy === "scheduled"
+        ? [{ ...scheduled, filter: "scheduled" as const, label: "Scheduled" }]
         : []),
       ...[...automations.values()].sort((left, right) =>
         left.label.localeCompare(right.label),

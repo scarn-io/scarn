@@ -1,5 +1,8 @@
 import { beforeAll, describe, expect } from "bun:test";
+import type { Grant } from "@/tasks/task/domain/grants";
 import { concurrentTest, unwrapAsync } from "tests/utils";
+import { grant } from "tests/tasks/task/grants-test-support";
+import { buildAgentStepDefinitionPayload } from "../../pipeline-test-support";
 import {
   createAutomationFixture,
   createMember,
@@ -29,12 +32,14 @@ describe("publishing automations", () => {
   const wayfinder = (key = `wayfinder-${crypto.randomUUID()}`) =>
     workItemAutomationDocument(key, [
       {
+        key: "self-attached",
         event: "self.attached",
         next: {
           routes: [{ kind: "step", to: fixture.planStepKey, on: "workItem" }],
         },
       },
       {
+        key: "child-ready",
         event: "child.ready",
         next: {
           routes: [
@@ -101,6 +106,7 @@ describe("publishing automations", () => {
       `broken-${crypto.randomUUID()}`,
       [
         {
+          key: "self-attached",
           event: "self.attached",
           next: {
             routes: [
@@ -116,6 +122,7 @@ describe("publishing automations", () => {
           },
         },
         {
+          key: "child-created",
           event: "child.created",
           next: {
             routes: [
@@ -154,6 +161,7 @@ describe("publishing automations", () => {
       fixture,
       workItemAutomationDocument(`on-${crypto.randomUUID()}`, [
         {
+          key: "self-attached",
           event: "self.attached",
           next: {
             routes: [{ kind: "step", to: fixture.planStepKey, on: "child" }],
@@ -166,6 +174,36 @@ describe("publishing automations", () => {
     expect(errorPaths(error)).toEqual(["/rules/0/next"]);
   });
 
+  const skipRule = { next: { routes: [{ kind: "skip" }] } };
+
+  concurrentTest("rejects a rule without a key", async () => {
+    const { error } = await publishAutomationRequest(
+      fixture,
+      workItemAutomationDocument(`rule-keys-${crypto.randomUUID()}`, [
+        { ...skipRule, key: "ready", event: "child.ready" },
+        { ...skipRule, event: "child.created" },
+      ]),
+      fixture.headers,
+    );
+    expect(error?.status).toBe(422);
+    expect(error?.value).toMatchObject({ code: "AUTOMATION_DOCUMENT_INVALID" });
+    expect(errorPaths(error)).toEqual(["/rules/1/key"]);
+  });
+
+  concurrentTest("rejects two rules with the same key", async () => {
+    const { error } = await publishAutomationRequest(
+      fixture,
+      workItemAutomationDocument(`rule-keys-${crypto.randomUUID()}`, [
+        { ...skipRule, key: "same", event: "child.ready" },
+        { ...skipRule, key: "same", event: "child.closed" },
+      ]),
+      fixture.headers,
+    );
+    expect(error?.status).toBe(422);
+    expect(error?.value).toMatchObject({ code: "AUTOMATION_DOCUMENT_INVALID" });
+    expect(errorPaths(error)).toEqual(["/rules/1/key"]);
+  });
+
   concurrentTest("attach must name a work-item automation", async () => {
     const target = wayfinder();
     await unwrapAsync(
@@ -175,6 +213,7 @@ describe("publishing automations", () => {
     const router = (automation: string) =>
       projectAutomationDocument(projectKey, [
         {
+          key: "work-item-label-added",
           event: "workItem.label.added",
           next: {
             routes: [
@@ -217,6 +256,68 @@ describe("publishing automations", () => {
       scope: "project",
       enabled: false,
       title: null,
+    });
+  });
+
+  describe("a schedule rule's step", () => {
+    const stepWith = async (grants: Grant[]) =>
+      (
+        await unwrapAsync(
+          fixture.apiClient.api["step-definitions"].post(
+            {
+              ...buildAgentStepDefinitionPayload(fixture.projectId),
+              grants,
+            },
+            { headers: { ...fixture.headers } },
+          ),
+        )
+      ).key;
+
+    const scheduleStarting = (stepKey: string) =>
+      projectAutomationDocument(`poller-${crypto.randomUUID()}`, [
+        {
+          key: "poll",
+          event: "schedule",
+          cron: "*/15 * * * *",
+          next: { routes: [{ kind: "step", to: stepKey }] },
+        },
+      ]);
+
+    concurrentTest(
+      "is rejected when it has grants on self or children",
+      async () => {
+        const stepKey = await stepWith([
+          grant("create", "project", ["intake"]),
+          grant("comment", "self"),
+          grant("create", "children", ["intake"]),
+        ]);
+
+        const { error } = await publishAutomationRequest(
+          fixture,
+          scheduleStarting(stepKey),
+          fixture.headers,
+        );
+
+        expect(error?.status).toBe(422);
+        expect(error?.value).toMatchObject({
+          code: "AUTOMATION_DOCUMENT_INVALID",
+        });
+        expect(errorPaths(error)).toEqual(["/rules/0/next/routes/0/to"]);
+      },
+    );
+
+    concurrentTest("is accepted with only project grants", async () => {
+      const stepKey = await stepWith([grant("create", "project", ["intake"])]);
+
+      const published = await unwrapAsync(
+        publishAutomationRequest(
+          fixture,
+          scheduleStarting(stepKey),
+          fixture.headers,
+        ),
+      );
+
+      expect(published.published).toBe(true);
     });
   });
 

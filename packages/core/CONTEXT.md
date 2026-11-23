@@ -11,14 +11,14 @@ What a Task's agent is told about beyond its own instructions. It is held as ref
 _Avoid_: step input, task input (those are the step's arguments)
 
 **Context reference**:
-A pointer from a Task to something it gets context from, made of a kind and an id. A Task on a work item always has that work item as one of them; a chat has none (see **Chat**).
+A pointer from a Task to something it gets context from, made of a kind and an id. A Task on a work item always has that work item as one of them; a chat and a scheduled Task have none (see **Chat**, **Scheduled Task**).
 _Avoid_: context link, subject id
 
 **Context provider**:
 The code that turns one kind of context reference into the summary, files and branch a run receives.
 
 **Concurrency group**:
-The live Tasks of one step on one work item (so never a chat), when that step limits how many can run at once and how many may wait behind them. A Task holds its place from when it's let in until it ends, including while it waits for a person, for work or for a retry. Tasks beyond both limits are dropped. It limits only live Tasks: whether the work is done is decided by its work item closing, not by an earlier Task succeeding.
+The live Tasks that share a limit on how many can run at once and how many may wait behind them. It is keyed either by one step on one work item, when that step sets the limit, or by one schedule, whose rule sets it (see **Schedule**); a step's own limit doesn't apply when a schedule starts it, and a chat is never in one. A Task holds its place from when it's let in until it ends, including while it waits for a person, for work or for a retry. Tasks beyond both limits are dropped. It limits only live Tasks: whether the work is done is decided by its work item closing, not by an earlier Task succeeding.
 _Avoid_: lock, mutex, queue, singleton, claim
 
 ### Environments
@@ -193,16 +193,56 @@ _Avoid_: reference, mention, short id, `#N` (for a work item created in Scarn)
 ### Automations
 
 **Automation**:
-A named set of rules with a scope. A work-item automation is attached to one work item and reacts to what happens to it and its child work items. A project automation reacts to what happens to any top-level work item in its project; child work items are left to their parent's automations. It is on from the moment it is pushed until someone disables it. Either kind reacts by starting steps or pipelines, or by attaching other automations. Unlike a pipeline, it has no graph and no run: it keeps reacting for as long as it is attached, until its work item closes.
+A named set of rules with a scope. A work-item automation is attached to one work item and reacts to what happens to it and its child work items. A project automation reacts to what happens to any top-level work item in its project, and can also start steps on a schedule; child work items are left to their parent's automations. It is on from the moment it is pushed until someone disables it. Either kind reacts by starting steps or pipelines, or by attaching other automations. Unlike a pipeline, it has no graph and no run: it keeps reacting for as long as it is attached, until its work item closes.
 _Avoid_: playbook, policy, workflow, child assignment, default pipeline assignment (that's now a project automation)
 
 **Event**:
-Something that happened, which an automation's rules react to, named as a subject and an action: a child work item became ready or closed, a work item was created, became ready or had a label added, or the automation itself was attached.
+Something that happened, which an automation's rules react to, named as a subject and an action: a child work item became ready or closed, a work item was created, became ready or had a label added, the automation itself was attached, or a project automation's schedule came due (`schedule`).
 _Avoid_: trigger, hook
 
 **Rule**:
 One part of an automation: an event and what to start for it, optionally chosen by routes that check the work item's labels and other properties. Every rule whose event happens fires.
 _Avoid_: trigger (that's only the event half), handler
+
+**Rule key**:
+The required name of a rule, unique within its automation, such as `poll-acme`. Every rule has one, whatever its event. A schedule is found by its automation and rule key.
+_Avoid_: rule id, rule name, index
+
+**Schedule**:
+A `schedule` rule in a project automation: a cron, a timezone (default `UTC`) and a concurrency limit, which starts one step on that cron. It can only route to a `step` or `skip`, never a pipeline or attach, because both need a work item. Publishing mirrors it into a schedule row keyed by automation and rule key; removing the rule removes the row, and publishing the key again makes a new schedule. See `docs/adr/0015-scheduled-task-is-a-task-without-work-item.md`.
+_Avoid_: cron job, scheduled automation (the automation isn't scheduled, one rule is), trigger, timer
+
+**Scheduled Task**:
+A Task a schedule started. It has no work item and no conversation: it belongs to its schedule (`started_by_schedule_id`) and records the cron time it is for. Having no work item, it gets no activity lines, no blockers, no summary comment and only project-scoped grants. A schedule's history is its scheduled Tasks. See `docs/adr/0015-scheduled-task-is-a-task-without-work-item.md`.
+_Avoid_: scheduled run (a Task has runs; this is the Task), cron run, job, schedule execution
+
+**scheduledFor**:
+The cron time a scheduled Task is for (`event.schedule.scheduledFor`, `tasks.scheduled_for`). When missed times collapse it's the latest due time; for Run now it's the moment someone pressed it. It is not when the tick happened.
+_Avoid_: fired at, run at, tick time
+
+**previousScheduledFor**:
+The `scheduledFor` of the schedule's most recent succeeded Task, or null before the first success. It only moves on success, so a failed or skipped run widens the next run's window rather than losing items.
+_Avoid_: last run, cursor, since
+
+**Tick**:
+One pass, once a minute, that claims due schedules, collapses any missed times into one run and starts a scheduled Task for each, or records a skip. A broken schedule is retried once per cron time, not every tick.
+_Avoid_: poll, sweep, cron (that's the rule's expression)
+
+**Run now**:
+A person starting a schedule's step immediately, through the same path and concurrency check as the tick, with `scheduledFor` set to now. It works while the automation is disabled and doesn't move the next run.
+_Avoid_: trigger, manual tick, test run
+
+**Skip**:
+A tick that came due but started nothing because the schedule's concurrency group was full. It is recorded in the schedule summary, not as an error. A Run now that would be dropped is refused instead.
+_Avoid_: drop (that's the concurrency group's answer; a skip is how the tick records it), miss (a missed time is one the tick never saw, and collapses)
+
+**Schedule summary**:
+What is shown for a schedule in the automations list and `scarn automations`: cron, timezone, next run, last fired, last Task status, failure streak, last skip and last error. It's kept on the schedule row; there's no per-tick record.
+_Avoid_: schedule history (that's its scheduled Tasks), status
+
+**Project create grant**:
+The step grant `create` with `project` scope, limited by labels: it lets a Task create top-level work items in its project, on platform `custom` keyed by a `platformKey` from the source system. A key the project already has returns that item, unchanged and with no `workItem.created`, rather than creating it twice. Like every non-native item, it can't be edited or relabelled in Scarn: it mirrors its source. A scheduled Task keeps only its step's `project` grants, so a `schedule` rule can't start a step with grants on `self` or `children`. It is how a scheduled Task makes work items for `workItem.created` automations to take on.
+_Avoid_: grant alone (that's a managed connection's), child create (that's `create` scoped to `children`)
 
 ### Pipelines
 

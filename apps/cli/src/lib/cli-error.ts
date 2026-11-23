@@ -39,6 +39,7 @@ export const CLI_ERROR_CODES = [
   "pipeline_not_found",
   "pipeline_publish_failed",
   "automation_request_failed",
+  "automation_schedule_busy",
   "build_failed",
   "build_check_failed",
   "designer_exited_nonzero",

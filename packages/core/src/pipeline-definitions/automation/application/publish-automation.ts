@@ -12,11 +12,19 @@ import type { StepDefinitionRepo } from "@scarn/core/pipeline-definitions/step-d
 import type { PipelineGraphRepo } from "@scarn/core/pipeline-definitions/pipeline-graph/application/pipeline-graph-repo";
 import {
   automationDocumentSchema,
+  schedulesOf,
   type AutomationDocument,
 } from "@scarn/sdk/contracts/automation-document";
 import type { StepCatalog } from "@scarn/sdk/contracts/pipeline-document";
 import { validateAutomation } from "@scarn/shared-core/automations";
-import { formatValidationError } from "@scarn/shared-core/pipelines";
+import {
+  formatValidationError,
+  type ValidationError,
+} from "@scarn/shared-core/pipelines";
+import {
+  workItemScopedGrants,
+  type Grant,
+} from "@scarn/core/tasks/task/domain/grants";
 import {
   publishAutomationInputSchema,
   type PublishAutomationInput,
@@ -25,10 +33,16 @@ import {
 import { AutomationEntity } from "../domain/automation-entity";
 import { AutomationVersionEntity } from "../domain/automation-version-entity";
 import type { AutomationRepo } from "./automation-repo";
+import type { AutomationScheduleRepo } from "./automation-schedule-repo";
 import { automationToContract } from "./automation-contract-mapper";
+import {
+  checkScheduleLimit,
+  syncAutomationSchedules,
+} from "./automation-schedules";
 
 export type PublishAutomationDeps = {
   automationRepo: AutomationRepo;
+  automationScheduleRepo: AutomationScheduleRepo;
   stepDefinitionRepo: StepDefinitionRepo;
   pipelineGraphRepo: PipelineGraphRepo;
   timeProvider: TimeProvider;
@@ -128,8 +142,62 @@ const validate = async (
       ),
     );
   }
+  const grantErrors = scheduledStepGrantErrors(
+    validation.document,
+    new Map(stepDefinitions.map((step) => [step.key, step.grants])),
+  );
+  if (grantErrors.length > 0) {
+    return Result.err(
+      new CoreValidationError(
+        `Automation document is invalid:\n${grantErrors.map(formatValidationError).join("\n")}`,
+        "AUTOMATION_DOCUMENT_INVALID",
+        { errors: grantErrors },
+      ),
+    );
+  }
   return Result.ok(validation.document);
 };
+
+/**
+ * A scheduled Task has no work item, so it keeps only its step's `project`
+ * grants: a `schedule` rule may not start a step with grants on `self` or
+ * `children`, which would silently do nothing.
+ */
+const scheduledStepGrantErrors = (
+  document: AutomationDocument,
+  grantsByStep: ReadonlyMap<string, readonly Grant[]>,
+): ValidationError[] =>
+  document.rules.flatMap((rule, ruleIndex) => {
+    if (rule.event !== "schedule") {
+      return [];
+    }
+    const targets = [
+      ...rule.next.routes.map((target, index) => ({
+        target,
+        path: `routes/${String(index)}`,
+      })),
+      ...(rule.next.otherwise
+        ? [{ target: rule.next.otherwise, path: "otherwise" }]
+        : []),
+    ];
+    return targets.flatMap(({ target, path }) => {
+      if (target.kind !== "step") {
+        return [];
+      }
+      const offending = workItemScopedGrants(grantsByStep.get(target.to) ?? []);
+      if (offending.length === 0) {
+        return [];
+      }
+      return [
+        {
+          code: "schema" as const,
+          path: `/rules/${String(ruleIndex)}/next/${path}/to`,
+          message: `Schedule rule '${rule.key}' starts step '${target.to}', which has grants a scheduled Task can't use: ${offending.map((grant) => `${grant.action} on ${grant.scope}`).join(", ")}`,
+          hint: "A scheduled Task has no work item; give the step only `project` grants",
+        },
+      ];
+    });
+  });
 
 /** The automation with this key, created (disabled, with no versions) when the project has none. */
 const lockOrCreate = async (
@@ -170,7 +238,10 @@ const lockOrCreate = async (
  * Validates `document` and stores it as the automation's next version,
  * creating the automation on its first publish. When the document matches
  * the latest version, nothing is written. An automation's scope can't
- * change once published. Must run inside the caller's transaction.
+ * change once published. Its `schedule` rules are synced to
+ * `automation_schedules` (see `automation-schedules.ts`), and an enabled
+ * automation can't take the project over its schedule limit. Must run
+ * inside the caller's transaction.
  */
 export const publishAutomationDocument = async (
   projectId: UuidV7,
@@ -201,7 +272,25 @@ export const publishAutomationDocument = async (
       automation: automationToContract({ automation, latestVersion: latest }),
     });
   }
+  if (automation.enabled) {
+    const overLimit = await checkScheduleLimit(
+      automation,
+      schedulesOf(validDocument).length,
+      deps.automationScheduleRepo,
+      tx,
+    );
+    if (overLimit) {
+      return Result.err(overLimit);
+    }
+  }
   const now = deps.timeProvider.now();
+  await syncAutomationSchedules(
+    automation,
+    validDocument,
+    now,
+    deps.automationScheduleRepo,
+    tx,
+  );
   const version = await deps.automationRepo.insertVersion(
     AutomationVersionEntity.create({
       automationId: automation.id,

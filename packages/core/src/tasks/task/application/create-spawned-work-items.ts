@@ -5,7 +5,11 @@ import type { TimeProvider } from "@scarn/core/lib/time-provider";
 import { createWorkItems } from "@scarn/core/work-items/work-item/application/create-work-item";
 import type { WorkItemEventsPort } from "@scarn/core/work-items/work-item/application/work-item-events-port";
 import type { WorkItemRepo } from "@scarn/core/work-items/work-item/application/work-item-repo";
-import { parseWorkItemId } from "@scarn/core/work-items/work-item/domain/work-item-id";
+import {
+  parseWorkItemId,
+  type WorkItemId,
+} from "@scarn/core/work-items/work-item/domain/work-item-id";
+import type { WorkItemPlatform } from "@scarn/core/work-items/work-item/domain/work-item-platform";
 import { createWorkItemBlock } from "@scarn/core/work-items/work-item-block/application/create-work-item-block";
 import type { WorkItemBlockRepo } from "@scarn/core/work-items/work-item-block/application/work-item-block-repo";
 import type { TaskEntity } from "../domain/task-entity";
@@ -83,4 +87,80 @@ export const createSpawnedWorkItems = async (
       );
     }
   }
+};
+
+/** A top-level work item an agent Task creates in its project. */
+export type ProjectWorkItemCreate = {
+  workItemId: string;
+  platform: WorkItemPlatform;
+  platformKey: string;
+  url?: string | undefined;
+  title: string;
+  description: string;
+  fields?: Record<string, unknown> | undefined;
+  labels?: string[] | undefined;
+};
+
+/**
+ * Creates a top-level item in an agent Task's project, stamped with the
+ * spawning Task, unless the project already has its `(platform,
+ * platformKey)`: then it returns that item untouched, so `workItem.created`
+ * fires once per key. A concurrent create of the same key resolves the same
+ * way. Checks nothing about the Task's grants; callers validate first.
+ */
+export const createProjectWorkItem = async (
+  task: TaskEntity,
+  create: ProjectWorkItemCreate,
+  deps: CreateSpawnedWorkItemsDeps,
+  tx: DbExecutor,
+): Promise<{ workItemId: WorkItemId; created: boolean }> => {
+  const findExisting = async () =>
+    (
+      await deps.workItemRepo.loadManyByPlatformIdentities(
+        [
+          {
+            projectId: task.projectId,
+            platform: create.platform,
+            sourceIdentity: create.platformKey,
+          },
+        ],
+        tx,
+      )
+    )[0];
+  const existing = await findExisting();
+  if (existing) {
+    return { workItemId: existing.id, created: false };
+  }
+  const created = await createWorkItems(
+    [
+      {
+        projectId: task.projectId,
+        platform: create.platform,
+        platformKey: create.platformKey,
+        url: create.url ?? null,
+        title: create.title,
+        description: create.description,
+        sourceCreatedAt: null,
+        sourceUpdatedAt: null,
+        fields: create.fields ?? {},
+        labels: create.labels,
+      },
+    ],
+    { ...deps, dbExecutor: tx },
+    [
+      {
+        id: parseWorkItemId(create.workItemId),
+        parentWorkItemId: null,
+        spawnedByTaskId: task.id,
+      },
+    ],
+  );
+  if (created.ok) {
+    return { workItemId: parseWorkItemId(create.workItemId), created: true };
+  }
+  const raced = await findExisting();
+  if (!raced) {
+    throw created.error;
+  }
+  return { workItemId: raced.id, created: false };
 };

@@ -311,6 +311,25 @@ describe("defineStep", () => {
       expect(spec.prompt).toContain("Any other label is rejected.");
     });
 
+    test("create on project grants it and tells the agent to send a platformKey", () => {
+      const feature = Features.workItems.create({
+        scope: "project",
+        labels: ["intake"],
+      });
+      expect(feature._grant).toEqual({
+        resource: "workItem",
+        action: "create",
+        scope: "project",
+        labels: ["intake"],
+      });
+      expect(feature._promptAddition).toStartWith(
+        "## Work Items: Create Work Items in the Project",
+      );
+      expect(feature._promptAddition).toContain("`platformKey`");
+      expect(feature._promptAddition).toContain("`scarn-create-work-item`");
+      expect(feature._promptAddition).toContain("- `intake`");
+    });
+
     test.each([
       ["read", "scarn-get-work-item"],
       ["update", "scarn-set-work-item-description"],
@@ -361,7 +380,7 @@ describe("defineStep", () => {
 
     test("rejects invalid work item features at the type level", () => {
       const typeOnly = () => [
-        // @ts-expect-error create only covers children
+        // @ts-expect-error create covers children or project, not self
         Features.workItems.create({ scope: "self", labels: ["afk"] }),
         // @ts-expect-error label needs labels
         Features.workItems.label({ scope: "self" }),

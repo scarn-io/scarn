@@ -32,8 +32,13 @@ export const wayfinder = defineAutomation({
   title: "Wayfinder",
   scope: "workItem",
   rules: [
-    onEvent({ event: "self.attached", to: (r) => plan().on(r.workItem) }),
     onEvent({
+      key: "plan",
+      event: "self.attached",
+      to: (r) => plan().on(r.workItem),
+    }),
+    onEvent({
+      key: "research",
       event: "child.ready",
       routes: [
         {
@@ -43,7 +48,11 @@ export const wayfinder = defineAutomation({
       ],
       otherwise: skip,
     }),
-    onEvent({ event: "child.closed", to: (r) => plan().on(r.workItem) }),
+    onEvent({
+      key: "replan",
+      event: "child.closed",
+      to: (r) => plan().on(r.workItem),
+    }),
   ],
 });
 
@@ -52,6 +61,7 @@ export const projectDefault = defineAutomation({
   scope: "project",
   rules: [
     onEvent({
+      key: "route-labels",
       event: "workItem.label.added",
       match: "all",
       routes: [
@@ -62,7 +72,11 @@ export const projectDefault = defineAutomation({
         { when: (r) => contains(r.workItem.labels, "bug"), to: triage },
       ],
     }),
-    onEvent({ event: "workItem.created", to: (r) => triage.on(r.workItem) }),
-    onEvent({ event: "workItem.ready", to: plan }),
+    onEvent({
+      key: "triage",
+      event: "workItem.created",
+      to: (r) => triage.on(r.workItem),
+    }),
+    onEvent({ key: "plan", event: "workItem.ready", to: plan }),
   ],
 });

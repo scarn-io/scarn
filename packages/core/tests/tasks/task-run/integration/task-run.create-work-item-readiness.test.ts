@@ -26,6 +26,7 @@ describe("task run work item create: readiness", () => {
       await h.publish(
         workItemAutomation(key, [
           {
+            key: "child-ready",
             event: "child.ready",
             next: {
               routes: [{ kind: "step", to: research.key, on: "child" }],

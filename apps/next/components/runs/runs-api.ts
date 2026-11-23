@@ -23,7 +23,7 @@ export async function fetchProjectRuns(
   options: { before?: string; limit?: number } = {},
 ): Promise<RunsPage> {
   const apiClient = getBrowserScarnApiClient();
-  const { whatRan, startedBy, workItemId, atNode, q } = query;
+  const { whatRan, startedBy, workItemId, scheduleId, atNode, q } = query;
   return await unwrapTreatyResponse(
     apiClient.api.projects({ projectId: parseUuidV7(projectId) }).runs.get({
       query: {
@@ -39,11 +39,16 @@ export async function fetchProjectRuns(
         ...(startedBy !== undefined
           ? {
               startedBy:
-                startedBy === "me" ? ("me" as const) : parseUuidV7(startedBy),
+                startedBy === "me" || startedBy === "scheduled"
+                  ? startedBy
+                  : parseUuidV7(startedBy),
             }
           : {}),
         ...(workItemId !== undefined
           ? { workItemId: parseUuidV7(workItemId) }
+          : {}),
+        ...(scheduleId !== undefined
+          ? { scheduleId: parseUuidV7(scheduleId) }
           : {}),
         ...(atNode !== undefined ? { atNode } : {}),
         ...(q !== undefined ? { q } : {}),

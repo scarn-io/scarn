@@ -196,8 +196,13 @@ export default defineAutomation({
   title: "Wayfinder",
   scope: "workItem",
   rules: [
-    onEvent({ event: "self.attached", to: (r) => plan().on(r.workItem) }),
     onEvent({
+      key: "plan-on-attach",
+      event: "self.attached",
+      to: (r) => plan().on(r.workItem),
+    }),
+    onEvent({
+      key: "route-ready-children",
       event: "child.ready",
       routes: [
         {
@@ -214,6 +219,10 @@ export default defineAutomation({
         },
       ],
     }),
-    onEvent({ event: "child.closed", to: (r) => plan().on(r.workItem) }),
+    onEvent({
+      key: "replan-on-child-closed",
+      event: "child.closed",
+      to: (r) => plan().on(r.workItem),
+    }),
   ],
 });

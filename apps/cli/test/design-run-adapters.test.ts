@@ -31,6 +31,7 @@ describe("firstPipelineKeyOf", () => {
       firstPipelineKeyOf(
         version([
           {
+            key: "route-ready",
             event: "workItem.ready",
             next: {
               routes: [
@@ -52,6 +53,7 @@ describe("firstPipelineKeyOf", () => {
       firstPipelineKeyOf(
         version([
           {
+            key: "route-ready",
             event: "workItem.ready",
             next: {
               routes: [{ kind: "attach", automation: "wayfinder" }],
@@ -69,7 +71,11 @@ describe("firstPipelineKeyOf", () => {
     expect(
       firstPipelineKeyOf(
         version([
-          { event: "workItem.created", next: { routes: [{ kind: "skip" }] } },
+          {
+            key: "skip-created",
+            event: "workItem.created",
+            next: { routes: [{ kind: "skip" }] },
+          },
         ]),
       ),
     ).toBeUndefined();

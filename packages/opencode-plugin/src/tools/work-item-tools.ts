@@ -3,6 +3,7 @@ import {
   hasGrantFor,
   type CurrentExecutionInfo,
 } from "./_shared/current-execution";
+import { findGrant } from "./_shared/work-item-grants";
 import { createScarnCreateWorkItemTool } from "./scarn-create-work-item";
 import { createScarnGetWorkItemTool } from "./scarn-get-work-item";
 import {
@@ -14,18 +15,24 @@ import {
 } from "./scarn-work-item-change-tools";
 
 /**
- * The work item tools a run's Task may use: none outside a run on a work
- * item, otherwise one per action the Task has a grant for (on any scope).
- * The server re-checks every change.
+ * The work item tools a run's Task may use: one per action the Task has a
+ * grant for (on any scope). Outside a run on a work item, only the create
+ * tool, and only with a `create` grant on `project` (a scheduled Task). The
+ * server re-checks every change.
  */
 export function createWorkItemTools(
   directory: string,
   info: CurrentExecutionInfo | null,
 ): ToolInfo[] {
-  if (info?.workItemId == null) {
+  if (info === null) {
     return [];
   }
   const { grants } = info;
+  if (info.workItemId === null) {
+    return findGrant(grants, "create", "project")
+      ? [createScarnCreateWorkItemTool(directory, grants)]
+      : [];
+  }
   const tools: ToolInfo[] = [];
   if (hasGrantFor(grants, "read")) {
     tools.push(createScarnGetWorkItemTool(directory, grants));

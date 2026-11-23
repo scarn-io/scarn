@@ -589,7 +589,23 @@ scarn connections reconnect slack
 
 ## `scarn automations`
 
-Turn project automations on and off, and attach work-item automations to work items. Automations are published by [`scarn pipelines push`](#scarn-pipelines-push-project). Every subcommand accepts `--base-url <url>`; `enable` and `disable` take the project from `--project <owner/slug>` (defaults to `project` in `.scarn/scarn.jsonc`).
+List the project's automations and their schedules, turn project automations on and off, run a schedule now, and attach work-item automations to work items. Automations are published by [`scarn pipelines push`](#scarn-pipelines-push-project). Every subcommand accepts `--base-url <url>`; `list`, `enable`, `disable` and `run` take the project from `--project <owner/slug>` (defaults to `project` in `.scarn/scarn.jsonc`), and so do `attach` and `detach` when given a ticket URL.
+
+### `scarn automations list`
+
+List the project's automations: each one's key, state (`enabled`, `disabled`, or `work-item` for a work-item automation), latest published version and title. Under a project automation, each [schedule](/scarn/guides/automations/#schedules) shows its rule key, cron and timezone, and next run (`disabled` while the automation is off), then when it last fired, its last Task's status and id, its failures in a row, its last skip with the number of skips since it last fired, and its last error.
+
+```bash
+scarn automations list
+scarn automations list --json
+```
+
+| Flag                     | Default | Description                                                    |
+| ------------------------ | ------- | -------------------------------------------------------------- |
+| `--project <owner/slug>` | config  | The project                                                    |
+| `--limit <n>`            | —       | How many automations to show                                   |
+| `--json`                 | `false` | Print the automations, with their schedules, as one JSON array |
+| `--base-url <url>`       | —       | Override the API server URL                                    |
 
 ### `scarn automations enable <key>` / `disable <key>`
 
@@ -598,6 +614,14 @@ Turn a project automation on or off. A work-item automation can't be enabled; at
 ```bash
 scarn automations enable attach-wayfinder
 scarn automations disable attach-wayfinder
+```
+
+### `scarn automations run <key> <ruleKey>`
+
+Run a project automation's schedule rule once, now, to test it. It goes through the same concurrency check as a scheduled run and works while the automation is disabled; the schedule's next run doesn't move. Prints the Task it started, or says the rule routed to `skip`. Needs `executions:write` on the project. When a run of the schedule is still open, the command fails with `automation_schedule_busy` and names the Tasks holding it.
+
+```bash
+scarn automations run nightly-triage sweep
 ```
 
 ### `scarn automations attach <workItem> <key>` / `detach <workItem> <key>`
@@ -1360,6 +1384,7 @@ unless noted above.
 | `push_failed`                    | `pipelines push` failed: no builder directory, missing dependencies, or the push script exited non-zero |
 | `push_connection_url_mismatch`   | `pipelines push` published, but an MCP server's URL isn't the URL of the connection its `auth` names    |
 | `automation_request_failed`      | The server rejected an `automations` command, e.g. enabling a work-item automation                      |
+| `automation_schedule_busy`       | `automations run` found a run of the schedule still open, so no Task started                            |
 | `build_failed`                   | `pipelines build` couldn't run: no builder directory, missing dependencies, or no runtime               |
 | `build_check_failed`             | `pipelines build --check` found missing, out-of-date or invalid pipeline JSON                           |
 | `designer_exited_nonzero`        | The designer TUI exited with a non-zero code                                                            |

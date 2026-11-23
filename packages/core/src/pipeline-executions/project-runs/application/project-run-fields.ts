@@ -79,6 +79,18 @@ export const standaloneTaskOutcome = ({
     : null;
 
 /**
+ * A scheduled Task's title when it has no prompt line to show: its
+ * automation and rule, as `Automation title · ruleKey`.
+ */
+export const scheduledTaskTitle = (
+  automation: { key: string; title: string | null } | null,
+  schedule: { key: string } | null,
+): string =>
+  [automation ? (automation.title ?? automation.key) : null, schedule?.key]
+    .filter(Boolean)
+    .join(" · ");
+
+/**
  * A Task without a work item's title: its conversation's first person
  * message, previewed as the Conversations list does.
  */

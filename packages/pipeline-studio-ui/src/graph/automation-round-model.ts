@@ -1,15 +1,18 @@
 // Pure model of one automation drawn as one round: a junction per rule (its
-// event and rule as one node), the targets its routes start, and the soft
-// links its steps' grants say an agent may cause. No layout, no React.
+// event and rule as one node), or a trigger per `schedule` rule (its cron),
+// the targets its routes start, and the soft links its steps' grants say an
+// agent may cause. No layout, no React.
 //
 // Soft links only join targets and events of this automation: `attach`
 // targets aren't followed, pipeline targets draw none, and a step key with no
 // grants draws its target with no links.
-import type {
-  AutomationDocument,
-  AutomationEvent,
-  AutomationRoute,
-  AutomationTargetJson,
+import {
+  DEFAULT_SCHEDULE_TIMEZONE,
+  type AutomationDocument,
+  type AutomationEvent,
+  type AutomationRoute,
+  type AutomationRule,
+  type AutomationTargetJson,
 } from "@scarn/sdk/contracts/automation-document";
 import type { Grant } from "@scarn/sdk/definitions/steps";
 import {
@@ -23,6 +26,7 @@ import {
   personNodeId,
   pipelineNodeId,
   stepNodeId,
+  triggerNodeId,
   type AutomationRoundModel,
   type RoundEdge,
   type RoundNode,
@@ -59,16 +63,19 @@ function addNode(builder: Builder, node: RoundNode): void {
 function targetNode(
   target: Exclude<AutomationTargetJson, { kind: "skip" }>,
   pipelineNames: ReadonlyMap<string, string>,
+  scheduled: boolean,
 ): RoundNode {
   switch (target.kind) {
-    case "step":
+    case "step": {
+      const on = scheduled ? null : (target.on ?? "workItem");
       return {
-        id: stepNodeId(target.to, target.on),
+        id: stepNodeId(target.to, on),
         kind: "step",
         label: target.to,
         stepKey: target.to,
-        on: target.on,
+        on,
       };
+    }
     case "pipeline": {
       const name = pipelineNames.get(target.to);
       return {
@@ -90,22 +97,48 @@ function targetNode(
   }
 }
 
+/** `cron`, or `cron timezone` when the timezone isn't UTC. */
+export function scheduleTriggerLabel(cron: string, timezone: string): string {
+  return timezone === DEFAULT_SCHEDULE_TIMEZONE ? cron : `${cron} ${timezone}`;
+}
+
+function ruleNode(rule: AutomationRule, ruleIndex: number): RoundNode {
+  const match = rule.next.match ?? "first";
+  if (rule.event === "schedule") {
+    const timezone = rule.timezone ?? DEFAULT_SCHEDULE_TIMEZONE;
+    return {
+      id: triggerNodeId(ruleIndex),
+      kind: "trigger",
+      label: scheduleTriggerLabel(rule.cron, timezone),
+      cron: rule.cron,
+      timezone,
+      ruleKey: rule.key,
+      ruleIndex,
+      match,
+    };
+  }
+  return {
+    id: junctionNodeId(ruleIndex),
+    kind: "junction",
+    label: rule.event,
+    event: rule.event,
+    ruleKey: rule.key,
+    ruleIndex,
+    match,
+  };
+}
+
 function addRoutes(
   builder: Builder,
   document: AutomationDocument,
   pipelineNames: ReadonlyMap<string, string>,
 ): void {
   document.rules.forEach((rule, ruleIndex) => {
-    const junctionId = junctionNodeId(ruleIndex);
+    const entry = ruleNode(rule, ruleIndex);
+    const junctionId = entry.id;
     const match = rule.next.match ?? "first";
-    addNode(builder, {
-      id: junctionId,
-      kind: "junction",
-      label: rule.event,
-      event: rule.event,
-      ruleIndex,
-      match,
-    });
+    const scheduled = entry.kind === "trigger";
+    addNode(builder, entry);
 
     const ordered = match === "first" && rule.next.routes.length > 1;
     const targets: {
@@ -130,7 +163,7 @@ function addRoutes(
 
     for (const { target, when, suffix, order } of targets) {
       if (target.kind === "skip") continue;
-      const node = targetNode(target, pipelineNames);
+      const node = targetNode(target, pipelineNames, scheduled);
       addNode(builder, node);
       const otherwise = suffix === "otherwise";
       const matchedLabel = otherwise ? null : routeMatchedLabel(when);
@@ -282,7 +315,7 @@ function addEngineLinks(builder: Builder, document: AutomationDocument): void {
 
 /**
  * Builds the round model of one automation's latest document: one junction
- * per rule, one node per distinct target (`skip` dropped), a `route` edge per
+ * per event rule or trigger per `schedule` rule, one node per distinct target (`skip` dropped), a `route` edge per
  * route and `otherwise`, and `soft` edges read from `stepGrants` (keyed by
  * step key, from the latest active definition of each).
  *

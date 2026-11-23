@@ -117,10 +117,14 @@ export const taskSummariesToContracts = async (
       workItem: record.workItem,
       repoConversation: record.repoConversation,
       startedBy: toStartedBy(
-        record.startedByUserId,
-        record.startedByAutomation,
+        {
+          userId: record.startedByUserId,
+          automation: record.startedByAutomation,
+          schedule: record.startedBySchedule,
+        },
         usersById,
       ),
+      scheduledFor: record.scheduledFor?.toISOString() ?? null,
       source: sourceOf(record),
       pipelineRunId: record.pipelineRunId,
       nodeId: record.nodeId,

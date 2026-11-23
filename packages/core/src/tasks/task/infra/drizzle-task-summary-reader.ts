@@ -11,6 +11,7 @@ import {
 import { getDb } from "@scarn/core/lib/db";
 import type { DbExecutor } from "@scarn/core/lib/db/db-executor";
 import {
+  automationSchedules,
   automations,
   conversationMessages,
   conversations,
@@ -135,6 +136,10 @@ const selectSummaries = (db: DbExecutor) =>
       startedByAutomationId: automations.id,
       startedByAutomationKey: automations.key,
       startedByAutomationTitle: automations.title,
+      startedByScheduleId: automationSchedules.id,
+      startedByScheduleKey: automationSchedules.key,
+      startedByScheduleRemovedAt: automationSchedules.removedAt,
+      scheduledFor: tasks.scheduledFor,
       conversationId: tasks.conversationId,
       waitingOnUserIds: taskWaitingOnUserIdsSql(waitingOnColumns),
       createdAt: tasks.createdAt,
@@ -163,6 +168,10 @@ const selectSummaries = (db: DbExecutor) =>
     .leftJoin(conversations, repoConversationJoin)
     .leftJoin(stepDefinitions, eq(stepDefinitions.id, tasks.stepDefinitionId))
     .leftJoin(automations, eq(automations.id, tasks.startedByAutomationId))
+    .leftJoin(
+      automationSchedules,
+      eq(automationSchedules.id, tasks.startedByScheduleId),
+    )
     .leftJoin(nodeVisits, eq(nodeVisits.taskId, tasks.id))
     .leftJoin(pipelineRuns, eq(pipelineRuns.id, nodeVisits.pipelineRunId))
     .leftJoin(
@@ -188,6 +197,15 @@ const toRecord = (row: SummaryRow): TaskSummaryRecord => ({
           key: row.startedByAutomationKey,
           title: row.startedByAutomationTitle,
         },
+  startedBySchedule:
+    row.startedByScheduleId === null || row.startedByScheduleKey === null
+      ? null
+      : {
+          id: parseUuidV7(row.startedByScheduleId),
+          key: row.startedByScheduleKey,
+          removed: row.startedByScheduleRemovedAt !== null,
+        },
+  scheduledFor: row.scheduledFor,
   conversationId: optionalUuid(row.conversationId),
   waitingOnUserIds: [...new Set(row.waitingOnUserIds.map(parseUuidV7))],
   workItem:

@@ -64,12 +64,9 @@ function parseGrant(value: unknown): Grant | null {
   if (knownAction === "read") {
     return { resource, action: knownAction, scope: knownScope };
   }
-  if (knownScope === "project") {
-    return null;
-  }
   if (knownAction === "create") {
     const parsedLabels = parseLabels(labels);
-    return knownScope === "children" && parsedLabels !== null
+    return knownScope !== "self" && parsedLabels !== null
       ? {
           resource,
           action: knownAction,
@@ -77,6 +74,9 @@ function parseGrant(value: unknown): Grant | null {
           labels: parsedLabels,
         }
       : null;
+  }
+  if (knownScope === "project") {
+    return null;
   }
   if (knownAction === "label") {
     const parsedLabels = parseLabels(labels);

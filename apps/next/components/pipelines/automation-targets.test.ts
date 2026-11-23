@@ -19,6 +19,7 @@ describe("automationStarts", () => {
       scope: "project",
       rules: [
         {
+          key: "route-created",
           event: "workItem.created",
           next: {
             routes: [
@@ -29,6 +30,7 @@ describe("automationStarts", () => {
           },
         },
         {
+          key: "ship-created",
           event: "workItem.created",
           next: {
             routes: [

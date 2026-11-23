@@ -34,6 +34,8 @@ export type RunsToolbarProps = {
   counts: RunsCounts | null;
   /** The work item key for the `item` chip, when the rows name it. */
   itemKey: string | null;
+  /** The schedule's label for the `schedule` chip, when the rows name it. */
+  scheduleLabel?: string | null;
   /** The list URL with `patch` applied. */
   hrefFor: (patch: NavPatch) => string;
   /** Writes `q`; called once typing settles. */
@@ -46,6 +48,7 @@ export function RunsToolbar({
   nav,
   counts,
   itemKey,
+  scheduleLabel = null,
   hrefFor,
   onSearch,
   actions,
@@ -83,6 +86,13 @@ export function RunsToolbar({
       key: "item",
       clear: hrefFor({ item: undefined }),
       label: `On ${itemKey ?? "this work item"} or its children`,
+    });
+  }
+  if (nav.schedule !== undefined) {
+    chips.push({
+      key: "schedule",
+      clear: hrefFor({ schedule: undefined }),
+      label: `Started by ${scheduleLabel ?? "this schedule"}`,
     });
   }
 

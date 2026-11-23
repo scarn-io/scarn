@@ -227,9 +227,10 @@ export default defineAutomation({
   title: "Default",
   scope: "project",
   rules: [
-    onEvent({ event: "workItem.ready", to: bugPipeline }),
+    onEvent({ key: "start-on-ready", event: "workItem.ready", to: bugPipeline }),
     // As you add pipelines, route work items to them with \`routes\`, e.g.:
     //   onEvent({
+    //     key: "route-ready",
     //     event: "workItem.ready",
     //     routes: [{ when: (r) => contains(r.workItem.labels, "feature"), to: featurePipeline }],
     //     otherwise: bugPipeline,

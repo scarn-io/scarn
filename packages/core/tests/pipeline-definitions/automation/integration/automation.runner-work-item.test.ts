@@ -52,6 +52,7 @@ describe("work-item automations", () => {
   const researchOnReadyChild = () => {
     const { research } = requireSetup();
     return {
+      key: "child-ready",
       event: "child.ready",
       next: {
         routes: [
@@ -72,6 +73,7 @@ describe("work-item automations", () => {
       const { h, plan } = requireSetup();
       const { key, parent } = await parentWith([
         {
+          key: "self-attached",
           event: "self.attached",
           next: { routes: [{ kind: "step", to: plan.key, on: "workItem" }] },
         },
@@ -143,6 +145,7 @@ describe("work-item automations", () => {
       const { h, research, plan } = requireSetup();
       const { key, parent } = await parentWith([
         {
+          key: "research",
           event: "child.created",
           next: {
             routes: [
@@ -162,6 +165,7 @@ describe("work-item automations", () => {
           },
         },
         {
+          key: "child-created",
           event: "child.created",
           next: {
             routes: [
@@ -180,6 +184,7 @@ describe("work-item automations", () => {
           },
         },
         {
+          key: "child-closed",
           event: "child.closed",
           next: { routes: [{ kind: "step", to: plan.key, on: "workItem" }] },
         },
@@ -211,6 +216,7 @@ describe("work-item automations", () => {
       const { h, plan } = requireSetup();
       const { key, parent } = await parentWith([
         {
+          key: "child-closed",
           event: "child.closed",
           next: { routes: [{ kind: "step", to: plan.key, on: "workItem" }] },
         },
@@ -250,6 +256,7 @@ describe("work-item automations", () => {
     });
     const { key, parent } = await parentWith([
       {
+        key: "child-created",
         event: "child.created",
         next: {
           routes: [{ kind: "step", to: limited.key, on: "workItem" }],
@@ -276,10 +283,12 @@ describe("work-item automations", () => {
       const doomed = await h.createStep("doomed");
       const { key, parent } = await parentWith([
         {
+          key: "doomed",
           event: "child.created",
           next: { routes: [{ kind: "step", to: doomed.key, on: "child" }] },
         },
         {
+          key: "plan",
           event: "child.created",
           next: { routes: [{ kind: "step", to: plan.key, on: "child" }] },
         },
@@ -306,6 +315,7 @@ describe("work-item automations", () => {
       const pipeline = await h.createPipeline(plan);
       const { key, parent } = await parentWith([
         {
+          key: "child-created",
           event: "child.created",
           next: {
             routes: [{ kind: "pipeline", to: pipeline.key, on: "workItem" }],
@@ -331,6 +341,7 @@ describe("work-item automations", () => {
       const { h, plan } = requireSetup();
       const { key, parent } = await parentWith([
         {
+          key: "self-attached",
           event: "self.attached",
           next: { routes: [{ kind: "step", to: plan.key, on: "workItem" }] },
         },
@@ -359,6 +370,7 @@ describe("work-item automations", () => {
       const pipeline = await h.createPipeline(plan);
       const { key, parent } = await parentWith([
         {
+          key: "child-created",
           event: "child.created",
           next: {
             routes: [{ kind: "pipeline", to: pipeline.key, on: "workItem" }],

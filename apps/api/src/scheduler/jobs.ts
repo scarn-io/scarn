@@ -65,6 +65,12 @@ export const scheduledJobs: readonly ScheduledJob[] = [
     secretEnv: "INTEGRATION_POLL_CRON_SECRET",
   },
   {
+    name: "automation-schedule-tick",
+    path: "/api/internal/automations/schedules/tick",
+    schedules: ["* * * * *"],
+    secretEnv: "AUTOMATION_SCHEDULE_TICK_CRON_SECRET",
+  },
+  {
     name: "demo-project-refresh",
     path: "/api/internal/demo-project/refresh",
     schedules: ["0 4 1,15 * *"],

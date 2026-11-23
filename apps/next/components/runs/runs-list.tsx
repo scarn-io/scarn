@@ -25,7 +25,7 @@ import {
   runsQueryOf,
   type RunsNav,
 } from "./runs-params";
-import { runsTitle, scopedWorkItem } from "./runs-scope";
+import { runsTitle, scopedSchedule, scopedWorkItem } from "./runs-scope";
 import { RunsSidebar, type RunsSidebarAutomation } from "./runs-sidebar";
 import { useRunsSelection } from "./runs-selection";
 import { RunsToolbar } from "./runs-toolbar";
@@ -111,6 +111,7 @@ export function RunsList({ projectId }: { projectId: string }) {
         whatRan: scope.whatRan,
         by: scope.by,
         item: undefined,
+        schedule: undefined,
         at: undefined,
       }),
     [hrefFor],
@@ -123,11 +124,13 @@ export function RunsList({ projectId }: { projectId: string }) {
   );
 
   const item = scopedWorkItem(nav.item, runs);
+  const schedule = scopedSchedule(nav.schedule, runs);
   const title = runsTitle(
     nav,
     counts,
     item,
     (id) => automations.find((automation) => automation.id === id)?.label,
+    schedule,
   );
   const columns: RunColumns = {
     whatRan: nav.whatRan === undefined,
@@ -162,6 +165,7 @@ export function RunsList({ projectId }: { projectId: string }) {
             nav={nav}
             counts={counts}
             itemKey={item?.platformKey ?? null}
+            scheduleLabel={schedule?.label ?? null}
             hrefFor={hrefFor}
             onSearch={onSearch}
             actions={selection.actions}

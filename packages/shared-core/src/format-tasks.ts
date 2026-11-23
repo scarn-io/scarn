@@ -4,6 +4,7 @@ import type {
   TaskDetail,
   TaskRunDetail,
   TaskSource,
+  TaskStartedBy,
   TaskSummary,
   TaskSummaryPage,
   TaskWorkItemRef,
@@ -24,6 +25,30 @@ export function describeTaskSource(source: TaskSource): string {
       return source.name === null ? "code" : `code ${source.name}`;
     case "mcp_tool":
       return source.name === null ? "MCP tool" : `MCP tool ${source.name}`;
+  }
+}
+
+/**
+ * Who started a Task, in a few words; `null` for the system. A scheduled
+ * Task reads `scheduled: <automation>/<ruleKey>`, with `(removed)` once the
+ * rule is gone and the person for Run now.
+ */
+export function describeStartedBy(startedBy: TaskStartedBy): string | null {
+  switch (startedBy.kind) {
+    case "user":
+      return startedBy.username ?? startedBy.userId;
+    case "automation":
+      return `automation ${startedBy.key}`;
+    case "schedule": {
+      const removed = startedBy.schedule.removed ? " (removed)" : "";
+      const user =
+        startedBy.user === null
+          ? ""
+          : ` run now by ${startedBy.user.username ?? startedBy.user.userId}`;
+      return `scheduled: ${startedBy.key}/${startedBy.schedule.key}${removed}${user}`;
+    }
+    case "system":
+      return null;
   }
 }
 
@@ -71,6 +96,11 @@ export function formatTaskList(page: TaskSummaryPage): string {
     if (task.pipelineRunId !== null) {
       lines.push(
         `      pipeline run ${task.pipelineRunId}${task.nodeId === null ? "" : ` at step ${task.nodeId}`}`,
+      );
+    }
+    if (task.startedBy.kind === "schedule") {
+      lines.push(
+        `      ${describeStartedBy(task.startedBy) ?? ""}${task.scheduledFor === null ? "" : ` for ${task.scheduledFor}`}`,
       );
     }
     if (task.latest !== null) {
@@ -123,10 +153,12 @@ function headerLines(task: TaskDetail): string[] {
   if (task.maxTurns !== null) {
     lines.push(`Max turns:    ${String(task.maxTurns)}`);
   }
-  if (task.startedBy !== null) {
-    lines.push(
-      `Started by:   ${task.startedBy.username ?? task.startedBy.userId}`,
-    );
+  const startedBy = describeStartedBy(task.startedBy);
+  if (startedBy !== null) {
+    lines.push(`Started by:   ${startedBy}`);
+  }
+  if (task.scheduledFor !== null) {
+    lines.push(`Scheduled:    for ${task.scheduledFor}`);
   }
   if (task.waitingOn.length > 0) {
     lines.push(

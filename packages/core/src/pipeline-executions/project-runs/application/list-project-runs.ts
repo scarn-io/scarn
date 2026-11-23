@@ -95,6 +95,7 @@ export const listProjectRuns = async (
     actorUserId: deps.userAuthz.actorId,
     q: query.q,
     workItemId: query.workItemId,
+    scheduleId: query.scheduleId,
   };
   const facets = {
     whatRan: query.whatRan,

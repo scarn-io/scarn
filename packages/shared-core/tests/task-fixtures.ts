@@ -40,6 +40,8 @@ export function makeTaskSummary(
     },
     pipelineRunId: PIPELINE_RUN_ID,
     nodeId: "investigate",
+    startedBy: { kind: "system" },
+    scheduledFor: null,
     ...overrides,
   };
 }
@@ -72,7 +74,8 @@ export function makeTaskDetail(
     },
     pipelineRunId: PIPELINE_RUN_ID,
     nodeId: "investigate",
-    startedBy: null,
+    startedBy: { kind: "system" },
+    scheduledFor: null,
     waitingOn: [],
     conversationId: null,
     ...overrides,

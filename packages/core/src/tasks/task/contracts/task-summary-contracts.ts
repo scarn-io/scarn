@@ -65,10 +65,12 @@ export const taskSummaryFieldsSchema = z.object({
     .object({ id: uuidV7Schema, title: z.string() })
     .nullable(),
   /**
-   * The person or automation that started the Task; a pipeline step's Task
-   * carries its run's starter.
+   * The person, automation or schedule rule that started the Task; a
+   * pipeline step's Task carries its run's starter.
    */
   startedBy: startedBySchema,
+  /** The cron time a scheduled Task runs for (the start time for Run now); `null` otherwise. */
+  scheduledFor: z.iso.datetime().nullable(),
   source: taskSourceSchema,
   /** Set when a pipeline step visit created the Task; `null` for a standalone Task. */
   pipelineRunId: uuidV7Schema.nullable(),

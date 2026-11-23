@@ -1,16 +1,13 @@
 import type { DbExecutor } from "@scarn/core/lib/db/db-executor";
 import type { WorkItemActivityRepo } from "@scarn/core/work-items/work-item-activity/application/work-item-activity-repo";
 import { WorkItemActivityEntry } from "@scarn/core/work-items/work-item-activity/domain/work-item-activity-entry";
-import type {
-  AutomationRule,
-  AutomationTargetJson,
-} from "@scarn/sdk/contracts/automation-document";
+import type { AutomationTargetJson } from "@scarn/sdk/contracts/automation-document";
 import { noopLogger, type Logger } from "@scarn/observability/logging";
 import type { AutomationEntity } from "../domain/automation-entity";
 import type { ResolvedAutomation } from "./automation-repo";
 import {
-  routeMatches,
-  type AutomationEventContext,
+  selectTargets,
+  type WorkItemEventContext,
 } from "./automation-event-context";
 import {
   executeTarget,
@@ -41,27 +38,10 @@ export type OnAttached = (
 const errorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
 
-/** The targets a rule's `next` picks for the event: the first matching route, every one with `match: "all"`, else `otherwise`. */
-const selectTargets = (
-  rule: AutomationRule,
-  context: AutomationEventContext,
-): AutomationTargetJson[] => {
-  const matching =
-    rule.next.match === "all"
-      ? rule.next.routes.filter((route) => routeMatches(route, context))
-      : rule.next.routes
-          .filter((route) => routeMatches(route, context))
-          .slice(0, 1);
-  if (matching.length > 0) {
-    return matching;
-  }
-  return rule.next.otherwise ? [rule.next.otherwise] : [];
-};
-
 const logLine = async (
   automation: AutomationEntity,
   ruleNumber: number,
-  context: AutomationEventContext,
+  context: WorkItemEventContext,
   outcome: string,
   deps: AutomationDispatchDeps,
   tx: DbExecutor,
@@ -87,7 +67,7 @@ const logLine = async (
  */
 export const runAutomation = async (
   { automation, latestVersion }: ResolvedAutomation,
-  context: AutomationEventContext,
+  context: WorkItemEventContext,
   depth: number,
   onAttached: OnAttached,
   deps: AutomationDispatchDeps,

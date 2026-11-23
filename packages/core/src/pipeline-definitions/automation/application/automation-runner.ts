@@ -8,7 +8,6 @@ import type { WorkItemEventsPort } from "@scarn/core/work-items/work-item/applic
 import type { WorkItemRepo } from "@scarn/core/work-items/work-item/application/work-item-repo";
 import type { WorkItemEntity } from "@scarn/core/work-items/work-item/domain/work-item-entity";
 import { parseWorkItemId } from "@scarn/core/work-items/work-item/domain/work-item-id";
-import type { AutomationEvent } from "@scarn/sdk/contracts/automation-document";
 import { noopLogger } from "@scarn/observability/logging";
 import type { AutomationEntity } from "../domain/automation-entity";
 import {
@@ -16,7 +15,7 @@ import {
   runAutomation,
   type AutomationDispatchDeps,
 } from "./automation-dispatch";
-import type { AutomationEventContext } from "./automation-event-context";
+import type { WorkItemEventContext } from "./automation-event-context";
 
 export type AutomationRunnerDeps = StartReadyWorkDeps &
   AutomationDispatchDeps & {
@@ -192,7 +191,7 @@ export class AutomationRunner implements WorkItemEventsPort, SelfAttachedPort {
 
   private async run(
     automations: Parameters<typeof runAutomation>[0][],
-    context: AutomationEventContext & { event: AutomationEvent },
+    context: WorkItemEventContext,
     depth: number,
     tx: DbExecutor,
   ): Promise<void> {

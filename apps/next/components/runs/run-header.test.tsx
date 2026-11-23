@@ -149,6 +149,43 @@ describe("RunHeader", () => {
     expect(caption()).toBe("started by Triage new issues · updated just now");
   });
 
+  test("caption links a scheduled Task's schedule and names who ran it now", async () => {
+    const scheduleId = id("651");
+    const scheduled = (user: ProjectRun["startedBy"] | null) =>
+      buildRun({
+        type: "task",
+        whatRan: { kind: "task", name: "Task" },
+        workItem: null,
+        startedBy: {
+          kind: "schedule",
+          automationId: id("650"),
+          key: "poller",
+          title: null,
+          schedule: { id: scheduleId, key: "hourly", removed: false },
+          user:
+            user?.kind === "user"
+              ? { userId: user.userId, username: user.username }
+              : null,
+        },
+      });
+
+    await renderHeader(scheduled(null));
+    expect(caption()).toBe("poller · hourly · updated just now");
+    expect(
+      page()
+        .getByRole("link", { name: "poller · hourly" })
+        .getAttribute("href"),
+    ).toBe(`/alice/demo/runs?status=all&schedule=${scheduleId}`);
+    cleanup();
+
+    await renderHeader(
+      scheduled({ kind: "user", userId: viewerId, username: "alice" }),
+    );
+    expect(caption()).toBe(
+      "poller · hourly · run now by you · updated just now",
+    );
+  });
+
   test("pipeline parts show only when given", async () => {
     await renderHeader(buildRun({ workItem: null }), {
       stepsSoFar: 4,

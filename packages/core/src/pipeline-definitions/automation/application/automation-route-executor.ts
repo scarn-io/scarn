@@ -24,7 +24,7 @@ import { attachAutomation } from "./attach-automation";
 import type { AutomationRepo } from "./automation-repo";
 import {
   resolveTargetArgs,
-  type AutomationEventContext,
+  type WorkItemEventContext,
 } from "./automation-event-context";
 import type { WorkItemAutomationRepo } from "./work-item-automation-repo";
 
@@ -55,9 +55,15 @@ export type RouteResult = {
 };
 
 const subjectOf = (
-  on: "workItem" | "child",
-  context: AutomationEventContext,
+  on: "workItem" | "child" | undefined,
+  context: WorkItemEventContext,
 ): WorkItemEntity => {
+  if (on === undefined) {
+    throw new CoreValidationError(
+      `A target of "${context.event}" needs "on"`,
+      "AUTOMATION_DOCUMENT_INVALID",
+    );
+  }
   if (on === "child") {
     if (!context.child) {
       throw new CoreValidationError(
@@ -73,7 +79,7 @@ const subjectOf = (
 const startStep = async (
   target: Extract<AutomationTargetJson, { kind: "step" }>,
   automation: AutomationEntity,
-  context: AutomationEventContext,
+  context: WorkItemEventContext,
   deps: AutomationRouteDeps,
   tx: DbExecutor,
 ): Promise<RouteResult> => {
@@ -112,7 +118,7 @@ const startStep = async (
 const startPipeline = async (
   target: Extract<AutomationTargetJson, { kind: "pipeline" }>,
   automation: AutomationEntity,
-  context: AutomationEventContext,
+  context: WorkItemEventContext,
   deps: AutomationRouteDeps,
   tx: DbExecutor,
 ): Promise<RouteResult> => {
@@ -153,7 +159,7 @@ const startPipeline = async (
 
 const attach = async (
   target: Extract<AutomationTargetJson, { kind: "attach" }>,
-  context: AutomationEventContext,
+  context: WorkItemEventContext,
   deps: AutomationRouteDeps,
   tx: DbExecutor,
 ): Promise<RouteResult> => {
@@ -191,7 +197,7 @@ const attach = async (
 export const executeTarget = async (
   target: AutomationTargetJson,
   automation: AutomationEntity,
-  context: AutomationEventContext,
+  context: WorkItemEventContext,
   deps: AutomationRouteDeps,
   tx: DbExecutor,
 ): Promise<RouteResult> => {

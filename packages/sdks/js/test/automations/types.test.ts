@@ -30,17 +30,23 @@ describe("automation types", () => {
       defineAutomation({
         key: "a",
         scope: "workItem",
-        // @ts-expect-error workItem.created is a project event
-        rules: [onEvent({ event: "workItem.created", to: plan })],
+        rules: [
+          // @ts-expect-error workItem.created is a project event
+          onEvent({ key: "a", event: "workItem.created", to: plan }),
+        ],
       });
       defineAutomation({
         key: "b",
         scope: "project",
-        // @ts-expect-error child.ready is a work-item event
-        rules: [onEvent({ event: "child.ready", to: plan })],
+        rules: [
+          // @ts-expect-error child.ready is a work-item event
+          onEvent({ key: "b", event: "child.ready", to: plan }),
+        ],
       });
       // @ts-expect-error not an event
-      onEvent({ event: "child.reopened", to: plan });
+      onEvent({ key: "child-reopened", event: "child.reopened", to: plan });
+      // @ts-expect-error a rule's key is required
+      onEvent({ event: "child.ready", to: plan });
       // @ts-expect-error scope is required
       defineAutomation({ key: "c", rules: [] });
     });
@@ -49,6 +55,7 @@ describe("automation types", () => {
 
   test("r.child exists only on child.* events", () => {
     const rule = onEvent({
+      key: "child-created",
       event: "child.created",
       to: (r) => {
         expectTypeOf(r.child.title).toEqualTypeOf<Placeholder<string>>();
@@ -65,11 +72,13 @@ describe("automation types", () => {
     ).toEqual({ kind: "step", to: "plan", on: "child" });
     typeOnly(() => {
       onEvent({
+        key: "self-attached",
         event: "self.attached",
         // @ts-expect-error no child on self.attached
         to: (r) => plan().on(r.child),
       });
       onEvent({
+        key: "work-item-ready",
         event: "workItem.ready",
         // @ts-expect-error no child on project events
         routes: [{ when: (r) => contains(r.child.labels, "x"), to: plan }],
@@ -80,12 +89,14 @@ describe("automation types", () => {
   test("r.label exists only on workItem.label.added", () => {
     expect(() =>
       onEvent({
+        key: "work-item-label-added",
         event: "workItem.label.added",
         routes: [{ when: (r) => equal(r.label, "bug"), to: triage }],
       }),
     ).not.toThrow();
     typeOnly(() => {
       onEvent({
+        key: "work-item-created",
         event: "workItem.created",
         // @ts-expect-error no label on workItem.created
         routes: [{ when: (r) => equal(r.label, "bug"), to: triage }],
@@ -98,13 +109,24 @@ describe("automation types", () => {
       defineAutomation({
         key: "p",
         scope: "project",
-        rules: [onEvent({ event: "workItem.created", to: attach(wayfinder) })],
+        rules: [
+          onEvent({
+            key: "work-item-created",
+            event: "workItem.created",
+            to: attach(wayfinder),
+          }),
+        ],
       }),
     ).not.toThrow();
     typeOnly(() => {
-      // @ts-expect-error attach in a work-item event's rule
-      onEvent({ event: "child.ready", to: attach(wayfinder) });
       onEvent({
+        key: "child-ready",
+        event: "child.ready",
+        // @ts-expect-error attach in a work-item event's rule
+        to: attach(wayfinder),
+      });
+      onEvent({
+        key: "child-ready",
         event: "child.ready",
         routes: [{ to: skip }],
         // @ts-expect-error attach as otherwise of a work-item rule
@@ -123,6 +145,7 @@ describe("automation types", () => {
   test("targets: step calls, bare steps, pipelines, skip", () => {
     expect(() =>
       onEvent({
+        key: "child-ready",
         event: "child.ready",
         match: "all",
         routes: [
@@ -136,19 +159,26 @@ describe("automation types", () => {
     ).not.toThrow();
     typeOnly(() => {
       // @ts-expect-error research has a required input, so it isn't a bare target
-      onEvent({ event: "child.ready", to: research });
+      onEvent({ key: "child-ready", event: "child.ready", to: research });
       onEvent({
+        key: "child-ready",
         event: "child.ready",
         // @ts-expect-error a step's args are type-checked
         to: (r) => research({ question: r.child.labels }),
       });
       onEvent({
+        key: "child-ready",
         event: "child.ready",
         // @ts-expect-error a condition isn't a target
         to: (r) => contains(r.child.labels, "x"),
       });
       // @ts-expect-error otherwise only goes with routes
-      onEvent({ event: "child.ready", to: plan, otherwise: skip });
+      onEvent({
+        key: "child-ready",
+        event: "child.ready",
+        to: plan,
+        otherwise: skip,
+      });
     });
   });
 });

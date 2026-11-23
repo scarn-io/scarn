@@ -146,6 +146,9 @@ export type { ArtifactFailureContract } from "@scarn/core/tasks/task-artifact/co
 export type { StepDefinitionContract } from "@scarn/core/pipeline-definitions/step-definition/contracts/step-definition-contracts";
 export type {
   AutomationContract,
+  AutomationListItemContract,
+  AutomationScheduleSummaryContract,
+  RunAutomationScheduleResult,
   WorkItemAutomationContract,
 } from "@scarn/core/pipeline-definitions/automation/contracts/automation-contracts";
 export type {

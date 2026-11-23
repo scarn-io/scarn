@@ -2,13 +2,16 @@
  * The public types of automations. An automation's `scope` picks the events
  * its rules may name, each event picks what `r` holds, and the scope picks
  * which targets a rule may start, so a rule that doesn't fit its automation
- * is a type error at the `onEvent(...)` call.
+ * is a type error at the `onEvent(...)` call. A `schedule` rule has `cron`,
+ * `timezone` and `concurrency`, an `r` of `r.schedule` refs, and starts only
+ * steps or `skip`.
  */
 import type {
   AutomationDocument,
   AutomationScope,
   AutomationSubject,
   ProjectAutomationEvent,
+  ScheduleConcurrency,
   WorkItemAutomationEvent,
 } from "../contracts/automation-document";
 import type { StepRef } from "../definitions/steps/step-ref";
@@ -50,8 +53,34 @@ export interface EventWorkItem<K extends AutomationSubject> {
 
 type NoKeys = Record<never, never>;
 
+/** `r.schedule` on a `schedule` rule: refs to the run's schedule. */
+export interface EventSchedule {
+  /** The rule's key. */
+  readonly key: Placeholder<string>;
+  /**
+   * The cron time this run is for (an ISO date-time): the latest due time
+   * when missed ticks collapse, not the wall-clock time of the tick.
+   */
+  readonly scheduledFor: Placeholder<string>;
+  /**
+   * `scheduledFor` of the schedule's most recent succeeded run, or null
+   * before the first one. Only advances on success, so a failed or skipped
+   * run widens the next run's window.
+   */
+  readonly previousScheduledFor: Placeholder<string | null>;
+  /** The IANA timezone the cron is read in. */
+  readonly timezone: Placeholder<string>;
+}
+
 /** `r` in a rule's callbacks: what the event `E` carries. */
-export type EventContext<E> = {
+export type EventContext<E> = E extends "schedule"
+  ? {
+      /** The schedule this run is for. A schedule rule is about no work item. */
+      readonly schedule: EventSchedule;
+    }
+  : WorkItemEventContext<E>;
+
+type WorkItemEventContext<E> = {
   /** The work item the rule is about. */
   readonly workItem: EventWorkItem<"workItem">;
 } & (E extends ChildEvent
@@ -94,9 +123,40 @@ export type BareStep = { readonly [targetBrand]: true } & StepRef<
 export type RuleTarget<S extends AutomationScope> =
   AutomationTarget<S> | StepTarget | BareStep | PipelineDefinition;
 
+/**
+ * What a `schedule` rule may start: a step (for no work item, so without
+ * `.on(...)`) or `skip`. Pipelines and `attach` need a work item.
+ */
+export type ScheduleRuleTarget =
+  AutomationTarget<AutomationScope> | StepTarget | BareStep;
+
+type TargetOfEvent<E> = E extends "schedule"
+  ? ScheduleRuleTarget
+  : RuleTarget<ScopeOf<E>>;
+
 /** A target, or a callback receiving `r` that returns one. */
 export type RuleTargetArg<E> =
-  RuleTarget<ScopeOf<E>> | ((r: EventContext<E>) => RuleTarget<ScopeOf<E>>);
+  TargetOfEvent<E> | ((r: EventContext<E>) => TargetOfEvent<E>);
+
+/** The settings only a `schedule` rule has. */
+export interface ScheduleOptions {
+  /**
+   * When the rule fires: 5-field cron (`"*\/15 * * * *"`) or an alias such
+   * as `"@hourly"` or `"@daily"`. No seconds field and no Quartz syntax.
+   */
+  cron: string;
+  /** IANA timezone `cron` is read in. Defaults to `"UTC"`. */
+  timezone?: string;
+  /**
+   * How many runs of the schedule may be open at once. Defaults to
+   * `{ max: 1, waiting: 0 }`: a tick is skipped while a run is open.
+   */
+  concurrency?: ScheduleConcurrency;
+}
+
+type ScheduleFields<E> = E extends "schedule"
+  ? ScheduleOptions
+  : { cron?: never; timezone?: never; concurrency?: never };
 
 /** One route of a rule: taken when `when` matches (or always, with no `when`). */
 export interface RuleRoute<E> {
@@ -106,6 +166,8 @@ export interface RuleRoute<E> {
 
 /** A rule that starts one target whenever its event happens. */
 export interface RuleToOptions<E> {
+  /** The rule's name, unique within its automation: letters, digits, `_` and `-`. */
+  key: string;
   event: E;
   to: RuleTargetArg<E>;
   routes?: never;
@@ -119,6 +181,8 @@ export interface RuleToOptions<E> {
  * every matching route is.
  */
 export interface RuleRoutesOptions<E> {
+  /** The rule's name, unique within its automation: letters, digits, `_` and `-`. */
+  key: string;
   event: E;
   to?: never;
   match?: "first" | "all";
@@ -127,11 +191,13 @@ export interface RuleRoutesOptions<E> {
   otherwise?: RuleTargetArg<E>;
 }
 
-export type RuleOptions<E> = RuleToOptions<E> | RuleRoutesOptions<E>;
+export type RuleOptions<E> = (RuleToOptions<E> | RuleRoutesOptions<E>) &
+  ScheduleFields<E>;
 
 /** A finished rule, from `onEvent(...)`, for an automation's `rules`. */
 export interface Rule<E> {
   readonly [ruleBrand]: true;
+  readonly key: string;
   readonly event: E;
 }
 

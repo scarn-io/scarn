@@ -53,11 +53,22 @@ export function taskSourceLabel(source: TaskSummary["source"]): string {
   }
 }
 
+type ScheduleStarter = Extract<TaskSummary["startedBy"], { kind: "schedule" }>;
+
+/** `Scheduled · <automation title or key> / <rule key>`. */
+export const scheduledLabel = (startedBy: ScheduleStarter): string =>
+  `Scheduled · ${startedBy.title ?? startedBy.key} / ${startedBy.schedule.key}`;
+
 export function startedByLabel(
   task: Pick<TaskSummary, "startedBy" | "pipelineRunId">,
 ): string {
   const { startedBy } = task;
   if (startedBy.kind === "user") return startedBy.username ?? "Unknown user";
   if (startedBy.kind === "automation") return startedBy.title ?? startedBy.key;
+  if (startedBy.kind === "schedule") {
+    const label = scheduledLabel(startedBy);
+    if (startedBy.user === null) return label;
+    return `${label} · Run now by ${startedBy.user.username ?? "Unknown user"}`;
+  }
   return task.pipelineRunId ? "Pipeline" : "—";
 }

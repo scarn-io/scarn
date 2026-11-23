@@ -2,7 +2,10 @@
  * Types the `event.*` references an automation rule reads in `when` and
  * `args`: `event.workItem.<prop>`, `event.child.<prop>` (only on `child.*`
  * events) and `event.label` (only on `workItem.label.added`), where `<prop>`
- * is `title`, `description`, `labels`, `state` or `fields.<name>`.
+ * is `title`, `description`, `labels`, `state` or `fields.<name>`. A
+ * `schedule` rule is about no work item and only has `event.schedule.key`,
+ * `.scheduledFor`, `.previousScheduledFor` (null before the first succeeded
+ * run) and `.timezone`.
  *
  * Work item fields are free-form, so `fields.<name>` (and anything below it)
  * types as "any": a field ref passes every type check.
@@ -46,7 +49,17 @@ export function eventSite(): Site {
   };
 }
 
+const SCHEDULE_PROPS: Readonly<Record<string, JsonSchema>> = {
+  key: { type: "string" },
+  scheduledFor: { type: "string", format: "date-time" },
+  previousScheduledFor: { type: ["string", "null"], format: "date-time" },
+  timezone: { type: "string" },
+};
+
 function rootsOf(event: AutomationEvent): string[] {
+  if (event === "schedule") {
+    return ["event.schedule"];
+  }
   return [
     "event.workItem",
     ...(eventHasChild(event) ? ["event.child"] : []),
@@ -104,6 +117,43 @@ function workItemProp(
   return found;
 }
 
+function scheduleProp(
+  ctx: ReportContext,
+  site: Site,
+  text: string,
+  rest: readonly string[],
+  pointer: Segment[],
+): RootedSchema | null {
+  const [prop, ...path] = rest;
+  const names = Object.keys(SCHEDULE_PROPS);
+  const schema = prop === undefined ? undefined : SCHEDULE_PROPS[prop];
+  if (prop === undefined || schema === undefined) {
+    const suggestion = prop === undefined ? undefined : closest(prop, names);
+    report(ctx, site, {
+      code: "unknown_path",
+      path: jsonPointer(pointer),
+      message:
+        prop === undefined
+          ? `"${text}" needs a property`
+          : `"${text}" doesn't exist: a schedule has no "${prop}"`,
+      hint:
+        suggestion === undefined
+          ? `A schedule has ${quoteList(names)}`
+          : `Did you mean "event.schedule.${suggestion}"?`,
+    });
+    return null;
+  }
+  const found = schemaAtPath(rooted(schema), path);
+  if (found === null) {
+    report(ctx, site, {
+      code: "unknown_path",
+      path: jsonPointer(pointer),
+      message: `"${text}" doesn't exist: "event.schedule.${prop}" has no "${path.join(".")}"`,
+    });
+  }
+  return found;
+}
+
 /** The schema an `event.*` reference resolves to on `event`, or null (and an error) when it's not valid there. */
 export function resolveEventReference(
   ctx: ReportContext,
@@ -125,13 +175,28 @@ export function resolveEventReference(
   }
   const [, subject, ...rest] = segments;
   const allowed = (root: string) => roots.includes(root);
+  if (subject === "schedule") {
+    if (!allowed("event.schedule")) {
+      report(ctx, site, {
+        code: "reference_not_allowed",
+        path: jsonPointer(pointer),
+        message: `"${text}" can't be used on "${event}"`,
+        hint: '"event.schedule" only exists on "schedule" rules',
+      });
+      return null;
+    }
+    return scheduleProp(ctx, site, text, rest, pointer);
+  }
   if (subject === "workItem" || subject === "child") {
     if (!allowed(`event.${subject}`)) {
       report(ctx, site, {
         code: "reference_not_allowed",
         path: jsonPointer(pointer),
         message: `"${text}" can't be used on "${event}"`,
-        hint: '"event.child" only exists on child.* events',
+        hint:
+          event === "schedule"
+            ? 'A schedule rule is about no work item; it has "event.schedule"'
+            : '"event.child" only exists on child.* events',
       });
       return null;
     }

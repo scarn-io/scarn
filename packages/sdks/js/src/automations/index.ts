@@ -12,6 +12,7 @@ export type {
   ChildEvent,
   EventContext,
   EventOf,
+  EventSchedule,
   EventWorkItem,
   PipelineCall,
   Rule,
@@ -21,6 +22,8 @@ export type {
   RuleTarget,
   RuleTargetArg,
   RuleToOptions,
+  ScheduleOptions,
+  ScheduleRuleTarget,
   ScopeOf,
 } from "./types";
 export type {
@@ -29,5 +32,6 @@ export type {
   AutomationScope,
   AutomationSubject,
   ProjectAutomationEvent,
+  ScheduleConcurrency,
   WorkItemAutomationEvent,
 } from "../contracts/automation-document";

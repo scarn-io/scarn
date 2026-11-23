@@ -22,11 +22,13 @@ import {
   LaneNode,
   PersonNode,
   RoundCardNode,
+  TriggerNode,
 } from "./RoundNodes";
 
 const nodeTypes: NodeTypes = {
   lane: LaneNode,
   junction: JunctionNode,
+  trigger: TriggerNode,
   step: RoundCardNode,
   pipeline: RoundCardNode,
   attach: RoundCardNode,

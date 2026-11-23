@@ -88,7 +88,7 @@ describe("DrizzleTaskRepo, a Task without a work item", () => {
   );
 
   concurrentTest(
-    "the database rejects a Task with neither a work item nor a conversation",
+    "the database rejects a Task with no work item, conversation or schedule",
     async () => {
       const projectId = await seedProject();
 
@@ -104,7 +104,7 @@ describe("DrizzleTaskRepo, a Task without a work item", () => {
               ...agentTaskInstructionColumns,
               status: "queued",
             }),
-        { code: "23514", constraint: "tasks_work_item_or_conversation_check" },
+        { code: "23514", constraint: "tasks_owner_check" },
       );
     },
   );

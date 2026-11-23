@@ -305,6 +305,7 @@ export { describeCondition } from "./describe-transition";
 export {
   buildAutomationRound,
   routeMatchedLabel,
+  scheduleTriggerLabel,
 } from "./automation-round-model";
 export {
   LANE_ORDER,
@@ -334,6 +335,7 @@ export {
   personNodeId,
   pipelineNodeId,
   stepNodeId,
+  triggerNodeId,
   type AutomationRoundModel,
   type RoundAttachNode,
   type RoundEdge,
@@ -347,6 +349,7 @@ export {
   type RoundRouteEdge,
   type RoundSoftEdge,
   type RoundStepNode,
+  type RoundTriggerNode,
   type SoftLinkProvenance,
 } from "./automation-round-types";
 export {

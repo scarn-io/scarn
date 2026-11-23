@@ -180,9 +180,11 @@ const postSummaryComment = async (
   );
 };
 
-/** A failed chat (no work item) keeps its conversation open so it can be retried. */
+/** A failed chat (no work item or schedule) keeps its conversation open so it can be retried. */
 const staysOpen = (task: TaskEntity): boolean =>
-  task.workItemId === null && task.status === "failed";
+  task.workItemId === null &&
+  task.startedByScheduleId === null &&
+  task.status === "failed";
 
 /**
  * `task` just ended because `run` ended (or a person ended it, or it was

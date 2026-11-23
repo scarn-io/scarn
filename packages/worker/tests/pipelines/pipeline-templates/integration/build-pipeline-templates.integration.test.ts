@@ -43,6 +43,7 @@ type BuiltAutomation = {
   key: string;
   scope: string;
   rules: {
+    key: string;
     event: string;
     next: { routes: BuiltRoute[]; otherwise?: BuiltRoute };
   }[];
@@ -141,17 +142,20 @@ describe("pipeline templates build", () => {
       });
       expect(
         document.rules.map((rule) => ({
+          key: rule.key,
           event: rule.event,
           routes: rule.next.routes.map((route) => [route.to, route.on]),
           otherwise: rule.next.otherwise,
         })),
       ).toEqual([
         {
+          key: "plan-on-attach",
           event: "self.attached",
           routes: [["plan", "workItem"]],
           otherwise: undefined,
         },
         {
+          key: "route-ready-children",
           event: "child.ready",
           routes: [
             ["research", "child"],
@@ -161,6 +165,7 @@ describe("pipeline templates build", () => {
           otherwise: undefined,
         },
         {
+          key: "replan-on-child-closed",
           event: "child.closed",
           routes: [["plan", "workItem"]],
           otherwise: undefined,

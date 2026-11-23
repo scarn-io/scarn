@@ -2,12 +2,25 @@ import type { UuidV7 } from "@scarn/core/common/contracts/uuid-v7";
 import type { DbExecutor } from "@scarn/core/lib/db/db-executor";
 import type { TaskEntity, TaskStatus } from "../domain/task-entity";
 
-/** A concurrency group: the Tasks of one step key on one work item. */
-export type ConcurrencyGroupKey = {
+/** A concurrency group of the Tasks of one step key on one work item. */
+export type StepConcurrencyGroupKey = {
   projectId: UuidV7;
   stepKey: string;
   workItemId: UuidV7;
 };
+
+/** A concurrency group of the Tasks one schedule started. */
+export type ScheduleConcurrencyGroupKey = {
+  projectId: UuidV7;
+  scheduleId: UuidV7;
+};
+
+export type ConcurrencyGroupKey =
+  StepConcurrencyGroupKey | ScheduleConcurrencyGroupKey;
+
+export const isScheduleConcurrencyGroup = (
+  group: ConcurrencyGroupKey,
+): group is ScheduleConcurrencyGroupKey => "scheduleId" in group;
 
 export type TaskRepo = {
   load(id: UuidV7, dbExecutor?: DbExecutor): Promise<TaskEntity | null>;
@@ -24,8 +37,17 @@ export type TaskRepo = {
   ): Promise<Map<UuidV7, TaskStatus>>;
   create(task: TaskEntity, dbExecutor?: DbExecutor): Promise<TaskEntity>;
   /**
+   * The `scheduledFor` of the latest succeeded Task the schedule started;
+   * null when none has succeeded.
+   */
+  findLatestSucceededScheduledFor(
+    scheduleId: UuidV7,
+    dbExecutor?: DbExecutor,
+  ): Promise<Date | null>;
+  /**
    * Takes the transaction-scoped advisory lock of a concurrency group (a
-   * step key on a work item), so arrivals and promotions in it take turns.
+   * step key on a work item, or a schedule), so arrivals and promotions in
+   * it take turns.
    */
   lockConcurrencyGroup(
     group: ConcurrencyGroupKey,
@@ -37,8 +59,8 @@ export type TaskRepo = {
    */
   lockSpawnedWorkItems(taskId: UuidV7, dbExecutor: DbExecutor): Promise<void>;
   /**
-   * The group's Tasks that haven't ended, from every version of the step
-   * key, oldest first.
+   * The group's Tasks that haven't ended, oldest first: from every version
+   * of the step key on the work item, or every Task the schedule started.
    */
   listLiveInConcurrencyGroup(
     group: ConcurrencyGroupKey,

@@ -33,10 +33,12 @@ describe("project automations", () => {
       await h.publish(
         projectAutomation(key, [
           {
+            key: "work-item-created",
             event: "workItem.created",
             next: { routes: [{ kind: "step", to: plan.key, on: "workItem" }] },
           },
           {
+            key: "work-item-ready",
             event: "workItem.ready",
             next: {
               routes: [
@@ -82,7 +84,11 @@ describe("project automations", () => {
     for (const key of [second, first]) {
       await h.publish(
         projectAutomation(key, [
-          { event: "workItem.created", next: { routes: [{ kind: "skip" }] } },
+          {
+            key: "work-item-created",
+            event: "workItem.created",
+            next: { routes: [{ kind: "skip" }] },
+          },
         ]),
       );
       await h.enable(key);
@@ -101,7 +107,11 @@ describe("project automations", () => {
     const key = uniqueKey("dormant");
     await h.publish(
       projectAutomation(key, [
-        { event: "workItem.created", next: { routes: [{ kind: "skip" }] } },
+        {
+          key: "work-item-created",
+          event: "workItem.created",
+          next: { routes: [{ kind: "skip" }] },
+        },
       ]),
     );
 
@@ -121,6 +131,7 @@ describe("project automations", () => {
       await h.publish(
         projectAutomation(key, [
           {
+            key: "work-item-label-added",
             event: "workItem.label.added",
             next: {
               routes: [
@@ -167,6 +178,7 @@ describe("project automations", () => {
       await h.publish(
         workItemAutomation(workKey, [
           {
+            key: "self-attached",
             event: "self.attached",
             next: { routes: [{ kind: "step", to: plan.key, on: "workItem" }] },
           },
@@ -175,6 +187,7 @@ describe("project automations", () => {
       await h.publish(
         projectAutomation(projectKey, [
           {
+            key: "work-item-created",
             event: "workItem.created",
             next: { routes: [{ kind: "attach", automation: workKey }] },
           },

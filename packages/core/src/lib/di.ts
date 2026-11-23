@@ -13,6 +13,8 @@ import { DrizzleEnvironmentRepo } from "@scarn/core/pipeline-definitions/environ
 import type { AutomationRepo } from "@scarn/core/pipeline-definitions/automation/application/automation-repo";
 import type { WorkItemAutomationRepo } from "@scarn/core/pipeline-definitions/automation/application/work-item-automation-repo";
 import { DrizzleAutomationRepo } from "@scarn/core/pipeline-definitions/automation/infra/drizzle-automation-repo";
+import type { AutomationScheduleRepo } from "@scarn/core/pipeline-definitions/automation/application/automation-schedule-repo";
+import { DrizzleAutomationScheduleRepo } from "@scarn/core/pipeline-definitions/automation/infra/drizzle-automation-schedule-repo";
 import { DrizzleWorkItemAutomationRepo } from "@scarn/core/pipeline-definitions/automation/infra/drizzle-work-item-automation-repo";
 import { DrizzleTaskRunRepo } from "@scarn/core/tasks/task-run/infra/drizzle-task-run-repo";
 import { DrizzleTaskRepo } from "@scarn/core/tasks/task/infra/drizzle-task-repo";
@@ -199,6 +201,7 @@ export type CreateAppContextOverrides = {
   pipelineGraphRepo?: PipelineGraphRepo;
   pipelineGraphVersionRepo?: PipelineGraphVersionRepo;
   automationRepo?: AutomationRepo;
+  automationScheduleRepo?: AutomationScheduleRepo;
   workItemAutomationRepo?: WorkItemAutomationRepo;
   workItemActivityRepo?: WorkItemActivityRepo;
   /** Wraps (or replaces) the `AutomationRunner` behind `WorkItemEventsPort`. */
@@ -325,6 +328,8 @@ export function createAppContext(overrides?: CreateAppContextOverrides) {
     new DrizzlePipelineGraphVersionRepo();
   const automationRepo =
     overrides?.automationRepo ?? new DrizzleAutomationRepo();
+  const automationScheduleRepo =
+    overrides?.automationScheduleRepo ?? new DrizzleAutomationScheduleRepo();
   const workItemAutomationRepo =
     overrides?.workItemAutomationRepo ?? new DrizzleWorkItemAutomationRepo();
   const workItemActivityRepo =
@@ -491,6 +496,7 @@ export function createAppContext(overrides?: CreateAppContextOverrides) {
     taskRepo,
     taskRunRepo,
     stepDefinitionRepo,
+    automationScheduleRepo,
     workItemBlockRepo,
     taskPipelineRun,
     timeProvider,
@@ -630,6 +636,7 @@ export function createAppContext(overrides?: CreateAppContextOverrides) {
     pipelineGraphRepo,
     pipelineGraphVersionRepo,
     automationRepo,
+    automationScheduleRepo,
     workItemAutomationRepo,
     workItemActivityRepo,
     automationRunner,

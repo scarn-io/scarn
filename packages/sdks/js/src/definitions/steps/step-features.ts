@@ -23,16 +23,21 @@ export const grantScopeValues = ["self", "children", "project"] as const;
 export type GrantAction = (typeof grantActionValues)[number];
 /**
  * `self`: the Task's own work item. `children`: its child work items.
- * `project`: any work item in the project (`read` only).
+ * `project`: any work item in the project (`read` and `create` only).
  */
 export type GrantScope = (typeof grantScopeValues)[number];
 /** The scopes a grant that changes work items may cover. */
 export type ChangeGrantScope = Exclude<GrantScope, "project">;
+/**
+ * The scopes a `create` grant may cover: `children` of the Task's work item,
+ * or top-level items in the `project`, deduped by an external id.
+ */
+export type CreateGrantScope = Exclude<GrantScope, "self">;
 
 /**
  * One thing a step's Tasks may do to a work item. `label` and `create` name
- * the labels they may set; `create` only covers `children`; only `read` may
- * cover `project`.
+ * the labels they may set; `create` covers `children` or `project`; only
+ * `read` and `create` may cover `project`.
  */
 export type Grant =
   | {
@@ -54,7 +59,7 @@ export type Grant =
   | {
       resource: "workItem";
       action: "create";
-      scope: "children";
+      scope: CreateGrantScope;
       labels: string[];
     };
 
@@ -280,10 +285,21 @@ const SCOPE_TEXT: Record<GrantScope, string> = {
   project: "any work item in this project (pass its `workItemId`)",
 };
 
+const CREATE_SCOPE_TEXT: Record<CreateGrantScope, string> = {
+  children: "child work items of your work item",
+  project:
+    "top-level work items in this project. Give each one a `platformKey`: a stable id from the system it comes from, such as the external item's id. Creating with a `platformKey` that already exists returns the existing item with `created: false` and changes nothing, so send every item you find without checking for duplicates first",
+};
+
 const scopeText = (action: GrantAction, scope: GrantScope): string =>
-  action === "create"
-    ? "child work items of your work item"
+  action === "create" && scope !== "self"
+    ? CREATE_SCOPE_TEXT[scope]
     : SCOPE_TEXT[scope];
+
+const createHeading: Record<CreateGrantScope, string> = {
+  children: "Create Child Work Items",
+  project: "Create Work Items in the Project",
+};
 
 const scopeHeading: Record<GrantScope, string> = {
   self: "Your Work Item",
@@ -304,7 +320,7 @@ const actionHeading: Record<GrantAction, string> = {
 function workItemPrompt(grant: Grant): string {
   const heading =
     grant.action === "create"
-      ? "## Work Items: Create Child Work Items"
+      ? `## Work Items: ${createHeading[grant.scope]}`
       : `## Work Items: ${actionHeading[grant.action]} ${scopeHeading[grant.scope]}`;
   const lines = [
     heading,
@@ -339,8 +355,9 @@ type LabelsOptions<TLabels extends readonly string[]> = {
  * Work item grants. Each builder gives the step's Tasks one action on their
  * work item (`scope: "self"`) or its children (`scope: "children"`), and adds
  * a prompt section naming the tool to use. `read` may also cover every work
- * item in the project (`scope: "project"`). A step may attach at most one per
- * action and scope.
+ * item in the project (`scope: "project"`), and `create` may make top-level
+ * items in it (`scope: "project"`). A step may attach at most one per action
+ * and scope.
  */
 const workItems = {
   read: ({ scope }: { scope: GrantScope }) =>
@@ -370,19 +387,31 @@ const workItems = {
       scope,
       labels: [...labels] as [...TLabels],
     }),
-  /** Create child work items, each with labels from `labels` only. */
-  create: <const TLabels extends readonly [string, ...string[]]>({
+  /**
+   * Create work items, each with labels from `labels` only: children of the
+   * Task's work item (`scope: "children"`), or top-level items in the project
+   * (`scope: "project"`), each keyed by a stable external id so a repeat
+   * create returns the existing item. A scheduled step uses `project`.
+   */
+  create: <
+    const TScope extends CreateGrantScope,
+    const TLabels extends readonly [string, ...string[]],
+  >({
+    scope,
     labels,
   }: {
-    scope: "children";
+    scope: TScope;
     labels: TLabels;
   }): WorkItemFeature<
-    Extract<Grant, { action: "create" }> & { labels: [...TLabels] }
+    Extract<Grant, { action: "create" }> & {
+      scope: TScope;
+      labels: [...TLabels];
+    }
   > =>
     workItemFeature({
       resource: "workItem",
       action: "create",
-      scope: "children",
+      scope,
       labels: [...labels] as [...TLabels],
     }),
 } as const;

@@ -32,6 +32,7 @@ import { createNotificationRuleRoutes } from "./http/routes/notification-rules";
 import { createProjectIntegrationRoutes } from "./http/routes/project-integrations";
 import { createIntegrationsReconcileRoutes } from "./http/routes/integrations-reconcile";
 import { createIntegrationsPollRoutes } from "./http/routes/integrations-poll";
+import { createAutomationSchedulesTickRoutes } from "./http/routes/automation-schedules-tick";
 import { createGitHubIntegrationRoutes } from "./http/routes/github-integration";
 import { createProjectSetupRoutes } from "./http/routes/projects-setup";
 import { createProjectInviteRoutes } from "./http/routes/project-invites";
@@ -134,7 +135,8 @@ export const createAppCore = <OpenApi extends OpenApiPlugin | AnyElysia>(
     .use(
       new Elysia()
         .use(createIntegrationsReconcileRoutes(appContext))
-        .use(createIntegrationsPollRoutes(appContext)),
+        .use(createIntegrationsPollRoutes(appContext))
+        .use(createAutomationSchedulesTickRoutes(appContext)),
     )
     .use(createGitHubIntegrationRoutes(appContext))
     .use(createProjectSetupRoutes(appContext))

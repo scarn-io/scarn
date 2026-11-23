@@ -1,0 +1,291 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "80a2ff1b-b828-4852-990e-632baf5bbc41",
+  "prevIds": [
+    "3410c7b9-c36d-4e10-bb94-ff11860ac422"
+  ],
+  "footprints": [
+    {
+      "statementType": "drop_check",
+      "statementTarget": [
+        "table",
+        "app",
+        "tasks"
+      ],
+      "writes": [
+        "s|ck|app.tasks.tasks_work_item_or_conversation_check",
+        "n|ck|app.tasks.tasks_work_item_or_conversation_check",
+        "e|ck|app.tasks.tasks_work_item_or_conversation_check",
+        "n|con|app.tasks.tasks_work_item_or_conversation_check"
+      ],
+      "reads": [
+        "n|tbl|app.tasks",
+        "n|sch|app",
+        "e|col|app.tasks.work_item_id",
+        "e|col|app.tasks.conversation_id"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "tasks",
+        "started_by_schedule_id"
+      ],
+      "writes": [
+        "s|col|app.tasks.started_by_schedule_id",
+        "n|col|app.tasks.started_by_schedule_id",
+        "e|col|app.tasks.started_by_schedule_id"
+      ],
+      "reads": [
+        "n|tbl|app.tasks",
+        "n|sch|app"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "tasks",
+        "scheduled_for"
+      ],
+      "writes": [
+        "s|col|app.tasks.scheduled_for",
+        "n|col|app.tasks.scheduled_for",
+        "e|col|app.tasks.scheduled_for"
+      ],
+      "reads": [
+        "n|tbl|app.tasks",
+        "n|sch|app"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "app",
+        "tasks",
+        "tasks_started_by_schedule_id_scheduled_for_unique"
+      ],
+      "writes": [
+        "s|idx|app.tasks_started_by_schedule_id_scheduled_for_unique",
+        "n|idx|app.tasks_started_by_schedule_id_scheduled_for_unique",
+        "e|idx|app.tasks_started_by_schedule_id_scheduled_for_unique",
+        "n|rel|app.tasks_started_by_schedule_id_scheduled_for_unique"
+      ],
+      "reads": [
+        "n|tbl|app.tasks",
+        "n|sch|app",
+        "n|col|app.tasks.started_by_schedule_id",
+        "n|col|app.tasks.scheduled_for"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "app",
+        "tasks",
+        "tasks_started_by_schedule_id_status_scheduled_for_idx"
+      ],
+      "writes": [
+        "s|idx|app.tasks_started_by_schedule_id_status_scheduled_for_idx",
+        "n|idx|app.tasks_started_by_schedule_id_status_scheduled_for_idx",
+        "e|idx|app.tasks_started_by_schedule_id_status_scheduled_for_idx",
+        "n|rel|app.tasks_started_by_schedule_id_status_scheduled_for_idx"
+      ],
+      "reads": [
+        "n|tbl|app.tasks",
+        "n|sch|app",
+        "n|col|app.tasks.started_by_schedule_id",
+        "n|col|app.tasks.status",
+        "n|col|app.tasks.scheduled_for"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "app",
+        "tasks"
+      ],
+      "writes": [
+        "s|fk|app.tasks.tasks_started_by_schedule_id_automation_schedules_id_fkey",
+        "n|fk|app.tasks.tasks_started_by_schedule_id_automation_schedules_id_fkey",
+        "e|fk|app.tasks.tasks_started_by_schedule_id_automation_schedules_id_fkey",
+        "n|con|app.tasks.tasks_started_by_schedule_id_automation_schedules_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|app.tasks",
+        "n|sch|app",
+        "n|tbl|app.automation_schedules",
+        "n|sch|app",
+        "n|col|app.tasks.started_by_schedule_id",
+        "n|col|app.automation_schedules.id",
+        "e|uniqueness|app.automation_schedules.id"
+      ]
+    },
+    {
+      "statementType": "add_check",
+      "statementTarget": [
+        "table",
+        "app",
+        "tasks"
+      ],
+      "writes": [
+        "s|ck|app.tasks.tasks_owner_check",
+        "n|ck|app.tasks.tasks_owner_check",
+        "e|ck|app.tasks.tasks_owner_check",
+        "n|con|app.tasks.tasks_owner_check"
+      ],
+      "reads": [
+        "n|tbl|app.tasks",
+        "n|sch|app",
+        "n|col|app.tasks.work_item_id",
+        "n|col|app.tasks.conversation_id",
+        "n|col|app.tasks.started_by_schedule_id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "tasks",
+        "name": "started_by_schedule_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "tasks",
+        "name": "scheduled_for",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "tasks",
+        "name": "tasks_started_by_schedule_id_scheduled_for_unique",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "started_by_schedule_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "scheduled_for",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": true,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "tasks",
+        "name": "tasks_started_by_schedule_id_status_scheduled_for_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "started_by_schedule_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "status",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "scheduled_for",
+            "isExpression": false,
+            "asc": false,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "tasks",
+        "name": "tasks_started_by_schedule_id_automation_schedules_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "started_by_schedule_id"
+        ],
+        "schemaTo": "app",
+        "tableTo": "automation_schedules",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "tasks",
+        "name": "tasks_owner_check",
+        "value": "\"work_item_id\" IS NOT NULL OR \"conversation_id\" IS NOT NULL OR \"started_by_schedule_id\" IS NOT NULL",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "drop",
+      "key": "checks\u0000[\"app\",\"tasks\",\"tasks_work_item_or_conversation_check\"]"
+    }
+  ]
+}

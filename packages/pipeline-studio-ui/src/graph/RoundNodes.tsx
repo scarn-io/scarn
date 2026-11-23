@@ -195,7 +195,10 @@ function Pill({
             fontSize: 13,
             lineHeight: "16px",
             color: palette.text,
-            fontFamily: data.kind === "junction" ? fonts.mono : undefined,
+            fontFamily:
+              data.kind === "junction" || data.kind === "trigger"
+                ? fonts.mono
+                : undefined,
           }}
         >
           {data.node.label}
@@ -220,20 +223,34 @@ function Pill({
   );
 }
 
+/** A junction or trigger's caption: its rule key, and "all routes" on a fork. */
+function ruleCaption(node: RoundNode): string {
+  if (node.kind !== "junction" && node.kind !== "trigger") return "Rule";
+  return node.match === "all" ? `${node.ruleKey} · all routes` : node.ruleKey;
+}
+
 /** One rule with its event: the automation's entry point. */
 export function JunctionNode({ data, selected }: NodeProps<MemberNodeType>) {
-  const node = data.node;
-  const rule =
-    node.kind === "junction" ? `Rule ${String(node.ruleIndex + 1)}` : "Rule";
-  const fork =
-    node.kind === "junction" && node.match === "all" ? " · all routes" : "";
   return (
     <Pill
       data={data}
       selected={selected}
       icon="event"
       color={palette.attention}
-      caption={`${rule}${fork}`}
+      caption={ruleCaption(data.node)}
+    />
+  );
+}
+
+/** A `schedule` rule with its cron: an entry point that fires on time. */
+export function TriggerNode({ data, selected }: NodeProps<MemberNodeType>) {
+  return (
+    <Pill
+      data={data}
+      selected={selected}
+      icon="schedule"
+      color={palette.attention}
+      caption={ruleCaption(data.node)}
     />
   );
 }

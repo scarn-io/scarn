@@ -1,13 +1,15 @@
 /**
  * The Runs list as one SQL row set: every pipeline run and every Task not
- * owned by a node visit that has a work item or a conversation (single
- * steps, prompt Tasks and Tasks without a work item), with each row's
+ * owned by a node visit that has a work item, a conversation or a schedule
+ * (single steps, prompt Tasks, chats and scheduled Tasks), with each row's
  * `ProjectRunStatus` derived in SQL by a `case` per kind that mirrors
  * `deriveProjectRunStatus`. Filters, counts and paging read over it.
  */
 import { sql, type SQL } from "drizzle-orm";
 import type { UuidV7 } from "@scarn/core/common/contracts/uuid-v7";
 import {
+  automationSchedules,
+  automations,
   conversationMessages,
   conversations,
   nodeVisitQuestions,
@@ -40,6 +42,7 @@ export type ProjectRunRowColumns = {
   what_ran_name: string;
   started_by_automation_id: string | null;
   started_by_user_id: string | null;
+  started_by_schedule_id: string | null;
   work_item_id: string | null;
   run_waiter_user_ids: string[];
   at_node: boolean;
@@ -98,7 +101,7 @@ const pipelineRows = (scope: ProjectRunsScope, atNode: string | undefined) => {
     end) as status,
     r.pipeline_graph_id::text as what_ran_key, g.name as what_ran_name,
     r.started_by_automation_id, r.triggered_by_user_id as started_by_user_id,
-    r.work_item_id, ${waiters} as run_waiter_user_ids,
+    null::uuid as started_by_schedule_id, r.work_item_id, ${waiters} as run_waiter_user_ids,
     ${
       atNode === undefined
         ? sql`true`
@@ -175,20 +178,24 @@ const standaloneTaskRows = (
     end) end) as status,
     coalesce(t.step_definition_id::text, 'task') as what_ran_key,
     coalesce(sd.name, 'Task') as what_ran_name,
-    t.started_by_automation_id, t.started_by_user_id, t.work_item_id,
-    '{}'::uuid[] as run_waiter_user_ids, ${noAtNode(atNode)} as at_node
+    t.started_by_automation_id, t.started_by_user_id, t.started_by_schedule_id,
+    t.work_item_id, '{}'::uuid[] as run_waiter_user_ids, ${noAtNode(atNode)} as at_node
   from ${tasks} t
   left join ${workItems} w on w.id = t.work_item_id
   left join ${conversations} c on c.id = t.conversation_id
   left join ${stepDefinitions} sd on sd.id = t.step_definition_id
+  left join ${automationSchedules} s on s.id = t.started_by_schedule_id
+  left join ${automations} a on a.id = s.automation_id
   where t.project_id = ${scope.projectId}
-    and (t.work_item_id is not null or (c.id is not null and c.work_item_id is null))
+    and (t.work_item_id is not null or (c.id is not null and c.work_item_id is null)
+      or t.started_by_schedule_id is not null)
     and not exists (select 1 from ${nodeVisits} nv where nv.task_id = t.id)
     and ${searchMatch(
       scope.q,
       sql`(case when t.work_item_id is null
         then concat_ws(' ', ${conversationMessage("person", "asc")},
-          ${conversationMessage("agent", "desc")}, sd.name, t.error_json ->> 'message')
+          ${conversationMessage("agent", "desc")}, sd.name, a.key, a.title, s.key,
+          t.error_json ->> 'message')
         else concat_ws(' ', w.title, w.platform_key, t.prompt, sd.name,
           t.error_json ->> 'message') end)`,
     )}`;
@@ -213,5 +220,9 @@ export const projectRunRowsSql = (
           select 1 from ${workItems} cw
           where cw.id = x.work_item_id and cw.parent_work_item_id = ${scope.workItemId}::uuid
         ))`;
-  return sql`select x.* from (${rows}) x where ${inWorkItem}`;
+  const ofSchedule =
+    scope.scheduleId === undefined
+      ? sql`true`
+      : sql`x.started_by_schedule_id = ${scope.scheduleId}::uuid`;
+  return sql`select x.* from (${rows}) x where ${inWorkItem} and ${ofSchedule}`;
 };

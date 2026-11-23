@@ -3,6 +3,7 @@ import {
   automation,
   NO_GRANTS,
   NO_PIPELINES,
+  POLLER,
   WAYFINDER,
   WAYFINDER_GRANTS,
 } from "./automation-round-fixtures";
@@ -57,6 +58,7 @@ describe("layoutAutomationRound", () => {
       buildAutomationRound(
         automation("default", "project", [
           {
+            key: "on-work-item-ready",
             event: "workItem.ready",
             next: { routes: [{ kind: "pipeline", to: "bug", on: "workItem" }] },
           },
@@ -70,6 +72,25 @@ describe("layoutAutomationRound", () => {
       .filter((node) => node.data.kind === "lane")
       .map((node) => node.position.y);
     expect(tops[0]).toBeLessThan(tops[1] ?? 0);
+  });
+
+  test("schedule triggers sit with the rules; their steps in the no-work-item lane", () => {
+    const layout = layoutAutomationRound(
+      buildAutomationRound(POLLER, NO_GRANTS, NO_PIPELINES),
+    );
+    expect(laneIds(layout)).toEqual([
+      "lane:automation",
+      "lane:workItem",
+      "lane:noWorkItem",
+    ]);
+    expect(member(layout, "trigger:0")).toMatchObject({
+      lane: "automation",
+      column: 0,
+    });
+    expect(member(layout, "step:poll-linear@project")).toMatchObject({
+      lane: "noWorkItem",
+      column: 1,
+    });
   });
 
   test("wayfinder reads left to right as one round", () => {

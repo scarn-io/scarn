@@ -24,6 +24,8 @@ export type ProjectRunsScope = {
   actorUserId: UuidV7;
   q?: string | undefined;
   workItemId?: UuidV7 | undefined;
+  /** Only the Tasks this schedule started (its history). */
+  scheduleId?: UuidV7 | undefined;
 };
 
 /** The sidebar facets and the node a pipeline's runs are at. */
@@ -71,6 +73,8 @@ export type ProjectRunCountGroup = {
   whatRanName: string;
   startedByAutomation: StartingAutomation | null;
   startedByActor: boolean;
+  /** Whether a schedule rule started the rows. */
+  scheduled: boolean;
   /** Whether the rows have an open visit at the `atNode` asked for (true when none was). */
   atNode: boolean;
   count: number;

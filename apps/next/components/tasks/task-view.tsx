@@ -2,7 +2,7 @@
 
 /**
  * The Task view: a breadcrumb back to Tasks, a header (name, status, then
- * kind · work item · pipeline run · duration · who started it) over the
+ * kind · work item or schedule · pipeline run · duration · who started it) over the
  * Task's runs, shown with the run view's transcript and logs panels. A code
  * Task has no transcript, so it opens on its logs. Polls while the Task is
  * still live. Inside a run's page (`framed`), the run header stands in for
@@ -31,10 +31,11 @@ import type { LogStreamFilter } from "@/components/executions/log-viewer";
 import { formatDateTime } from "@/components/executions/format-datetime";
 import { formatElapsedMs } from "@/components/executions/elapsed";
 import { useWorkItemExecutions } from "@/components/executions/use-work-item-executions";
+import { useScheduleHistoryHref } from "@/components/runs/run-row-parts";
 import { type TaskDetail } from "./task-api";
 import { useTask } from "./use-task";
 import { TaskRetryAction } from "./task-retry-action";
-import { TaskStatusChip, startedByLabel } from "./task-labels";
+import { TaskStatusChip, scheduledLabel, startedByLabel } from "./task-labels";
 import { taskThreadRuns } from "./task-runs";
 import {
   TaskKindIcon,
@@ -220,6 +221,8 @@ function TaskHeader({
   runs: readonly TaskRunContract[];
 }) {
   const projectPath = useProjectPath();
+  const scheduleHistoryHref = useScheduleHistoryHref();
+  const schedule = task.startedBy.kind === "schedule" ? task.startedBy : null;
   const executions = useWorkItemExecutions(
     projectId,
     task.workItem?.id ?? null,
@@ -325,6 +328,34 @@ function TaskHeader({
             </Typography>
           </>
         ) : null}
+        {schedule ? (
+          <>
+            {dot}
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              data-testid="task-schedule"
+            >
+              <MuiLink
+                component={Link}
+                href={scheduleHistoryHref(schedule.schedule.id)}
+                underline="hover"
+                title="This schedule's runs"
+              >
+                {scheduledLabel(schedule)}
+              </MuiLink>
+              {schedule.schedule.removed ? " (removed)" : null}
+              {task.scheduledFor ? (
+                <>
+                  {" for "}
+                  <Box component="time" dateTime={task.scheduledFor}>
+                    {formatDateTime(task.scheduledFor)}
+                  </Box>
+                </>
+              ) : null}
+            </Typography>
+          </>
+        ) : null}
         {task.pipelineRunId ? (
           <>
             {dot}
@@ -357,7 +388,12 @@ function TaskHeader({
         ) : null}
         {dot}
         <Typography variant="body2" color="text.secondary">
-          Started by {startedByLabel(task)} · {formatDateTime(task.createdAt)}
+          {schedule
+            ? schedule.user
+              ? `Run now by ${schedule.user.username ?? "Unknown user"}`
+              : "Started on schedule"
+            : `Started by ${startedByLabel(task)}`}{" "}
+          · {formatDateTime(task.createdAt)}
         </Typography>
       </Stack>
     </Stack>

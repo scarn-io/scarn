@@ -2,7 +2,10 @@ import { z } from "zod";
 import type { ScarnClientOptions } from "../../client";
 import { createApiClient } from "../../create-api-client";
 import { Automations } from "../../generated/sdk.gen";
-import type { PutApiProjectsByProjectIdAutomationsByKeyResponses } from "../../generated/types.gen";
+import type {
+  GetApiProjectsByProjectIdAutomationsResponses,
+  PutApiProjectsByProjectIdAutomationsByKeyResponses,
+} from "../../generated/types.gen";
 
 type RequestOptions = {
   headers?: Record<string, unknown> | undefined;
@@ -11,6 +14,10 @@ type RequestOptions = {
 export type PublishAutomationResult =
   PutApiProjectsByProjectIdAutomationsByKeyResponses[200];
 export type Automation = PublishAutomationResult["automation"];
+/** A project's automation as the list shows it, with its live schedule rules. */
+export type AutomationListItem =
+  GetApiProjectsByProjectIdAutomationsResponses[200][number];
+export type AutomationScheduleSummary = AutomationListItem["schedules"][number];
 
 const automationDocumentIssueSchema = z.object({
   code: z.string(),
@@ -33,16 +40,22 @@ type ApiError = {
 
 /**
  * Thrown when the API rejects a request. `issues` carries the per-path
- * validation errors of an `AUTOMATION_DOCUMENT_INVALID` rejection.
+ * validation errors of an `AUTOMATION_DOCUMENT_INVALID` rejection; `heldBy`
+ * the Tasks holding a full concurrency group (`Scarn.ConcurrencyGroupFull`).
  */
 export class AutomationsApiError extends Error {
   readonly code: string | undefined;
   readonly issues: readonly AutomationDocumentIssue[];
+  readonly heldBy: readonly string[];
 
   constructor(error: ApiError) {
     super(error.detail ?? error.title ?? JSON.stringify(error));
     this.name = "AutomationsApiError";
     this.code = error.code;
+    const heldBy = error.meta?.["heldBy"];
+    this.heldBy = Array.isArray(heldBy)
+      ? heldBy.filter((id): id is string => typeof id === "string")
+      : [];
     const errors = error.meta?.["errors"];
     this.issues = Array.isArray(errors)
       ? errors.flatMap((issue) => {
@@ -105,6 +118,23 @@ const buildAutomationsClient = (automations: Automations) => ({
     unwrap(
       await automations.disableAutomation({
         path: { projectId, key },
+        headers: options?.headers,
+      }),
+    ),
+  /**
+   * Run now: fires the schedule rule `ruleKey` once, for now. `taskId` is
+   * null when the rule routed to `skip`. A full concurrency group throws
+   * with code `Scarn.ConcurrencyGroupFull` and `heldBy` set.
+   */
+  runSchedule: async (
+    projectId: string,
+    key: string,
+    ruleKey: string,
+    options?: RequestOptions,
+  ) =>
+    unwrap(
+      await automations.runAutomationSchedule({
+        path: { projectId, key, ruleKey },
         headers: options?.headers,
       }),
     ),

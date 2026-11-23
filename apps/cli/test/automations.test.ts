@@ -18,6 +18,8 @@ setDefaultTimeout(15_000);
 const PROJECT_ID = "0196a000-0000-7000-8000-000000000001";
 const WORK_ITEM_ID = "0196a000-0000-7000-8000-0000000000aa";
 const TICKET_URL = "https://github.com/acme/app/issues/7";
+const RUN_TASK_ID = "0196a000-0000-7000-8000-0000000000b1";
+const HELD_TASK_ID = "0196a000-0000-7000-8000-0000000000b2";
 
 type Request = { method: string; path: string };
 
@@ -70,6 +72,56 @@ function handle(request: Request, url: URL): Response {
       pageSize: 15,
     });
   }
+  if (method === "GET" && path === `/api/projects/${PROJECT_ID}/automations`) {
+    return json([
+      {
+        ...automation("nightly", true),
+        schedules: [
+          {
+            id: "0196a000-0000-7000-8000-0000000000c1",
+            key: "sweep",
+            cron: "0 2 * * *",
+            timezone: "Europe/London",
+            concurrency: { max: 1, waiting: 0 },
+            nextRunAt: "2026-11-23T02:00:00.000Z",
+            lastFiredAt: "2026-11-22T02:00:00.000Z",
+            lastTask: {
+              id: RUN_TASK_ID,
+              status: "failed",
+              scheduledFor: "2026-11-22T02:00:00.000Z",
+            },
+            failureStreak: 2,
+            lastSkippedAt: "2026-11-21T02:00:00.000Z",
+            skippedCountSinceFire: 0,
+            lastError: {
+              message: `Step "sweep" is gone\n${"x".repeat(200)}`,
+              at: "2026-11-20T02:00:00.000Z",
+            },
+          },
+        ],
+      },
+      {
+        ...automation("weekly", false),
+        schedules: [
+          {
+            id: "0196a000-0000-7000-8000-0000000000c2",
+            key: "digest",
+            cron: "0 9 * * 1",
+            timezone: "UTC",
+            concurrency: { max: 1, waiting: 0 },
+            nextRunAt: null,
+            lastFiredAt: null,
+            lastTask: null,
+            failureStreak: 0,
+            lastSkippedAt: null,
+            skippedCountSinceFire: 0,
+            lastError: null,
+          },
+        ],
+      },
+      { ...automation("wayfinder", false), schedules: [] },
+    ]);
+  }
   const toggle =
     /^\/api\/projects\/[^/]+\/automations\/([^/]+)\/(enable|disable)$/.exec(
       path,
@@ -89,6 +141,33 @@ function handle(request: Request, url: URL): Response {
       );
     }
     return json(automation(key, toggle[2] === "enable"));
+  }
+  const scheduleRun =
+    /^\/api\/projects\/[^/]+\/automations\/([^/]+)\/schedules\/([^/]+)\/runs$/.exec(
+      path,
+    );
+  if (method === "POST" && scheduleRun) {
+    const ruleKey = scheduleRun[2] ?? "";
+    if (ruleKey === "busy") {
+      return json(
+        {
+          type: "about:blank",
+          title: "Conflict",
+          status: 409,
+          detail: "The concurrency group of schedule s1 is full",
+          code: "Scarn.ConcurrencyGroupFull",
+          meta: { scheduleId: "s1", heldBy: [HELD_TASK_ID] },
+        },
+        409,
+      );
+    }
+    return json(
+      {
+        taskId: ruleKey === "quiet" ? null : RUN_TASK_ID,
+        scheduledFor: "2026-11-22T12:00:00.000Z",
+      },
+      201,
+    );
   }
   const workItem = /^\/api\/work-items\/([^/]+)\/automations\/([^/]+)$/.exec(
     path,
@@ -153,9 +232,57 @@ describe("scarn automations", () => {
     const result = await runCli(["automations", "--help"]);
 
     expect(result.exitCode).toBe(0);
-    for (const command of ["attach", "detach", "enable", "disable"]) {
+    for (const command of [
+      "list",
+      "attach",
+      "detach",
+      "enable",
+      "disable",
+      "run",
+    ]) {
       expect(result.stdout).toContain(`scarn automations ${command}`);
     }
+  });
+
+  test("list shows each schedule's next run, last Task, streak, skip and error", async () => {
+    const result = await run(["list", "--project", "acme/app"]);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toBe(
+      [
+        "Automations (3)",
+        "  nightly  enabled  unpublished",
+        "    schedule sweep  0 2 * * * (Europe/London)  next 2026-11-23T02:00:00.000Z",
+        `      last fired 2026-11-22T02:00:00.000Z  last Task failed (${RUN_TASK_ID})  2 failed in a row`,
+        "      last skipped 2026-11-21T02:00:00.000Z (0 since the last fire)",
+        `      last error 2026-11-20T02:00:00.000Z: Step "sweep" is gone ${"x".repeat(98)}…`,
+        "  weekly  disabled  unpublished",
+        "    schedule digest  0 9 * * 1 (UTC)  disabled",
+        "      last fired never  no Tasks yet",
+        "  wayfinder  work-item  unpublished",
+        "",
+      ].join("\n"),
+    );
+  });
+
+  test("list --json prints the API's automations with their schedules", async () => {
+    const result = await run(["list", "--project", "acme/app", "--json"]);
+
+    expect(result.exitCode).toBe(0);
+    const parsed = JSON.parse(result.stdout) as {
+      key: string;
+      schedules: { key: string; failureStreak: number }[];
+    }[];
+    expect(
+      parsed.map((entry) => [
+        entry.key,
+        entry.schedules.map((schedule) => schedule.failureStreak),
+      ]),
+    ).toEqual([
+      ["nightly", [2]],
+      ["weekly", [0]],
+      ["wayfinder", []],
+    ]);
   });
 
   test("enable turns on a project automation", async () => {
@@ -186,6 +313,66 @@ describe("scarn automations", () => {
       hasReporterLine(
         result.stderr,
         `Could not enable "wayfinder": Automation 'wayfinder' is a work-item automation`,
+      ),
+    ).toBe(true);
+  });
+
+  test("run starts the schedule now and names the Task", async () => {
+    const result = await run([
+      "run",
+      "nightly",
+      "sweep",
+      "--project",
+      "acme/app",
+    ]);
+
+    expect(result.exitCode).toBe(0);
+    expect(writes()).toEqual([
+      `POST /api/projects/${PROJECT_ID}/automations/nightly/schedules/sweep/runs`,
+    ]);
+    expect(
+      hasReporterLine(
+        result.stderr,
+        `Ran "nightly" schedule "sweep" for 2026-11-22T12:00:00.000Z: started Task ${RUN_TASK_ID}.`,
+      ),
+    ).toBe(true);
+    expect(
+      hasReporterLine(result.stderr, `scarn tasks view ${RUN_TASK_ID}`),
+    ).toBe(true);
+  });
+
+  test("run reports a rule that routed to skip", async () => {
+    const result = await run([
+      "run",
+      "nightly",
+      "quiet",
+      "--project",
+      "acme/app",
+    ]);
+
+    expect(result.exitCode).toBe(0);
+    expect(
+      hasReporterLine(
+        result.stderr,
+        "the rule routed to skip, so no Task started.",
+      ),
+    ).toBe(true);
+  });
+
+  test("run names the open Task when the concurrency group is full", async () => {
+    const result = await run([
+      "run",
+      "nightly",
+      "busy",
+      "--project",
+      "acme/app",
+    ]);
+
+    expect(result.exitCode).toBe(1);
+    expect(
+      hasReporterLine(
+        result.stderr,
+        `Could not run "nightly" schedule "busy": a run is already open (held by Task ${HELD_TASK_ID})`,
       ),
     ).toBe(true);
   });

@@ -1,8 +1,8 @@
 "use client";
 
 /**
- * The Runs list's sidebar: two facets, who started a run (an automation, or
- * you) and what ran (a pipeline, a step or a Task), each entry with
+ * The Runs list's sidebar: two facets, who started a run (an automation, a
+ * schedule, or you) and what ran (a pipeline, a step or a Task), each entry with
  * its in-progress count and a dot when something there needs you. Every
  * entry is a link, so the facets are URL state like the rest of the list.
  */
@@ -51,6 +51,7 @@ export function RunsSidebar({
   const facetOf = (entry: Facet | undefined): Facet => entry ?? IDLE;
 
   const you = startedBy.find((entry) => entry.filter === "me");
+  const scheduled = startedBy.find((entry) => entry.filter === "scheduled");
   const automationEntries = [
     ...automations.map((automation) => ({
       id: automation.id,
@@ -62,6 +63,7 @@ export function RunsSidebar({
       .filter(
         (entry) =>
           entry.filter !== "me" &&
+          entry.filter !== "scheduled" &&
           !automations.some((automation) => automation.id === entry.filter),
       )
       .map((entry) => ({
@@ -83,7 +85,10 @@ export function RunsSidebar({
       );
   const tasks = ofKind("task")[0];
   const unscoped =
-    nav.by === undefined && nav.whatRan === undefined && nav.item === undefined;
+    nav.by === undefined &&
+    nav.whatRan === undefined &&
+    nav.item === undefined &&
+    nav.schedule === undefined;
 
   return (
     <Box
@@ -118,6 +123,14 @@ export function RunsSidebar({
           href={scopeHref({ by: entry.id })}
         />
       ))}
+      {scheduled ? (
+        <SideLink
+          label={scheduled.label}
+          facet={scheduled}
+          active={nav.by === "scheduled" && nav.whatRan === undefined}
+          href={scopeHref({ by: "scheduled" })}
+        />
+      ) : null}
       {you ? (
         <SideLink
           label="You"

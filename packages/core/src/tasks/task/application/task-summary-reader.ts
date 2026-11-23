@@ -1,4 +1,7 @@
-import type { StartingAutomation } from "@scarn/core/common/contracts/started-by";
+import type {
+  StartingAutomation,
+  StartingSchedule,
+} from "@scarn/core/common/contracts/started-by";
 import type { UuidV7 } from "@scarn/core/common/contracts/uuid-v7";
 import type { DbExecutor } from "@scarn/core/lib/db/db-executor";
 import type { TaskKind } from "@scarn/core/tasks/task-run/domain/task-run-entity";
@@ -15,6 +18,10 @@ export type TaskSummaryRecord = {
   startedByUserId: UuidV7 | null;
   /** The automation that started the Task (or its pipeline run); `null` once deleted. */
   startedByAutomation: StartingAutomation | null;
+  /** The schedule rule that started the Task; `null` for an unscheduled Task. */
+  startedBySchedule: StartingSchedule | null;
+  /** The cron time a scheduled Task runs for; `null` for an unscheduled Task. */
+  scheduledFor: Date | null;
   conversationId: UuidV7 | null;
   /**
    * Who the Task waits on, derived as it is read (`workItemWaitingOnUserIds`

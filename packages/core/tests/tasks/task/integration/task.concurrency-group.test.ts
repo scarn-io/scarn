@@ -202,6 +202,7 @@ describe("Task concurrency groups", () => {
       await h.publish(
         projectAutomation(key, [
           {
+            key: "work-item-label-added",
             event: "workItem.label.added",
             next: { routes: [{ kind: "step", to: step.key, on: "workItem" }] },
           },
@@ -244,6 +245,7 @@ describe("Task concurrency groups", () => {
       await h.publish(
         workItemAutomation(key, [
           {
+            key: "child-created",
             event: "child.created",
             next: {
               routes: [{ kind: "step", to: limited.key, on: "workItem" }],

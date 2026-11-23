@@ -57,6 +57,7 @@
     "typecheck": "tsgo -p tsconfig.json --noEmit --incremental"
   },
   "dependencies": {
+    "croner": "^11.0.1",
     "jsonc-parser": "^3.3.1"
   },
   "peerDependencies": {

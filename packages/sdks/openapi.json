@@ -6469,7 +6469,10 @@
                             },
                             "scope": {
                               "type": "string",
-                              "const": "children"
+                              "enum": [
+                                "children",
+                                "project"
+                              ]
                             },
                             "labels": {
                               "minItems": 1,
@@ -7757,7 +7760,10 @@
                             },
                             "scope": {
                               "type": "string",
-                              "const": "children"
+                              "enum": [
+                                "children",
+                                "project"
+                              ]
                             },
                             "labels": {
                               "minItems": 1,
@@ -9045,7 +9051,10 @@
                             },
                             "scope": {
                               "type": "string",
-                              "const": "children"
+                              "enum": [
+                                "children",
+                                "project"
+                              ]
                             },
                             "labels": {
                               "minItems": 1,
@@ -10338,7 +10347,10 @@
                               },
                               "scope": {
                                 "type": "string",
-                                "const": "children"
+                                "enum": [
+                                  "children",
+                                  "project"
+                                ]
                               },
                               "labels": {
                                 "minItems": 1,
@@ -12166,7 +12178,10 @@
                                 },
                                 "scope": {
                                   "type": "string",
-                                  "const": "children"
+                                  "enum": [
+                                    "children",
+                                    "project"
+                                  ]
                                 },
                                 "labels": {
                                   "minItems": 1,
@@ -13779,7 +13794,10 @@
                             },
                             "scope": {
                               "type": "string",
-                              "const": "children"
+                              "enum": [
+                                "children",
+                                "project"
+                              ]
                             },
                             "labels": {
                               "minItems": 1,
@@ -15067,7 +15085,10 @@
                             },
                             "scope": {
                               "type": "string",
-                              "const": "children"
+                              "enum": [
+                                "children",
+                                "project"
+                              ]
                             },
                             "labels": {
                               "minItems": 1,
@@ -16355,7 +16376,10 @@
                             },
                             "scope": {
                               "type": "string",
-                              "const": "children"
+                              "enum": [
+                                "children",
+                                "project"
+                              ]
                             },
                             "labels": {
                               "minItems": 1,
@@ -17648,7 +17672,10 @@
                               },
                               "scope": {
                                 "type": "string",
-                                "const": "children"
+                                "enum": [
+                                  "children",
+                                  "project"
+                                ]
                               },
                               "labels": {
                                 "minItems": 1,
@@ -19340,7 +19367,10 @@
                               },
                               "scope": {
                                 "type": "string",
-                                "const": "children"
+                                "enum": [
+                                  "children",
+                                  "project"
+                                ]
                               },
                               "labels": {
                                 "minItems": 1,
@@ -21032,7 +21062,10 @@
                               },
                               "scope": {
                                 "type": "string",
-                                "const": "children"
+                                "enum": [
+                                  "children",
+                                  "project"
+                                ]
                               },
                               "labels": {
                                 "minItems": 1,
@@ -22972,7 +23005,10 @@
                                   },
                                   "scope": {
                                     "type": "string",
-                                    "const": "children"
+                                    "enum": [
+                                      "children",
+                                      "project"
+                                    ]
                                   },
                                   "labels": {
                                     "minItems": 1,
@@ -25046,7 +25082,10 @@
                               },
                               "scope": {
                                 "type": "string",
-                                "const": "children"
+                                "enum": [
+                                  "children",
+                                  "project"
+                                ]
                               },
                               "labels": {
                                 "minItems": 1,
@@ -25223,10 +25262,6 @@
                         {
                           "type": "object",
                           "properties": {
-                            "kind": {
-                              "type": "string",
-                              "const": "user"
-                            },
                             "userId": {
                               "type": "string"
                             },
@@ -25235,12 +25270,16 @@
                                 "string",
                                 "null"
                               ]
+                            },
+                            "kind": {
+                              "type": "string",
+                              "const": "user"
                             }
                           },
                           "required": [
-                            "kind",
                             "userId",
-                            "username"
+                            "username",
+                            "kind"
                           ],
                           "additionalProperties": false
                         },
@@ -25277,6 +25316,78 @@
                           "properties": {
                             "kind": {
                               "type": "string",
+                              "const": "schedule"
+                            },
+                            "automationId": {
+                              "type": "string"
+                            },
+                            "key": {
+                              "type": "string"
+                            },
+                            "title": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "schedule": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string"
+                                },
+                                "key": {
+                                  "type": "string"
+                                },
+                                "removed": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "key",
+                                "removed"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "user": {
+                              "type": [
+                                "object",
+                                "null"
+                              ],
+                              "properties": {
+                                "userId": {
+                                  "type": "string"
+                                },
+                                "username": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "userId",
+                                "username"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "automationId",
+                            "key",
+                            "title",
+                            "schedule",
+                            "user"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
                               "const": "system"
                             }
                           },
@@ -25286,6 +25397,14 @@
                           "additionalProperties": false
                         }
                       ]
+                    },
+                    "scheduledFor": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
                     },
                     "source": {
                       "oneOf": [
@@ -25420,6 +25539,7 @@
                     "workItem",
                     "repoConversation",
                     "startedBy",
+                    "scheduledFor",
                     "source",
                     "pipelineRunId",
                     "nodeId"
@@ -26735,10 +26855,6 @@
                               {
                                 "type": "object",
                                 "properties": {
-                                  "kind": {
-                                    "type": "string",
-                                    "const": "user"
-                                  },
                                   "userId": {
                                     "type": "string"
                                   },
@@ -26747,12 +26863,16 @@
                                       "string",
                                       "null"
                                     ]
+                                  },
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "user"
                                   }
                                 },
                                 "required": [
-                                  "kind",
                                   "userId",
-                                  "username"
+                                  "username",
+                                  "kind"
                                 ],
                                 "additionalProperties": false
                               },
@@ -26789,6 +26909,78 @@
                                 "properties": {
                                   "kind": {
                                     "type": "string",
+                                    "const": "schedule"
+                                  },
+                                  "automationId": {
+                                    "type": "string"
+                                  },
+                                  "key": {
+                                    "type": "string"
+                                  },
+                                  "title": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  },
+                                  "schedule": {
+                                    "type": "object",
+                                    "properties": {
+                                      "id": {
+                                        "type": "string"
+                                      },
+                                      "key": {
+                                        "type": "string"
+                                      },
+                                      "removed": {
+                                        "type": "boolean"
+                                      }
+                                    },
+                                    "required": [
+                                      "id",
+                                      "key",
+                                      "removed"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "user": {
+                                    "type": [
+                                      "object",
+                                      "null"
+                                    ],
+                                    "properties": {
+                                      "userId": {
+                                        "type": "string"
+                                      },
+                                      "username": {
+                                        "type": [
+                                          "string",
+                                          "null"
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "userId",
+                                      "username"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "automationId",
+                                  "key",
+                                  "title",
+                                  "schedule",
+                                  "user"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
                                     "const": "system"
                                   }
                                 },
@@ -26798,6 +26990,14 @@
                                 "additionalProperties": false
                               }
                             ]
+                          },
+                          "scheduledFor": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
                           },
                           "source": {
                             "oneOf": [
@@ -26922,6 +27122,7 @@
                           "workItem",
                           "repoConversation",
                           "startedBy",
+                          "scheduledFor",
                           "source",
                           "pipelineRunId",
                           "nodeId"
@@ -30038,7 +30239,10 @@
                                   },
                                   "scope": {
                                     "type": "string",
-                                    "const": "children"
+                                    "enum": [
+                                      "children",
+                                      "project"
+                                    ]
                                   },
                                   "labels": {
                                     "minItems": 1,
@@ -38794,7 +38998,7 @@
         "tags": [
           "TaskRuns"
         ],
-        "description": "Creates a child of the running task run's work item for its agent, committed at once, as the user who claimed the run. Needs the Task's `create` grant on `children`, covering every label; `blockedBy` must name existing items that are the Task's own item or its children. At most 10 items per Task and 50 open children per item. Returns 201, or 200 with `created: false` when `workItemId` already names this Task's child (a retry). Authorized by the claim token alone; no session.",
+        "description": "Creates a work item for the running task run's agent, committed at once, as the user who claimed the run. With `scope: \"children\"` (the default) it is a child of the run's work item: needs the Task's `create` grant on `children`, covering every label; `blockedBy` must name existing items that are the Task's own item or its children; at most 10 items per Task and 50 open children per item. With `scope: \"project\"` it is a top-level item in the Task's project on platform `custom`, keyed by the required `platformKey`: needs the `create` grant on `project`, covering every label; takes no `blockedBy`; at most 100 items per Task. Returns 201, or 200 with `created: false` when `workItemId` already names this Task's child (a retry) or the project already has the `platformKey` (the existing item, unchanged). Authorized by the claim token alone; no session.",
         "parameters": [
           {
             "name": "taskRunId",
@@ -38819,6 +39023,23 @@
                   },
                   "workItemId": {
                     "type": "string"
+                  },
+                  "scope": {
+                    "default": "children",
+                    "type": "string",
+                    "enum": [
+                      "children",
+                      "project"
+                    ]
+                  },
+                  "platformKey": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500
+                  },
+                  "url": {
+                    "type": "string",
+                    "format": "uri"
                   },
                   "title": {
                     "type": "string",
@@ -38874,6 +39095,23 @@
                   "workItemId": {
                     "type": "string"
                   },
+                  "scope": {
+                    "default": "children",
+                    "type": "string",
+                    "enum": [
+                      "children",
+                      "project"
+                    ]
+                  },
+                  "platformKey": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500
+                  },
+                  "url": {
+                    "type": "string",
+                    "format": "uri"
+                  },
                   "title": {
                     "type": "string",
                     "minLength": 1,
@@ -38927,6 +39165,23 @@
                   },
                   "workItemId": {
                     "type": "string"
+                  },
+                  "scope": {
+                    "default": "children",
+                    "type": "string",
+                    "enum": [
+                      "children",
+                      "project"
+                    ]
+                  },
+                  "platformKey": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500
+                  },
+                  "url": {
+                    "type": "string",
+                    "format": "uri"
                   },
                   "title": {
                     "type": "string",
@@ -47614,6 +47869,151 @@
                         "type": "string",
                         "format": "date-time",
                         "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                      },
+                      "schedules": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "key": {
+                              "type": "string"
+                            },
+                            "cron": {
+                              "type": "string"
+                            },
+                            "timezone": {
+                              "type": "string"
+                            },
+                            "concurrency": {
+                              "type": "object",
+                              "properties": {
+                                "max": {
+                                  "type": "integer",
+                                  "exclusiveMinimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "waiting": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                }
+                              },
+                              "required": [
+                                "max",
+                                "waiting"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "nextRunAt": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                            },
+                            "lastFiredAt": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                            },
+                            "lastTask": {
+                              "type": [
+                                "object",
+                                "null"
+                              ],
+                              "properties": {
+                                "id": {
+                                  "type": "string"
+                                },
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "waiting_for_concurrency_slot",
+                                    "waiting_for_work",
+                                    "queued",
+                                    "running",
+                                    "waiting_for_person",
+                                    "succeeded",
+                                    "failed",
+                                    "cancelled"
+                                  ]
+                                },
+                                "scheduledFor": {
+                                  "type": "string",
+                                  "format": "date-time",
+                                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "status",
+                                "scheduledFor"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "failureStreak": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "lastSkippedAt": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                            },
+                            "skippedCountSinceFire": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "lastError": {
+                              "type": [
+                                "object",
+                                "null"
+                              ],
+                              "properties": {
+                                "message": {
+                                  "type": "string"
+                                },
+                                "at": {
+                                  "type": "string",
+                                  "format": "date-time",
+                                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                                }
+                              },
+                              "required": [
+                                "message",
+                                "at"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "key",
+                            "cron",
+                            "timezone",
+                            "concurrency",
+                            "nextRunAt",
+                            "lastFiredAt",
+                            "lastTask",
+                            "failureStreak",
+                            "lastSkippedAt",
+                            "skippedCountSinceFire",
+                            "lastError"
+                          ],
+                          "additionalProperties": false
+                        }
                       }
                     },
                     "required": [
@@ -47625,7 +48025,8 @@
                       "enabled",
                       "latestVersion",
                       "createdAt",
-                      "updatedAt"
+                      "updatedAt",
+                      "schedules"
                     ],
                     "additionalProperties": false
                   }
@@ -50309,6 +50710,550 @@
         }
       }
     },
+    "/api/projects/{projectId}/automations/{key}/schedules/{ruleKey}/runs": {
+      "post": {
+        "operationId": "runAutomationSchedule",
+        "description": "Run now: fires the schedule rule `ruleKey` of the project automation `key` once, for `scheduledFor` = now, through the same path and concurrency check as the minutely tick. Requires `executions:write`. Works while the automation is disabled and does not change the schedule's next run. `taskId` is null when the rule routed to `skip`. Responds 409 `Scarn.ConcurrencyGroupFull` when the schedule's concurrency group is full: no Task is created, `meta.heldBy` names the Tasks that hold the group, and the schedule summary does not count a skip. Responds 409 `AUTOMATION_SCHEDULE_RUN_CONFLICT` when another Run now landed on the same instant.",
+        "tags": [
+          "Automations"
+        ],
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "name": "ruleKey",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Response for status 201",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "taskId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "scheduledFor": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                    }
+                  },
+                  "required": [
+                    "taskId",
+                    "scheduledFor"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Response for status 400",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "path": {
+                            "type": "string"
+                          },
+                          "message": {
+                            "type": "string"
+                          },
+                          "summary": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "path",
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "title",
+                    "status"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Response for status 401",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "path": {
+                            "type": "string"
+                          },
+                          "message": {
+                            "type": "string"
+                          },
+                          "summary": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "path",
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "title",
+                    "status"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Response for status 403",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "path": {
+                            "type": "string"
+                          },
+                          "message": {
+                            "type": "string"
+                          },
+                          "summary": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "path",
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "title",
+                    "status"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Response for status 404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "path": {
+                            "type": "string"
+                          },
+                          "message": {
+                            "type": "string"
+                          },
+                          "summary": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "path",
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "title",
+                    "status"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Response for status 409",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "path": {
+                            "type": "string"
+                          },
+                          "message": {
+                            "type": "string"
+                          },
+                          "summary": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "path",
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "title",
+                    "status"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Response for status 422",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "path": {
+                            "type": "string"
+                          },
+                          "message": {
+                            "type": "string"
+                          },
+                          "summary": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "path",
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "title",
+                    "status"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Response for status 500",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "path": {
+                            "type": "string"
+                          },
+                          "message": {
+                            "type": "string"
+                          },
+                          "summary": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "path",
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "title",
+                    "status"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/work-items/{workItemId}/automations/{key}": {
       "post": {
         "operationId": "attachWorkItemAutomation",
@@ -51521,10 +52466,6 @@
                         {
                           "type": "object",
                           "properties": {
-                            "kind": {
-                              "type": "string",
-                              "const": "user"
-                            },
                             "userId": {
                               "type": "string"
                             },
@@ -51533,12 +52474,16 @@
                                 "string",
                                 "null"
                               ]
+                            },
+                            "kind": {
+                              "type": "string",
+                              "const": "user"
                             }
                           },
                           "required": [
-                            "kind",
                             "userId",
-                            "username"
+                            "username",
+                            "kind"
                           ],
                           "additionalProperties": false
                         },
@@ -51567,6 +52512,78 @@
                             "automationId",
                             "key",
                             "title"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "schedule"
+                            },
+                            "automationId": {
+                              "type": "string"
+                            },
+                            "key": {
+                              "type": "string"
+                            },
+                            "title": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "schedule": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string"
+                                },
+                                "key": {
+                                  "type": "string"
+                                },
+                                "removed": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "key",
+                                "removed"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "user": {
+                              "type": [
+                                "object",
+                                "null"
+                              ],
+                              "properties": {
+                                "userId": {
+                                  "type": "string"
+                                },
+                                "username": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "userId",
+                                "username"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "automationId",
+                            "key",
+                            "title",
+                            "schedule",
+                            "user"
                           ],
                           "additionalProperties": false
                         },
@@ -52859,10 +53876,6 @@
                               {
                                 "type": "object",
                                 "properties": {
-                                  "kind": {
-                                    "type": "string",
-                                    "const": "user"
-                                  },
                                   "userId": {
                                     "type": "string"
                                   },
@@ -52871,12 +53884,16 @@
                                       "string",
                                       "null"
                                     ]
+                                  },
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "user"
                                   }
                                 },
                                 "required": [
-                                  "kind",
                                   "userId",
-                                  "username"
+                                  "username",
+                                  "kind"
                                 ],
                                 "additionalProperties": false
                               },
@@ -52905,6 +53922,78 @@
                                   "automationId",
                                   "key",
                                   "title"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "schedule"
+                                  },
+                                  "automationId": {
+                                    "type": "string"
+                                  },
+                                  "key": {
+                                    "type": "string"
+                                  },
+                                  "title": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  },
+                                  "schedule": {
+                                    "type": "object",
+                                    "properties": {
+                                      "id": {
+                                        "type": "string"
+                                      },
+                                      "key": {
+                                        "type": "string"
+                                      },
+                                      "removed": {
+                                        "type": "boolean"
+                                      }
+                                    },
+                                    "required": [
+                                      "id",
+                                      "key",
+                                      "removed"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "user": {
+                                    "type": [
+                                      "object",
+                                      "null"
+                                    ],
+                                    "properties": {
+                                      "userId": {
+                                        "type": "string"
+                                      },
+                                      "username": {
+                                        "type": [
+                                          "string",
+                                          "null"
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "userId",
+                                      "username"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "automationId",
+                                  "key",
+                                  "title",
+                                  "schedule",
+                                  "user"
                                 ],
                                 "additionalProperties": false
                               },
@@ -53418,10 +54507,6 @@
                         {
                           "type": "object",
                           "properties": {
-                            "kind": {
-                              "type": "string",
-                              "const": "user"
-                            },
                             "userId": {
                               "type": "string"
                             },
@@ -53430,12 +54515,16 @@
                                 "string",
                                 "null"
                               ]
+                            },
+                            "kind": {
+                              "type": "string",
+                              "const": "user"
                             }
                           },
                           "required": [
-                            "kind",
                             "userId",
-                            "username"
+                            "username",
+                            "kind"
                           ],
                           "additionalProperties": false
                         },
@@ -53464,6 +54553,78 @@
                             "automationId",
                             "key",
                             "title"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "schedule"
+                            },
+                            "automationId": {
+                              "type": "string"
+                            },
+                            "key": {
+                              "type": "string"
+                            },
+                            "title": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "schedule": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string"
+                                },
+                                "key": {
+                                  "type": "string"
+                                },
+                                "removed": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "key",
+                                "removed"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "user": {
+                              "type": [
+                                "object",
+                                "null"
+                              ],
+                              "properties": {
+                                "userId": {
+                                  "type": "string"
+                                },
+                                "username": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "userId",
+                                "username"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "automationId",
+                            "key",
+                            "title",
+                            "schedule",
+                            "user"
                           ],
                           "additionalProperties": false
                         },
@@ -54895,10 +56056,6 @@
                             {
                               "type": "object",
                               "properties": {
-                                "kind": {
-                                  "type": "string",
-                                  "const": "user"
-                                },
                                 "userId": {
                                   "type": "string"
                                 },
@@ -54907,12 +56064,16 @@
                                     "string",
                                     "null"
                                   ]
+                                },
+                                "kind": {
+                                  "type": "string",
+                                  "const": "user"
                                 }
                               },
                               "required": [
-                                "kind",
                                 "userId",
-                                "username"
+                                "username",
+                                "kind"
                               ],
                               "additionalProperties": false
                             },
@@ -54941,6 +56102,78 @@
                                 "automationId",
                                 "key",
                                 "title"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "type": "string",
+                                  "const": "schedule"
+                                },
+                                "automationId": {
+                                  "type": "string"
+                                },
+                                "key": {
+                                  "type": "string"
+                                },
+                                "title": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "schedule": {
+                                  "type": "object",
+                                  "properties": {
+                                    "id": {
+                                      "type": "string"
+                                    },
+                                    "key": {
+                                      "type": "string"
+                                    },
+                                    "removed": {
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "key",
+                                    "removed"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "user": {
+                                  "type": [
+                                    "object",
+                                    "null"
+                                  ],
+                                  "properties": {
+                                    "userId": {
+                                      "type": "string"
+                                    },
+                                    "username": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "userId",
+                                    "username"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "automationId",
+                                "key",
+                                "title",
+                                "schedule",
+                                "user"
                               ],
                               "additionalProperties": false
                             },
@@ -56902,10 +58135,6 @@
                         {
                           "type": "object",
                           "properties": {
-                            "kind": {
-                              "type": "string",
-                              "const": "user"
-                            },
                             "userId": {
                               "type": "string"
                             },
@@ -56914,12 +58143,16 @@
                                 "string",
                                 "null"
                               ]
+                            },
+                            "kind": {
+                              "type": "string",
+                              "const": "user"
                             }
                           },
                           "required": [
-                            "kind",
                             "userId",
-                            "username"
+                            "username",
+                            "kind"
                           ],
                           "additionalProperties": false
                         },
@@ -56948,6 +58181,78 @@
                             "automationId",
                             "key",
                             "title"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "schedule"
+                            },
+                            "automationId": {
+                              "type": "string"
+                            },
+                            "key": {
+                              "type": "string"
+                            },
+                            "title": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "schedule": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string"
+                                },
+                                "key": {
+                                  "type": "string"
+                                },
+                                "removed": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "key",
+                                "removed"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "user": {
+                              "type": [
+                                "object",
+                                "null"
+                              ],
+                              "properties": {
+                                "userId": {
+                                  "type": "string"
+                                },
+                                "username": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "userId",
+                                "username"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "automationId",
+                            "key",
+                            "title",
+                            "schedule",
+                            "user"
                           ],
                           "additionalProperties": false
                         },
@@ -58105,10 +59410,6 @@
                         {
                           "type": "object",
                           "properties": {
-                            "kind": {
-                              "type": "string",
-                              "const": "user"
-                            },
                             "userId": {
                               "type": "string"
                             },
@@ -58117,12 +59418,16 @@
                                 "string",
                                 "null"
                               ]
+                            },
+                            "kind": {
+                              "type": "string",
+                              "const": "user"
                             }
                           },
                           "required": [
-                            "kind",
                             "userId",
-                            "username"
+                            "username",
+                            "kind"
                           ],
                           "additionalProperties": false
                         },
@@ -58151,6 +59456,78 @@
                             "automationId",
                             "key",
                             "title"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "schedule"
+                            },
+                            "automationId": {
+                              "type": "string"
+                            },
+                            "key": {
+                              "type": "string"
+                            },
+                            "title": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "schedule": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string"
+                                },
+                                "key": {
+                                  "type": "string"
+                                },
+                                "removed": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "key",
+                                "removed"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "user": {
+                              "type": [
+                                "object",
+                                "null"
+                              ],
+                              "properties": {
+                                "userId": {
+                                  "type": "string"
+                                },
+                                "username": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "userId",
+                                "username"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "automationId",
+                            "key",
+                            "title",
+                            "schedule",
+                            "user"
                           ],
                           "additionalProperties": false
                         },
@@ -59272,12 +60649,24 @@
                 {
                   "type": "string",
                   "const": "me"
+                },
+                {
+                  "type": "string",
+                  "const": "scheduled"
                 }
               ]
             }
           },
           {
             "name": "workItemId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "scheduleId",
             "in": "query",
             "required": false,
             "schema": {
@@ -59523,10 +60912,6 @@
                               {
                                 "type": "object",
                                 "properties": {
-                                  "kind": {
-                                    "type": "string",
-                                    "const": "user"
-                                  },
                                   "userId": {
                                     "type": "string"
                                   },
@@ -59535,12 +60920,16 @@
                                       "string",
                                       "null"
                                     ]
+                                  },
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "user"
                                   }
                                 },
                                 "required": [
-                                  "kind",
                                   "userId",
-                                  "username"
+                                  "username",
+                                  "kind"
                                 ],
                                 "additionalProperties": false
                               },
@@ -59569,6 +60958,78 @@
                                   "automationId",
                                   "key",
                                   "title"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "schedule"
+                                  },
+                                  "automationId": {
+                                    "type": "string"
+                                  },
+                                  "key": {
+                                    "type": "string"
+                                  },
+                                  "title": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  },
+                                  "schedule": {
+                                    "type": "object",
+                                    "properties": {
+                                      "id": {
+                                        "type": "string"
+                                      },
+                                      "key": {
+                                        "type": "string"
+                                      },
+                                      "removed": {
+                                        "type": "boolean"
+                                      }
+                                    },
+                                    "required": [
+                                      "id",
+                                      "key",
+                                      "removed"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "user": {
+                                    "type": [
+                                      "object",
+                                      "null"
+                                    ],
+                                    "properties": {
+                                      "userId": {
+                                        "type": "string"
+                                      },
+                                      "username": {
+                                        "type": [
+                                          "string",
+                                          "null"
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "userId",
+                                      "username"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "automationId",
+                                  "key",
+                                  "title",
+                                  "schedule",
+                                  "user"
                                 ],
                                 "additionalProperties": false
                               },
@@ -59689,6 +61150,10 @@
                                   {
                                     "type": "string",
                                     "const": "me"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "const": "scheduled"
                                   }
                                 ]
                               },
@@ -60396,10 +61861,6 @@
                         {
                           "type": "object",
                           "properties": {
-                            "kind": {
-                              "type": "string",
-                              "const": "user"
-                            },
                             "userId": {
                               "type": "string"
                             },
@@ -60408,12 +61869,16 @@
                                 "string",
                                 "null"
                               ]
+                            },
+                            "kind": {
+                              "type": "string",
+                              "const": "user"
                             }
                           },
                           "required": [
-                            "kind",
                             "userId",
-                            "username"
+                            "username",
+                            "kind"
                           ],
                           "additionalProperties": false
                         },
@@ -60442,6 +61907,78 @@
                             "automationId",
                             "key",
                             "title"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "schedule"
+                            },
+                            "automationId": {
+                              "type": "string"
+                            },
+                            "key": {
+                              "type": "string"
+                            },
+                            "title": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "schedule": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string"
+                                },
+                                "key": {
+                                  "type": "string"
+                                },
+                                "removed": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "key",
+                                "removed"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "user": {
+                              "type": [
+                                "object",
+                                "null"
+                              ],
+                              "properties": {
+                                "userId": {
+                                  "type": "string"
+                                },
+                                "username": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "userId",
+                                "username"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "automationId",
+                            "key",
+                            "title",
+                            "schedule",
+                            "user"
                           ],
                           "additionalProperties": false
                         },
@@ -63348,10 +64885,6 @@
                             {
                               "type": "object",
                               "properties": {
-                                "kind": {
-                                  "type": "string",
-                                  "const": "user"
-                                },
                                 "userId": {
                                   "type": "string"
                                 },
@@ -63360,12 +64893,16 @@
                                     "string",
                                     "null"
                                   ]
+                                },
+                                "kind": {
+                                  "type": "string",
+                                  "const": "user"
                                 }
                               },
                               "required": [
-                                "kind",
                                 "userId",
-                                "username"
+                                "username",
+                                "kind"
                               ],
                               "additionalProperties": false
                             },
@@ -63394,6 +64931,78 @@
                                 "automationId",
                                 "key",
                                 "title"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "type": "string",
+                                  "const": "schedule"
+                                },
+                                "automationId": {
+                                  "type": "string"
+                                },
+                                "key": {
+                                  "type": "string"
+                                },
+                                "title": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "schedule": {
+                                  "type": "object",
+                                  "properties": {
+                                    "id": {
+                                      "type": "string"
+                                    },
+                                    "key": {
+                                      "type": "string"
+                                    },
+                                    "removed": {
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "key",
+                                    "removed"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "user": {
+                                  "type": [
+                                    "object",
+                                    "null"
+                                  ],
+                                  "properties": {
+                                    "userId": {
+                                      "type": "string"
+                                    },
+                                    "username": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "userId",
+                                    "username"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "automationId",
+                                "key",
+                                "title",
+                                "schedule",
+                                "user"
                               ],
                               "additionalProperties": false
                             },
@@ -64638,10 +66247,6 @@
                         {
                           "type": "object",
                           "properties": {
-                            "kind": {
-                              "type": "string",
-                              "const": "user"
-                            },
                             "userId": {
                               "type": "string"
                             },
@@ -64650,12 +66255,16 @@
                                 "string",
                                 "null"
                               ]
+                            },
+                            "kind": {
+                              "type": "string",
+                              "const": "user"
                             }
                           },
                           "required": [
-                            "kind",
                             "userId",
-                            "username"
+                            "username",
+                            "kind"
                           ],
                           "additionalProperties": false
                         },
@@ -64684,6 +66293,78 @@
                             "automationId",
                             "key",
                             "title"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "schedule"
+                            },
+                            "automationId": {
+                              "type": "string"
+                            },
+                            "key": {
+                              "type": "string"
+                            },
+                            "title": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "schedule": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string"
+                                },
+                                "key": {
+                                  "type": "string"
+                                },
+                                "removed": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "key",
+                                "removed"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "user": {
+                              "type": [
+                                "object",
+                                "null"
+                              ],
+                              "properties": {
+                                "userId": {
+                                  "type": "string"
+                                },
+                                "username": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "userId",
+                                "username"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "automationId",
+                            "key",
+                            "title",
+                            "schedule",
+                            "user"
                           ],
                           "additionalProperties": false
                         },
@@ -65841,10 +67522,6 @@
                         {
                           "type": "object",
                           "properties": {
-                            "kind": {
-                              "type": "string",
-                              "const": "user"
-                            },
                             "userId": {
                               "type": "string"
                             },
@@ -65853,12 +67530,16 @@
                                 "string",
                                 "null"
                               ]
+                            },
+                            "kind": {
+                              "type": "string",
+                              "const": "user"
                             }
                           },
                           "required": [
-                            "kind",
                             "userId",
-                            "username"
+                            "username",
+                            "kind"
                           ],
                           "additionalProperties": false
                         },
@@ -65887,6 +67568,78 @@
                             "automationId",
                             "key",
                             "title"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "schedule"
+                            },
+                            "automationId": {
+                              "type": "string"
+                            },
+                            "key": {
+                              "type": "string"
+                            },
+                            "title": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "schedule": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string"
+                                },
+                                "key": {
+                                  "type": "string"
+                                },
+                                "removed": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "key",
+                                "removed"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "user": {
+                              "type": [
+                                "object",
+                                "null"
+                              ],
+                              "properties": {
+                                "userId": {
+                                  "type": "string"
+                                },
+                                "username": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "userId",
+                                "username"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "automationId",
+                            "key",
+                            "title",
+                            "schedule",
+                            "user"
                           ],
                           "additionalProperties": false
                         },

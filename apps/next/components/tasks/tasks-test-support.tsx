@@ -281,6 +281,7 @@ export function buildTask(overrides: Partial<TaskSummary> = {}): TaskSummary {
     conversationId: null,
     workItem: { id: workItemId, platformKey: "GH-12", title: "Fix the bug" },
     repoConversation: null,
+    scheduledFor: null,
     startedBy: {
       kind: "user",
       userId: parseUuidV7("019e9a92-b432-73e8-9341-3519156fa700"),

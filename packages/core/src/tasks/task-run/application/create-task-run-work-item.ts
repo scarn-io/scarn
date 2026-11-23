@@ -9,7 +9,10 @@ import {
 import { Result } from "@scarn/core/lib/result";
 import type { TimeProvider } from "@scarn/core/lib/time-provider";
 import type { UserAuthorizationService } from "@scarn/core/access/authorization/application/user-authorization-service";
-import { createSpawnedWorkItems } from "@scarn/core/tasks/task/application/create-spawned-work-items";
+import {
+  createProjectWorkItem,
+  createSpawnedWorkItems,
+} from "@scarn/core/tasks/task/application/create-spawned-work-items";
 import type { TaskRepo } from "@scarn/core/tasks/task/application/task-repo";
 import { WORK_ITEM_CHANGES_INVALID } from "@scarn/core/tasks/task/application/validate-work-item-changes";
 import {
@@ -29,7 +32,9 @@ import {
 import {
   createTaskRunWorkItemInputSchema,
   MAX_OPEN_CHILD_WORK_ITEMS,
+  MAX_PROJECT_WORK_ITEMS_CREATED_PER_TASK,
   MAX_WORK_ITEMS_CREATED_PER_TASK,
+  PROJECT_WORK_ITEM_PLATFORM,
   type CreatedTaskRunWorkItemContract,
   type CreateTaskRunWorkItemInput,
 } from "../contracts/task-run-work-item-contracts";
@@ -48,30 +53,36 @@ export type CreateTaskRunWorkItemDeps = {
   dbExecutor?: DbExecutor | undefined;
 };
 
+type ParsedCreate = ReturnType<typeof createTaskRunWorkItemInputSchema.parse>;
+
 const invalid = (message: string): CoreValidationError =>
   new CoreValidationError(message, WORK_ITEM_CHANGES_INVALID);
 
-const checkCaps = async (
+const checkCreatedCap = async (
   task: TaskEntity,
+  max: number,
   deps: CreateTaskRunWorkItemDeps,
   tx: DbExecutor,
 ): Promise<void> => {
-  if (task.workItemId === null) {
-    throw invalid("This Task has no work item to create children under");
-  }
-  await deps.taskRepo.lockSpawnedWorkItems(task.id, tx);
   const spawned = await deps.workItemRepo.countSpawnedByTask(task.id, tx);
-  if (spawned >= MAX_WORK_ITEMS_CREATED_PER_TASK) {
+  if (spawned >= max) {
     throw invalid(
-      `This Task has already created ${String(spawned)} work items, the most one Task may create (${String(MAX_WORK_ITEMS_CREATED_PER_TASK)})`,
+      `This Task has already created ${String(spawned)} work items, the most one Task may create (${String(max)})`,
     );
   }
+};
+
+const checkOpenChildrenCap = async (
+  parentWorkItemId: string,
+  deps: CreateTaskRunWorkItemDeps,
+  tx: DbExecutor,
+): Promise<void> => {
   const openChildren = (
-    await deps.workItemRepo.listChildren(parseWorkItemId(task.workItemId), tx)
+    await deps.workItemRepo.listChildren(parseWorkItemId(parentWorkItemId), tx)
   ).filter((child) => child.state === "open").length;
   if (openChildren >= MAX_OPEN_CHILD_WORK_ITEMS) {
     throw invalid(
-      `Work item ${task.workItemId} already has ${String(openChildren)} open children, the most a work item may have (${String(MAX_OPEN_CHILD_WORK_ITEMS)})`,
+      `Work item ${parentWorkItemId} already has ${String(openChildren)} open children, the most a work item may have (${String(MAX_OPEN_CHILD_WORK_ITEMS)})`,
     );
   }
 };
@@ -108,16 +119,139 @@ const checkBlockers = async (
   }
 };
 
+const requireCreateGrant = (task: TaskEntity, parsed: ParsedCreate): void => {
+  const grant = findGrant(task.grants, "create", parsed.scope);
+  if (!grant) {
+    throw invalid(
+      `This Task may not create work items: it has no create grant on ${parsed.scope}`,
+    );
+  }
+  const labelsRefusal = grantLabelsRefusal(
+    grant,
+    parsed.labels ?? [],
+    parsed.workItemId,
+  );
+  if (labelsRefusal) {
+    throw invalid(labelsRefusal);
+  }
+};
+
+const createChild = async (
+  task: TaskEntity,
+  parsed: ParsedCreate,
+  userAuthz: UserAuthorizationService,
+  deps: CreateTaskRunWorkItemDeps,
+  tx: DbExecutor,
+): Promise<CreatedTaskRunWorkItemContract> => {
+  const parentWorkItemId = task.workItemId;
+  if (parentWorkItemId === null) {
+    throw invalid("This Task has no work item to create children under");
+  }
+  const existing = await deps.workItemRepo.load(
+    parseWorkItemId(parsed.workItemId),
+    tx,
+  );
+  if (existing) {
+    if (
+      existing.spawnedByTaskId === task.id &&
+      (existing.parentWorkItemId as string | null) === parentWorkItemId
+    ) {
+      return { workItemId: existing.id, created: false };
+    }
+    throw invalid(
+      `Work item id ${parsed.workItemId} is already used; make a new id`,
+    );
+  }
+
+  await deps.taskRepo.lockSpawnedWorkItems(task.id, tx);
+  await checkCreatedCap(task, MAX_WORK_ITEMS_CREATED_PER_TASK, deps, tx);
+  await checkOpenChildrenCap(parentWorkItemId, deps, tx);
+  await checkBlockers(task, parsed.blockedBy ?? [], deps, tx);
+
+  const workItemEvents = new DeferredWorkItemEvents(deps.workItemEvents);
+  await createSpawnedWorkItems(
+    task,
+    [parsed],
+    { ...deps, userAuthz, workItemEvents },
+    tx,
+  );
+  await workItemEvents.flush(tx);
+  return { workItemId: parseWorkItemId(parsed.workItemId), created: true };
+};
+
+const createInProject = async (
+  task: TaskEntity,
+  parsed: ParsedCreate,
+  userAuthz: UserAuthorizationService,
+  deps: CreateTaskRunWorkItemDeps,
+  tx: DbExecutor,
+): Promise<CreatedTaskRunWorkItemContract> => {
+  const platformKey = parsed.platformKey;
+  if (platformKey === undefined) {
+    throw invalid("A project create needs a platformKey");
+  }
+  await deps.taskRepo.lockSpawnedWorkItems(task.id, tx);
+  const known = await deps.workItemRepo.loadManyByPlatformIdentities(
+    [
+      {
+        projectId: task.projectId,
+        platform: PROJECT_WORK_ITEM_PLATFORM,
+        sourceIdentity: platformKey,
+      },
+    ],
+    tx,
+  );
+  const knownItem = known[0];
+  if (knownItem) {
+    return { workItemId: knownItem.id, created: false };
+  }
+  if (await deps.workItemRepo.load(parseWorkItemId(parsed.workItemId), tx)) {
+    throw invalid(
+      `Work item id ${parsed.workItemId} is already used; make a new id`,
+    );
+  }
+  await checkCreatedCap(
+    task,
+    MAX_PROJECT_WORK_ITEMS_CREATED_PER_TASK,
+    deps,
+    tx,
+  );
+
+  const workItemEvents = new DeferredWorkItemEvents(deps.workItemEvents);
+  const result = await createProjectWorkItem(
+    task,
+    {
+      workItemId: parsed.workItemId,
+      platform: PROJECT_WORK_ITEM_PLATFORM,
+      platformKey,
+      url: parsed.url,
+      title: parsed.title,
+      description: parsed.description,
+      fields: parsed.fields,
+      labels: parsed.labels,
+    },
+    { ...deps, userAuthz, workItemEvents },
+    tx,
+  );
+  await workItemEvents.flush(tx);
+  return result;
+};
+
 /**
- * Creates a child of a running Task's work item for its agent, in one
- * transaction, and commits it whatever the run does afterwards. Needs a
- * `create` grant on `children` that covers every label; `blockedBy` names
- * existing items, the Task's own or its children, and the blocks land before
- * readiness is checked. Per Task, creates take turns under an advisory lock
- * so the per-Task and open-children caps hold under parallel calls.
+ * Creates a work item for a running Task's agent, in one transaction, and
+ * commits it whatever the run does afterwards. Needs a `create` grant on the
+ * requested scope that covers every label. Per Task, creates take turns under
+ * an advisory lock so the caps hold under parallel calls.
  *
- * The id is the one the agent's tool made: an id already naming this Task's
- * child returns it with `created: false`, so a retried request is safe.
+ * - `children`: a child of the Task's work item. `blockedBy` names existing
+ *   items, the Task's own or its children, and the blocks land before
+ *   readiness is checked. The id is the one the agent's tool made: an id
+ *   already naming this Task's child returns it with `created: false`, so a
+ *   retried request is safe.
+ * - `project`: a top-level item in the Task's project, on platform `custom`
+ *   keyed by `platformKey`. A key the project already has returns that item,
+ *   untouched, with `created: false`, and `workItem.created` doesn't fire, so
+ *   a poller may send every item it sees.
  *
  * The run's claim token is the only credential; the item is created as the
  * user who claimed the run.
@@ -145,60 +279,25 @@ export const createTaskRunWorkItem = async (
     }
 
     const task = await deps.taskRepo.load(run.taskId, tx);
-    const parent =
-      task?.workItemId != null
-        ? await deps.workItemRepo.load(parseWorkItemId(task.workItemId), tx)
-      : null;
-    if (!task || !parent || parent.projectId !== run.projectId) {
+    if (!task || task.projectId !== run.projectId) {
       return Result.err(new ResourceNotFoundError("Task", run.taskId));
     }
-
-    const grant = findGrant(task.grants, "create", "children");
-    if (!grant) {
-      throw invalid(
-        "This Task may not create work items: it has no create grant on children",
+    if (parsed.scope === "children" && task.workItemId !== null) {
+      const parent = await deps.workItemRepo.load(
+        parseWorkItemId(task.workItemId),
+        tx,
       );
-    }
-    const labelsRefusal = grantLabelsRefusal(
-      grant,
-      parsed.labels ?? [],
-      parsed.workItemId,
-    );
-    if (labelsRefusal) {
-      throw invalid(labelsRefusal);
-    }
-
-    const existing = await deps.workItemRepo.load(
-      parseWorkItemId(parsed.workItemId),
-      tx,
-    );
-    if (existing) {
-      if (
-        existing.spawnedByTaskId === task.id &&
-        (existing.parentWorkItemId as string | null) === task.workItemId
-      ) {
-        return Result.ok({ workItemId: existing.id, created: false });
+      if (!parent || parent.projectId !== run.projectId) {
+        return Result.err(new ResourceNotFoundError("Task", run.taskId));
       }
-      throw invalid(
-        `Work item id ${parsed.workItemId} is already used; make a new id`,
-      );
     }
 
-    await checkCaps(task, deps, tx);
-    await checkBlockers(task, parsed.blockedBy ?? [], deps, tx);
-
-    const workItemEvents = new DeferredWorkItemEvents(deps.workItemEvents);
-    await createSpawnedWorkItems(
-      task,
-      [parsed],
-      {
-        ...deps,
-        userAuthz: deps.createUserAuthorizationService(run.claimedByUserId),
-        workItemEvents,
-      },
-      tx,
+    requireCreateGrant(task, parsed);
+    const userAuthz = deps.createUserAuthorizationService(run.claimedByUserId);
+    return Result.ok(
+      parsed.scope === "project"
+        ? await createInProject(task, parsed, userAuthz, deps, tx)
+        : await createChild(task, parsed, userAuthz, deps, tx),
     );
-    await workItemEvents.flush(tx);
-    return Result.ok({ workItemId: parsed.workItemId, created: true });
   });
 };

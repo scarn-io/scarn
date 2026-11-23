@@ -223,10 +223,10 @@ function grantToFeature(grant: Grant): {
     case "create":
       return {
         feature: workItems.create({
-          scope: "children",
+          scope: grant.scope,
           labels: grant.labels as [string, ...string[]],
         }),
-        source: `Features.workItems.create({ scope: "children", labels: ${JSON.stringify(grant.labels)} })`,
+        source: `Features.workItems.create({ scope: ${JSON.stringify(grant.scope)}, labels: ${JSON.stringify(grant.labels)} })`,
       };
     case "read":
       return {

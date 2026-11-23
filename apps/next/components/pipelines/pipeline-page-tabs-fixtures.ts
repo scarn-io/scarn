@@ -1,7 +1,7 @@
 /** Automations and a pipeline for the Pipelines & Automations page tests. */
 import {
   parseUuidV7,
-  type AutomationContract,
+  type AutomationListItemContract,
   type PipelineDefinitionContract,
 } from "@scarn/api/frontend-contracts";
 
@@ -15,7 +15,7 @@ export const IDLE_AUTOMATION_ID = parseUuidV7(
 );
 const STAMP = "2026-11-01T12:00:00.000Z";
 
-export const triage: AutomationContract = {
+export const triage: AutomationListItemContract = {
   id: AUTOMATION_ID,
   projectId: parseUuidV7(PROJECT_ID),
   key: "triage",
@@ -34,6 +34,7 @@ export const triage: AutomationContract = {
       scope: "project",
       rules: [
         {
+          key: "on-work-item-created",
           event: "workItem.created",
           next: {
             routes: [
@@ -48,15 +49,56 @@ export const triage: AutomationContract = {
   },
   createdAt: STAMP,
   updatedAt: STAMP,
+  schedules: [],
 };
 
-export const wayfinder: AutomationContract = {
+export const wayfinder: AutomationListItemContract = {
   ...triage,
   id: IDLE_AUTOMATION_ID,
   key: "wayfinder",
   title: "Wayfinder",
   scope: "workItem",
   latestVersion: null,
+};
+
+export const POLLER_ID = parseUuidV7("019e9a92-b432-73e8-9341-3519156fa803");
+export const SCHEDULE_ID = parseUuidV7("019e9a92-b432-73e8-9341-3519156fa901");
+export const HELD_TASK_ID = parseUuidV7("019e9a92-b432-73e8-9341-3519156fa9aa");
+export const STARTED_TASK_ID = parseUuidV7(
+  "019e9a92-b432-73e8-9341-3519156fa9bb",
+);
+
+/** A project automation with one schedule rule that has been failing. */
+export const poller: AutomationListItemContract = {
+  ...triage,
+  id: POLLER_ID,
+  key: "poller",
+  title: "Poll Linear",
+  enabled: true,
+  latestVersion: null,
+  schedules: [
+    {
+      id: SCHEDULE_ID,
+      key: "hourly",
+      cron: "0 * * * *",
+      timezone: "Europe/Paris",
+      concurrency: { max: 1, waiting: 0 },
+      nextRunAt: "2099-01-01T00:00:00.000Z",
+      lastFiredAt: STAMP,
+      lastTask: {
+        id: HELD_TASK_ID,
+        status: "failed",
+        scheduledFor: STAMP,
+      },
+      failureStreak: 3,
+      lastSkippedAt: STAMP,
+      skippedCountSinceFire: 2,
+      lastError: {
+        message: "Step poll-linear has no active version",
+        at: STAMP,
+      },
+    },
+  ],
 };
 
 export const shipIt: PipelineDefinitionContract = {

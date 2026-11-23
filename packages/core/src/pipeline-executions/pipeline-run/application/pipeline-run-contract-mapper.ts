@@ -298,10 +298,12 @@ export const loadProjectedRuns = async (
     tasksById,
     workItemTitle: titles.get(parseWorkItemId(run.workItemId)) ?? "",
     startedBy: toStartedBy(
-      run.triggeredByUserId,
-      run.startedByAutomationId
-        ? (automationsById.get(run.startedByAutomationId) ?? null)
-        : null,
+      {
+        userId: run.triggeredByUserId,
+        automation: run.startedByAutomationId
+          ? (automationsById.get(run.startedByAutomationId) ?? null)
+          : null,
+      },
       usersById,
     ),
     document: documentsByVersionId.get(run.pipelineGraphVersionId) ?? null,

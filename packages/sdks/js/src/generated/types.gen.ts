@@ -1656,7 +1656,7 @@ export type GetApiStepDefinitionsResponses = {
         } | {
             resource: 'workItem';
             action: 'create';
-            scope: 'children';
+            scope: 'children' | 'project';
             labels: Array<string>;
         }>;
         maxTurns: number | null;
@@ -1896,7 +1896,7 @@ export type PostApiStepDefinitionsData = {
         } | {
             resource: 'workItem';
             action: 'create';
-            scope: 'children';
+            scope: 'children' | 'project';
             labels: Array<string>;
         }>;
         maxTurns?: number | null;
@@ -2277,7 +2277,7 @@ export type PostApiStepDefinitionsResponses = {
         } | {
             resource: 'workItem';
             action: 'create';
-            scope: 'children';
+            scope: 'children' | 'project';
             labels: Array<string>;
         }>;
         maxTurns: number | null;
@@ -2517,7 +2517,7 @@ export type PutApiStepDefinitionsData = {
         } | {
             resource: 'workItem';
             action: 'create';
-            scope: 'children';
+            scope: 'children' | 'project';
             labels: Array<string>;
         }>;
         maxTurns?: number | null;
@@ -2860,7 +2860,7 @@ export type PutApiStepDefinitionsResponses = {
         } | {
             resource: 'workItem';
             action: 'create';
-            scope: 'children';
+            scope: 'children' | 'project';
             labels: Array<string>;
         }>;
         maxTurns: number | null;
@@ -3213,7 +3213,7 @@ export type GetApiStepDefinitionsByStepDefinitionIdResponses = {
         } | {
             resource: 'workItem';
             action: 'create';
-            scope: 'children';
+            scope: 'children' | 'project';
             labels: Array<string>;
         }>;
         maxTurns: number | null;
@@ -3566,7 +3566,7 @@ export type PutApiStepDefinitionsByStepDefinitionIdArchiveResponses = {
         } | {
             resource: 'workItem';
             action: 'create';
-            scope: 'children';
+            scope: 'children' | 'project';
             labels: Array<string>;
         }>;
         maxTurns: number | null;
@@ -3939,7 +3939,7 @@ export type PostApiTasksResponses = {
             } | {
                 resource: 'workItem';
                 action: 'create';
-                scope: 'children';
+                scope: 'children' | 'project';
                 labels: Array<string>;
             }>;
             maxTurns: number | null;
@@ -4413,7 +4413,7 @@ export type GetApiTasksByTaskIdResponses = {
         } | {
             resource: 'workItem';
             action: 'create';
-            scope: 'children';
+            scope: 'children' | 'project';
             labels: Array<string>;
         }>;
         maxTurns: number | null;
@@ -4442,17 +4442,32 @@ export type GetApiTasksByTaskIdResponses = {
             title: string;
         } | null;
         startedBy: {
-            kind: 'user';
             userId: string;
             username: string | null;
+            kind: 'user';
         } | {
             kind: 'automation';
             automationId: string;
             key: string;
             title: string | null;
         } | {
+            kind: 'schedule';
+            automationId: string;
+            key: string;
+            title: string | null;
+            schedule: {
+                id: string;
+                key: string;
+                removed: boolean;
+            };
+            user: {
+                userId: string;
+                username: string | null;
+            } | null;
+        } | {
             kind: 'system';
         };
+        scheduledFor: string | null;
         source: {
             kind: 'step_definition';
             stepDefinitionId: string;
@@ -4783,17 +4798,32 @@ export type GetApiProjectsByProjectIdTasksResponses = {
                 title: string;
             } | null;
             startedBy: {
-                kind: 'user';
                 userId: string;
                 username: string | null;
+                kind: 'user';
             } | {
                 kind: 'automation';
                 automationId: string;
                 key: string;
                 title: string | null;
             } | {
+                kind: 'schedule';
+                automationId: string;
+                key: string;
+                title: string | null;
+                schedule: {
+                    id: string;
+                    key: string;
+                    removed: boolean;
+                };
+                user: {
+                    userId: string;
+                    username: string | null;
+                } | null;
+            } | {
                 kind: 'system';
             };
+            scheduledFor: string | null;
             source: {
                 kind: 'step_definition';
                 stepDefinitionId: string;
@@ -5540,7 +5570,7 @@ export type PostApiTaskRunsByTaskRunIdWorkerContextResponses = {
             } | {
                 resource: 'workItem';
                 action: 'create';
-                scope: 'children';
+                scope: 'children' | 'project';
                 labels: Array<string>;
             }>;
         };
@@ -7393,6 +7423,9 @@ export type PostApiTaskRunsByTaskRunIdWorkItemCreatesData = {
     body: {
         claimToken: string;
         workItemId: string;
+        scope?: 'children' | 'project';
+        platformKey?: string;
+        url?: string;
         title: string;
         description: string;
         fields?: {
@@ -9924,6 +9957,30 @@ export type GetApiProjectsByProjectIdAutomationsResponses = {
         } | null;
         createdAt: string;
         updatedAt: string;
+        schedules: Array<{
+            id: string;
+            key: string;
+            cron: string;
+            timezone: string;
+            concurrency: {
+                max: number;
+                waiting: number;
+            };
+            nextRunAt: string | null;
+            lastFiredAt: string | null;
+            lastTask: {
+                id: string;
+                status: 'waiting_for_concurrency_slot' | 'waiting_for_work' | 'queued' | 'running' | 'waiting_for_person' | 'succeeded' | 'failed' | 'cancelled';
+                scheduledFor: string;
+            } | null;
+            failureStreak: number;
+            lastSkippedAt: string | null;
+            skippedCountSinceFire: number;
+            lastError: {
+                message: string;
+                at: string;
+            } | null;
+        }>;
     }>;
 };
 
@@ -10568,6 +10625,167 @@ export type PostApiProjectsByProjectIdAutomationsByKeyDisableResponses = {
 
 export type PostApiProjectsByProjectIdAutomationsByKeyDisableResponse = PostApiProjectsByProjectIdAutomationsByKeyDisableResponses[keyof PostApiProjectsByProjectIdAutomationsByKeyDisableResponses];
 
+export type PostApiProjectsByProjectIdAutomationsByKeySchedulesByRuleKeyRunsData = {
+    body?: never;
+    path: {
+        projectId: string;
+        key: string;
+        ruleKey: string;
+    };
+    query?: never;
+    url: '/api/projects/{projectId}/automations/{key}/schedules/{ruleKey}/runs';
+};
+
+export type PostApiProjectsByProjectIdAutomationsByKeySchedulesByRuleKeyRunsErrors = {
+    /**
+     * Response for status 400
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 404
+     */
+    404: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 409
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type PostApiProjectsByProjectIdAutomationsByKeySchedulesByRuleKeyRunsError = PostApiProjectsByProjectIdAutomationsByKeySchedulesByRuleKeyRunsErrors[keyof PostApiProjectsByProjectIdAutomationsByKeySchedulesByRuleKeyRunsErrors];
+
+export type PostApiProjectsByProjectIdAutomationsByKeySchedulesByRuleKeyRunsResponses = {
+    /**
+     * Response for status 201
+     */
+    201: {
+        taskId: string | null;
+        scheduledFor: string;
+    };
+};
+
+export type PostApiProjectsByProjectIdAutomationsByKeySchedulesByRuleKeyRunsResponse = PostApiProjectsByProjectIdAutomationsByKeySchedulesByRuleKeyRunsResponses[keyof PostApiProjectsByProjectIdAutomationsByKeySchedulesByRuleKeyRunsResponses];
+
 export type DeleteApiWorkItemsByWorkItemIdAutomationsByKeyData = {
     body?: never;
     path: {
@@ -10989,14 +11207,28 @@ export type GetApiPipelineExecutionsResponses = {
             } | null;
             triggeredByUserId: string | null;
             startedBy: {
-                kind: 'user';
                 userId: string;
                 username: string | null;
+                kind: 'user';
             } | {
                 kind: 'automation';
                 automationId: string;
                 key: string;
                 title: string | null;
+            } | {
+                kind: 'schedule';
+                automationId: string;
+                key: string;
+                title: string | null;
+                schedule: {
+                    id: string;
+                    key: string;
+                    removed: boolean;
+                };
+                user: {
+                    userId: string;
+                    username: string | null;
+                } | null;
             } | {
                 kind: 'system';
             };
@@ -11189,14 +11421,28 @@ export type PostApiPipelineExecutionsResponses = {
         } | null;
         triggeredByUserId: string | null;
         startedBy: {
-            kind: 'user';
             userId: string;
             username: string | null;
+            kind: 'user';
         } | {
             kind: 'automation';
             automationId: string;
             key: string;
             title: string | null;
+        } | {
+            kind: 'schedule';
+            automationId: string;
+            key: string;
+            title: string | null;
+            schedule: {
+                id: string;
+                key: string;
+                removed: boolean;
+            };
+            user: {
+                userId: string;
+                username: string | null;
+            } | null;
         } | {
             kind: 'system';
         };
@@ -11448,14 +11694,28 @@ export type PostApiPipelineExecutionsByPipelineExecutionIdVisitsByVisitIdRerunRe
         } | null;
         triggeredByUserId: string | null;
         startedBy: {
-            kind: 'user';
             userId: string;
             username: string | null;
+            kind: 'user';
         } | {
             kind: 'automation';
             automationId: string;
             key: string;
             title: string | null;
+        } | {
+            kind: 'schedule';
+            automationId: string;
+            key: string;
+            title: string | null;
+            schedule: {
+                id: string;
+                key: string;
+                removed: boolean;
+            };
+            user: {
+                userId: string;
+                username: string | null;
+            } | null;
         } | {
             kind: 'system';
         };
@@ -11721,14 +11981,28 @@ export type PostApiPipelineExecutionsByPipelineExecutionIdVisitsByVisitIdRouteRe
         } | null;
         triggeredByUserId: string | null;
         startedBy: {
-            kind: 'user';
             userId: string;
             username: string | null;
+            kind: 'user';
         } | {
             kind: 'automation';
             automationId: string;
             key: string;
             title: string | null;
+        } | {
+            kind: 'schedule';
+            automationId: string;
+            key: string;
+            title: string | null;
+            schedule: {
+                id: string;
+                key: string;
+                removed: boolean;
+            };
+            user: {
+                userId: string;
+                username: string | null;
+            } | null;
         } | {
             kind: 'system';
         };
@@ -12169,14 +12443,28 @@ export type PostApiPipelineExecutionsByPipelineExecutionIdQuestionsByQuestionIdC
         } | null;
         triggeredByUserId: string | null;
         startedBy: {
-            kind: 'user';
             userId: string;
             username: string | null;
+            kind: 'user';
         } | {
             kind: 'automation';
             automationId: string;
             key: string;
             title: string | null;
+        } | {
+            kind: 'schedule';
+            automationId: string;
+            key: string;
+            title: string | null;
+            schedule: {
+                id: string;
+                key: string;
+                removed: boolean;
+            };
+            user: {
+                userId: string;
+                username: string | null;
+            } | null;
         } | {
             kind: 'system';
         };
@@ -12427,14 +12715,28 @@ export type PutApiPipelineExecutionsByPipelineExecutionIdCancelResponses = {
         } | null;
         triggeredByUserId: string | null;
         startedBy: {
-            kind: 'user';
             userId: string;
             username: string | null;
+            kind: 'user';
         } | {
             kind: 'automation';
             automationId: string;
             key: string;
             title: string | null;
+        } | {
+            kind: 'schedule';
+            automationId: string;
+            key: string;
+            title: string | null;
+            schedule: {
+                id: string;
+                key: string;
+                removed: boolean;
+            };
+            user: {
+                userId: string;
+                username: string | null;
+            } | null;
         } | {
             kind: 'system';
         };
@@ -12543,8 +12845,9 @@ export type GetApiProjectsByProjectIdRunsData = {
     query?: {
         status?: 'needs-you' | 'open' | 'finished' | 'all' | 'needs-you' | 'waiting' | 'running' | 'queued' | 'done' | 'ended' | 'failed' | 'cancelled';
         whatRan?: string | 'task';
-        startedBy?: string | 'me';
+        startedBy?: string | 'me' | 'scheduled';
         workItemId?: string;
+        scheduleId?: string;
         atNode?: string;
         q?: string;
         before?: string;
@@ -12695,14 +12998,28 @@ export type GetApiProjectsByProjectIdRunsResponses = {
                 username: string | null;
             }>;
             startedBy: {
-                kind: 'user';
                 userId: string;
                 username: string | null;
+                kind: 'user';
             } | {
                 kind: 'automation';
                 automationId: string;
                 key: string;
                 title: string | null;
+            } | {
+                kind: 'schedule';
+                automationId: string;
+                key: string;
+                title: string | null;
+                schedule: {
+                    id: string;
+                    key: string;
+                    removed: boolean;
+                };
+                user: {
+                    userId: string;
+                    username: string | null;
+                } | null;
             } | {
                 kind: 'system';
             };
@@ -12721,7 +13038,7 @@ export type GetApiProjectsByProjectIdRunsResponses = {
             startedBy: Array<{
                 inProgress: number;
                 needsYou: boolean;
-                filter: string | 'me';
+                filter: string | 'me' | 'scheduled';
                 label: string;
             }>;
             whatRan: Array<{
@@ -12899,14 +13216,28 @@ export type GetApiProjectsByProjectIdRunsByTypeByIdResponses = {
             username: string | null;
         }>;
         startedBy: {
-            kind: 'user';
             userId: string;
             username: string | null;
+            kind: 'user';
         } | {
             kind: 'automation';
             automationId: string;
             key: string;
             title: string | null;
+        } | {
+            kind: 'schedule';
+            automationId: string;
+            key: string;
+            title: string | null;
+            schedule: {
+                id: string;
+                key: string;
+                removed: boolean;
+            };
+            user: {
+                userId: string;
+                username: string | null;
+            } | null;
         } | {
             kind: 'system';
         };
@@ -13741,14 +14072,28 @@ export type PostApiPipelineExecutionsByPipelineExecutionIdVisitsByVisitIdMessage
             } | null;
             triggeredByUserId: string | null;
             startedBy: {
-                kind: 'user';
                 userId: string;
                 username: string | null;
+                kind: 'user';
             } | {
                 kind: 'automation';
                 automationId: string;
                 key: string;
                 title: string | null;
+            } | {
+                kind: 'schedule';
+                automationId: string;
+                key: string;
+                title: string | null;
+                schedule: {
+                    id: string;
+                    key: string;
+                    removed: boolean;
+                };
+                user: {
+                    userId: string;
+                    username: string | null;
+                } | null;
             } | {
                 kind: 'system';
             };
@@ -14004,14 +14349,28 @@ export type PostApiPipelineExecutionsByPipelineExecutionIdVisitsByVisitIdDecisio
         } | null;
         triggeredByUserId: string | null;
         startedBy: {
-            kind: 'user';
             userId: string;
             username: string | null;
+            kind: 'user';
         } | {
             kind: 'automation';
             automationId: string;
             key: string;
             title: string | null;
+        } | {
+            kind: 'schedule';
+            automationId: string;
+            key: string;
+            title: string | null;
+            schedule: {
+                id: string;
+                key: string;
+                removed: boolean;
+            };
+            user: {
+                userId: string;
+                username: string | null;
+            } | null;
         } | {
             kind: 'system';
         };
@@ -14243,14 +14602,28 @@ export type GetApiPipelineExecutionsByPipelineExecutionIdResponses = {
         } | null;
         triggeredByUserId: string | null;
         startedBy: {
-            kind: 'user';
             userId: string;
             username: string | null;
+            kind: 'user';
         } | {
             kind: 'automation';
             automationId: string;
             key: string;
             title: string | null;
+        } | {
+            kind: 'schedule';
+            automationId: string;
+            key: string;
+            title: string | null;
+            schedule: {
+                id: string;
+                key: string;
+                removed: boolean;
+            };
+            user: {
+                userId: string;
+                username: string | null;
+            } | null;
         } | {
             kind: 'system';
         };

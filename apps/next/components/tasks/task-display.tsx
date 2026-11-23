@@ -11,10 +11,20 @@ import { formatElapsedMs } from "@/components/executions/elapsed";
 import type { TaskStatus, TaskSummary } from "./task-api";
 
 type NamedTask = Pick<TaskSummary, "name" | "source"> &
-  Partial<Pick<TaskSummary, "repoConversation">>;
+  Partial<Pick<TaskSummary, "repoConversation" | "startedBy">>;
 
-/** A Task without a work item reads as its conversation's question. */
+/**
+ * A Task without a work item reads as its conversation's question, or a
+ * scheduled one as its schedule (`<automation> · <rule>`).
+ */
 export function taskDisplayName(task: NamedTask): string {
+  if (task.startedBy?.kind === "schedule") {
+    const { startedBy } = task;
+    return (
+      task.name ??
+      `${startedBy.title ?? startedBy.key} · ${startedBy.schedule.key}`
+    );
+  }
   if (task.repoConversation) return task.repoConversation.title || "Task";
   if (task.name) return task.name;
   switch (task.source.kind) {
