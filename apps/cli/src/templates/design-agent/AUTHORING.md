@@ -586,6 +586,13 @@ searchIssues
 
 A tool step takes no messages and has no transcript; its logs show the call.
 
+**Several calls, no agent:** a `codeStep` with `mcps: { github }` gets `mcp`
+in its `fn` context: `await mcp.github.searchIssues(args)`, typed by the
+bound catalog, or the untyped `mcp.github.call(tool, args)`. A failed call
+throws one of the `Scarn.*` errors above; `fail(name, message)` fails the step with a
+built-in or `errors` name. The servers' `defineMcp` checks run before `fn`,
+and a `local` server must be runnable in the step's runtime.
+
 ## 2. Pipelines — `definePipeline` and `flow`
 
 A pipeline says which step runs first, and for each node, where to go when it
@@ -870,7 +877,7 @@ named errors. `.catch(on, target)` goes somewhere else instead; its callback's
 before `.next`. `on` lists built-in errors (`Scarn.All`,
 `Scarn.StepFailed`, `Scarn.HealthCheckFailed`, `Scarn.Timeout`, `Scarn.HeartbeatTimeout`,
 `Scarn.MaxRunsExceeded`, `Scarn.ConditionError`, `Scarn.ArgsError`, and a
-tool step's `Scarn.McpToolError`, `Scarn.McpUnavailable`,
+MCP call's `Scarn.McpToolError`, `Scarn.McpUnavailable`,
 `Scarn.McpOutputInvalid`) and
 the names in the step's own `errors`; anything else is a type error.
 

@@ -11,6 +11,7 @@ import {
   taskKindInstallsPipelineBuilder,
   taskKindResolvesMcpServers,
 } from "../application/task-kind-runtime";
+import { declaresMcpServers } from "./local-mcp-call-launch";
 
 type LaunchInput = Parameters<LaunchedRuntimeOrchestrator["launch"]>[0];
 
@@ -24,8 +25,9 @@ export function launchTaskKind(input: LaunchInput): TaskKind {
 
 /**
  * What a launch sets up besides the runtime: whether it resolves the step's
- * MCP servers (agents and MCP tool steps) and whether a managed runtime
- * installs the pipeline-builder dependencies (code steps only).
+ * MCP servers (agents, MCP tool steps, and code steps that declare servers)
+ * and whether a managed runtime installs the pipeline-builder dependencies
+ * (code steps only).
  */
 export function launchPlan(input: LaunchInput): {
   kind: TaskKind;
@@ -35,7 +37,10 @@ export function launchPlan(input: LaunchInput): {
   const kind = launchTaskKind(input);
   return {
     kind,
-    resolveMcpServers: input.startAgent || taskKindResolvesMcpServers(kind),
+    resolveMcpServers:
+      input.startAgent ||
+      (taskKindResolvesMcpServers(kind) &&
+        (kind !== "code" || declaresMcpServers(input.opencodeMcpJson))),
     installPipelineBuilder:
       !input.startAgent && taskKindInstallsPipelineBuilder(kind),
   };

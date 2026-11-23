@@ -116,8 +116,14 @@ function resolveExtraHosts(env: Env): string[] {
 
 function resolveBindAddress(env: Env, platform: NodeJS.Platform): string {
   const configured = env["SCARN_GIT_CREDENTIAL_RELAY_BIND"]?.trim();
-  if (configured) {
-    return configured;
-  }
+  return configured || defaultHostRelayBindAddress(platform);
+}
+
+/**
+ * Where a worker-hosted server that containers reach through
+ * `host.docker.internal` binds by default: `127.0.0.1` on macOS and Windows
+ * (Docker Desktop forwards to it) and `0.0.0.0` on Linux.
+ */
+export function defaultHostRelayBindAddress(platform: NodeJS.Platform): string {
   return platform === "linux" ? "0.0.0.0" : "127.0.0.1";
 }

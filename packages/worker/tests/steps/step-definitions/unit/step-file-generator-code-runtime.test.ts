@@ -102,6 +102,24 @@ describe("generateStepsFileContent code step runtime", () => {
     ).toThrow("SDK support for explicit null environments");
   });
 
+  test("rejects a code step with MCP servers until source generation supports them", () => {
+    expect(() =>
+      generateStepsFileContent([
+        makeStep({
+          kind: "code",
+          prompt: null,
+          environment: {
+            kind: "inline",
+            runtime: { kind: "managed", id: "bun1" },
+          },
+          opencodeMcpJson: { db: { type: "local", command: ["db-mcp"] } },
+        }),
+      ]),
+    ).toThrow(
+      "MCP server source generation for code steps is not supported yet",
+    );
+  });
+
   test("keeps the config emission for a non-managed code step with a config path", () => {
     const content = generateStepsFileContent([
       makeStep({

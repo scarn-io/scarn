@@ -19,6 +19,7 @@
  *      files afterward — on both the success and failure paths.
  *   4. A non-zero exit from the command runner throws a clear error
  *      surfacing stderr/stdout detail, identifying the failing source file and step key.
+ *   5. Named step errors: `execute-code-step-named-error.test.ts`.
  */
 import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
 import os from "node:os";
@@ -64,6 +65,7 @@ describe("executeCodeStep", () => {
           sourceFile: ".scarn/pipeline-builder/review-file-step.ts",
         },
         stepKey: "review-file",
+        declaredErrors: [],
         inputJson: { file: "src/index.ts" },
       },
       { runCommand },
@@ -117,6 +119,7 @@ describe("executeCodeStep", () => {
         },
         entrypointJson: { sourceFile: "steps/review.ts" },
         stepKey: "it's-a-key",
+        declaredErrors: [],
         inputJson: null,
       },
       { runCommand },
@@ -143,6 +146,7 @@ describe("executeCodeStep", () => {
         },
         entrypointJson: { sourceFile: "steps/review.ts" },
         stepKey: "review-step",
+        declaredErrors: [],
         inputJson: null,
       },
       { runCommand },
@@ -169,6 +173,7 @@ describe("executeCodeStep", () => {
           },
           entrypointJson: { sourceFile: "steps/review.ts" },
           stepKey: "review-step",
+          declaredErrors: [],
           inputJson: null,
           stepEnv: { ACCOUNT_ID: "acct-1", WAREHOUSE_TOKEN: "wh-token-value" },
         },
@@ -203,6 +208,7 @@ describe("executeCodeStep", () => {
         },
         entrypointJson: { sourceFile: "steps/review.ts" },
         stepKey: "review-step",
+        declaredErrors: [],
         inputJson: null,
       },
       { runCommand },
@@ -234,6 +240,7 @@ describe("executeCodeStep", () => {
         },
         entrypointJson: { sourceFile: "steps/review.ts" },
         stepKey: "review-step",
+        declaredErrors: [],
         inputJson: { a: 1 },
       },
       { runCommand },
@@ -282,6 +289,7 @@ describe("executeCodeStep", () => {
           },
           entrypointJson: { sourceFile: "steps/review.ts" },
           stepKey: "review-file",
+          declaredErrors: [],
           inputJson: null,
         },
         { runCommand },
@@ -330,6 +338,7 @@ describe("executeCodeStep", () => {
         },
         entrypointJson: { sourceFile: "steps/review.ts" },
         stepKey: "review-step",
+        declaredErrors: [],
         inputJson: { file: "src/index.ts", priority: "high" },
       },
       { runCommand },
@@ -367,6 +376,7 @@ describe("executeCodeStep", () => {
         },
         entrypointJson: { sourceFile: "steps/review.ts" },
         stepKey: "review-step",
+        declaredErrors: [],
         inputJson: null,
       },
       { runCommand },

@@ -113,6 +113,7 @@ describe("work dry-run runtime launch input", () => {
       id: "id",
       key: "review",
       name: "Review",
+      kind: "user_defined",
       environment: { kind: "named", name: "ci" },
       repo: {
         mode: "readOnly",

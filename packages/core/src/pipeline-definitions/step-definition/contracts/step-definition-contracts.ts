@@ -6,7 +6,10 @@ import {
   anyJsonObjectSchema,
   anyJsonValueSchema,
 } from "@scarn/core/common/contracts/json";
-import { healthChecksSchema } from "@scarn/core/common/contracts/health-checks";
+import {
+  healthChecksSchema,
+  type HealthCheck,
+} from "@scarn/core/common/contracts/health-checks";
 import {
   repoConfigInputSchema,
   repoConfigSchema,
@@ -173,6 +176,30 @@ const refineMcpToolStep = (
   }
 };
 
+/**
+ * A `code` step's health checks, mirroring the SDK's code-step validation:
+ * only `tool` checks on an MCP server. That the server is declared is the
+ * execution config's rule (`TASK_EXECUTION_CONFIG_HEALTH_CHECK_MCP_UNKNOWN`).
+ */
+const refineCodeStepHealthChecks = (
+  value: {
+    kind: (typeof stepDefinitionKindValues)[number];
+    healthChecksJson?: readonly HealthCheck[] | null | undefined;
+  },
+  context: z.RefinementCtx,
+): void => {
+  if (value.kind !== "code") return;
+  (value.healthChecksJson ?? []).forEach((check, index) => {
+    if (check.kind === "tool" && check.mcp !== undefined) return;
+    context.addIssue({
+      code: "custom",
+      message:
+        "Step definition of kind 'code' allows only 'tool' health checks that name one of its MCP servers",
+      path: ["healthChecksJson", index],
+    });
+  });
+};
+
 export const createStepDefinitionInputSchema = z
   .object({
     projectId: uuidV7Schema,
@@ -238,6 +265,7 @@ export const createStepDefinitionInputSchema = z
       });
     }
     refineMcpToolStep(value, context);
+    refineCodeStepHealthChecks(value, context);
   });
 
 export const upsertStepDefinitionInputSchema = createStepDefinitionInputSchema;

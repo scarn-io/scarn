@@ -45,6 +45,7 @@ describe("executeCodeStep runner placement", () => {
         },
         entrypointJson: { sourceFile },
         stepKey: "review-step",
+        declaredErrors: [],
         inputJson: null,
       },
       { runCommand },

@@ -1,4 +1,3 @@
-import path from "node:path";
 import { prepareLaunchEnvironment } from "./prepare-launch-environment";
 import {
   cleanupSessionHome,
@@ -17,7 +16,7 @@ import type {
 import type { ManagedLaunchServerUrls } from "../contracts/managed-launch-types";
 import type {
   AgentRuntime,
-  McpToolLaunch,
+  McpCallLaunch,
 } from "../contracts/launched-runtime-handles";
 import { startStopwatch } from "../../../lib/elapsed";
 import { logWork } from "../application/work-logger";
@@ -28,8 +27,7 @@ import {
   cleanupEnvironment,
   devcontainerHostEnv,
   inspectContainerHealthStatus,
-  selectLaunchRuntimeConfig,
-  resolveDevcontainerWorkspaceFolder,
+  prepareLaunchDevcontainer,
 } from "./local-project-runtime-environment-helpers";
 import { MANAGED_RUNTIME_INSTALL_ARTIFACT_PATHS } from "../../../runtime/runtime-service/domain/managed-runtimes";
 import type { ResolvedManagedRuntime } from "../../../runtime/runtime-service/domain/managed-runtimes";
@@ -45,7 +43,12 @@ import {
 } from "./local-project-runtime-environment-deps";
 import { prepareGitCredentialRelay } from "./local-project-git-credentials";
 import { launchPlan } from "./resolve-launch-environment";
-import { planMcpToolLaunch } from "./local-mcp-tool-launch";
+import {
+  launchMcpCallingKind,
+  mcpCallLaunchFields,
+  planMcpCallLaunch,
+  type McpCallingTaskKind,
+} from "./local-mcp-call-launch";
 
 export type LocalProjectRuntimeEnvironment = LaunchedRuntime;
 
@@ -83,9 +86,9 @@ export class DefaultLocalProjectRuntimeEnvironmentOrchestrator implements LocalP
     let payloadVersion: string | null = null;
     let secretValues: readonly string[] = [];
     let gitCredentialRelay: { stop(): Promise<void> } | null = null;
-    let mcpTool: McpToolLaunch | undefined;
+    let mcpCallLaunch: McpCallLaunch | undefined;
     const plan = launchPlan(input);
-    const callsMcpTool = plan.kind === "mcp_tool" && !input.startAgent;
+    const mcpCallingKind = launchMcpCallingKind(input, plan.kind);
 
     try {
       logWork("runtime", "Creating local runtime environment", {
@@ -131,15 +134,16 @@ export class DefaultLocalProjectRuntimeEnvironmentOrchestrator implements LocalP
       );
       const isHost = resolvedEnvironment.runtime.kind === "host";
       const register = input.registerManagedLaunch;
-      const relayRuntimeKind = callsMcpTool
+      const relayRuntimeKind = mcpCallingKind
         ? "host"
         : resolvedEnvironment.runtime.kind;
       const registerManagedLaunch = register
         ? (urls: ManagedLaunchServerUrls) =>
             register({ ...urls, runtimeKind: relayRuntimeKind })
         : undefined;
-      const mcpToolPlan = (checkout: string) =>
-        planMcpToolLaunch({
+      const mcpCallPlan = (kind: McpCallingTaskKind, checkout: string) =>
+        planMcpCallLaunch({
+          kind,
           launch: input,
           workspacePath: checkout,
           connectors: resolvedEnvironment.connectors,
@@ -191,47 +195,28 @@ export class DefaultLocalProjectRuntimeEnvironmentOrchestrator implements LocalP
         agent = started.agent;
         payloadVersion = started.payloadVersion;
         secretValues = started.secretValues;
-      } else if (isHost && callsMcpTool) {
-        const toolPlan = await mcpToolPlan(workspacePath);
+      } else if (isHost && mcpCallingKind === "mcp_tool") {
+        const toolPlan = await mcpCallPlan(mcpCallingKind, workspacePath);
         secretValues = toolPlan.secretValues;
         input.onSecretValues?.(secretValues);
-        mcpTool = toolPlan.place({ kind: "host", workspaceDir: workspacePath });
+        mcpCallLaunch = toolPlan.place({
+          kind: "host",
+          workspaceDir: workspacePath,
+        });
       } else if (!isHost) {
-        // Step 2: Resolve the devcontainer config + its workspace folder: the
-        // cloned repo's, or for a managed runtime one synthesized into the clone.
-        // Only a code step (no agent) runs pipeline-builder code, so only it
-        // installs the pipeline-builder dependencies.
-        const selected = await selectLaunchRuntimeConfig({
+        const devcontainer = await prepareLaunchDevcontainer({
           devcontainerLauncher: deps.devcontainerLauncher,
+          sessionId: input.sessionId,
           workspacePath,
           lookupBranch: devcontainerLookupBranch,
           runtime: resolvedEnvironment.runtime,
           installPipelineBuilder: plan.installPipelineBuilder,
+          servesMcpBridge: mcpCallingKind === "code",
+          logger: input.logger,
         });
-        devcontainerConfigPath = selected.devcontainerConfigPath;
-        managedRuntime = selected.managedRuntime;
-        if (managedRuntime) {
-          input.logger?.log(
-            "runtime",
-            `managed runtime ${managedRuntime.id} (${managedRuntime.definition.image})`,
-          );
-        }
-        const devcontainerWorkspaceFolder =
-          await resolveDevcontainerWorkspaceFolder({
-            workspacePath,
-            devcontainerConfigPath,
-          });
-        // The agent-facing workspace folder inside the devcontainer: the declared
-        // workspaceFolder, or the CLI convention /workspaces/<basename>.
-        agentWorkspaceFolder =
-          devcontainerWorkspaceFolder ??
-          `/workspaces/${path.basename(workspacePath)}`;
-        logWork("runtime", "Resolved devcontainer config", {
-          sessionId: input.sessionId,
-          devcontainerConfigPath,
-          devcontainerWorkspaceFolder,
-          agentWorkspaceFolder,
-        });
+        devcontainerConfigPath = devcontainer.devcontainerConfigPath;
+        managedRuntime = devcontainer.managedRuntime;
+        agentWorkspaceFolder = devcontainer.agentWorkspaceFolder;
 
         gitCredentialRelay = await prepareGitCredentialRelay({
           deps: deps,
@@ -274,10 +259,12 @@ export class DefaultLocalProjectRuntimeEnvironmentOrchestrator implements LocalP
             })
           : null;
         payloadVersion = agentPlan?.payload.version ?? null;
-        const toolPlan = callsMcpTool ? await mcpToolPlan(workspacePath) : null;
+        const callPlan = mcpCallingKind
+          ? await mcpCallPlan(mcpCallingKind, workspacePath)
+          : null;
         secretValues = agentPlan
           ? agentLaunchSecretValues(agentPlan)
-          : (toolPlan?.secretValues ?? []);
+          : (callPlan?.secretValues ?? []);
         input.onSecretValues?.(secretValues);
 
         // Step 4: Launch the devcontainer. Stream the CLI's lifecycle progress
@@ -326,7 +313,7 @@ export class DefaultLocalProjectRuntimeEnvironmentOrchestrator implements LocalP
               taskRunId,
             })
           : null;
-        mcpTool = toolPlan?.place({
+        mcpCallLaunch = callPlan?.place({
           kind: "container",
           containerId: devcontainerId,
           workspaceDir: agentWorkspaceFolder,
@@ -382,7 +369,7 @@ export class DefaultLocalProjectRuntimeEnvironmentOrchestrator implements LocalP
         // OpenCode.
         runtimeContainerId: devcontainerId,
         agent,
-        ...(mcpTool ? { mcpTool } : {}),
+        ...mcpCallLaunchFields(mcpCallingKind, mcpCallLaunch),
         // No AI image is used; surface the pinned OpenCode runtime version
         // (empty when no agent was started).
         aiImage: payloadVersion ? `opencode-runtime@${payloadVersion}` : "",

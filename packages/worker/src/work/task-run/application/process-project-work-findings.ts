@@ -13,10 +13,10 @@ import {
 import { readWorkItemChanges } from "@scarn/sdk/contracts/work-item-changes";
 import type { AnyJsonValue } from "../../../common/contracts/json";
 import type {
-  CommitAndPushWorkBranchResult,
   ProcessProjectWorkDeps,
   StartedClaimedTask,
 } from "../contracts/process-project-work-types";
+import type { CommitAndPushWorkBranchResult } from "../contracts/launched-runtime";
 
 const STEP_FINDINGS_SUBMISSION_RELATIVE_PATH =
   ".scarn/step-findings-submission.json";

@@ -174,6 +174,12 @@ export const taskRunWorkerContextSchema = z.object({
     toolCall: toolCallJsonSchema.nullable(),
     resultSchemaJson: anyJsonObjectSchema.nullable(),
     /**
+     * The error names the Task's step definition declares, besides the
+     * built-in ones; empty for a Task with no step definition. A code step's
+     * thrown `StepError` may use only these or a built-in name.
+     */
+    declaredErrors: z.array(nonEmptyStringSchema),
+    /**
      * How many more times the agent may hand the conversation to a person:
      * its Task's `maxTurns` minus its continuation runs; null for a Task with
      * no turns.

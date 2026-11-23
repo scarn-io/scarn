@@ -18,6 +18,7 @@ function step(
   return {
     stepDefinitionId: `id-${overrides.key}`,
     name: overrides.key,
+    kind: "user_defined",
     environment: null,
     opencodeMcpJson: null,
     healthChecksJson: [
@@ -300,5 +301,22 @@ describe("planHealthCheckLaunches", () => {
         (launch) => launch.baseWorkBranch,
       ),
     ).toEqual(["release", null]);
+  });
+
+  test("code steps launch apart from agent steps, without an agent", () => {
+    const plan = planHealthCheckLaunches([
+      step({ key: "agent" }),
+      step({ key: "code-a", kind: "code" }),
+      step({ key: "code-b", kind: "code" }),
+    ]);
+    expect(
+      plan.launches.map((launch) => ({
+        keys: launch.steps.map((entry) => entry.key),
+        usesAgent: launch.usesAgent,
+      })),
+    ).toEqual([
+      { keys: ["agent"], usesAgent: true },
+      { keys: ["code-a", "code-b"], usesAgent: false },
+    ]);
   });
 });

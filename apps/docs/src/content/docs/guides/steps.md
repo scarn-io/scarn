@@ -1211,7 +1211,7 @@ The worker resolves the step with `@scarn/sdk/code-step-lookup` from the SDK ins
 
 During a run the worker writes a temporary `.code-step-runner-<uuid>.mjs` next to `sourceFile` and removes it afterwards.
 
-`fn(input, { artifactsDir })` also gets the absolute path of the step's artifacts folder. Write files there and return `Artifact.path("<relative path>")` in a `z.artifact` field to declare them (see [Returning a file from a code step](#returning-a-file-from-a-code-step)).
+`fn(input, { artifactsDir, fail })` also gets the absolute path of the step's artifacts folder. Write files there and return `Artifact.path("<relative path>")` in a `z.artifact` field to declare them (see [Returning a file from a code step](#returning-a-file-from-a-code-step)). `fail` fails the step with a named error (see [Failing with a named error](#failing-with-a-named-error)). A step that declares `mcps` also gets `mcp` (see [Calling MCP tools from a code step](#calling-mcp-tools-from-a-code-step)).
 
 See [`codeStep(options)`](/scarn/reference/sdk/#codestepoptions) for the full option table, including `errors`.
 
@@ -1219,7 +1219,156 @@ See [`codeStep(options)`](/scarn/reference/sdk/#codestepoptions) for the full op
 
 `codeStep()` also accepts [`environment`](#environment), with the same `vars` forms and rules as `defineStep()` and a `runtime` of `Runtime.managed.<id>()` (the default, `bun1`) or `Runtime.devcontainer()` (see [Runtime for code steps](#runtime-for-code-steps)). It takes `repo` with the same rules too (see [Repo access](#repo-access)): a code step that edits files is committed and pushed like an agent step, unless it uses `Repo.readOnly()`. There is no typed env argument to `fn`: the function reads the resolved variables from `process.env`.
 
-A code step never starts OpenCode. The worker launches the step's container (a managed runtime, or your devcontainer), runs the entrypoint, and reads the findings file the runner wrote, so a code step needs no AI provider credentials, and Scarn neither exports nor injects any for it. Scarn does not inject the OpenCode runtime mount, published port or host-gateway run args into its devcontainer, and writes no `.opencode/` files into the workspace. Those injections are what reject `docker-compose`-based devcontainer configs for AI steps, so a code step is not subject to that restriction. If the runner finishes without writing its findings file, the step fails immediately.
+A code step never starts OpenCode. The worker launches the step's container (a managed runtime, or your devcontainer), runs the entrypoint, and reads the findings file the runner wrote, so a code step needs no AI provider credentials, and Scarn neither exports nor injects any for it. Scarn does not inject the OpenCode runtime mount, published port or host-gateway run args into its devcontainer, and writes no `.opencode/` files into the workspace. Those injections are what reject `docker-compose`-based devcontainer configs for AI steps, so a code step is not subject to that restriction, unless it declares `mcps` (see [Where the servers run](#where-the-servers-run)). If the runner finishes without writing its findings file, the step fails immediately.
+
+### Calling MCP tools from a code step
+
+A code step can call tools on MCP servers from inside `fn`, as often as it needs, with no agent: search, then create if missing; page through results; call one tool per item in a loop. Declare the servers under `mcps`, the same `defineMcp` handles an agent step mounts, and call them through `context.mcp`:
+
+```typescript
+import { codeStep, z } from "@scarn/sdk/definitions/steps";
+import { notion } from "./mcps"; // defineMcp(...).withTools(notionTools)
+
+export const fileReport = codeStep({
+  key: "file-report",
+  name: "File report",
+  mcps: { notion },
+  inputSchema: z.object({ title: z.string(), body: z.string() }),
+  resultSchema: z.object({ pageId: z.string() }),
+  fn: async (input, { mcp }) => {
+    const found = await mcp.notion.search({ query: input.title });
+    if (found.results.length > 0) return { pageId: found.results[0].id };
+    const page = await mcp.notion.createPage({
+      title: input.title,
+      body: input.body,
+    });
+    return { pageId: page.id };
+  },
+});
+```
+
+- The `mcps` key is the server's name: `mcp.notion` calls the server mounted as `notion`. A key may not reuse a [connector](/scarn/guides/environments/#connectors) id of the step's environment.
+- `mcp.<server>.<tool>(args)` exists for each tool of a catalog bound with `.withTools()` (see [Build a library of MCP tool steps](/scarn/guides/mcp-tool-steps/#bind-the-catalog-to-a-server)). Arguments are typed and parsed with the tool's input schema before the call is sent. The result is the tool's `structuredContent`, parsed with its output schema, or the MCP content result `{ content, structuredContent }` when it declares none: the same result an MCP tool step has.
+- `mcp.<server>.call(toolName, args)` is the untyped escape hatch, for a handle with no catalog or a tool missing from it. It returns the MCP content result. A catalog tool keyed `call` is only reachable this way.
+- Each call takes an optional second argument `{ timeoutMs, signal }`. A call is bounded by the smallest of `timeoutMs`, the server's `timeout.execution` and 10 minutes. The step's own timeout still bounds the whole run.
+
+The MCP client runs in the worker, not in the step's container. `fn`'s calls go to a per-run MCP bridge on the worker host, which calls the server with the same server resolution as an agent step: repository refs, project connections, env vars and log masking. Server secrets (env, headers, connection credentials) never reach `fn`'s `process.env`. Each server keeps one connection for the whole run, so calls in a loop don't restart it. A connection that dies before a call is sent is reopened once; a call that reached the server is never retried.
+
+The task log gets one line per call, as for an MCP tool step, without argument values or content:
+
+```text
+mcp: starting notion (managed)
+mcp: notion.search called in 0.8s (ok)
+mcp: notion.create-page called in 1.2s (ok)
+```
+
+#### Errors from MCP calls
+
+A failed call throws one of these classes, exported from `@scarn/sdk/definitions/steps` and `@scarn/sdk/pipelines`. Catch one to handle it in `fn`. Left uncaught, it fails the step with its built-in name, the same name an [MCP tool step](/scarn/guides/mcp-tool-steps/#errors-retry-and-catch) fails with, so a pipeline can `.retry` or `.catch` both kinds the same way:
+
+| Class                   | Error name               | `code`                     | When                                                                                                                        |
+| ----------------------- | ------------------------ | -------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `McpArgsError`          | `Scarn.ArgsError`        | `SCARN_ARGS_ERROR`         | The arguments don't match the tool's input schema, `timeoutMs` isn't a positive integer, or the bridge rejected the request |
+| `McpToolError`          | `Scarn.McpToolError`     | `SCARN_MCP_TOOL_ERROR`     | The tool returned an error. `content` holds its content blocks                                                              |
+| `McpUnavailableError`   | `Scarn.McpUnavailable`   | `SCARN_MCP_UNAVAILABLE`    | The server couldn't be started, reached or used, has no such tool, or returned a result over 1 MiB. See `reason` below      |
+| `McpOutputInvalidError` | `Scarn.McpOutputInvalid` | `SCARN_MCP_OUTPUT_INVALID` | `structuredContent` is missing or doesn't match the tool's output schema                                                    |
+| `McpTimeoutError`       | `Scarn.Timeout`          | `SCARN_MCP_TOOL_TIMEOUT`   | The call ran past its time limit                                                                                            |
+
+`McpUnavailableError` carries `reason` and `detail`. `reason` is one of `start`, `connect`, `initialize`, `tool_not_found` and `output_too_large` from the server, or:
+
+- `no_bridge`: the bridge env vars aren't set, so the code isn't running inside a Scarn run, such as in a unit test without fakes.
+- `not_declared`: the server isn't one of the step's `mcps`.
+- `bridge`: the bridge couldn't be reached, rejected the run's token, or sent a response the SDK doesn't understand.
+- `no_fake`: a [fake client](#testing-with-fake-clients) has no fake for the tool.
+
+```typescript
+fn: async (input, { mcp }) => {
+  try {
+    return await mcp.notion.search({ query: input.title });
+  } catch (error) {
+    if (error instanceof McpToolError) return { results: [] };
+    throw error;
+  }
+},
+```
+
+#### Health checks before `fn`
+
+The `defineMcp` [health checks](#health-checks) of every server in `mcps` run before `fn` starts, as plain tool calls from the worker; no agent is involved. The rules are an agent step's: `required` checks run before `warn` checks, `serialGroup` is respected, a failed `required` check fails the step with `Scarn.HealthCheckFailed` without running `fn`, and a failed `warn` check is only logged. The checks open the connections `fn` then reuses. Only `defineMcp` checks apply: `codeStep` has no `healthChecks` option, and a code step has no MCP startup gate.
+
+A dry run (`scarn work --dry-run`, and the post-push dry run of `scarn pipelines design`) launches a code step's runtime without OpenCode and runs the same checks the same way.
+
+#### Where the servers run
+
+A code step's runtime doesn't change because it declares `mcps`: it is still `Runtime.managed.bun1()` unless the step or its environment says otherwise. A `local` (stdio) server is started inside the step's container, so its command must exist there. `bun1` has no `npx`, for example, and such a server fails at its first call or check with `Scarn.McpUnavailable` (`start`). Remote servers and servers authenticated by a project connection are called from the worker host and work in any runtime.
+
+The container reaches the bridge at `host.docker.internal`. The worker adds the run args that resolve it on Linux to managed runtimes and to `image` or Dockerfile devcontainers. A compose-based devcontainer ignores those run args, so a code step that declares `mcps` fails its launch there with "compose devcontainers aren't supported for code steps with `mcps` yet". Use an `image` or Dockerfile devcontainer, or a managed runtime. Code steps without `mcps` are unaffected.
+
+The bridge URL and token reach only the runner process, in `SCARN_MCP_BRIDGE_URL` and `SCARN_MCP_BRIDGE_TOKEN`. The token is masked in logs. Anything `fn` launches can call the bridge while the run is live, but only for the step's own servers.
+
+#### Testing with fake clients
+
+Outside a run there is no bridge, so every `context.mcp` call throws `McpUnavailableError` (`no_bridge`). To unit test `fn`, pass `createFakeMcpClients` as `mcp`. It is typed from the same catalogs, and arguments and results go through the same validation as the real client:
+
+```typescript
+import {
+  createFakeMcpClients,
+  failStep,
+  McpToolError,
+} from "@scarn/sdk/definitions/steps";
+import { notion } from "./mcps";
+import { fileReportFn } from "./file-report";
+
+const mcp = createFakeMcpClients(
+  { notion },
+  {
+    notion: {
+      search: async () => ({ results: [] }),
+      createPage: async ({ title }) => ({ id: `page-${title}` }),
+    },
+  },
+);
+
+const result = await fileReportFn(
+  { title: "Crash", body: "…" },
+  { artifactsDir: "/tmp/artifacts", fail: failStep, mcp },
+);
+```
+
+- A fake for a tool with an output schema returns that output; one for a tool without returns an MCP content result.
+- The untyped `call(toolName, args)` goes to the server's `call` fake.
+- A tool with no fake throws `McpUnavailableError` (`no_fake`).
+- A fake can throw any of the MCP error classes, such as `new McpToolError("not found", [])`, to test an error path.
+
+There is no way yet to make real MCP calls outside a run.
+
+### Failing with a named error
+
+A code step fails with `Scarn.StepFailed` when `fn` throws. To fail with a name a pipeline can [`retry` or `catch`](/scarn/guides/pipelines/#errors-retries-and-timeouts), declare it in `errors` and throw a `StepError`, or call `context.fail`:
+
+```typescript
+import { codeStep, StepError, z } from "@scarn/sdk/definitions/steps";
+
+export const rejectReport = codeStep({
+  key: "reject-report",
+  name: "Reject report",
+  errors: ["Report.Rejected"],
+  inputSchema: z.object({ filed: z.string() }),
+  fn: ({ filed }, { fail }) => {
+    if (filed === "") fail("Report.Rejected", "nothing was filed");
+    throw new StepError("Report.Rejected", `rejected ${filed}`, {
+      code: "REPORT_REJECTED",
+    });
+  },
+});
+```
+
+- `new StepError(name, message, { code?, cause? })` and `fail(name, message, { code?, cause? })` do the same thing. `fail` is typed to accept only the built-in names and the step's `errors`; a `throw` can't be type-checked.
+- The worker checks the name again. A name that is neither a built-in error nor in the step's `errors` is reported as `Scarn.StepFailed`, and the task log says why. `Scarn.All` only matches errors in `retry` and `catch`, so it is never accepted as a thrown name.
+- The Task's error carries the name, the message and `code`, which defaults to `SCARN_STEP_ERROR`.
+- A `StepError` is recognised by a brand, not `instanceof`, so one from another copy of the SDK still counts. `isStepError(value)` checks for it.
+- The MCP error classes above are `StepError`s with built-in names, which is why an uncaught one keeps its name.
+- When calling `fn` from a unit test, pass `failStep` as `fail`.
 
 ## Pushing steps
 

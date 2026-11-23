@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "server": "inventory",
+  "listedAt": "2026-11-23T16:29:32.497Z",
+  "hash": "sha256:c4beb5f0106beb4b1e588c1a678e5d185ec706409d8e10548efbf5bba0effcf2",
+  "tools": [
+    {
+      "name": "lookup_sku",
+      "title": "Look up a SKU",
+      "description": "Returns a SKU's name and how many units are in stock.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "sku": {
+            "type": "string"
+          }
+        },
+        "required": ["sku"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "sku": {
+            "type": "string"
+          },
+          "found": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "inStock": {
+            "type": "integer"
+          }
+        },
+        "required": ["sku", "found", "inStock"]
+      }
+    },
+    {
+      "name": "reserve_stock",
+      "title": "Reserve stock",
+      "description": "Reserves units of a SKU for an order.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "sku": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": ["sku", "quantity"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "reservationId": {
+            "type": "string"
+          },
+          "remaining": {
+            "type": "integer"
+          }
+        },
+        "required": ["reservationId", "remaining"]
+      }
+    }
+  ]
+}

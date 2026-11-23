@@ -15,6 +15,7 @@
     "seed": "bun --env-file=../../.env src/seed.ts",
     "work": "bun --env-file=../../.env src/work.ts",
     "worker": "bun --env-file=../../.env src/worker.ts",
+    "pull-inventory": "bun src/pull-inventory-catalog.ts",
     "typecheck": "tsgo -p tsconfig.json --noEmit --incremental"
   },
   "dependencies": {

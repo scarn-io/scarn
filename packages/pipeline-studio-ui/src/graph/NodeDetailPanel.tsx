@@ -7,6 +7,7 @@ import type {
 import { SeverityChip } from "./SeverityChip";
 import {
   MCP_TOOL_BADGE,
+  mcpServerKeys,
   mcpToolTarget,
   nodeCaption,
   severityColor,
@@ -118,6 +119,7 @@ export function NodeDetailPanel({
   const { data } = node;
   const { shape } = data;
   const mcpTool = mcpToolTarget(data);
+  const mcpServers = mcpServerKeys(data);
 
   return (
     <div className="studio-detail">
@@ -130,6 +132,17 @@ export function NodeDetailPanel({
         <div className="studio-detail-mcp-tool">
           <span className="studio-required-badge">{MCP_TOOL_BADGE}</span>{" "}
           <code>{mcpTool}</code>
+        </div>
+      ) : null}
+      {mcpServers ? (
+        <div className="studio-detail-mcp-tool">
+          <span className="studio-required-badge">MCP servers</span>{" "}
+          {mcpServers.map((server, index) => (
+            <span key={server}>
+              {index > 0 ? ", " : null}
+              <code>{server}</code>
+            </span>
+          ))}
         </div>
       ) : null}
       {notice ? <p className="studio-detail-notice">{notice}</p> : null}

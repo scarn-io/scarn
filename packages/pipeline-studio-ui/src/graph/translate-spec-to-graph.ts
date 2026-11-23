@@ -72,6 +72,9 @@ function nodeShape(
     ...(step.mcpTool
       ? { mcpTool: { server: step.mcpTool.server, tool: step.mcpTool.tool } }
       : {}),
+    ...(step.mcpServers && step.mcpServers.length > 0
+      ? { mcpServers: [...step.mcpServers] }
+      : {}),
   };
 }
 

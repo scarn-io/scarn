@@ -32,20 +32,59 @@ import {
   type RepoSpec,
 } from "./repo";
 import { isEnvironmentHandle } from "../../push/code-step-lookup";
+import { assertNoConnectorMcpCollisions, mergeStepMcps } from "./compile-mcps";
+import type { McpHandle } from "./define-mcp";
+import {
+  createCodeStepMcpClient,
+  type McpClients,
+} from "./code-step-mcp-client";
+import type { StepErrorOptions } from "./step-error";
 
-/** What the worker passes a code step besides its input. */
-export type CodeStepContext = {
+/** A code step's `mcps`: `defineMcp` handles keyed by the step's server key. */
+export type CodeStepMcps = Record<string, McpHandle>;
+
+/**
+ * Fails the step with a pipeline error name: a built-in one or one the step
+ * declares in `errors`. The Task fails with that name, so a pipeline's
+ * `retry` and `catch` can match it.
+ */
+export type CodeStepFail<TErrors extends string = never> = (
+  name: BuiltInError | TErrors,
+  message: string,
+  options?: StepErrorOptions,
+) => never;
+
+/**
+ * What a code step's `fn` gets besides its input. `mcp` is present only when
+ * the step declares `mcps`: one client per server key.
+ */
+export type CodeStepContext<
+  TMcps extends CodeStepMcps = Record<never, never>,
+  TErrors extends string = never,
+> = {
   /**
    * Absolute path of the step-artifacts folder, which already exists. Write
    * a file here and return its path relative to this folder with
    * `Artifact.path(...)` to fill an artifact field.
    */
   artifactsDir: string;
-};
+  /**
+   * Throws a `StepError` whose name the worker reports as the Task's error.
+   * Only built-in names and the step's `errors` type-check here; a bare
+   * `throw new StepError(...)` works too, and the worker reports any other
+   * name as `Scarn.StepFailed`. In a unit test, pass `failStep`.
+   */
+  fail: CodeStepFail<TErrors>;
+} & ([keyof TMcps] extends [never] ? unknown : { mcp: McpClients<TMcps> });
 
-export type CodeStepFn<TInput, TResult> = (
+export type CodeStepFn<
+  TInput,
+  TResult,
+  TMcps extends CodeStepMcps = Record<never, never>,
+  TErrors extends string = never,
+> = (
   input: TInput,
-  context: CodeStepContext,
+  context: CodeStepContext<TMcps, TErrors>,
 ) => TResult | Promise<TResult>;
 
 export type DefineCodeStepInput<
@@ -55,6 +94,8 @@ export type DefineCodeStepInput<
   TEnv extends EnvRecord = EnvRecord,
   TNamed extends NamedStepEnvironment | undefined =
     NamedStepEnvironment | undefined,
+  TMcps extends CodeStepMcps = Record<never, never>,
+  TErrors extends string = never,
 > = {
   key: string;
   name: string;
@@ -72,13 +113,28 @@ export type DefineCodeStepInput<
    * a step with `features: [Features.notifications()]` can return the
    * `$scarn_notifications_v1` field (e.g. via `Notify.inApp(...)`)
    * without a type error.
+   *
+   * With `mcps`, the context also carries `mcp`, whose clients call the
+   * servers' tools through the worker during a run. In a unit test, pass
+   * `createFakeMcpClients(...)` as `mcp` instead.
+   *
+   * `context.fail(name, message)` fails the step with a named error.
    */
   fn: CodeStepFn<
     TInput["_output"],
-    EffectiveResult<TResult["_output"], TFeatures>
+    EffectiveResult<TResult["_output"], TFeatures>,
+    TMcps,
+    NoInfer<TErrors>
   >;
   inputSchema?: TInput;
   resultSchema?: TResult;
+  /**
+   * The MCP servers `fn` calls, built with `defineMcp` (add a catalog with
+   * `withTools` for typed methods) and keyed by the step's server key. Each
+   * server's health checks run before `fn`. A key may not reuse a connector
+   * id of the step's environment.
+   */
+  mcps?: TMcps;
   /**
    * Step features to attach — unlike `defineStep()`, only each feature's
    * `_resultExtension` applies here (there is no prompt to append
@@ -119,12 +175,30 @@ export type DefineCodeStepInput<
    * Error names this step can fail with, beyond the built-in ones. A
    * pipeline's `retry.on` and `catch.on` may name them.
    */
-  errors?: readonly string[];
+  errors?: readonly TErrors[];
   /** As `defineStep()`'s `retry`: how a standalone Task of this step retries. */
   retry?: readonly StepRetryEntry[];
   /** As `defineStep()`'s `concurrency`: the per-work-item concurrency limit. */
   concurrency?: StepConcurrency;
 };
+
+type EntrypointFn = NonNullable<StepDefinitionSpec["entrypoint"]>["fn"];
+
+/**
+ * The function the worker runs. With `mcps` it wraps `fn` to add `mcp` to the
+ * worker's context; the clients read the bridge env on their first call, so
+ * the runner script stays unaware of MCP. Without `mcps` it is `fn` itself.
+ * The runner supplies `artifactsDir` and `fail`.
+ */
+function entrypointFn(
+  fn: (input: never, context: never) => unknown,
+  mcps: CodeStepMcps | undefined,
+): EntrypointFn {
+  const run = fn as unknown as EntrypointFn;
+  if (mcps === undefined || Object.keys(mcps).length === 0) return run;
+  const mcp = createCodeStepMcpClient(mcps);
+  return (input, context) => run(input, { ...context, mcp } as typeof context);
+}
 
 /**
  * Defines a `kind: "code"` step: a plain function instead of an LLM
@@ -140,12 +214,20 @@ export function codeStep<
   const TErrors extends string = never,
   TEnv extends EnvRecord = EnvRecord,
   TNamed extends NamedStepEnvironment | undefined = undefined,
+  TMcps extends CodeStepMcps = Record<never, never>,
 >(
   config: Omit<
-    DefineCodeStepInput<TInput, TResult, TFeatures, TEnv, TNamed>,
-    "errors" | "retry"
+    DefineCodeStepInput<
+      TInput,
+      TResult,
+      TFeatures,
+      TEnv,
+      TNamed,
+      TMcps,
+      TErrors
+    >,
+    "retry"
   > & {
-    errors?: readonly TErrors[];
     retry?: readonly {
       on: readonly (BuiltInError | TErrors)[];
       maxAttempts: number;
@@ -189,6 +271,12 @@ export function codeStep<
     knownEnvironmentVars(config.environment, environment),
     { stepKey: config.key },
   );
+  assertNoConnectorMcpCollisions(config.key, config.environment, config.mcps);
+  const mcpFields = mergeStepMcps(config.key, {
+    mcps: config.mcps,
+    healthChecks: null,
+    envJson: null,
+  });
 
   const spec: StepDefinitionSpec = {
     key: config.key,
@@ -205,8 +293,8 @@ export function codeStep<
     resultSchemaJson: effectiveResult
       ? toJSONSchema(effectiveResult as unknown as $ZodType)
       : null,
-    opencodeMcpJson: null,
-    healthChecksJson: null,
+    opencodeMcpJson: mcpFields.opencodeMcpJson,
+    healthChecksJson: mcpFields.healthChecksJson,
     ...(repo !== undefined ? { repo } : {}),
     errors: compileStepErrors(config.key, config.errors),
     retryJson: compileStepRetry(config.key, config.retry, config.errors ?? []),
@@ -215,7 +303,7 @@ export function codeStep<
           concurrency: compileStepConcurrency(config.key, config.concurrency),
         }
       : {}),
-    entrypoint: { fn: config.fn },
+    entrypoint: { fn: entrypointFn(config.fn, config.mcps) },
   };
 
   return toStepHandle(spec, environmentHandle) as StepHandle<

@@ -41,6 +41,7 @@ import {
 } from "../infra/opencode-client";
 import { forceAndVerifyCliHealthCheck } from "./force-and-verify-cli-health-check";
 import { forceAndVerifyMcpHealthCheck } from "./force-and-verify-mcp-health-check";
+import { scheduleHealthChecks } from "./health-check-scheduling";
 import { logWorkError } from "./work-logger";
 import type { OpencodeServerHandle } from "../../../runtime/runtime-service/infra/opencode-server-contract";
 
@@ -71,7 +72,9 @@ export type HealthCheckOutcome =
         | "tool-error"
         | "timeout"
         | "session-error"
-        | "nonzero-exit";
+        | "nonzero-exit"
+        /** A direct MCP check (no agent) whose server couldn't be reached or lacks the tool. */
+        | "unavailable";
       detail: string;
       /** Only set for `not-registered`: every id OpenCode does know about. */
       availableIds?: string[];
@@ -325,7 +328,7 @@ export type FailedHealthCheckOutcome = Extract<
 
 /**
  * Finds the first `required` check whose outcome is `failed`, in report
- * order (which matches declaration order — see {@link runHealthChecks}).
+ * order (which matches declaration order).
  * Used by a real task run (#120) to decide whether to kill the step
  * before the agent is prompted; `warn` failures are advisory and never
  * matched here.
@@ -372,115 +375,14 @@ export function buildReport(
   };
 }
 
-type IndexedCheck = { check: HealthCheck; index: number };
-
-/**
- * Shared across every lane in a single phase (see {@link runPhase}): once any
- * lane's check fails as `required`, every OTHER lane checks this before
- * starting its own next check. This is a best-effort abort, not a hard stop —
- * a check already in flight when the flag flips is not cancelled and its real
- * outcome (pass or fail) is kept; only checks that haven't started yet get
- * `skipped`. Trading determinism for speed here is deliberate: with several
- * lanes genuinely running in parallel, there is no single well-defined
- * "everything after the failure" to abort atomically the way the old fully
- * sequential runner could.
- */
-type AbortFlag = { aborted: boolean };
-
-/**
- * Runs one lane — checks that share a `serialGroup` (or a single ungrouped
- * check) — strictly one at a time, in declaration order, honouring `abort`
- * before starting each one. Lanes themselves run concurrently with each
- * other; see {@link runPhase}.
- */
-async function runLane(
-  lane: IndexedCheck[],
-  context: CheckContext,
-  abort: AbortFlag,
-  reportByIndex: Map<number, HealthCheckReport>,
-): Promise<void> {
-  for (const { check, index } of lane) {
-    const resolvedId = resolveHealthCheckToolId(check);
-    if (abort.aborted) {
-      reportByIndex.set(
-        index,
-        buildReport(check, resolvedId, { kind: "skipped" }),
-      );
-      continue;
-    }
-    const outcome = await runOneCheck({
-      check,
-      resolvedId,
-      ...context,
-    });
-    reportByIndex.set(index, buildReport(check, resolvedId, outcome));
-    if (outcome.kind === "failed" && check.severity === "required") {
-      abort.aborted = true;
-    }
-  }
-}
-
-/**
- * Groups `entries` into lanes — checks sharing a `serialGroup` value become
- * one lane (run sequentially, in declaration order, relative to each other);
- * every ungrouped check gets its own single-check lane — then runs every
- * lane concurrently. Used once per severity phase (see {@link
- * runHealthChecks}), never across phases: `required` and `warn` are already
- * separated by a full `await` barrier, so a `serialGroup` shared between a
- * `required` and a `warn` check is naturally never a concurrency concern.
- */
-async function runPhase(
-  entries: IndexedCheck[],
-  context: CheckContext,
-  abort: AbortFlag,
-  reportByIndex: Map<number, HealthCheckReport>,
-): Promise<void> {
-  const groups = new Map<string, IndexedCheck[]>();
-  const lanes: IndexedCheck[][] = [];
-
-  for (const entry of entries) {
-    const key = entry.check.serialGroup;
-    if (key === undefined) {
-      lanes.push([entry]);
-      continue;
-    }
-    const group = groups.get(key);
-    if (group) {
-      group.push(entry);
-    } else {
-      const newGroup = [entry];
-      groups.set(key, newGroup);
-      lanes.push(newGroup);
-    }
-  }
-
-  await Promise.all(
-    lanes.map((lane) => runLane(lane, context, abort, reportByIndex)),
-  );
-}
-
 /**
  * Runs a step's declared health checks against a launched environment and
  * reports an outcome for each one, returned in the same order as
  * `input.healthChecks`.
  *
- * Two phases run in strict order: every `required` check, then every `warn`
- * check — a `warn` failure never aborts anything, since `warn` exists
- * precisely to be advisory (see `healthCheckSeverityValues`).
- *
- * Within a phase, checks run in PARALLEL by default: each check is its own
- * lane. Set `serialGroup` on checks that contend over the same underlying
- * resource (a shared database, a browser that can't run two sessions at
- * once, etc.) — checks sharing a `serialGroup` value form one lane and run
- * one at a time, in declaration order, while still running concurrently with
- * every other lane. See {@link runPhase}/{@link runLane}.
- *
- * A `required` failure sets a shared abort flag every lane checks before
- * starting its next check; this is best-effort, not a hard stop — see {@link
- * AbortFlag}. If the `required` phase ends with the flag set, the entire
- * `warn` phase is skipped without attempting a single check (that part IS
- * deterministic: phases are separated by a full `await`, so nothing in the
- * `warn` phase has started yet when this decision is made).
+ * Scheduling (`required` before `warn`, parallel lanes, `serialGroup`, the
+ * best-effort abort on a `required` failure) lives in
+ * `health-check-scheduling.ts`, shared with the direct runner a code step uses.
  */
 export async function runHealthChecks(
   input: RunHealthChecksInput,
@@ -496,12 +398,6 @@ export async function runHealthChecks(
     server,
   );
 
-  const indexed = healthChecks.map((check, index) => ({ check, index }));
-  const required = indexed.filter(({ check }) => check.severity === "required");
-  const warn = indexed.filter(({ check }) => check.severity === "warn");
-
-  const reportByIndex = new Map<number, HealthCheckReport>();
-  const abort: AbortFlag = { aborted: false };
   const context: CheckContext = {
     enumeration,
     server,
@@ -509,16 +405,14 @@ export async function runHealthChecks(
     pollIntervalMs: input.healthCheckPollIntervalMs,
   };
 
-  await runPhase(required, context, abort, reportByIndex);
-  await runPhase(warn, context, abort, reportByIndex);
-
-  return healthChecks.map((_, index) => {
-    const report = reportByIndex.get(index);
-    if (!report) {
-      throw new Error(
-        `Internal error: the health check runner produced no report for index ${String(index)}`,
-      );
-    }
-    return report;
-  });
+  const results = await scheduleHealthChecks(healthChecks, (check) =>
+    runOneCheck({
+      check,
+      resolvedId: resolveHealthCheckToolId(check),
+      ...context,
+    }),
+  );
+  return results.map(({ check, outcome }) =>
+    buildReport(check, resolveHealthCheckToolId(check), outcome),
+  );
 }

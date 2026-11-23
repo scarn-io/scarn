@@ -7,7 +7,10 @@ import { planClaimedStepEnv } from "./plan-step-env-with-secrets";
 import { requestProjectSecrets } from "./request-project-secrets";
 import { taskKindUsesAgent } from "./task-kind-runtime";
 import { runAgentStepBranch } from "./process-claimed-task-run-agent-branch";
-import { runCodeStepBranch } from "./process-claimed-task-run-code-branch";
+import {
+  openCodeStepMcpBridge,
+  runCodeStepBranch,
+} from "./process-claimed-task-run-code-branch";
 import { runMcpToolStepBranch } from "./process-claimed-task-run-mcp-tool-branch";
 import {
   fetchWorkerContext,
@@ -32,9 +35,11 @@ import type {
   TaskRunWorkerClient,
 } from "../contracts/process-project-work-types";
 import type { FakeAiServer } from "../infra/fake-ai";
+import type { McpBridgeSession } from "../../../runtime/mcp-bridge/infra";
 import type { RunHandle } from "./run-registry";
 import {
   runLaunchGatesOrThrow,
+  stopLaunchGateResources,
   startHealthCheckHarnessIfDeclared,
 } from "./health-check-gate";
 
@@ -115,6 +120,9 @@ export async function startProcessClaimedTaskRun(
   // scoped to the `try` block) so the `catch` block can stop it too if
   // something throws before the normal stop point is reached.
   let fakeAiServer: FakeAiServer | undefined;
+  // A code step's MCP bridge, open from before the launch gates (its health
+  // checks warm the pool) until the step ends; stopped here on every path.
+  let mcpBridge: McpBridgeSession | null = null;
 
   await createTrackedSession(tracker, {
     localRuntimeSessionId,
@@ -154,19 +162,18 @@ export async function startProcessClaimedTaskRun(
     let promptEnv: Record<string, string> = {};
 
     // Steps whose kind does not prompt an agent (`code`: a plain function run
-    // in the devcontainer) never declare health checks (no prompting harness
-    // to gate), never get an OpenCode server, and skip prompt rendering. The
-    // runtime environment (launch, work-branch checkout) stays required
-    // exactly as for an agent step.
+    // in the devcontainer) never get an OpenCode server or a fake-AI harness,
+    // and skip prompt rendering; a code step's MCP health checks run directly
+    // through its MCP bridge's pool instead. The runtime environment (launch,
+    // work-branch checkout) stays required exactly as for an agent step.
     const { kind } = workerContext.task;
     const usesAgent = taskKindUsesAgent(kind);
 
     // A step declaring no health checks must be byte-identical to today: no
     // fake-AI harness starts, no synthetic provider is registered, and
     // `fakeAiProviderOverride` stays unset below.
-    const declaredHealthChecks: HealthCheck[] = usesAgent
-      ? (workerContext.runtime.healthChecksJson ?? [])
-      : [];
+    const declaredHealthChecks: HealthCheck[] =
+      kind === "mcp_tool" ? [] : (workerContext.runtime.healthChecksJson ?? []);
     throwIfAborted();
 
     logger.log("step", "Launching runtime environment", {
@@ -285,6 +292,15 @@ export async function startProcessClaimedTaskRun(
       taskRunId: input.claim.task.id,
     });
 
+    mcpBridge = await openCodeStepMcpBridge({
+      deps,
+      logger,
+      workerContext,
+      environment,
+      registerSecretValues: (values) => logStream?.registerSecretValues(values),
+      run: input.run,
+    });
+
     // The launch gates: the MCP startup gate (decision 10), then declared
     // health checks (#120). A failure throws here, before any provider tokens
     // are spent and before the prompt is even rendered.
@@ -299,6 +315,8 @@ export async function startProcessClaimedTaskRun(
         fakeAiServer,
         healthChecks: declaredHealthChecks,
         runHealthChecksOverride: deps.runHealthChecks,
+        mcpPool: mcpBridge?.pool,
+        signal: input.run?.signal ?? new AbortController().signal,
         logger,
         reporter,
         taskRunId: input.claim.task.id,
@@ -346,7 +364,8 @@ export async function startProcessClaimedTaskRun(
     };
     switch (kind) {
       case "code":
-        await runCodeStepBranch({ ...branchInput, stepEnv });
+        await runCodeStepBranch({ ...branchInput, stepEnv, mcpBridge });
+        await mcpBridge?.stop();
         break;
       case "mcp_tool":
         await runMcpToolStepBranch({
@@ -430,25 +449,14 @@ export async function startProcessClaimedTaskRun(
       localRuntimeSessionId,
       hasCleanup: cleanup !== null,
     });
-    // Normally already stopped (and cleared) right after health checks
-    // complete; only still set here if something threw before that point
-    // (e.g. the runtime launch itself failed).
-    if (fakeAiServer) {
-      // eslint-disable-next-line local/no-unknown-parameter-type -- narrows a caught value, not a real input boundary
-      await fakeAiServer.stop().catch((stopError: unknown) => {
-        logger.error(
-          "step",
-          "Failed to stop the fake AI server after failure",
-          {
-            taskRunId: input.claim.task.id,
-            error:
-              stopError instanceof Error
-                ? stopError.message
-                : String(stopError),
-          },
-        );
-      });
-    }
+    // Stops the harness if something threw before the gates stopped it, and
+    // the MCP bridge (idempotent, so a failed stop after success is harmless).
+    await stopLaunchGateResources({
+      fakeAiServer,
+      mcpBridge,
+      logger,
+      taskRunId,
+    });
     if (input.preserveRuntimeOnFailure) {
       logger.log("step", "Preserving runtime environment after failure", {
         taskRunId,

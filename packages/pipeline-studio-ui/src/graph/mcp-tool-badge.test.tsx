@@ -5,7 +5,7 @@ import type { NodeProps } from "@xyflow/react";
 import { GraphNode, type GraphNodeType } from "./GraphNode";
 import { NodeDetailPanel } from "./NodeDetailPanel";
 import type { StudioNode, StudioNodeData } from "./studio-graph-types";
-import { mcpToolTarget } from "./studio-graph-visuals";
+import { mcpServerKeys, mcpToolTarget } from "./studio-graph-visuals";
 import { translateDocumentToGraph } from "./translate-spec-to-graph";
 
 const STEP_SHAPE = {
@@ -94,5 +94,65 @@ describe("MCP tool steps in the studio", () => {
     expect(html).toContain("MCP tool");
     expect(html).toContain("<code>linear.create_issue</code>");
     expect(renderPanel(stepData())).not.toContain("MCP tool");
+  });
+});
+
+function codeStepData(mcpServers?: string[]): StudioNodeData {
+  return {
+    label: "Sync",
+    kind: "step",
+    stepKey: "sync",
+    issues: [],
+    shape: { ...STEP_SHAPE, ...(mcpServers ? { mcpServers } : {}) },
+  };
+}
+
+describe("code steps with MCP servers in the studio", () => {
+  test("the catalog's server keys reach the step node's shape", () => {
+    const { nodes } = translateDocumentToGraph(
+      {
+        schemaVersion: 1,
+        key: "p",
+        start: { to: "sync" },
+        nodes: {
+          sync: {
+            kind: "step",
+            step: "sync",
+            next: { routes: [], otherwise: { to: "done" } },
+          },
+          done: { kind: "succeed" },
+        },
+      },
+      [],
+      {
+        sync: {
+          inputSchema: true,
+          resultSchema: true,
+          errors: [],
+          mcpServers: ["db", "docs"],
+        },
+      },
+    );
+    const sync = nodes.find((node) => node.id === "sync");
+    expect(sync && mcpServerKeys(sync.data)).toEqual(["db", "docs"]);
+  });
+
+  test("the graph node shows a servers badge only when servers are mounted", () => {
+    const html = renderNode(codeStepData(["db", "docs"]));
+    expect(html).toContain('data-badge="mcp-servers"');
+    expect(html).toContain("MCP servers: db, docs");
+    expect(html).not.toContain('data-badge="mcp-tool"');
+
+    expect(renderNode(codeStepData())).not.toContain(
+      'data-badge="mcp-servers"',
+    );
+  });
+
+  test("the detail panel lists the server keys", () => {
+    const html = renderPanel(codeStepData(["db", "docs"]));
+    expect(html).toContain("MCP servers");
+    expect(html).toContain("<code>db</code>");
+    expect(html).toContain("<code>docs</code>");
+    expect(renderPanel(codeStepData())).not.toContain("MCP servers");
   });
 });

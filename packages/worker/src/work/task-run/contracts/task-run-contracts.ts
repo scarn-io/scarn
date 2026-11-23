@@ -122,6 +122,11 @@ export type TaskRunWorkerContextContract = {
     /** `kind === "mcp_tool"` only; null for every other kind. */
     toolCall: TaskToolCall | null;
     resultSchemaJson: Record<string, unknown> | null;
+    /**
+     * The error names the Task's step declares, besides the built-in ones: a
+     * code step's thrown `StepError` may use only these or a built-in name.
+     */
+    declaredErrors: string[];
     /** How many more turns the agent may hand to a person; null outside a pipeline run. */
     turnsRemaining?: number | null;
     workItemId?: string;

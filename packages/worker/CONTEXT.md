@@ -50,6 +50,21 @@ A worker started in the terminal for one project that polls once, waits for
 the runs it claimed and exits. It saves nothing and has no control API.
 _Avoid_: `work --once` (the old command)
 
+### MCP calls
+
+**MCP bridge**:
+The small HTTP server the worker opens for one run of a `code` step that
+declares `mcps`. The step's code reaches it at `host.docker.internal:<port>`
+with a per-run bearer token, and the worker makes each call with its own MCP
+client over one pooled connection per server, then stops the bridge when the
+run ends. It's the same pattern as the git credential relay. It's not the
+managed MCP relay, which is Scarn's API route for managed connections (see
+[Core](../core/CONTEXT.md#mcp-tool-steps) and
+`docs/adr/0013-managed-mcp-connections.md`); a bridged call to a managed
+server goes on from the worker through that relay. See
+`docs/adr/0016-mcp-calls-from-code-steps.md`.
+_Avoid_: relay, MCP relay, MCP proxy, MCP gateway
+
 ### Concurrency
 
 **Slot**:

@@ -5539,6 +5539,7 @@ export type PostApiTaskRunsByTaskRunIdWorkerContextResponses = {
             resultSchemaJson: {
                 [key: string]: unknown;
             } | null;
+            declaredErrors: Array<string>;
             turnsRemaining: number | null;
             workItemId: string | null;
             conversationId: string | null;

@@ -69,8 +69,8 @@ function collectDefinitions(
 
 /**
  * The highest local version of each step key, with the error names it
- * declares and, for an MCP tool step, the tool it calls. Takes handles or
- * plain specs.
+ * declares and, for an MCP tool step, the tool it calls; for a code step, the
+ * MCP server keys it mounts. Takes handles or plain specs.
  */
 export function buildLocalStepCatalog(
   steps: readonly StepDefinitionSpec[],
@@ -94,6 +94,11 @@ export function buildLocalStepCatalog(
                 tool: step.toolCall.tool,
               },
             }
+          : {}),
+        ...(step.kind === "code" &&
+        step.opencodeMcpJson &&
+        Object.keys(step.opencodeMcpJson).length > 0
+          ? { mcpServers: Object.keys(step.opencodeMcpJson) }
           : {}),
       },
     ]),

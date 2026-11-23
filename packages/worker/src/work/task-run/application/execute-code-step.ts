@@ -29,9 +29,12 @@
  * `buildFindingsSubmissionPath` / `process-project-work-findings.ts`, reused
  * here verbatim) — the downstream `tryPersistAgentFindings` path needs zero
  * changes, since it is already agnostic to how `resultJson` was produced.
+ *
+ * When `fn` throws a `StepError`, the runner also writes
+ * `.scarn/tmp/code-step-error-<id>.json`; see `codeStepFailure`.
  */
 import { execFile } from "node:child_process";
-import { mkdir, readdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 import { buildStepArtifactsDir } from "@scarn/sdk/contracts/step-artifact-submissions";
@@ -41,6 +44,7 @@ import {
   dockerProcessEnv,
 } from "../../../runtime/runtime-service/infra/docker-env-flags";
 import { CODE_STEP_RUNNER_SCRIPT_SOURCE } from "./code-step-runner-script";
+import { codeStepFailure } from "./named-step-error";
 import { buildFindingsSubmissionPath } from "./process-project-work-findings";
 import { shQuote } from "./process-project-work-monitor-helpers";
 
@@ -74,6 +78,8 @@ export type ExecuteCodeStepInput = {
   entrypointJson: CodeStepEntrypoint;
   /** The step definition's key, which the runner looks up in the module. */
   stepKey: string;
+  /** The error names the step declares, besides the built-in ones. */
+  declaredErrors: readonly string[];
   inputJson: unknown;
   /**
    * The runtime a managed step's image provides, invoked directly. Omitted for
@@ -186,6 +192,7 @@ function buildRunnerInvocationScript(input: {
   inputFilePath: string;
   findingsFilePath: string;
   artifactsDir: string;
+  errorFilePath: string;
 }): string {
   const runnerArgs = [
     shQuote(input.runnerScriptPath),
@@ -194,6 +201,7 @@ function buildRunnerInvocationScript(input: {
     shQuote(input.inputFilePath),
     shQuote(input.findingsFilePath),
     shQuote(input.artifactsDir),
+    shQuote(input.errorFilePath),
   ].join(" ");
   const enterWorkspace = `cd ${shQuote(input.workspaceFolder)} &&`;
 
@@ -260,11 +268,16 @@ async function removeStaleRunners(directory: string): Promise<void> {
  * environment and writes its result to the findings-submission file. Throws
  * with a clear message on any failure (missing export, thrown error, command
  * dispatch failure, etc.) so the caller (`process-claimed-task-run.ts`)
- * surfaces a real error instead of silently producing no findings.
+ * surfaces a real error instead of silently producing no findings. A thrown
+ * `StepError` the step may fail with becomes a `NamedStepError`; `onLog`
+ * hears why one with any other name was reported as a plain failure.
  */
 export async function executeCodeStep(
   input: ExecuteCodeStepInput,
-  deps: { runCommand?: RunCodeStepCommand } = {},
+  deps: {
+    runCommand?: RunCodeStepCommand;
+    onLog?: (message: string, details: Record<string, unknown>) => void;
+  } = {},
 ): Promise<void> {
   const runCommand = deps.runCommand ?? defaultRunCodeStepCommand;
   const tmpId = createUuidV7();
@@ -278,6 +291,10 @@ export async function executeCodeStep(
     CODE_STEP_TMP_RELATIVE_DIR,
     `code-step-input-${tmpId}.json`,
   );
+  const relativeErrorFilePath = path.posix.join(
+    CODE_STEP_TMP_RELATIVE_DIR,
+    `code-step-error-${tmpId}.json`,
+  );
 
   const hostRunnerScriptPath = resolveInsideWorkspace(
     input.environment.workspacePath,
@@ -287,6 +304,10 @@ export async function executeCodeStep(
     input.environment.workspacePath,
     relativeInputFilePath,
   );
+  const hostErrorFilePath = path.join(
+    input.environment.workspacePath,
+    relativeErrorFilePath,
+  );
 
   const runnerVisibleRunnerScriptPath = path.posix.join(
     input.environment.workspaceFolder,
@@ -295,6 +316,10 @@ export async function executeCodeStep(
   const runnerVisibleInputFilePath = path.posix.join(
     input.environment.workspaceFolder,
     relativeInputFilePath,
+  );
+  const runnerVisibleErrorFilePath = path.posix.join(
+    input.environment.workspaceFolder,
+    relativeErrorFilePath,
   );
   const runnerVisibleEntrypointPath = path.posix.join(
     input.environment.workspaceFolder,
@@ -334,6 +359,7 @@ export async function executeCodeStep(
       inputFilePath: runnerVisibleInputFilePath,
       findingsFilePath: runnerVisibleFindingsPath,
       artifactsDir: runnerVisibleArtifactsDir,
+      errorFilePath: runnerVisibleErrorFilePath,
     });
 
     const result = await runCommand({
@@ -346,16 +372,24 @@ export async function executeCodeStep(
       const details = [result.stderr.trim(), result.stdout.trim()]
         .filter((text) => text.length > 0)
         .join("\n");
-      throw new Error(
-        `Code task failed (exit code ${String(result.exitCode)}) ` +
+      throw codeStepFailure({
+        message:
+          `Code task failed (exit code ${String(result.exitCode)}) ` +
           `for ${input.entrypointJson.sourceFile} (step "${input.stepKey}")` +
           (details ? `: ${details}` : ""),
-      );
+        errorFileText: await readFile(hostErrorFilePath, "utf8").catch(
+          () => null,
+        ),
+        declaredErrors: input.declaredErrors,
+        stepKey: input.stepKey,
+        onLog: deps.onLog,
+      });
     }
   } finally {
     await Promise.allSettled([
       rm(hostRunnerScriptPath, { force: true }),
       rm(hostInputFilePath, { force: true }),
+      rm(hostErrorFilePath, { force: true }),
     ]);
   }
 }

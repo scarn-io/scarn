@@ -74,6 +74,7 @@ export function createWorkerContext(
       "Open {{env.BASE_URL}} for {{input.title}} and save to {{scarn.artifactsDir}}trace.zip. Legacy: {{title}} and {{stepArtifactsDir}}trace.zip.",
     entrypointJson: null,
     toolCall: null,
+    declaredErrors: [],
     resultSchemaJson: { type: "object" },
     grants: [],
   };

@@ -37,6 +37,7 @@ async function namedSteps(
       stepDefinitionId: `id-${key}`,
       key,
       name: key,
+      kind: "user_defined" as const,
       environment: await resolveStepEnvironmentRef(
         { kind: "named", name },
         fetchLatest,
@@ -134,6 +135,7 @@ describe("resolved dry-run reporting", () => {
       stepDefinitionId: key,
       key,
       name: key,
+      kind: "user_defined",
       environment: namedEnvironment({ runtime: { kind: "host" } }, { version }),
       opencodeMcpJson: null,
       healthChecksJson: [
@@ -248,6 +250,7 @@ describe("resolved dry-run reporting", () => {
             id: "id",
             key: "review",
             name: "Review",
+            kind: "user_defined",
             environment: { kind: "named", name: "local" },
             repo: input.repo,
             resultSchemaJson: null,
@@ -268,6 +271,7 @@ describe("resolved dry-run reporting", () => {
             stepDefinitionId: "review",
             key: "review",
             name: "Review",
+            kind: "user_defined",
             environment: namedEnvironment({ runtime }),
             opencodeMcpJson: null,
             healthChecksJson: [

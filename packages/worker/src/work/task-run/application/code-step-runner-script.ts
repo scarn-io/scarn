@@ -15,11 +15,18 @@
  * bare `@scarn/sdk/code-step-lookup` import resolves by walking up from the
  * same directory as the module's own imports do.
  *
- * The step function is called as `fn(inputJson, { artifactsDir })`; the folder
- * is created first so the step can write files there and return their paths
- * with `Artifact.path(...)`. One-argument steps simply ignore the context.
+ * The step function is called as `fn(inputJson, { artifactsDir, fail })`; the
+ * folder is created first so the step can write files there and return their
+ * paths with `Artifact.path(...)`. `fail` throws a `StepError` built here, so
+ * it works whatever SDK version the module bundles. One-argument steps simply
+ * ignore the context.
  *
- * argv: `<entrypointAbsPath> <stepKey> <inputFileAbsPath> <findingsFileAbsPath> <artifactsDirAbsPath>`.
+ * When `fn` throws a `StepError` (recognised by its
+ * `Symbol.for("scarn.stepError")` brand, so one from any copy of the SDK
+ * counts), the runner also writes `{ name, code, message }` to the error file
+ * for `execute-code-step.ts` to report as the Task's error.
+ *
+ * argv: `<entrypointAbsPath> <stepKey> <inputFileAbsPath> <findingsFileAbsPath> <artifactsDirAbsPath> <errorFileAbsPath>`.
  * Every failure is an exit code of 1 with a message on stderr.
  */
 export const CODE_STEP_RUNNER_SCRIPT_SOURCE = `
@@ -27,8 +34,46 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+const STEP_ERROR_BRAND = Symbol.for("scarn.stepError");
+
 function describeError(error) {
   return error instanceof Error ? (error.stack ?? error.message) : String(error);
+}
+
+function isStepError(error) {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    error[STEP_ERROR_BRAND] === true &&
+    typeof error.name === "string"
+  );
+}
+
+function fail(name, message, options = {}) {
+  const error = new Error(
+    message,
+    options.cause === undefined ? undefined : { cause: options.cause },
+  );
+  Object.defineProperty(error, "name", { value: name, configurable: true });
+  error.code = options.code;
+  error[STEP_ERROR_BRAND] = true;
+  throw error;
+}
+
+async function writeStepError(errorFilePath, error) {
+  const record = {
+    name: error.name,
+    code: typeof error.code === "string" ? error.code : null,
+    message: typeof error.message === "string" ? error.message : String(error),
+  };
+  try {
+    await mkdir(path.dirname(errorFilePath), { recursive: true });
+    await writeFile(errorFilePath, JSON.stringify(record), "utf8");
+  } catch (writeError) {
+    console.error(
+      \`scarn code-step runner: failed to write the step error to \${errorFilePath}: \${describeError(writeError)}\`,
+    );
+  }
 }
 
 async function readInstalledSdkVersion() {
@@ -50,9 +95,24 @@ async function readInstalledSdkVersion() {
 }
 
 async function main() {
-  const [, , entrypointPath, stepKey, inputFilePath, findingsFilePath, artifactsDir] =
-    process.argv;
-  if (!entrypointPath || !stepKey || !inputFilePath || !findingsFilePath || !artifactsDir) {
+  const [
+    ,
+    ,
+    entrypointPath,
+    stepKey,
+    inputFilePath,
+    findingsFilePath,
+    artifactsDir,
+    errorFilePath,
+  ] = process.argv;
+  if (
+    !entrypointPath ||
+    !stepKey ||
+    !inputFilePath ||
+    !findingsFilePath ||
+    !artifactsDir ||
+    !errorFilePath
+  ) {
     console.error("scarn code-step runner: missing required arguments");
     process.exitCode = 1;
     return;
@@ -137,11 +197,12 @@ async function main() {
 
   let result;
   try {
-    result = await fn(inputJson, { artifactsDir });
+    result = await fn(inputJson, { artifactsDir, fail });
   } catch (error) {
     console.error(
       \`scarn code-step runner: code step "\${stepKey}" threw: \${describeError(error)}\`,
     );
+    if (isStepError(error)) await writeStepError(errorFilePath, error);
     process.exitCode = 1;
     return;
   }

@@ -29,7 +29,9 @@ import type { McpContentBlock, McpToolCallOutcome } from "./mcp-tool-caller";
 import { McpToolStepError } from "./mcp-tool-step-error";
 import {
   assertMcpToolResultWithinCap,
-  formatCallDuration,
+  DEFAULT_MCP_TOOL_CALL_TIMEOUT_MS,
+  formatMcpServerStartingLine,
+  formatMcpToolCalledLine,
   mcpServerTransportLabel,
   mcpToolOutcomeContentBlocks,
   mcpToolOutcomeLabel,
@@ -39,9 +41,6 @@ import type { RunHandle } from "./run-registry";
 
 /** How much of a tool's error text `Scarn.McpToolError` carries. */
 export const MCP_TOOL_ERROR_MESSAGE_MAX_CHARS = 2_000;
-
-/** The call timeout when neither the server nor the step sets one. */
-export const DEFAULT_MCP_TOOL_CALL_TIMEOUT_MS = 10 * 60 * 1_000;
 
 type JsonSchema = Record<string, unknown> | boolean;
 
@@ -88,13 +87,17 @@ export async function runMcpToolStepBranch(input: {
     server,
     workerContext.runtime.opencodeMcpJson,
   );
-  input.logger.log("step", `mcp: starting ${toolCall.server} (${transport})`, {
-    taskRunId: input.taskRunId,
-    localRuntimeSessionId: input.localRuntimeSessionId,
-    stepKey: workerContext.task.key,
-    tool: toolCall.tool,
-    argKeys: Object.keys(args),
-  });
+  input.logger.log(
+    "step",
+    formatMcpServerStartingLine(toolCall.server, transport),
+    {
+      taskRunId: input.taskRunId,
+      localRuntimeSessionId: input.localRuntimeSessionId,
+      stepKey: workerContext.task.key,
+      tool: toolCall.tool,
+      argKeys: Object.keys(args),
+    },
+  );
   input.reporter.event({
     type: "task:agent-running",
     taskRunId: input.taskRunId,
@@ -117,7 +120,12 @@ export async function runMcpToolStepBranch(input: {
   });
   input.logger.log(
     "step",
-    `mcp: ${label} called in ${formatCallDuration(performance.now() - startedAt)} (${mcpToolOutcomeLabel(outcome)})`,
+    formatMcpToolCalledLine(
+      toolCall.server,
+      toolCall.tool,
+      performance.now() - startedAt,
+      mcpToolOutcomeLabel(outcome),
+    ),
     {
       taskRunId: input.taskRunId,
       contentBlocks: mcpToolOutcomeContentBlocks(outcome),

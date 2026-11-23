@@ -18,6 +18,30 @@ import { stepConnectionAuthEntries } from "./resolve-step-env";
 /** The largest serialized findings an `mcp_tool` step may produce. */
 export const MCP_TOOL_RESULT_MAX_BYTES = 1024 * 1024;
 
+/** The call timeout when neither the server nor the caller sets one. */
+export const DEFAULT_MCP_TOOL_CALL_TIMEOUT_MS = 10 * 60 * 1_000;
+
+/** `mcp: starting <server> (<transport>)`, logged when a server is first used. */
+export function formatMcpServerStartingLine(
+  serverKey: string,
+  transport: McpServerTransportLabel,
+): string {
+  return `mcp: starting ${serverKey} (${transport})`;
+}
+
+/**
+ * `mcp: <server>.<tool> called in <duration> (<outcome>)`, where `outcome`
+ * is usually {@link mcpToolOutcomeLabel}.
+ */
+export function formatMcpToolCalledLine(
+  serverKey: string,
+  tool: string,
+  durationMs: number,
+  outcome: string,
+): string {
+  return `mcp: ${serverKey}.${tool} called in ${formatCallDuration(durationMs)} (${outcome})`;
+}
+
 export type McpServerTransportLabel = "local" | "remote" | "managed";
 
 /**
@@ -74,7 +98,8 @@ export function assertMcpToolResultWithinCap(
   );
 }
 
-function formatBytes(bytes: number): string {
+/** `512 B`, `1.5 KiB` or `2 MiB`. */
+export function formatBytes(bytes: number): string {
   if (bytes >= 1024 * 1024) {
     return `${trimFixed(bytes / (1024 * 1024))} MiB`;
   }

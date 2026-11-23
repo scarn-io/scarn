@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { codeStep, defineStep, z } from "@scarn/sdk/definitions/steps";
+import {
+  codeStep,
+  defineStep,
+  toStepSpec,
+  z,
+} from "@scarn/sdk/definitions/steps";
 import { buildLocalStepCatalog } from "../../../../src/pipelines/pipeline-studio/application/compute-studio-snapshot";
 
 describe("buildLocalStepCatalog", () => {
@@ -54,6 +59,23 @@ describe("buildLocalStepCatalog", () => {
       tool: "create_issue",
     });
     expect(catalog["create-issue"]?.resultSchema).toEqual({ type: "object" });
+  });
+
+  test("carries the MCP server keys a code step mounts", () => {
+    const fix = toStepSpec(
+      codeStep({ key: "fix", name: "Fix", fn: () => ({}) }),
+    );
+    const catalog = buildLocalStepCatalog([
+      {
+        ...fix,
+        opencodeMcpJson: {
+          db: { type: "local", command: ["db-mcp"] },
+          docs: { type: "remote", url: "https://docs.example/mcp" },
+        },
+      },
+    ]);
+
+    expect(catalog["fix"]?.mcpServers).toEqual(["db", "docs"]);
   });
 
   test("keeps the highest version of each key", () => {

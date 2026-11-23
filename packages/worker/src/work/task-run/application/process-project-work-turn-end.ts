@@ -25,12 +25,12 @@ import path from "node:path";
 import { readWorkItemChanges } from "@scarn/sdk/contracts/work-item-changes";
 import type { AnyJsonValue } from "../../../common/contracts/json";
 import type {
-  CommitAndPushWorkBranchResult,
   OpencodeServerHandle,
   ProcessProjectWorkDeps,
   ProjectWorkLogger,
   StartedClaimedTask,
 } from "../contracts/process-project-work-types";
+import type { CommitAndPushWorkBranchResult } from "../contracts/launched-runtime";
 import { tryReadCurrentExecutionInfo } from "./process-project-work-findings";
 import { handOverAgentTask } from "./process-project-work-yield";
 

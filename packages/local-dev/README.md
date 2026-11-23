@@ -19,8 +19,8 @@ ENABLE_DEV_LOGIN=true bun run dev         # leave running
 - **Docker.** Steps run in the managed `bun1` container, except `ld-grill`,
   which runs on `Runtime.host()`.
 - **An AI provider configured for OpenCode.** Most steps are AI steps. Only
-  `ld-loop`, `ld-errors` and `ld-merges` are pure code steps; `ld-grill`
-  also uses the `/grilling` skill.
+  `ld-loop`, `ld-errors`, `ld-merges` and `ld-codestep-with-mcp` run without an agent;
+  `ld-grill` also uses the `/grilling` skill.
 
 ## Commands
 
@@ -32,6 +32,7 @@ bun run --filter @scarn/local-dev work -- --once                            # on
 bun run --filter @scarn/local-dev work -- --once --work-item-id <id>        # step one item through
 bun run --filter @scarn/local-dev work -- --dry-run
 bun run --filter @scarn/local-dev typecheck
+bun run --filter @scarn/local-dev pull-inventory   # regenerate ld-codestep-with-mcp's typed catalog
 ```
 
 Plain `work` runs `scarn work` in the sandbox checkout,
@@ -88,7 +89,7 @@ server, so its worker, logs and saved settings stay apart from an installed
    `local-secrets` environment before the steps and also publishes the
    pipelines and the `default` and `ld-schedule` project automations, then
    enables both with `automations enable`.
-9. **Work items.** Upserts 25 work items. The default automation routes and
+9. **Work items.** Upserts 28 work items. The default automation routes and
    queues each one as it becomes ready.
 10. **Prints** the project URL and a table of each item's key, pipeline,
     expected outcome and id.
@@ -97,7 +98,8 @@ server, so its worker, logs and saved settings stay apart from an installed
 
 Sources are in `src/local-test-project/.scarn/pipeline-builder/`. The shared
 steps are in `steps.ts`, `ld-routes-all`'s in `routes-all-steps.ts`,
-`ld-merges`'s in `merges-steps.ts` and `ld-secrets`'s in `secrets-steps.ts`.
+`ld-merges`'s in `merges-steps.ts`, `ld-secrets`'s in `secrets-steps.ts` and
+`ld-codestep-with-mcp`'s in `mcp-steps.ts`.
 The `local-secrets` environment `ld-secrets` runs in is defined in
 `secrets-environment.ts`, and push publishes it before the steps. `shop.ts`
 holds what the AI steps share.
@@ -114,22 +116,45 @@ exercise engine mechanics (`attempt`, `flaky`, `recover`, `edit-file`,
 `collect-edits`, `grill-stopped` and everything in `merges-steps.ts`) stay code
 steps, so those branches are exact.
 
-| Pipeline         | Mechanics                                                                         | Branch driven by                                              |
-| ---------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| `ld-linear`      | Linear chain, `succeed`. Also the default automation's `otherwise`                | —                                                             |
-| `ld-choice`      | Conditional `next`, `otherwise`, several terminals including `fail`               | `severity`: `critical`, `minor`, `invalid`                    |
-| `ld-decision`    | `decision` wait (approve / revise / reject), revise loops back with `feedback`    | `requiresApproval`, then you pick an action                   |
-| `ld-reply`       | `reply` wait, loop back with the answer, `maxRuns`                                | `detail`: `thin` asks, `full` skips the question              |
-| `ld-loop`        | Self-loop carrying input, `maxRuns`, `catch(Scarn.MaxRunsExceeded)`               | `passOnAttempt`: `3` passes, `99` gives up                    |
-| `ld-errors`      | `retry`, `timeoutSeconds` → `Scarn.Timeout`, `catch(Scarn.StepFailed)`            | `failMode`: `throw`, `sleep`, `none`                          |
-| `ld-lanes-merge` | `each` with `maxConcurrency`, `toleratedFailures`, `.partial()` merge, `decision` | `files` (lane count), `failFiles` (lanes that throw)          |
-| `ld-routes-all`  | `match: "all"`, always + conditional routes, partial and closing merges           | `category`, `affectedPages`                                   |
-| `ld-merges`      | `.partial()` partial merge, closing merge, conditional and `each` lanes filtered  | `services`, `unhealthy`, `failingSuite`, `scan`, `advisories` |
-| `ld-grill`       | Agent conversation, `maxTurns`, `catch(Scarn.MaxTurnsExceeded)`                   | The work item title is the topic; you answer in the UI        |
-| `ld-secrets`     | Named environment (`local-secrets`) with a `secret` var, log masking              | The `LOCAL_DEV_API_KEY` project secret seed saves             |
+| Pipeline               | Mechanics                                                                         | Branch driven by                                              |
+| ---------------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| `ld-linear`            | Linear chain, `succeed`. Also the default automation's `otherwise`                | —                                                             |
+| `ld-choice`            | Conditional `next`, `otherwise`, several terminals including `fail`               | `severity`: `critical`, `minor`, `invalid`                    |
+| `ld-decision`          | `decision` wait (approve / revise / reject), revise loops back with `feedback`    | `requiresApproval`, then you pick an action                   |
+| `ld-reply`             | `reply` wait, loop back with the answer, `maxRuns`                                | `detail`: `thin` asks, `full` skips the question              |
+| `ld-loop`              | Self-loop carrying input, `maxRuns`, `catch(Scarn.MaxRunsExceeded)`               | `passOnAttempt`: `3` passes, `99` gives up                    |
+| `ld-errors`            | `retry`, `timeoutSeconds` → `Scarn.Timeout`, `catch(Scarn.StepFailed)`            | `failMode`: `throw`, `sleep`, `none`                          |
+| `ld-lanes-merge`       | `each` with `maxConcurrency`, `toleratedFailures`, `.partial()` merge, `decision` | `files` (lane count), `failFiles` (lanes that throw)          |
+| `ld-routes-all`        | `match: "all"`, always + conditional routes, partial and closing merges           | `category`, `affectedPages`                                   |
+| `ld-merges`            | `.partial()` partial merge, closing merge, conditional and `each` lanes filtered  | `services`, `unhealthy`, `failingSuite`, `scan`, `advisories` |
+| `ld-grill`             | Agent conversation, `maxTurns`, `catch(Scarn.MaxTurnsExceeded)`                   | The work item title is the topic; you answer in the UI        |
+| `ld-secrets`           | Named environment (`local-secrets`) with a `secret` var, log masking              | The `LOCAL_DEV_API_KEY` project secret seed saves             |
+| `ld-codestep-with-mcp` | Typed MCP tool step, code step calling `context.mcp`, declared error caught       | `sku`: `MUG-01`, `TEE-02` (short), `SCARF-09` (unknown)       |
 
 `ld-schedule.ts` is a project automation rather than a pipeline; see
 [Schedules](#schedules).
+
+### Typed MCP calls
+
+`ld-codestep-with-mcp` (`fields.demo: "codestep-with-mcp"`) calls the shop's
+inventory, a dependency-free stdio MCP server in `.scarn/inventory-mcp.mjs`
+that the worker starts with `bun` inside the `bun1` container. `inventory.ts` binds it to the typed catalog in
+`mcp/inventory.tools.ts`, so tool names, arguments and results are
+type-checked:
+
+- `lookup-sku` is an MCP tool step (`inventory.tools.lookupSku.step()`). Its
+  input is the tool's arguments, and the pipeline routes on its typed
+  `found`.
+- `reserve-order` is a code step with `mcps: { inventory }`. Its `fn`
+  (`reserveOrderFn`) re-reads the stock with `mcp.inventory.lookupSku`, fails
+  with its declared `Order.OutOfStock` when the order doesn't fit, and
+  otherwise calls `mcp.inventory.reserveStock`. The pipeline catches
+  `Order.OutOfStock` into `backordered`.
+
+The catalog and `mcp/inventory.lock.json` are generated; don't edit them.
+After changing a tool in `inventory-mcp.mjs`, run `pull-inventory`, which
+lists the server's tools with the codegen `scarn mcp pull` uses. Stock resets
+whenever the server restarts, so every run starts from the same numbers.
 
 Routing items are seeded too: a closed item (never ready), a
 `status: "resolved"` item (skipped) and one with no `demo` field (runs
@@ -206,6 +231,7 @@ packages/local-dev/src/
   project.ts, repo.ts    find-or-create project; rebuild bare repo + checkout
   cli.ts                 runs `bun apps/cli/src/index.ts <args>` in the checkout
   work-items.ts          the fixture list; seed-work-items.ts upserts it
+  pull-inventory-catalog.ts  regenerates ld-codestep-with-mcp's typed inventory catalog
   local-test-project/.scarn/pipeline-builder/   pipeline sources (edit these)
 
 ~/.scarn-local-dev/

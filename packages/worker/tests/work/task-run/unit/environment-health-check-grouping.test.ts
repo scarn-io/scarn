@@ -18,6 +18,7 @@ function step(
     stepDefinitionId: key,
     key,
     name: key,
+    kind: "user_defined",
     environment,
     opencodeMcpJson: null,
     healthChecksJson: [

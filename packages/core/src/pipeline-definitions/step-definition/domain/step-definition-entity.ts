@@ -7,6 +7,7 @@ import {
   parseUuidV7,
   type UuidV7,
 } from "@scarn/core/common/contracts/uuid-v7";
+import type { HealthCheck } from "@scarn/core/common/contracts/health-checks";
 import { CoreValidationError } from "@scarn/core/lib/errors";
 import type { RetryPolicyEntry } from "@scarn/core/tasks/task/domain/retry-decision";
 import { grantsSchema, type Grant } from "@scarn/core/tasks/task/domain/grants";
@@ -206,6 +207,28 @@ export const assertToolCallFitsMcpServers = (
       `Step definition of kind 'mcp_tool' must declare exactly one MCP server, the one its tool call names ("${toolCall.server}")`,
       "STEP_DEFINITION_TOOL_CALL_SERVER_MISMATCH",
     );
+  }
+};
+
+/**
+ * A `code` step has no agent to run CLI or plugin-tool checks: each health
+ * check must be a `tool` check on one of its MCP servers. That the server
+ * exists is the execution config's rule
+ * (`TASK_EXECUTION_CONFIG_HEALTH_CHECK_MCP_UNKNOWN`). Other kinds are not
+ * restricted here.
+ */
+export const assertHealthChecksFitStepKind = (
+  kind: StepDefinitionKind,
+  healthChecks: readonly HealthCheck[] | null | undefined,
+): void => {
+  if (kind !== "code") return;
+  for (const [index, check] of (healthChecks ?? []).entries()) {
+    if (check.kind !== "tool" || check.mcp === undefined) {
+      throw new CoreValidationError(
+        `health check #${String(index + 1)}: a step of kind 'code' allows only 'tool' health checks that name one of its MCP servers`,
+        "STEP_DEFINITION_HEALTH_CHECK_NOT_ALLOWED",
+      );
+    }
   }
 };
 

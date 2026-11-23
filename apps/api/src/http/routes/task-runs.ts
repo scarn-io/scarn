@@ -178,6 +178,7 @@ const createTaskRunWriteRoutes = (appContext: AppContext) => {
               taskExecutionConfigRepo: appContext.taskExecutionConfigRepo,
               environmentRepo: appContext.environmentRepo,
               workItemRepo: appContext.workItemRepo,
+              stepDefinitionRepo: appContext.stepDefinitionRepo,
               taskRunStepKeyReader: appContext.taskRunStepKeyReader,
               taskRunHistoryReader: appContext.taskRunHistoryReader,
               timeProvider: appContext.timeProvider,

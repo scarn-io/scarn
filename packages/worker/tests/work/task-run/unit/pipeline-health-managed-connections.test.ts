@@ -23,6 +23,7 @@ function step(healthChecksJson = checks): HealthCheckStep {
     stepDefinitionId: "step",
     key: "step",
     name: "Step",
+    kind: "user_defined",
     environment: null,
     healthChecksJson,
     opencodeMcpJson: {

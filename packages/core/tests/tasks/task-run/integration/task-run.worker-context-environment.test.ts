@@ -267,4 +267,45 @@ describe("task worker context: named environment version", () => {
       expect(await pinnedVersionOf(taskRunId)).toBe(await versionIdOf(name, 1));
     },
   );
+
+  concurrentTest(
+    "the worker context carries the step's declared errors",
+    async () => {
+      const name = uniqueEnvironmentName();
+      await publish(name, V1);
+      const key = `declares-${crypto.randomUUID().slice(0, 8)}`;
+      const step = await unwrapAsync(
+        apiClient.api["step-definitions"].put(
+          {
+            projectId,
+            key,
+            name: `Step ${key}`,
+            kind: "user_defined",
+            version: 1,
+            description: null,
+            prompt: "Do the thing",
+            inputSchemaJson: { type: "object", properties: {} },
+            resultSchemaJson: null,
+            status: "active",
+            environment: { kind: "named", name },
+            errors: ["Billing.Declined", "Billing.Expired"],
+          },
+          { headers: owner.authHeaders },
+        ),
+      );
+      const { workItemId, taskRunId } = await startTask(step);
+      const claimToken = await claim(workItemId, taskRunId);
+
+      const context = await unwrapAsync(
+        apiClient.api["task-runs"]({ taskRunId })["worker-context"].post(
+          { claimToken },
+          { headers: owner.authHeaders },
+        ),
+      );
+      expect(context.task.declaredErrors).toEqual([
+        "Billing.Declined",
+        "Billing.Expired",
+      ]);
+    },
+  );
 });

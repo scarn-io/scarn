@@ -247,6 +247,18 @@ export function mcpToolTarget(
   return `${shape.mcpTool.server}.${shape.mcpTool.tool}`;
 }
 
+/** The badge on a code step's node that mounts MCP servers. */
+export const MCP_SERVERS_BADGE = "MCP";
+
+/** The MCP server keys a code step mounts; `null` when it mounts none. */
+export function mcpServerKeys(
+  data: Pick<StudioNodeData, "shape">,
+): string[] | null {
+  const { shape } = data;
+  if (shape.kind !== "step" || !shape.mcpServers?.length) return null;
+  return shape.mcpServers;
+}
+
 /** The dash pattern of a detached step node's border. */
 export const DETACHED_DASH_ARRAY = "8 5";
 

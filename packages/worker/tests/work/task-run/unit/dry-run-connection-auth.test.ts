@@ -41,6 +41,7 @@ function step(
   return {
     stepDefinitionId: `id-${overrides.key}`,
     name: `Step ${overrides.key}`,
+    kind: "user_defined",
     environment: null,
     opencodeMcpJson: null,
     healthChecksJson: [

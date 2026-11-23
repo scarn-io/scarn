@@ -30034,6 +30034,13 @@
                           },
                           "additionalProperties": {}
                         },
+                        "declaredErrors": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "minLength": 1
+                          }
+                        },
                         "turnsRemaining": {
                           "type": [
                             "integer",
@@ -30279,6 +30286,7 @@
                         "entrypointJson",
                         "toolCall",
                         "resultSchemaJson",
+                        "declaredErrors",
                         "turnsRemaining",
                         "workItemId",
                         "conversationId",

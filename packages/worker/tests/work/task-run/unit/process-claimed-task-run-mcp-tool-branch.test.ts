@@ -13,8 +13,8 @@ import type {
   McpToolCallOutcome,
 } from "../../../../src/work/task-run/application/mcp-tool-caller";
 import { McpToolStepError } from "../../../../src/work/task-run/application/mcp-tool-step-error";
+import { DEFAULT_MCP_TOOL_CALL_TIMEOUT_MS } from "../../../../src/work/task-run/application/mcp-tool-step-observability";
 import {
-  DEFAULT_MCP_TOOL_CALL_TIMEOUT_MS,
   MCP_TOOL_ERROR_MESSAGE_MAX_CHARS,
   mcpToolCallTimeoutMs,
   runMcpToolStepBranch,

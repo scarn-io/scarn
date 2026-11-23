@@ -5,7 +5,7 @@ description: Pull an MCP server's tools into a typed catalog, bind it to a serve
 
 An **MCP tool step** calls one tool on one MCP server, with no agent and no LLM. The worker renders the tool's arguments from the step's input, calls the tool and hands its result on as the step's result. Pipelines call it like any other step, and the input and result are type-checked.
 
-Use a tool step when the work is one call whose arguments come straight from earlier results or the work item: look up a record, search issues, create a page. Use an [agent step](/scarn/guides/steps/) with the server under `mcps` when the work needs judgement, reading free text, or several calls whose order depends on what comes back.
+Use a tool step when the work is one call whose arguments come straight from earlier results or the work item: look up a record, search issues, create a page. Use an [agent step](/scarn/guides/steps/) with the server under `mcps` when the work needs judgement or reading free text. For several calls whose order follows fixed logic, use a code step that [calls the tools itself](#tool-step-or-code-step).
 
 The workflow:
 
@@ -192,6 +192,21 @@ The MCP client always runs in the worker process. Only the server's own process 
 | `ref` without `auth`                | `Runtime.devcontainer()` | As for what the ref resolves to                                                   |
 
 A stdio server launched with `npx`, `uvx`, `dotnet` or `java` needs that toolchain in its image, which `bun1` doesn't have. For a server that needs a specific image, point `Runtime.devcontainer({ config })` at a devcontainer.json that names it. A remote URL must be reachable from the worker host: a server listening on `localhost` inside the devcontainer isn't supported.
+
+## Tool step or code step
+
+The same catalog-bound handle also works in a [code step](/scarn/guides/steps/#calling-mcp-tools-from-a-code-step): declare it under `mcps` and call `context.mcp.<server>.<tool>(args)` from `fn`, with the same typed arguments and results.
+
+| Use…                      | When                                                                                                                                                                     |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `.tools.<tool>.step()`    | One call, arguments taken straight from the input. No source file, so it can ship in a package. Routing happens in the pipeline                                          |
+| `context.mcp` in `fn`     | Several calls, loops, paging, "search, then create if missing", or arguments that need computing. Logic lives in one function, which must be exported from a source file |
+| An agent step with `mcps` | The work needs judgement or reading free text                                                                                                                            |
+
+The two no-LLM kinds fail with the same built-in error names, so a pipeline's `retry` and `catch` treat them alike. They differ in two ways:
+
+- A code step runs its servers' `defineMcp` health checks before `fn`; a tool step runs none.
+- A code step keeps one connection per server for the whole run; a tool step connects for its one call.
 
 ## Share a catalog or a step library as a package
 

@@ -4,6 +4,7 @@
 export type DefinitionValidationIssue = {
   readonly check:
     | "health-check-mcp-server"
+    | "health-check-code-step"
     | "mcp-tool"
     | "env-var"
     | "env-var-mcp"

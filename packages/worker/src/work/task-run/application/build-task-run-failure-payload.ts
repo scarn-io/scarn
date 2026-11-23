@@ -47,6 +47,7 @@ import {
   McpConnectionAuthNotRemoteError,
 } from "../infra/mcp-server-ref-resolver";
 import { McpToolStepError } from "./mcp-tool-step-error";
+import { NamedStepError } from "./named-step-error";
 
 const WORKER_EXECUTION_FAILED_ERROR_CODE = "SCARN_WORKER_EXECUTION_FAILED";
 const STEP_FAILED_ERROR_NAME = "Scarn.StepFailed";
@@ -154,7 +155,7 @@ function failureIdentity(error: TaskRunFailureInputError): {
       code: MANAGED_CONNECTION_AUTHORITY_LOST_ERROR_CODE,
     };
   }
-  if (error instanceof McpToolStepError) {
+  if (error instanceof McpToolStepError || error instanceof NamedStepError) {
     return { name: error.errorName, code: error.code };
   }
   return {

@@ -15,6 +15,8 @@ import {
   type ResolvedManagedRuntime,
 } from "../../../runtime/runtime-service/domain/managed-runtimes";
 import { writeManagedRuntimeConfig } from "../../../runtime/runtime-service/infra/managed-runtime-config";
+import type { ProjectWorkLogger } from "../contracts/process-project-work-types";
+import { prepareMcpBridgeDevcontainer } from "./local-mcp-call-launch";
 
 export const execFileAsync = promisify(execFile);
 
@@ -77,6 +79,66 @@ export async function selectLaunchRuntimeConfig(input: {
     devcontainerConfigPath,
     managedRuntime,
   };
+}
+
+/**
+ * Resolves the devcontainer config of a container launch and its workspace
+ * folder: the cloned repo's config, or for a managed runtime one synthesized
+ * into the clone. Only a code step (no agent) runs pipeline-builder code, so
+ * only it installs the pipeline-builder dependencies. The agent-facing
+ * workspace folder is the declared `workspaceFolder`, or the CLI convention
+ * `/workspaces/<basename>`. A code step serving an MCP bridge also gets its
+ * config patched to reach the worker host (`prepareMcpBridgeDevcontainer`).
+ */
+export async function prepareLaunchDevcontainer(input: {
+  devcontainerLauncher: DevcontainerLauncher;
+  sessionId: string;
+  workspacePath: string;
+  lookupBranch: string;
+  runtime: ResolvedEnvironment["runtime"];
+  installPipelineBuilder: boolean;
+  servesMcpBridge: boolean;
+  logger?: ProjectWorkLogger | undefined;
+}): Promise<{
+  devcontainerConfigPath: string;
+  managedRuntime: ResolvedManagedRuntime | null;
+  agentWorkspaceFolder: string;
+}> {
+  const { workspacePath } = input;
+  const { devcontainerConfigPath, managedRuntime } =
+    await selectLaunchRuntimeConfig({
+      devcontainerLauncher: input.devcontainerLauncher,
+      workspacePath,
+      lookupBranch: input.lookupBranch,
+      runtime: input.runtime,
+      installPipelineBuilder: input.installPipelineBuilder,
+    });
+  if (managedRuntime) {
+    input.logger?.log(
+      "runtime",
+      `managed runtime ${managedRuntime.id} (${managedRuntime.definition.image})`,
+    );
+  }
+  const devcontainerWorkspaceFolder = await resolveDevcontainerWorkspaceFolder({
+    workspacePath,
+    devcontainerConfigPath,
+  });
+  const agentWorkspaceFolder =
+    devcontainerWorkspaceFolder ??
+    `/workspaces/${path.basename(workspacePath)}`;
+  logWork("runtime", "Resolved devcontainer config", {
+    sessionId: input.sessionId,
+    devcontainerConfigPath,
+    devcontainerWorkspaceFolder,
+    agentWorkspaceFolder,
+  });
+  if (input.servesMcpBridge) {
+    await prepareMcpBridgeDevcontainer({
+      workspacePath,
+      devcontainerConfigPath,
+    });
+  }
+  return { devcontainerConfigPath, managedRuntime, agentWorkspaceFolder };
 }
 
 /**

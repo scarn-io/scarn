@@ -37,6 +37,7 @@ import type { McpHandle } from "./define-mcp";
 import type { ArgsTemplate } from "./args-template";
 import type { JsonSchema } from "../../contracts/pipeline-document/json";
 import type { BuiltInError, ConversationResult } from "../../pipelines/types";
+import type { StepErrorOptions } from "./step-error";
 import {
   compileStepConcurrency,
   compileStepErrors,
@@ -199,7 +200,9 @@ export type StepDefinitionSpec = {
   grants?: readonly Grant[];
   /**
    * `kind === "code"` only: the live function of a spec produced by
-   * `codeStep()`. Code-step discovery (`findCodeStepInModule`) reads it to
+   * `codeStep()`: the step's `fn`, wrapped to add `mcp` to its context when
+   * the step declares `mcps`. The runner supplies `artifactsDir` and `fail`.
+   * Code-step discovery (`findCodeStepInModule`) reads it to
    * find the function to run. `collect-definitions.ts` strips it from the
    * copy it pushes, since a function cannot be serialized into the push
    * request; the original spec keeps it.
@@ -208,8 +211,18 @@ export type StepDefinitionSpec = {
   // real input/result types live on the `StepHandle` `codeStep()` returns,
   // not on the plain `StepDefinitionSpec` wire shape itself.
   entrypoint?: {
-    // eslint-disable-next-line local/no-unknown-parameter-type
-    fn: (input: unknown, context: { artifactsDir: string }) => unknown;
+    fn: (
+      // eslint-disable-next-line local/no-unknown-parameter-type
+      input: unknown,
+      context: {
+        artifactsDir: string;
+        fail: (
+          name: string,
+          message: string,
+          options?: StepErrorOptions,
+        ) => never;
+      },
+    ) => unknown;
   };
   /** `kind === "code"` only, present after `collect-definitions.ts` has run. */
   entrypointJson?: StepDefinitionEntrypointJson | null;

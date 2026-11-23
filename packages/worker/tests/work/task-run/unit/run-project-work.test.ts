@@ -68,6 +68,7 @@ function createWorkerClient(
           prompt: "Run the demo step.",
           entrypointJson: null,
           toolCall: null,
+          declaredErrors: [],
           resultSchemaJson: { type: "object" },
           grants: [],
         },

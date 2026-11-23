@@ -7,7 +7,10 @@
  *   - finds a step exported by name (including a callable `codeStep` handle),
  *     and one embedded only in the default pipeline, and writes its result to
  *     the findings file;
- *   - passes `{ artifactsDir }` as the second argument, creating the folder;
+ *   - passes `{ artifactsDir, fail }` as the second argument, creating the
+ *     folder;
+ *   - writes the error file for a thrown `StepError`, recognised by its brand
+ *     (so also one from another SDK copy), and not for any other throw;
  *   - fails with a clear stderr message when the key is not in the module,
  *     is ambiguous, or the installed SDK has no `code-step-lookup`;
  *   - runs end to end through `executeCodeStep` and the default command
@@ -33,6 +36,7 @@ import {
   defaultRunCodeStepCommand,
   executeCodeStep,
 } from "../../../../src/work/task-run/application/execute-code-step";
+import { NamedStepError } from "../../../../src/work/task-run/application/named-step-error";
 
 const execFileAsync = promisify(execFile);
 
@@ -98,17 +102,15 @@ describe("code step runner script", () => {
     exitCode: number;
     stderr: string;
     findings: unknown;
+    stepError: unknown;
   }> {
-    const pipelineDir = path.join(
-      workspacePath,
-      ".scarn",
-      "pipeline-builder",
-    );
+    const pipelineDir = path.join(workspacePath, ".scarn", "pipeline-builder");
     const runnerPath = path.join(pipelineDir, ".code-step-runner-test.mjs");
     const entrypointPath = path.join(workspacePath, SOURCE_FILE);
     const inputPath = path.join(workspacePath, "input.json");
     const findingsPath = path.join(workspacePath, "findings.json");
     const artifactsDir = path.join(workspacePath, ".scarn", "step-artifacts");
+    const errorPath = path.join(workspacePath, ".scarn", "tmp", "error.json");
     await writeFile(entrypointPath, input.moduleSource);
     await writeFile(runnerPath, CODE_STEP_RUNNER_SCRIPT_SOURCE);
     await writeFile(inputPath, JSON.stringify(input.stepInput ?? null));
@@ -124,6 +126,7 @@ describe("code step runner script", () => {
         inputPath,
         findingsPath,
         artifactsDir,
+        errorPath,
       ]);
     } catch (error) {
       const execError = error as { code?: number; stderr?: string };
@@ -131,11 +134,17 @@ describe("code step runner script", () => {
       stderr = execError.stderr ?? "";
     }
 
-    const findings = await readFile(findingsPath, "utf8").then(
-      (text) => JSON.parse(text) as unknown,
-      () => null,
-    );
-    return { exitCode, stderr, findings };
+    const readJson = (file: string) =>
+      readFile(file, "utf8").then(
+        (text) => JSON.parse(text) as unknown,
+        () => null,
+      );
+    return {
+      exitCode,
+      stderr,
+      findings: await readJson(findingsPath),
+      stepError: await readJson(errorPath),
+    };
   }
 
   test("runs a step exported by name, with the module's helpers in scope", async () => {
@@ -254,6 +263,77 @@ export const s = ${stepSource(
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toContain('code step "boom" threw');
     expect(result.stderr).toContain("kaput");
+    expect(result.stepError).toBeNull();
+  });
+
+  test("writes the error file when the step throws an SDK StepError", async () => {
+    await linkRealSdk();
+
+    const result = await runRunner({
+      moduleSource: `
+import { StepError, codeStep } from "@scarn/sdk/definitions/steps";
+export const s = codeStep({
+  key: "declined",
+  name: "Declined",
+  errors: ["Billing.Declined"],
+  fn: () => {
+    throw new StepError("Billing.Declined", "card declined", { code: "CARD_DECLINED" });
+  },
+});
+`,
+      stepKey: "declined",
+    });
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain('code step "declined" threw');
+    expect(result.stepError).toEqual({
+      name: "Billing.Declined",
+      code: "CARD_DECLINED",
+      message: "card declined",
+    });
+  });
+
+  test("writes the error file for a branded error from another copy of the SDK", async () => {
+    await linkRealSdk();
+
+    const result = await runRunner({
+      moduleSource: `export const s = ${stepSource(
+        "foreign",
+        `() => {
+          const error = new Error("rate limited");
+          Object.defineProperty(error, "name", { value: "Scarn.McpUnavailable" });
+          error[Symbol.for("scarn.stepError")] = true;
+          throw error;
+        }`,
+      )};`,
+      stepKey: "foreign",
+    });
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stepError).toEqual({
+      name: "Scarn.McpUnavailable",
+      code: null,
+      message: "rate limited",
+    });
+  });
+
+  test("passes a fail that throws a branded error the runner records", async () => {
+    await linkRealSdk();
+
+    const result = await runRunner({
+      moduleSource: `export const s = ${stepSource(
+        "fails",
+        `(_input, { fail }) => fail("Billing.Expired", "card expired", { code: "EXPIRED" })`,
+      )};`,
+      stepKey: "fails",
+    });
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stepError).toEqual({
+      name: "Billing.Expired",
+      code: "EXPIRED",
+      message: "card expired",
+    });
   });
 
   test("tells the user to upgrade when the installed SDK has no code-step-lookup subpath", async () => {
@@ -315,6 +395,7 @@ export const s = ${stepSource(
         },
         entrypointJson: { sourceFile: SOURCE_FILE },
         stepKey: "shift",
+        declaredErrors: [],
         inputJson: { n: 1 },
         runtime: "bun",
         stepEnv: {
@@ -334,5 +415,49 @@ export const s = ${stepSource(
     expect(
       await readdir(path.join(workspacePath, ".scarn", "pipeline-builder")),
     ).toEqual(["step.mjs"]);
+  });
+
+  test("end to end, a declared StepError fails as a NamedStepError and leaves no error file", async () => {
+    await linkRealSdk();
+    await writeFile(
+      path.join(workspacePath, SOURCE_FILE),
+      `export const s = ${stepSource(
+        "declined",
+        `(_input, { fail }) => fail("Billing.Declined", "card declined")`,
+      )};`,
+    );
+
+    let failure: unknown;
+    try {
+      await executeCodeStep(
+        {
+          environment: {
+            workspacePath,
+            workspaceFolder: workspacePath,
+            runtimeContainerId: null,
+          },
+          entrypointJson: { sourceFile: SOURCE_FILE },
+          stepKey: "declined",
+          declaredErrors: ["Billing.Declined"],
+          inputJson: null,
+          runtime: "bun",
+          stepEnv: {
+            PATH: `${path.dirname(process.execPath)}${path.delimiter}${process.env["PATH"] ?? ""}`,
+          },
+        },
+        { runCommand: defaultRunCodeStepCommand },
+      );
+    } catch (error) {
+      failure = error;
+    }
+
+    expect(failure).toBeInstanceOf(NamedStepError);
+    expect(failure).toMatchObject({
+      errorName: "Billing.Declined",
+      code: "SCARN_STEP_ERROR",
+    });
+    expect(await readdir(path.join(workspacePath, ".scarn", "tmp"))).toEqual(
+      [],
+    );
   });
 });

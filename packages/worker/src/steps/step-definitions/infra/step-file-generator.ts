@@ -265,9 +265,22 @@ function buildGrantFeatures(step: StepDefContract): {
   return { prompt, sources };
 }
 
+function assertCodeStepHasNoMcpServers(step: StepDefContract): void {
+  if (
+    step.kind === "code" &&
+    step.opencodeMcpJson &&
+    Object.keys(step.opencodeMcpJson).length > 0
+  ) {
+    throw new Error(
+      "MCP server source generation for code steps is not supported yet",
+    );
+  }
+}
+
 export function generateStepsFileContent(steps: StepDefContract[]): string {
   if (steps.length === 0) return "";
 
+  steps.forEach(assertCodeStepHasNoMcpServers);
   const environmentFields = steps.map(buildEnvironmentField);
   const usesEnvHelper = environmentFields.some((field) => field?.usesEnvHelper);
   const usesRuntimeHelper = environmentFields.some(

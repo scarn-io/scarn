@@ -16,6 +16,37 @@ export {
   type McpToolStepResult,
 } from "./define-mcp-tool-step";
 export { compileMcps, type CompiledMcps } from "./compile-mcps";
+export {
+  failStep,
+  isStepError,
+  StepError,
+  type StepErrorOptions,
+} from "./step-error";
+export {
+  McpArgsError,
+  McpOutputInvalidError,
+  McpTimeoutError,
+  McpToolError,
+  McpUnavailableError,
+  type McpUnavailableReason,
+} from "./mcp-errors";
+export {
+  createCodeStepMcpClient,
+  type CodeStepMcpClientOptions,
+  type McpBridgeFetch,
+  type McpCallOptions,
+  type McpClient,
+  type McpClients,
+  type McpToolMethod,
+  type McpUntypedCall,
+} from "./code-step-mcp-client";
+export {
+  createFakeMcpClients,
+  type FakeMcpCall,
+  type FakeMcpClient,
+  type FakeMcpClients,
+  type FakeMcpTool,
+} from "./fake-mcp-clients";
 export * from "./env";
 export * from "./prompt-template";
 export * from "./args-template";

@@ -25,6 +25,7 @@ import {
   requestedByUserId,
   taskRunId,
 } from "./helpers/claimed-task-fixtures";
+import { buildCodeStepDeps } from "./helpers/code-step-deps";
 
 describe("startProcessClaimedTaskRun kind: 'code' branch", () => {
   let workspacePath: string;
@@ -35,64 +36,6 @@ describe("startProcessClaimedTaskRun kind: 'code' branch", () => {
     }
     vi.restoreAllMocks();
   });
-
-  function buildDeps(input: {
-    entrypointJson: { sourceFile: string };
-    runCodeStepCommand: ProcessProjectWorkDeps["runCodeStepCommand"];
-    envJson?: Parameters<typeof createCodeStepWorkerContext>[1];
-    runtime?: Parameters<typeof createCodeStepWorkerContext>[2];
-  }): {
-    deps: ProcessProjectWorkDeps;
-    tracker: ReturnType<typeof createRunTracker>;
-    launch: ReturnType<typeof vi.fn>;
-  } {
-    const { launch } = createRecordingOrchestrator(workspacePath, {
-      resolvedBranch: "main",
-      workBranch: null,
-      createdFromBranch: null,
-      devcontainerConfigPath: ".devcontainer/devcontainer.json",
-      runtimeContainerId: "runtime-container-id",
-      agent: null,
-      aiImage: "",
-      networkName: "test-network",
-    });
-
-    const workerClient = createWorkerClient();
-    workerClient.getTaskRunWorkerContext = vi.fn(() =>
-      Promise.resolve(
-        createCodeStepWorkerContext(
-          input.entrypointJson,
-          input.envJson,
-          input.runtime,
-        ),
-      ),
-    );
-
-    const tracker = createRunTracker();
-    const deps = {
-      workerClient,
-      createRunTracker: () => tracker,
-      runtimeEnvironmentOrchestrator: { launch },
-      agentRunner: {
-        promptAsync: vi.fn(() =>
-          Promise.reject(
-            new Error("promptAsync must not be called for a code step"),
-          ),
-        ),
-        getSessionStatus: vi.fn(),
-        abort: vi.fn(() => Promise.resolve(undefined)),
-        sendRetryPrompt: vi.fn(),
-      },
-      artifactStore: {
-        saveArtifact: vi.fn(),
-      },
-      sleep: vi.fn(() => Promise.resolve(undefined)),
-      logger: { debug: vi.fn(), log: vi.fn(), error: vi.fn() },
-      runCodeStepCommand: input.runCodeStepCommand,
-    } satisfies ProcessProjectWorkDeps;
-
-    return { deps, tracker, launch };
-  }
 
   test("dispatches via the injected command runner, skips promptAsync and the agent entirely, and returns a null agentSessionId", async () => {
     workspacePath = await mkdtemp(
@@ -105,7 +48,8 @@ describe("startProcessClaimedTaskRun kind: 'code' branch", () => {
     const runCodeStepCommand = vi.fn<RunCodeStepCommand>(() =>
       Promise.resolve({ exitCode: 0, stdout: "", stderr: "" }),
     );
-    const { deps, tracker, launch } = buildDeps({
+    const { deps, tracker, launch } = buildCodeStepDeps({
+      workspacePath,
       entrypointJson,
       runCodeStepCommand,
     });
@@ -163,7 +107,8 @@ describe("startProcessClaimedTaskRun kind: 'code' branch", () => {
       const runCodeStepCommand = vi.fn<RunCodeStepCommand>(() =>
         Promise.resolve({ exitCode: 0, stdout: "", stderr: "" }),
       );
-      const { deps, tracker, launch } = buildDeps({
+      const { deps, tracker, launch } = buildCodeStepDeps({
+        workspacePath,
         entrypointJson: { sourceFile: "steps/review.ts" },
         runCodeStepCommand,
         runtime: { kind: "managed", id: managedRuntime },
@@ -208,7 +153,8 @@ describe("startProcessClaimedTaskRun kind: 'code' branch", () => {
     const runCodeStepCommand = vi.fn<RunCodeStepCommand>(() =>
       Promise.resolve({ exitCode: 0, stdout: "", stderr: "" }),
     );
-    const { deps, tracker, launch } = buildDeps({
+    const { deps, tracker, launch } = buildCodeStepDeps({
+      workspacePath,
       entrypointJson: { sourceFile: "steps/review.ts" },
       runCodeStepCommand,
       envJson: [
@@ -275,7 +221,11 @@ describe("startProcessClaimedTaskRun kind: 'code' branch", () => {
           'no code step with key "demo-step" exported by or embedded in x',
       }),
     );
-    const { deps, tracker } = buildDeps({ entrypointJson, runCodeStepCommand });
+    const { deps, tracker } = buildCodeStepDeps({
+      workspacePath,
+      entrypointJson,
+      runCodeStepCommand,
+    });
 
     let caught: unknown;
     try {
@@ -316,7 +266,8 @@ describe("startProcessClaimedTaskRun kind: 'code' branch", () => {
     const runCodeStepCommand = vi.fn<RunCodeStepCommand>(() =>
       Promise.resolve({ exitCode: 0, stdout: "", stderr: "" }),
     );
-    const { deps, tracker, launch } = buildDeps({
+    const { deps, tracker, launch } = buildCodeStepDeps({
+      workspacePath,
       entrypointJson: { sourceFile: "steps/review.ts" },
       runCodeStepCommand,
     });

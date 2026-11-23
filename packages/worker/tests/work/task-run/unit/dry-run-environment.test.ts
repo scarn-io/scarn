@@ -57,7 +57,7 @@ function fakeOrchestrator(
   return { orchestrator, state };
 }
 
-const launchInput = {} as DryRunLaunchInput;
+const launchInput = { startAgent: true } as DryRunLaunchInput;
 const probe = () => Promise.resolve(HEALTHY);
 
 async function rejectionMessage(promise: Promise<unknown>): Promise<string> {
@@ -77,7 +77,7 @@ describe("runInDryRunEnvironment", () => {
       launchInput,
       keep: false,
       probe,
-      run: (server) => Promise.resolve(server.workspaceFolder),
+      run: (server) => Promise.resolve(server?.workspaceFolder),
     });
     expect(outcome).toMatchObject({
       kind: "ran",
@@ -98,6 +98,7 @@ describe("runInDryRunEnvironment", () => {
     await runInDryRunEnvironment({
       orchestrator,
       launchInput: {
+        startAgent: true,
         opencodeMcpJson: { db: { type: "ref" } },
       } as unknown as DryRunLaunchInput,
       keep: false,

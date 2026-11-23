@@ -43,12 +43,30 @@ function checkHealthChecks(
       // `resolveHealthCheckToolId` (`packages/worker`) and the dry-run
       // reporter, for consistency — though this file has no direct
       // dependency on either.
-      if (check.kind === "cli") return;
+      if (check.kind === "cli") {
+        if (step.kind === "code") {
+          issues.push({
+            check: "health-check-code-step",
+            severity: "error",
+            message: `Step "${step.key}" health check #${String(index + 1)} ("${check.name ?? check.command.join(" ")}") is a cli check, but a code step runs only its MCP servers' tool checks. Declare checks on the server with defineMcp({ healthChecks }).`,
+          });
+        }
+        return;
+      }
 
       const label = check.name ?? check.tool;
       const where = `Step "${step.key}" health check #${String(index + 1)} ("${label}")`;
 
-      if (!check.mcp) return;
+      if (!check.mcp) {
+        if (step.kind === "code") {
+          issues.push({
+            check: "health-check-code-step",
+            severity: "error",
+            message: `${where} names no MCP server, but a code step has no plugin or built-in tools to check. Declare checks on the server with defineMcp({ healthChecks }).`,
+          });
+        }
+        return;
+      }
 
       if (!mcpServerKeySet.has(check.mcp)) {
         issues.push({

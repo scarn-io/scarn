@@ -23,7 +23,6 @@ import type { ObjectStore } from "@scarn/core/artifacts/object-store";
 import type { UsernameReader } from "@scarn/core/organizations/organization/application/username-reader";
 import type { OrgRepo } from "@scarn/core/organizations/organization/application/org-repo";
 import { resolveProjectOwnerUsernames } from "@scarn/core/projects/project/application/resolve-project-owner-usernames";
-import type { UuidV7 } from "@scarn/core/common/contracts/uuid-v7";
 import type { ConversationRepo } from "@scarn/core/conversations/conversation/application/conversation-repo";
 import { buildTurnGuidancePromptLines } from "./task-run-worker-context-turn-guidance";
 import { loadRestoreSession } from "./task-run-worker-context-restore";
@@ -50,11 +49,9 @@ import type { TaskRunHistoryReader } from "./task-run-history-reader";
 import type { TaskRunRepo } from "./task-run-repo";
 import type { TaskRunEntity } from "../domain/task-run-entity";
 import type { TaskRepo } from "@scarn/core/tasks/task/application/task-repo";
-import { countContinuationRuns } from "@scarn/core/tasks/task/application/on-run-ended";
-import { turnsLeft } from "@scarn/core/tasks/task/domain/task-turns";
-import { taskGrants, type Grant } from "@scarn/core/tasks/task/domain/grants";
-import type { ExtraConnector } from "@scarn/core/tasks/task/domain/task-environment-selection";
 import type { TaskRunStepKeyReader } from "./task-run-step-key-reader";
+import { loadTaskFacts } from "./task-run-worker-context-task-facts";
+import type { StepDefinitionRepo } from "@scarn/core/pipeline-definitions/step-definition/application/step-definition-repo";
 import {
   buildSteeringPromptLines,
   loadStepSteering,
@@ -162,55 +159,6 @@ const workerTaskInstructions = (task: TaskRunEntity) => {
   }
 };
 
-/**
- * What `run`'s Task contributes: how many more times `run` may hand over (its
- * turns left as of `run`), which work items its agent may change, the
- * conversation of a chat (a Task with no work item), and the extra
- * connectors it selected.
- */
-const loadTaskFacts = async (
-  run: TaskRunEntity,
-  deps: {
-    taskRepo: Pick<TaskRepo, "load">;
-    taskRunRepo: Pick<TaskRunRepo, "listByTaskId">;
-  },
-): Promise<{
-  turnsRemaining: number | null;
-  grants: Grant[];
-  chatConversationId: UuidV7 | null;
-  extraConnectors: ExtraConnector[];
-}> => {
-  const task = await deps.taskRepo.load(run.taskId);
-  const grants = task
-    ? [...task.grants]
-    : taskGrants([], {
-        workItemId: run.workItemId,
-        startedByScheduleId: null,
-      });
-  const chatConversationId =
-    task && task.workItemId === null && task.startedByScheduleId === null
-      ? task.conversationId
-      : null;
-  const extraConnectors = task?.environmentSelection?.extraConnectors ?? [];
-  if (!task || task.maxTurns === null) {
-    return {
-      turnsRemaining: null,
-      grants,
-      chatConversationId,
-      extraConnectors,
-    };
-  }
-  return {
-    turnsRemaining: turnsLeft(
-      task,
-      await countContinuationRuns(run, deps.taskRunRepo),
-    ),
-    grants,
-    chatConversationId,
-    extraConnectors,
-  };
-};
-
 export const getTaskRunWorkerContext = async (
   taskIdInput: GetTaskRunInput,
   input: GetTaskRunWorkerContextInput,
@@ -222,6 +170,7 @@ export const getTaskRunWorkerContext = async (
     taskExecutionConfigRepo,
     environmentRepo,
     workItemRepo,
+    stepDefinitionRepo,
     taskRunStepKeyReader,
     taskRunHistoryReader,
     timeProvider,
@@ -240,6 +189,7 @@ export const getTaskRunWorkerContext = async (
       "findVersionById" | "findLiveWithLatestVersionByName"
     >;
     workItemRepo: WorkItemRepo;
+    stepDefinitionRepo: Pick<StepDefinitionRepo, "load">;
     taskRunStepKeyReader: TaskRunStepKeyReader;
     taskRunHistoryReader: TaskRunHistoryReader;
     timeProvider: TimeProvider;
@@ -284,8 +234,13 @@ export const getTaskRunWorkerContext = async (
         : workItemRepo.load(parseWorkItemId(workItemId)),
       loadStepSteering({ history, reason: task.reason, taskRunRepo }),
     ]);
-  const { turnsRemaining, grants, chatConversationId, extraConnectors } =
-    await loadTaskFacts(task, { taskRepo, taskRunRepo });
+  const {
+    turnsRemaining,
+    grants,
+    chatConversationId,
+    extraConnectors,
+    declaredErrors,
+  } = await loadTaskFacts(task, { taskRepo, taskRunRepo, stepDefinitionRepo });
   const conversationDeps = { conversationRepo, usernameReader, timeProvider };
   const isChat = chatConversationId !== null;
   const inline = inlineConfigFieldsFromTaskExecutionConfig(taskExecutionConfig);
@@ -377,6 +332,7 @@ export const getTaskRunWorkerContext = async (
       executionTimeoutSeconds: task.executionTimeoutSeconds,
       ...workerTaskInstructions(task),
       resultSchemaJson: task.resultSchemaJson,
+      declaredErrors,
       turnsRemaining,
       workItemId,
       conversationId: chatConversationId,

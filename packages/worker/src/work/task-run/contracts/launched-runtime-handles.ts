@@ -30,12 +30,13 @@ export type AgentRuntime = {
 };
 
 /**
- * An `mcp_tool` launch's resolved MCP server and where to call it from. The
- * launch resolves the step's servers exactly as for an agent (refs,
- * connectors, managed relay, inferred env) but starts no OpenCode; the worker
- * process calls the tool itself.
+ * The resolved MCP servers of a step whose worker calls them (an `mcp_tool`
+ * step's one tool call, or a code step's calls through the MCP bridge), and
+ * where to call them from. The launch resolves the step's servers exactly as
+ * for an agent (refs, connectors, managed relay, inferred env) but starts no
+ * OpenCode; the worker process calls the tools itself.
  */
-export type McpToolLaunch = {
+export type McpCallLaunch = {
   /**
    * The step's MCP servers with every ref resolved. A managed connection is
    * already a remote entry pointing at the relay with a `Bearer` header, its

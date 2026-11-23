@@ -16,11 +16,11 @@ import { rethrowBranchFailure } from "./classify-branch-failure";
 import { RepoBranchInvalidError } from "../application/repo-branch-invalid-error";
 import type { BaseBranchSource } from "../contracts/environment-diagnostics";
 import { logWork } from "../application/work-logger";
+import type { ProjectWorkLogger } from "../contracts/process-project-work-types";
 import type {
   CommitAndPushWorkBranchContext,
   CommitAndPushWorkBranchResult,
-  ProjectWorkLogger,
-} from "../contracts/process-project-work-types";
+} from "../contracts/launched-runtime";
 import {
   defaultCommitMessage,
   renderCommitMessage,

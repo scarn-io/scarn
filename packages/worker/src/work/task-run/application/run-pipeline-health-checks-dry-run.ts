@@ -10,7 +10,12 @@ import { createAuthenticatedScarnClient } from "../../../auth/session/infra/auth
 import { DirectProviderAccessResolver } from "../infra/provider-access/direct-provider-access-resolver";
 import { SafeProviderAccessResolver } from "../infra/provider-access/safe-provider-access-resolver";
 import type { LaunchedRuntimeOrchestrator } from "../contracts/process-project-work-types";
-import { buildFakeAiProviderOverride, FakeAiServer } from "../infra/fake-ai";
+import type { McpConnectionPoolFactory } from "./mcp-connection-pool";
+import {
+  createLazyFakeAiServer,
+  dryRunAgentLaunchFields,
+  runDryRunStepChecks,
+} from "./dry-run-step-checks";
 import {
   buildDryRunOrchestrator,
   DRY_RUN_CLAIM_TOKEN,
@@ -19,7 +24,7 @@ import {
   runInDryRunEnvironment,
   type DryRunEnvironmentHealth,
 } from "./dry-run-environment";
-import { runHealthChecks, type HealthCheckReport } from "./run-health-checks";
+import type { HealthCheckReport } from "./run-health-checks";
 import { planDryRunStepEnv } from "./plan-step-env-with-secrets";
 import { fetchProjectGitUrl, fetchStepDefinition } from "./run-work-dry-run";
 import {
@@ -70,7 +75,7 @@ export type PipelineHealthDryRunReport = {
   launchCount: number;
   /** Steps with checks or enabled managed startup gates, in pipeline order. */
   steps: StepHealthCheckReport[];
-  /** Steps that declare none (code steps always), so nothing ran for them. */
+  /** Steps that declare none, so nothing ran for them. */
   stepsWithoutChecks: Array<{ stepKey: string; stepName: string }>;
 };
 
@@ -100,9 +105,10 @@ function environmentProblems(health: DryRunEnvironmentHealth): string[] {
   if (health.containerHealth && !health.containerHealth.healthy) {
     problems.push(`container ${health.containerHealth.status}`);
   }
-  if (!health.opencodeHealth.healthy) {
+  const opencode = health.opencodeHealth;
+  if (opencode && !opencode.healthy) {
     problems.push(
-      `OpenCode unhealthy${health.opencodeHealth.detail ? ` (${health.opencodeHealth.detail})` : ""}`,
+      `OpenCode unhealthy${opencode.detail ? ` (${opencode.detail})` : ""}`,
     );
   }
   return problems;
@@ -241,6 +247,8 @@ export type PipelineHealthChecksDryRunOptions = {
   dest?: DestinationStream | undefined;
   /** Env vars read from `.scarn/.env` in the user's local project directory. */
   localEnvVars?: Record<string, string> | undefined;
+  /** Builds a code step's MCP connection pool; defaults to the SDK pool. */
+  mcpPoolFactory?: McpConnectionPoolFactory | undefined;
 };
 
 /** A dry run has no step key, so it never commits, on any runtime. */
@@ -301,6 +309,7 @@ export async function runPipelineHealthChecksDryRun(
         stepDefinitionId: step.id,
         key: step.key,
         name: step.name,
+        kind: step.kind,
         environment,
         opencodeMcpJson: step.opencodeMcpJson,
         healthChecksJson: step.healthChecksJson,
@@ -331,14 +340,15 @@ export async function runPipelineHealthChecksDryRun(
 
   const gitUrl = await fetchProjectGitUrl(client, options.projectId);
 
-  // One fake provider for every launch: it has to be baked into each agent's
-  // launch-time config before any forced tool call can run.
-  const fakeAiServer = new FakeAiServer();
-  await fakeAiServer.start();
+  // One fake provider for every agent launch: it has to be baked into each
+  // agent's launch-time config before any forced tool call can run. Code-step
+  // launches start no agent and need none.
+  const fakeAi = createLazyFakeAiServer();
 
   const runLaunch: RunHealthCheckLaunch = async (launch) => {
     const runtime = describeHealthCheckRuntime(launch.runtime);
     const taskRunId = createUuidV7();
+    const fakeAiServer = launch.usesAgent ? await fakeAi.get() : null;
     logWork("dry-run", "Launching for pipeline health checks", {
       pipelineDefinitionId: options.pipelineDefinitionId,
       runtime,
@@ -349,7 +359,7 @@ export async function runPipelineHealthChecksDryRun(
       keep: false,
       launchInput: {
         ...buildPipelineHealthCheckRuntimeInput(launch.runtime),
-        startAgent: true,
+        ...dryRunAgentLaunchFields(fakeAiServer),
         sessionId: taskRunId,
         projectId,
         requestedByUserId,
@@ -365,11 +375,6 @@ export async function runPipelineHealthChecksDryRun(
           turnsRemaining: null,
         },
         taskRunId,
-        resolveFakeAiProviderOverride: (environment) =>
-          buildFakeAiProviderOverride({
-            fakeAiServer,
-            isNoWorkspace: environment.runtime.kind === "host",
-          }),
         resolveEnvironmentEnv: (environment) =>
           Promise.resolve(
             planDryRunStepEnv({
@@ -382,15 +387,17 @@ export async function runPipelineHealthChecksDryRun(
           ),
         repo: repoForLaunch(),
       },
-      run: async (server) => {
+      run: async (server, environment) => {
         const healthChecksByStep = new Map<string, HealthCheckReport[]>();
         for (const step of launch.steps) {
           healthChecksByStep.set(
             step.stepDefinitionId,
-            await runHealthChecks({
+            await runDryRunStepChecks({
               server,
+              environment,
               healthChecks: step.healthChecksJson ?? [],
               fakeAiServer,
+              poolFactory: options.mcpPoolFactory,
             }),
           );
         }
@@ -427,7 +434,7 @@ export async function runPipelineHealthChecksDryRun(
     });
   } finally {
     // eslint-disable-next-line local/no-unknown-parameter-type -- narrows a caught value, not a real input boundary
-    await fakeAiServer.stop().catch((error: unknown) => {
+    await fakeAi.stop().catch((error: unknown) => {
       logWorkError("dry-run", "Failed to stop the shared fake AI server", {
         error: errorMessage(error),
       });

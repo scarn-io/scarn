@@ -17,14 +17,21 @@ import { DirectProviderAccessResolver } from "../infra/provider-access/direct-pr
 import { SafeProviderAccessResolver } from "../infra/provider-access/safe-provider-access-resolver";
 import { logWork, logWorkError } from "./work-logger";
 import { noopReporter, type WorkReporter } from "../contracts/work-reporter";
-import { buildFakeAiProviderOverride, FakeAiServer } from "../infra/fake-ai";
+import type { McpConnectionPoolFactory } from "./mcp-connection-pool";
 import {
   buildDryRunOrchestrator,
   DRY_RUN_CLAIM_TOKEN,
 } from "./run-work-dry-run-orchestrators";
 import type { McpHandshakeReport } from "./run-work-dry-run-health-checks";
 import { runInDryRunEnvironment } from "./dry-run-environment";
-import { runHealthChecks, type HealthCheckReport } from "./run-health-checks";
+import type { HealthCheckReport } from "./run-health-checks";
+import {
+  createLazyFakeAiServer,
+  dryRunAgentLaunchFields,
+  dryRunStepUsesAgent,
+  runDryRunStepChecks,
+  type DryRunStepKind,
+} from "./dry-run-step-checks";
 import { computeDryRunOk } from "./compute-dry-run-ok";
 import { dryRunBaseBranch, environmentRefVars } from "./render-base-branch";
 import { planDryRunStepEnv } from "./plan-step-env-with-secrets";
@@ -118,12 +125,15 @@ export type WorkDryRunOptions = {
   /** Env vars read from .scarn/.env in the user's local project directory. */
   localEnvVars?: Record<string, string> | undefined;
   reporter?: WorkReporter | undefined;
+  /** Builds a code step's MCP connection pool; defaults to the SDK pool. */
+  mcpPoolFactory?: McpConnectionPoolFactory | undefined;
 };
 
 export type StepDefinitionForDryRun = {
   id: string;
   key: string;
   name: string;
+  kind: DryRunStepKind;
   environment: EnvironmentRef;
   repo: RepoConfig;
   resultSchemaJson: Record<string, unknown> | null;
@@ -209,6 +219,7 @@ export async function fetchStepDefinition(
     id: data.id,
     key: data.key,
     name: data.name,
+    kind: data.kind,
     environment: data.environment,
     repo: data.repo,
     resultSchemaJson: data.resultSchemaJson,
@@ -314,13 +325,14 @@ export async function runWorkDryRun(
   });
   reporter.event({ type: "task:starting", taskRunId });
 
-  // Started unconditionally (rather than only when the step declares
+  // Started for every agent launch (rather than only when the step declares
   // `healthChecks`) because the fake provider must be baked into the agent's
-  // launch-time config, before any forced tool call can run. Shared across
-  // every declared health check below and stopped once, regardless of
-  // outcome.
-  const fakeAiServer = new FakeAiServer();
-  await fakeAiServer.start();
+  // launch-time config, before any forced tool call can run. A code step
+  // launches no agent, as in a real run, and starts none.
+  const fakeAi = createLazyFakeAiServer();
+  const fakeAiServer = dryRunStepUsesAgent(stepDefinition?.kind)
+    ? await fakeAi.get()
+    : null;
 
   const keep = options.keep ?? false;
   let secrets: DryRunSecretReport[] = [];
@@ -330,7 +342,7 @@ export async function runWorkDryRun(
       keep,
       launchInput: {
         ...buildWorkDryRunRuntimeInput(launchStep),
-        startAgent: true,
+        ...dryRunAgentLaunchFields(fakeAiServer),
         sessionId,
         projectId,
         requestedByUserId,
@@ -349,11 +361,6 @@ export async function runWorkDryRun(
         },
         reporter,
         taskRunId,
-        resolveFakeAiProviderOverride: (environment) =>
-          buildFakeAiProviderOverride({
-            fakeAiServer,
-            isNoWorkspace: environment.runtime.kind === "host",
-          }),
         resolveEnvironmentEnv: (environment) => {
           const dryRun = planDryRunStepEnv({
             envVars: environment.envVars,
@@ -366,20 +373,22 @@ export async function runWorkDryRun(
           return Promise.resolve(dryRun.plan);
         },
       },
-      // Same runner the real-execution gate uses (`runHealthChecks`, #119),
-      // with its declaration-order, abort-required-then-skip-the-rest
-      // semantics unchanged; the probe already ran the MCP startup gate. Dry
-      // run's different policy (#121) sits above this call: a failing check
-      // never throws or cuts the dry run short, and every check gets a
-      // reported outcome.
+      // Same runners the real-execution gate uses (#119; a code step's direct
+      // MCP checks, ADR 0016 decision 8), with their declaration-order,
+      // abort-required-then-skip-the-rest semantics unchanged; the probe
+      // already ran the MCP startup gate. Dry run's different policy (#121)
+      // sits above this call: a failing check never throws or cuts the dry
+      // run short, and every check gets a reported outcome.
       onLaunched: () => {
         reporter.event({ type: "task:runtime-ready", taskRunId });
       },
-      run: (server) =>
-        runHealthChecks({
+      run: (server, environment) =>
+        runDryRunStepChecks({
           server,
+          environment,
           healthChecks: checks.runnableChecks,
           fakeAiServer,
+          poolFactory: options.mcpPoolFactory,
         }),
     });
 
@@ -420,7 +429,7 @@ export async function runWorkDryRun(
 
     const ok = computeDryRunOk({
       containerHealthy: health.containerHealth?.healthy,
-      opencodeHealthy: health.opencodeHealth.healthy,
+      opencodeHealthy: health.opencodeHealth?.healthy ?? true,
       mcpServers,
       healthChecks,
     });
@@ -469,7 +478,7 @@ export async function runWorkDryRun(
     };
   } finally {
     // eslint-disable-next-line local/no-unknown-parameter-type -- narrows a caught value, not a real input boundary
-    await fakeAiServer.stop().catch((error: unknown) => {
+    await fakeAi.stop().catch((error: unknown) => {
       logWorkError("dry-run", "Failed to stop the shared fake AI server", {
         error: error instanceof Error ? error.message : String(error),
       });

@@ -51,6 +51,7 @@ describe("executeCodeStep runtime and working directory", () => {
         },
         entrypointJson: { sourceFile: "steps/review.ts" },
         stepKey: "review-step",
+        declaredErrors: [],
         inputJson: null,
         runtime: input.runtime,
       },
@@ -131,6 +132,7 @@ describe("executeCodeStep runtime and working directory", () => {
         },
         entrypointJson: { sourceFile: "steps/review.ts" },
         stepKey: "review-step",
+        declaredErrors: [],
         inputJson: null,
         runtime: "node",
       });

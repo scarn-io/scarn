@@ -15,11 +15,12 @@ import {
   nodeKindStyle,
 } from "./graph-node-style";
 import { palette, tint } from "./graph-palette";
-import { McpToolBadge } from "./McpToolBadge";
+import { McpServersBadge, McpToolBadge } from "./McpToolBadge";
 import type { StudioNodeData } from "./studio-graph-types";
 import {
   forkMarker,
   kindLabel,
+  mcpServerKeys,
   mcpToolTarget,
   mergeBadge,
   nodeLayoutSize,
@@ -351,6 +352,7 @@ export function GraphNode({ data, selected }: NodeProps<GraphNodeType>) {
   const pause = pauseMarker(data);
   const mcpTool = mcpToolTarget(data);
   const cardIcon = mcpTool ? "mcpTool" : icon;
+  const mcpServers = mcpServerKeys(data);
 
   return (
     <div
@@ -405,6 +407,9 @@ export function GraphNode({ data, selected }: NodeProps<GraphNodeType>) {
             {data.label}
           </div>
           {mcpTool ? <McpToolBadge target={mcpTool} color={color} /> : null}
+          {mcpServers ? (
+            <McpServersBadge servers={mcpServers} color={color} />
+          ) : null}
         </div>
         <div
           title={caption}

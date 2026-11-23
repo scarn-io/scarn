@@ -6,6 +6,7 @@ import {
 import { buildTaskRunFailurePayload } from "../../../../src/work/task-run/application/build-task-run-failure-payload";
 import { ConnectorUnavailableError } from "../../../../src/work/task-run/application/connector-unavailable-error";
 import { HealthCheckFailedError } from "../../../../src/work/task-run/application/health-check-failed-error";
+import { NamedStepError } from "../../../../src/work/task-run/application/named-step-error";
 import { RepoContextCommitUnavailableError } from "../../../../src/work/task-run/application/repo-context-commit-unavailable-error";
 import { WorkerStoppedError } from "../../../../src/work/task-run/application/worker-stopped-error";
 
@@ -94,6 +95,18 @@ describe("buildTaskRunFailurePayload", () => {
       name: "Scarn.WorkerStopped",
       code: "WORKER_STOPPED",
       message: error.message,
+    });
+  });
+
+  test("names a NamedStepError by the code step's error name and code", () => {
+    const payload = buildTaskRunFailurePayload(
+      new NamedStepError("Billing.Declined", "CARD_DECLINED", "declined"),
+    );
+
+    expect(payload.errorJson).toEqual({
+      name: "Billing.Declined",
+      code: "CARD_DECLINED",
+      message: "declined",
     });
   });
 });

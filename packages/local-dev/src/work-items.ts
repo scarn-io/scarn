@@ -231,6 +231,31 @@ export const WORK_ITEMS: LocalWorkItem[] = [
     expect: "succeed: done",
   },
   {
+    key: "codestep-with-mcp-reserved",
+    title: "Reserve 2 Acme mugs",
+    note: "ld-codestep-with-mcp: the lookup-sku tool step finds MUG-01 and reserve-order reserves 2 of its 12 through context.mcp.",
+    description: "A customer ordered 2 Acme mugs (MUG-01). Reserve the stock.",
+    fields: { demo: "codestep-with-mcp", sku: "MUG-01", quantity: 2 },
+    expect: "succeed: reserved",
+  },
+  {
+    key: "codestep-with-mcp-backordered",
+    title: "Reserve 3 Acme tees",
+    note: "ld-codestep-with-mcp: TEE-02 has 1 in stock, so reserve-order fails with its declared Order.OutOfStock and the catch backorders it.",
+    description: "A customer ordered 3 Acme tees (TEE-02). Reserve the stock.",
+    fields: { demo: "codestep-with-mcp", sku: "TEE-02", quantity: 3 },
+    expect: "succeed: backordered",
+  },
+  {
+    key: "codestep-with-mcp-unknown",
+    title: "Reserve 1 Acme scarf",
+    note: "ld-codestep-with-mcp: the shop doesn't sell SCARF-09, so lookup-sku's typed found is false and the route fails.",
+    description:
+      "A customer ordered 1 Acme scarf (SCARF-09). Reserve the stock.",
+    fields: { demo: "codestep-with-mcp", sku: "SCARF-09", quantity: 1 },
+    expect: "fail: unknown-sku",
+  },
+  {
     key: "routing-closed",
     title: "Closed: old header bug",
     note: "Closed, so it is never ready and nothing runs.",

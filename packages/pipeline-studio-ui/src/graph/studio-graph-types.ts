@@ -39,10 +39,17 @@ export type StudioMcpTool = { server: string; tool: string };
 
 /**
  * The step catalog the studio translates with: the validator's
- * `StepContract`s, plus the tool an MCP tool step calls.
+ * `StepContract`s, plus the tool an MCP tool step calls and the MCP server
+ * keys a code step mounts.
  */
 export type StudioStepCatalog = Readonly<
-  Record<string, StepContract & { mcpTool?: StudioMcpTool }>
+  Record<
+    string,
+    StepContract & {
+      mcpTool?: StudioMcpTool;
+      mcpServers?: readonly string[];
+    }
+  >
 >;
 
 /**
@@ -50,7 +57,8 @@ export type StudioStepCatalog = Readonly<
  * the step catalog passed to `translateSpecToGraph`; `"none"` otherwise
  * (wait/succeed/fail nodes, or a step that wasn't found) — chosen over
  * fabricating empty arrays, which would read as a real zero-field step.
- * `mcpTool` is set on an MCP tool step.
+ * `mcpTool` is set on an MCP tool step; `mcpServers` on a code step that
+ * mounts MCP servers.
  */
 export type StudioNodeShape =
   | {
@@ -60,6 +68,7 @@ export type StudioNodeShape =
       resultSchemaJson: Record<string, unknown>;
       errors: string[];
       mcpTool?: StudioMcpTool;
+      mcpServers?: string[];
     }
   | { kind: "none" };
 

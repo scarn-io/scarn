@@ -5,13 +5,14 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 import type { McpToolCallInput } from "../../../../src/work/task-run/application/mcp-tool-caller";
+import { createSdkMcpConnectionPool } from "../../../../src/work/task-run/infra/sdk-mcp-connection-pool";
 import { SdkMcpToolCaller } from "../../../../src/work/task-run/infra/sdk-mcp-tool-caller";
 
 /**
  * `SdkMcpToolCaller` with `placement: container`: the fixture server, bundled
  * to one file, runs inside a plain `oven/bun` container through
  * `docker exec -i`, and an abort must leave no server process behind in the
- * container.
+ * container. The connection pool keeps one server process for many calls.
  */
 
 const integrationEnabled = process.env["SCARN_INTEGRATION"] === "true";
@@ -119,6 +120,38 @@ describe.skipIf(!integrationEnabled)(
       controller.abort();
 
       expect(await pending).toEqual({ status: "aborted" });
+      expect(await serverProcessCount(containerId)).toBe(0);
+    }, 60_000);
+
+    test("a pool sends two calls over one docker exec server and closeAll stops it", async () => {
+      const base = input({});
+      const pool = createSdkMcpConnectionPool({
+        servers: { fixture: base.server },
+        placement: base.placement,
+        env: base.env,
+        signal: new AbortController().signal,
+      });
+      const call = (text: string) =>
+        pool.call("fixture", {
+          tool: "echo",
+          args: { text },
+          timeoutMs: 30_000,
+          signal: new AbortController().signal,
+        });
+
+      expect(await call("one")).toMatchObject({
+        status: "ok",
+        content: [{ type: "text", text: "echo: one" }],
+      });
+      expect(await serverProcessCount(containerId)).toBe(1);
+      expect(await call("two")).toMatchObject({
+        status: "ok",
+        content: [{ type: "text", text: "echo: two" }],
+      });
+      expect(await serverProcessCount(containerId)).toBe(1);
+
+      await pool.closeAll();
+
       expect(await serverProcessCount(containerId)).toBe(0);
     }, 60_000);
   },

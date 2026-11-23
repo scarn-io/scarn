@@ -162,6 +162,10 @@ _Avoid_: prompt (that's an agent step's), args mapping, tool input
 The built-in result of an MCP tool step whose tool has no output schema: `{ content, structuredContent }`, the tool's raw content blocks plus its structured content, or null.
 _Avoid_: raw result, text result, tool output (that's a tool's declared output schema)
 
+**MCP bridge**:
+The per-run HTTP server the worker opens for a `code` step that declares `mcps`, so the step's `fn` can call tools on those servers through `context.mcp`. It listens on `host.docker.internal:<port>` behind a per-run bearer token, accepts calls only for the step's own servers, and makes each call with the worker's own MCP client, so server secrets never enter the container. It's not the managed MCP relay: the relay is Scarn's API route that forwards calls to a managed connection's provider using a relay capability; the bridge lives on the worker, and a bridged call to a managed server still goes on through the relay. See `docs/adr/0016-mcp-calls-from-code-steps.md`.
+_Avoid_: relay, MCP relay, MCP proxy, MCP gateway
+
 ### Branches
 
 **Base branch**:

@@ -84,6 +84,30 @@ export type {
   WaitSettings,
 } from "./types";
 export type { StepRef } from "../definitions/steps/step-ref";
+export {
+  failStep,
+  isStepError,
+  StepError,
+  type StepErrorOptions,
+} from "../definitions/steps/step-error";
+export {
+  McpArgsError,
+  McpOutputInvalidError,
+  McpTimeoutError,
+  McpToolError,
+  McpUnavailableError,
+  type McpUnavailableReason,
+} from "../definitions/steps/mcp-errors";
+export {
+  createCodeStepMcpClient,
+  type McpCallOptions,
+  type McpClient,
+  type McpClients,
+} from "../definitions/steps/code-step-mcp-client";
+export {
+  createFakeMcpClients,
+  type FakeMcpClients,
+} from "../definitions/steps/fake-mcp-clients";
 export type {
   Catch,
   Condition as ConditionJson,

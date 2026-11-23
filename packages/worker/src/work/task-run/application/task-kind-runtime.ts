@@ -22,15 +22,15 @@ export function taskKindUsesAgent(kind: TaskKind): boolean {
 /**
  * Whether a launch of this kind resolves the step's MCP servers (refs,
  * connectors, managed relay, the env they need). An agent hands them to
- * OpenCode; an `mcp_tool` task calls one of them itself.
+ * OpenCode; an `mcp_tool` task calls one of them itself; a code step calls
+ * its servers through the MCP bridge (a step without servers resolves none).
  */
 export function taskKindResolvesMcpServers(kind: TaskKind): boolean {
   switch (kind) {
     case "agent":
     case "mcp_tool":
-      return true;
     case "code":
-      return false;
+      return true;
     default:
       return assertNever(kind);
   }

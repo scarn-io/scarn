@@ -13,7 +13,10 @@ import type { TaskExecutionConfigEntity } from "@scarn/core/tasks/task-execution
 import type { EnvironmentRepo } from "@scarn/core/pipeline-definitions/environment/application/environment-repo";
 import type { CreateStepDefinitionInput } from "../contracts/step-definition-contracts";
 import { assertStepKindFitsRuntime } from "../domain/assert-step-kind-fits-runtime";
-import { assertToolCallFitsMcpServers } from "../domain/step-definition-entity";
+import {
+  assertHealthChecksFitStepKind,
+  assertToolCallFitsMcpServers,
+} from "../domain/step-definition-entity";
 import {
   RepoBaseBranchInvalidError,
   StepEnvironmentConnectorCollisionError,
@@ -112,7 +115,7 @@ export const resolveStepDefinitionTaskExecutionConfig = async (
     );
   }
 
-  return await resolveTaskExecutionConfig(
+  const config = await resolveTaskExecutionConfig(
     {
       projectId: input.projectId,
       environment: input.environment,
@@ -123,4 +126,6 @@ export const resolveStepDefinitionTaskExecutionConfig = async (
     { taskExecutionConfigRepo },
     dbExecutor,
   );
+  assertHealthChecksFitStepKind(input.kind, config?.healthChecks);
+  return config;
 };

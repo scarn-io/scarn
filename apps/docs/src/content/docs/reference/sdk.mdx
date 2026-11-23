@@ -636,7 +636,8 @@ export const sumScores = codeStep({
 | `fn`           | `(input, context: CodeStepContext) => result \| Promise<result>`                                                                                                           | Yes      | The step's implementation; may be inline. The worker imports the module and finds the step by `key`, so export the step by name. See [Code steps](/scarn/guides/steps/#code-steps)                                                                                                                |
 | `inputSchema`  | `ZodType`                                                                                                                                                                  | No       | Zod schema for `fn`'s input                                                                                                                                                                                                                                                                       |
 | `resultSchema` | `ZodType`                                                                                                                                                                  | No       | Zod schema for `fn`'s return value                                                                                                                                                                                                                                                                |
-| `errors`       | `string[]`                                                                                                                                                                 | No       | Error names the step can fail with; a pipeline can `.retry`/`.catch` them by name                                                                                                                                                                                                                 |
+| `mcps`         | `Record<string, McpHandle>`                                                                                                                                                | No       | MCP servers `fn` calls through `context.mcp`, keyed by server key. Their `defineMcp` health checks run before `fn`. See [Calling MCP tools from a code step](/scarn/guides/steps/#calling-mcp-tools-from-a-code-step)                                                                             |
+| `errors`       | `string[]`                                                                                                                                                                 | No       | Error names the step can fail with; a pipeline can `.retry`/`.catch` them by name. Fail with one through `StepError` or `context.fail`                                                                                                                                                            |
 | `retry`        | `{ on: string[]; maxAttempts: number }[]`                                                                                                                                  | No       | As `defineStep`'s `retry`: how a standalone Task of this step retries                                                                                                                                                                                                                             |
 | `concurrency`  | `{ max: number; waiting: number }`                                                                                                                                         | No       | As `defineStep`'s `concurrency`                                                                                                                                                                                                                                                                   |
 | `features`     | `AnyStepFeature[]`                                                                                                                                                         | No       | Feature plugins from `Features`; only each feature's result extension applies (no prompt on a code step)                                                                                                                                                                                          |
@@ -644,7 +645,52 @@ export const sumScores = codeStep({
 | `repo`         | `RepoSpec \| (({ input, result, workItem, env }) => RepoSpec)`                                                                                                             | No       | Top-level write policy: `Repo.readWrite()` (default) or `Repo.readOnly()`. See [`Repo`](#repo)                                                                                                                                                                                                    |
 | `status`       | `"draft" \| "active"`                                                                                                                                                      | No       | Draft steps are not executed; defaults to `"active"`                                                                                                                                                                                                                                              |
 
-`CodeStepContext` is `{ artifactsDir: string }`, the absolute path of the step's artifacts folder, which already exists. Write a file there and return `Artifact.path(<relative path>)` in a [`z.artifact`](#zartifactoptions) field. The worker checks that the path stays inside the folder, exists, is non-empty and has an accepted extension.
+`CodeStepContext` has:
+
+| Field          | Type                                     | Description                                                                                                                                                                                                                                                                                      |
+| -------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `artifactsDir` | `string`                                 | The absolute path of the step's artifacts folder, which already exists. Write a file there and return `Artifact.path(<relative path>)` in a [`z.artifact`](#zartifactoptions) field. The worker checks that the path stays inside the folder, exists, is non-empty and has an accepted extension |
+| `fail`         | `(name, message, options?) => never`     | Throws a [`StepError`](#steperror). `name` is typed as a built-in error or one of the step's `errors`                                                                                                                                                                                            |
+| `mcp`          | [`McpClients<typeof mcps>`](#mcpclients) | Only when the step declares `mcps`: one client per server key                                                                                                                                                                                                                                    |
+
+### `McpClients`
+
+`context.mcp` of a code step with `mcps`. For each server key, an `McpClient` with:
+
+| Member                            | Returns                         | Description                                                                                                                                                |
+| --------------------------------- | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `<tool>(args, options?)`          | `Promise<McpToolStepResult<T>>` | One method per tool of the catalog bound with `withTools`. `args` is `McpToolArgs<T>`, parsed with the tool's input schema; the result is as for `.step()` |
+| `call(toolName, args?, options?)` | `Promise<McpToolContentResult>` | Untyped call to any tool on the server. A catalog tool keyed `call` is only reachable this way                                                             |
+
+`options` is `McpCallOptions`: `{ timeoutMs?: number; signal?: AbortSignal }`. The worker also applies the server's `timeout.execution` and a 10-minute cap.
+
+`createCodeStepMcpClient(handles, { env?, fetch? })` builds the real clients; `codeStep` calls it for you. Outside a run every call throws `McpUnavailableError` (`no_bridge`).
+
+### `createFakeMcpClients(handles, fakes?)`
+
+Returns `McpClients` for unit-testing `fn`, typed from the handles' catalogs. `fakes` is `FakeMcpClients<typeof handles>`: per server key, a function per catalog tool that gets the parsed arguments and returns the tool's result, plus an optional `call(toolName, args)` fake for the untyped call. Arguments and results are validated as by the real client. A tool with no fake throws `McpUnavailableError` (`no_fake`). See [Testing with fake clients](/scarn/guides/steps/#testing-with-fake-clients).
+
+### `StepError`
+
+`new StepError(name, message, { code?, cause? })` fails a code step with `name` when thrown from `fn` and left uncaught. The name must be a built-in error or one in the step's `errors`; any other name is reported as `Scarn.StepFailed`, and `Scarn.All` is never accepted. `code` defaults to `SCARN_STEP_ERROR` in the Task's error. See [Failing with a named error](/scarn/guides/steps/#failing-with-a-named-error).
+
+| Export                              | Description                                                                               |
+| ----------------------------------- | ----------------------------------------------------------------------------------------- |
+| `failStep(name, message, options?)` | Throws a `StepError`. Pass it as `fail` when calling `fn` from a unit test                |
+| `isStepError(value)`                | `true` for any `StepError`, including one from another copy of the SDK (checked by brand) |
+| `StepErrorOptions`                  | `{ code?: string; cause?: unknown }`                                                      |
+
+The errors `context.mcp` calls throw are `StepError`s with built-in names:
+
+| Class                   | `name`                   | Extra fields                                                                                                                                                                |
+| ----------------------- | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `McpArgsError`          | `Scarn.ArgsError`        |                                                                                                                                                                             |
+| `McpToolError`          | `Scarn.McpToolError`     | `content: McpContentBlock[]`                                                                                                                                                |
+| `McpUnavailableError`   | `Scarn.McpUnavailable`   | `reason: McpUnavailableReason` (`start`, `connect`, `initialize`, `tool_not_found`, `output_too_large`, `no_bridge`, `not_declared`, `bridge`, `no_fake`), `detail: string` |
+| `McpOutputInvalidError` | `Scarn.McpOutputInvalid` |                                                                                                                                                                             |
+| `McpTimeoutError`       | `Scarn.Timeout`          |                                                                                                                                                                             |
+
+The classes and functions in this section are exported from both `@scarn/sdk/definitions/steps` and `@scarn/sdk/pipelines`. The fake-client types other than `FakeMcpClients` (`FakeMcpClient`, `FakeMcpTool`, `FakeMcpCall`) and `McpToolMethod`/`McpUntypedCall` are exported from `@scarn/sdk/definitions/steps` only.
 
 ---
 

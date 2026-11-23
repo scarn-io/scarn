@@ -11,6 +11,10 @@ import {
 } from "./resolve-step-env";
 import { partitionManagedMcpHealthChecks } from "./probe-managed-mcp-connections";
 import type { HealthCheckReport } from "./run-health-checks";
+import {
+  dryRunStepUsesAgent,
+  type DryRunStepKind,
+} from "./dry-run-step-checks";
 
 /**
  * Plans how the post-push run-offer gate runs every step's health checks
@@ -26,8 +30,9 @@ import type { HealthCheckReport } from "./run-health-checks";
  * Merging those silently would test a server one step never gets. Such a step
  * goes into the next launch of that runtime that has no conflict, or a new one.
  *
- * Steps with no declared checks are not launched at all; code steps never
- * declare any. Managed auth startup is probed server-side; only its tool
+ * Steps with no declared checks are not launched at all. A code step launches
+ * without an agent (its checks are direct MCP calls, ADR 0016 decision 8), so
+ * it never shares a launch with an agent step. Managed auth startup is probed server-side; only its tool
  * checks are skipped, while ordinary checks still share launches.
  * Pure, so the grouping is unit-tested without a launch.
  */
@@ -36,6 +41,7 @@ export type HealthCheckStep = {
   stepDefinitionId: string;
   key: string;
   name: string;
+  kind: DryRunStepKind;
   /** The step's ref, with a named environment's latest version fetched. */
   environment: ResolvedEnvironmentRefInput;
   opencodeMcpJson: OpenCodeMcpServers | null;
@@ -52,6 +58,8 @@ export type PlannedHealthCheckLaunch = {
   runtime: HealthCheckRuntime;
   /** Checked out after clone; null falls back to the configured or remote default branch. */
   baseWorkBranch: string | null;
+  /** False for a launch of code steps only, which starts no agent. */
+  usesAgent: boolean;
   /** In pipeline order; every one declares at least one check. */
   steps: HealthCheckStep[];
   opencodeMcpJson: OpenCodeMcpServers;
@@ -156,6 +164,7 @@ type LaunchBuilder = {
   runtimeKey: string;
   runtime: HealthCheckRuntime;
   baseWorkBranch: string | null;
+  usesAgent: boolean;
   steps: HealthCheckStep[];
   mcp: Map<string, OpenCodeMcpServers[string]>;
 };
@@ -202,10 +211,12 @@ export function planHealthCheckLaunches(
     const runtime = resolveHealthCheckRuntime(step);
     const runtimeKey = launchKey(runtime);
     const baseWorkBranch = step.baseWorkBranch ?? null;
+    const usesAgent = dryRunStepUsesAgent(step.kind);
     let builder = builders.find(
       (candidate) =>
         candidate.runtimeKey === runtimeKey &&
         candidate.baseWorkBranch === baseWorkBranch &&
+        candidate.usesAgent === usesAgent &&
         fits(candidate, step),
     );
     if (!builder) {
@@ -213,6 +224,7 @@ export function planHealthCheckLaunches(
         runtimeKey,
         runtime,
         baseWorkBranch,
+        usesAgent,
         steps: [],
         mcp: new Map(),
       };
@@ -225,6 +237,7 @@ export function planHealthCheckLaunches(
     launches: builders.map((builder) => ({
       runtime: builder.runtime,
       baseWorkBranch: builder.baseWorkBranch,
+      usesAgent: builder.usesAgent,
       steps: builder.steps,
       opencodeMcpJson: Object.fromEntries(builder.mcp),
     })),

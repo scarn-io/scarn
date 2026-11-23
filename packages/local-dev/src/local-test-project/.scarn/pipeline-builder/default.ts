@@ -7,6 +7,7 @@ import ldGrill from "./ld-grill";
 import ldLanesMerge from "./ld-lanes-merge";
 import ldLinear from "./ld-linear";
 import ldLoop from "./ld-loop";
+import ldCodestepWithMcp from "./ld-codestep-with-mcp";
 import ldMerges from "./ld-merges";
 import ldReply from "./ld-reply";
 import ldRoutesAll from "./ld-routes-all";
@@ -67,6 +68,10 @@ export default defineAutomation({
         {
           when: (r) => equal(r.workItem.fields.demo, "secrets"),
           to: ldSecrets,
+        },
+        {
+          when: (r) => equal(r.workItem.fields.demo, "codestep-with-mcp"),
+          to: ldCodestepWithMcp,
         },
       ],
       otherwise: ldLinear,
