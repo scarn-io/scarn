@@ -39,19 +39,6 @@ You'll need a repository with an `origin` remote, Node or Bun, and an AI provide
 
 **Self-hosted.** The whole server (API, web app, Postgres and S3-compatible storage) runs with Docker Compose from `docker-compose.selfhost.yml` in this repo. Self-hosted installs have no usage limits. Start with the [self-hosting quickstart](https://scarn-io.github.io/scarn/self-hosting/quickstart/), then [connect the GitHub App](https://scarn-io.github.io/scarn/self-hosting/github-app/) and [point the CLI at your server](https://scarn-io.github.io/scarn/self-hosting/cli/).
 
-## What's open and what's paid
-
-Scarn is open core. Everything an individual or a small team needs is open source in this repository:
-
-- projects, work items, pipelines, steps, signals, rules and the pipeline designer
-- workers, the CLI, the SDK and the OpenCode plugin
-- GitHub, Bitbucket and Jira ingest
-- orgs, members, invites and built-in roles
-- secrets, environments, notifications, artifacts and traces
-- usage metering (limits apply only on the hosted service)
-
-Paid plans will add what larger companies need to roll Scarn out across many teams: workflow guardrails such as required approvers and protected pipelines, and identity, governance and compliance features such as SSO, SCIM and audit logs. None of these exist yet. When they do, they will be available on the hosted service and, with a license key, on self-hosted installs. Features that are open stay open.
-
 ## Repository layout
 
 | Path                          | What it is                                                                                       |

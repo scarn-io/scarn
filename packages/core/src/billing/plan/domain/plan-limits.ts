@@ -16,7 +16,7 @@ export type PlanLimitsProps = {
 const GIB = 1024 ** 3;
 
 /**
- * Plan caps as data, not scattered constants. Adding a paid tier is a single
+ * Plan caps as data, not scattered constants. Adding a plan is a single
  * entry in this frozen map plus a value in {@link PlanId}. The `unlimited`
  * plan is the self-hosted default: usage is still metered, but nothing is
  * capped.
