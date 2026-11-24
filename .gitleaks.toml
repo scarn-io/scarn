@@ -30,6 +30,10 @@ regexes = [
 ]
 
 [[allowlists]]
+description = "Fixed, non-production dev encryption key in the self-host example env"
+regexes = ['''^Ym9ib2RkeS1kZXYtc2VjcmV0cy1rZXktbm90LXByb2Q=$''']
+
+[[allowlists]]
 description = "Git commit SHAs in recorded demo-project run logs"
 condition = "AND"
 paths = ['''(^|/)demo-project/fixtures/.*\.jsonl$''']
