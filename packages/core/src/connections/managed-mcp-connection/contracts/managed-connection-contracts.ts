@@ -175,7 +175,11 @@ export const startManagedLoopbackResponseSchema =
     redirectUri: z.string(),
   });
 
-const MAX_LOOPBACK_PARAM_LENGTH = 2048;
+/**
+ * Generous because some providers (e.g. Atlassian) issue authorization codes
+ * as JWTs carrying every requested scope, which can run well past 2 KB.
+ */
+const MAX_LOOPBACK_PARAM_LENGTH = 8192;
 
 /**
  * What the CLI's loopback listener caught: the provider's `state` with

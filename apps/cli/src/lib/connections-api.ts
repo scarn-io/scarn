@@ -94,6 +94,7 @@ type ApiErrorBody = {
   detail?: string;
   code?: string;
   meta?: Record<string, unknown>;
+  errors?: { path?: string; message?: string }[];
 };
 
 const COMPLETION_FAILURE_MESSAGES: Record<string, string> = {

@@ -129202,22 +129202,22 @@
                   "state": {
                     "type": "string",
                     "minLength": 1,
-                    "maxLength": 2048
+                    "maxLength": 8192
                   },
                   "code": {
                     "type": "string",
                     "minLength": 1,
-                    "maxLength": 2048
+                    "maxLength": 8192
                   },
                   "iss": {
                     "type": "string",
                     "minLength": 1,
-                    "maxLength": 2048
+                    "maxLength": 8192
                   },
                   "error": {
                     "type": "string",
                     "minLength": 1,
-                    "maxLength": 2048
+                    "maxLength": 8192
                   }
                 },
                 "required": [
@@ -129240,22 +129240,22 @@
                   "state": {
                     "type": "string",
                     "minLength": 1,
-                    "maxLength": 2048
+                    "maxLength": 8192
                   },
                   "code": {
                     "type": "string",
                     "minLength": 1,
-                    "maxLength": 2048
+                    "maxLength": 8192
                   },
                   "iss": {
                     "type": "string",
                     "minLength": 1,
-                    "maxLength": 2048
+                    "maxLength": 8192
                   },
                   "error": {
                     "type": "string",
                     "minLength": 1,
-                    "maxLength": 2048
+                    "maxLength": 8192
                   }
                 },
                 "required": [
@@ -129278,22 +129278,22 @@
                   "state": {
                     "type": "string",
                     "minLength": 1,
-                    "maxLength": 2048
+                    "maxLength": 8192
                   },
                   "code": {
                     "type": "string",
                     "minLength": 1,
-                    "maxLength": 2048
+                    "maxLength": 8192
                   },
                   "iss": {
                     "type": "string",
                     "minLength": 1,
-                    "maxLength": 2048
+                    "maxLength": 8192
                   },
                   "error": {
                     "type": "string",
                     "minLength": 1,
-                    "maxLength": 2048
+                    "maxLength": 8192
                   }
                 },
                 "required": [

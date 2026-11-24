@@ -212,6 +212,50 @@ describe("managed connection loopback routes", () => {
     });
   });
 
+  test("a JWT-sized code passes validation and reaches the exchange", async () => {
+    const { projectId, headers } = await setUp("lbr-long-code");
+    const started = await startLoopback(projectId, headers);
+    const redirect = await redirectedTo(started.authorizationUrl);
+
+    const response = await complete(
+      started.attemptId,
+      {
+        completionSecret: started.completionSecret,
+        ...redirect,
+        code: "c".repeat(4096),
+      },
+      headers,
+    );
+
+    expect(response.status).not.toBe(422);
+    expect(fake.callsTo("token")).toHaveLength(1);
+  });
+
+  test("an oversized code is 422 naming the field", async () => {
+    const { projectId, headers } = await setUp("lbr-oversized-code");
+    const started = await startLoopback(projectId, headers);
+    const redirect = await redirectedTo(started.authorizationUrl);
+
+    const response = await complete(
+      started.attemptId,
+      {
+        completionSecret: started.completionSecret,
+        ...redirect,
+        code: "c".repeat(8193),
+      },
+      headers,
+    );
+
+    expect(response.status).toBe(422);
+    expect(response.error?.value).toMatchObject({ code: "VALIDATION" });
+    expect(
+      JSON.stringify(
+        (response.error?.value as { errors?: unknown } | undefined)?.errors,
+      ),
+    ).toContain("code");
+    expect(fake.callsTo("token")).toHaveLength(0);
+  });
+
   test("a redirect URI that isn't loopback is 422", async () => {
     const { projectId, headers } = await setUp("lbr-bad-redirect");
 

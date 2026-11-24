@@ -43,15 +43,27 @@ export async function connectApi(baseUrl: string): Promise<AuthenticatedApi> {
   return { client: createScarnClient(baseUrl, { fetch }), fetch };
 }
 
+type ApiFieldIssue = { path?: string; message?: string };
+
 /**
  * The API's error bodies are RFC 7807 Problem Details (see
  * `apiErrorResponseSchema`), so `detail` is the sentence written for a human and
  * `title` the short fallback. Both beat `JSON.stringify`, which puts a brace
- * salad in front of the user.
+ * salad in front of the user. A validation failure's per-field `errors` are
+ * appended, since its `detail` alone doesn't say which field was rejected.
  */
 export function describeApiError(error: {
   title?: string | undefined;
   detail?: string | undefined;
+  errors?: readonly ApiFieldIssue[] | undefined;
 }): string {
-  return error.detail ?? error.title ?? "the server rejected the request";
+  const summary =
+    error.detail ?? error.title ?? "the server rejected the request";
+  const issues = (error.errors ?? []).flatMap(({ path, message }) => {
+    if (message === undefined) return [];
+    return path === undefined || path === "" || path === "/"
+      ? [message]
+      : [`${path}: ${message}`];
+  });
+  return issues.length === 0 ? summary : `${summary} (${issues.join("; ")})`;
 }
