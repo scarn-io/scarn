@@ -86,7 +86,7 @@ describe("assertProjectPermission", () => {
 
       let error: unknown = null;
       try {
-        assertProjectPermission(project, memberUserId, "comments:delete");
+        assertProjectPermission(project, memberUserId, "comments:write");
       } catch (caught) {
         error = caught;
       }
@@ -95,9 +95,9 @@ describe("assertProjectPermission", () => {
       expect((error as CoreError).status).toBe(403);
       expect((error as CoreError).code).toBe("PROJECT_FORBIDDEN");
       expect((error as CoreError).meta).toEqual({
-        permission: "comments:delete",
+        permission: "comments:write",
       });
-      expect((error as CoreError).message).toContain("comments:delete");
+      expect((error as CoreError).message).toContain("comments:write");
       expect((error as CoreError).message).not.toContain(project.id);
       expect((error as CoreError).message).not.toContain(memberUserId);
     },

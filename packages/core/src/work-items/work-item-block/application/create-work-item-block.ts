@@ -72,7 +72,7 @@ export const createWorkItemBlock = async (
   // present.
   await userAuthz.requireProjectPermission({
     projectId: blockedWorkItem.projectId,
-    permission: "work-items:update",
+    permission: "work-items:write",
     dbExecutor,
   });
 

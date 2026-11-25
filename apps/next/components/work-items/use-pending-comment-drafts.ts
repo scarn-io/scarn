@@ -19,7 +19,7 @@ export type PendingCommentDraftsData = {
 export function usePendingCommentDrafts(
   workItemId: string,
   /** Skips fetching entirely when `false`. Only viewers with
-   * `work-item-platform-comment:create` can act on drafts, so there's no
+   * `work-item-platform-comment:write` can act on drafts, so there's no
    * reason to fetch (or trip a 403) for anyone else. */
   enabled: boolean,
 ): PendingCommentDraftsData {

@@ -43,7 +43,7 @@ export const deleteWorkItemBlock = async (
 
   await userAuthz.requireProjectPermission({
     projectId: block.projectId,
-    permission: "work-items:update",
+    permission: "work-items:write",
     dbExecutor,
   });
 

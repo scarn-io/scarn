@@ -198,7 +198,7 @@ const refuseReplyToFailedChat = async (
   }
   await deps.userAuthz.requireProjectPermission({
     projectId: task.projectId,
-    permission: "comments:create",
+    permission: "comments:write",
     dbExecutor: tx,
   });
   throw new ConversationTaskFailedError(conversationId);
@@ -208,7 +208,7 @@ const refuseReplyToFailedChat = async (
  * A person's message in a Task's conversation. The first one while the Task
  * waits resumes it; one sent while that turn is still pending joins it.
  * Refused while the agent has the floor, once the conversation is closed,
- * and on a failed chat. Needs `comments:create`. Runs in `tx`.
+ * and on a failed chat. Needs `comments:write`. Runs in `tx`.
  */
 export const replyToTask = async (
   input: SendConversationMessageInput,

@@ -647,7 +647,7 @@ export class PipelineExecutions extends HeyApiClient {
     }
     
     /**
-     * Answers the visit waiting on an open question: the reply is saved as a threaded comment under the question's comment, the question becomes answered by the caller, and the wait's result is `{ replied: true, body, commentId }`. A question that isn't open is rejected (`PIPELINE_RUN_QUESTION_NOT_OPEN`) and nothing is saved. Requires `comments:create`.
+     * Answers the visit waiting on an open question: the reply is saved as a threaded comment under the question's comment, the question becomes answered by the caller, and the wait's result is `{ replied: true, body, commentId }`. A question that isn't open is rejected (`PIPELINE_RUN_QUESTION_NOT_OPEN`) and nothing is saved. Requires `comments:write`.
      */
     public answerQuestion<ThrowOnError extends boolean = false>(options: Options<PostApiPipelineExecutionsByPipelineExecutionIdQuestionsByQuestionIdAnswerData, ThrowOnError>) {
         return (options.client ?? this.client).post<PostApiPipelineExecutionsByPipelineExecutionIdQuestionsByQuestionIdAnswerResponses, PostApiPipelineExecutionsByPipelineExecutionIdQuestionsByQuestionIdAnswerErrors, ThrowOnError>({
@@ -923,7 +923,7 @@ export class Conversations extends HeyApiClient {
     }
     
     /**
-     * Replies in a conversation. Requires `comments:create`. The first reply while the agent waits queues its next turn; more replies join that turn until it starts. Refused with `CONVERSATION_NOT_WAITING` once the agent has the floor or the conversation is closed, and on a failed chat with `CONVERSATION_TASK_FAILED` (retry it instead).
+     * Replies in a conversation. Requires `comments:write`. The first reply while the agent waits queues its next turn; more replies join that turn until it starts. Refused with `CONVERSATION_NOT_WAITING` once the agent has the floor or the conversation is closed, and on a failed chat with `CONVERSATION_TASK_FAILED` (retry it instead).
      */
     public sendConversationMessage<ThrowOnError extends boolean = false>(options: Options<PostApiConversationsByConversationIdMessagesData, ThrowOnError>) {
         return (options.client ?? this.client).post<PostApiConversationsByConversationIdMessagesResponses, PostApiConversationsByConversationIdMessagesErrors, ThrowOnError>({
@@ -965,7 +965,7 @@ export class Conversations extends HeyApiClient {
     }
     
     /**
-     * Ends a chat: its conversation closes and a queued, running or waiting turn is cancelled. The transcript stays readable. Ending an ended chat does nothing. Requires `executions:write`, or being its creator with `comments:create`. 404 when the conversation isn't a chat (see `/done` for a conversation step).
+     * Ends a chat: its conversation closes and a queued, running or waiting turn is cancelled. The transcript stays readable. Ending an ended chat does nothing. Requires `executions:write`, or being its creator with `comments:write`. 404 when the conversation isn't a chat (see `/done` for a conversation step).
      */
     public endProjectConversation<ThrowOnError extends boolean = false>(options: Options<PostApiConversationsByConversationIdEndData, ThrowOnError>) {
         return (options.client ?? this.client).post<PostApiConversationsByConversationIdEndResponses, PostApiConversationsByConversationIdEndErrors, ThrowOnError>({ url: '/api/conversations/{conversationId}/end', ...options });
@@ -978,7 +978,7 @@ export class WorkItemComments extends HeyApiClient {
     }
     
     /**
-     * Creates a comment, or a reply when `parentCommentId` names a top-level comment. A reply to a question's comment is a plain comment and doesn't answer it; `POST /pipeline-executions/:id/questions/:questionId/answer` does. Requires `comments:create`.
+     * Creates a comment, or a reply when `parentCommentId` names a top-level comment. A reply to a question's comment is a plain comment and doesn't answer it; `POST /pipeline-executions/:id/questions/:questionId/answer` does. Requires `comments:write`.
      */
     public createWorkItemComment<ThrowOnError extends boolean = false>(options: Options<PostApiWorkItemCommentsData, ThrowOnError>) {
         return (options.client ?? this.client).post<PostApiWorkItemCommentsResponses, PostApiWorkItemCommentsErrors, ThrowOnError>({

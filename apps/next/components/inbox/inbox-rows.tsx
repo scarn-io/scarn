@@ -115,7 +115,7 @@ export function InboxTaskRow({
 }) {
   const agentsHref = useAgentsHref();
   const projectPath = useProjectPath();
-  const canReply = useHasProjectPermission("comments:create");
+  const canReply = useHasProjectPermission("comments:write");
   const { pending, error, run } = useRowAction(onChanged);
   const name = taskDisplayName(task);
   const { conversationId } = task;
@@ -172,7 +172,7 @@ export function InboxWaitRow({
   onChanged: () => void;
 }) {
   const agentsHref = useAgentsHref();
-  const canReply = useHasProjectPermission("comments:create");
+  const canReply = useHasProjectPermission("comments:write");
   const canDecide = useHasProjectPermission("executions:write");
   const { pending, error, run } = useRowAction(onChanged);
   const executionRoute = () =>

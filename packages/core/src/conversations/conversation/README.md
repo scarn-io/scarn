@@ -25,7 +25,7 @@ A conversation starts in `waiting_for_person`, opened by the agent's first hand-
 
 `application/send-conversation-message.ts`. Each locks the conversation row (`ConversationRepo.lock`), so it must run in a transaction:
 
-- `sendConversationMessage`: a person's message, needing `comments:create` on the project. It returns the status before, so the caller knows whether it queued the agent's next turn.
+- `sendConversationMessage`: a person's message, needing `comments:write` on the project. It returns the status before, so the caller knows whether it queued the agent's next turn.
 - `postConversationSystemMessage`: a `system` message for an action a person took without writing ("Alex chose to continue without a reply"), with the conversation's next status. The caller checks permissions.
 - `deliverPendingMessages(conversationId, taskRunId, deps, tx)`: hands every undelivered person and system message to `taskRunId` and moves the conversation to `agent_turn`. It does nothing unless the conversation is `reply_pending`. Once it runs, later messages are refused until the agent hands over again. The worker context runs it when a continuation fetches its context, and for a repo conversation (chat) on every run, found through the Task's `conversationId` (`tasks/task-run/application/task-run-worker-context-conversation.ts`). A chat's current turn is the person messages after the latest agent message, so a retry replays that turn whether or not it was already delivered.
 

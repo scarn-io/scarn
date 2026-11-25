@@ -37,7 +37,7 @@ export const setWorkItemCommentPin = async (
 
   await userAuthz.requireProjectPermission({
     projectId: comment.projectId,
-    permission: "comments:update",
+    permission: "comments:write",
     dbExecutor,
   });
 

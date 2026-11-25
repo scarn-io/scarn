@@ -22,11 +22,7 @@ export { SYSTEM_ACTOR_ID };
 // does not grant any other execution-lifecycle permission (e.g.
 // start/cancel/advance), which the system actor never drives.
 const SYSTEM_ACTOR_ALLOWED_PERMISSIONS: ReadonlySet<ProjectPermission> =
-  new Set<ProjectPermission>([
-    "work-items:write",
-    "work-items:update",
-    "executions:write",
-  ]);
+  new Set<ProjectPermission>(["work-items:write", "executions:write"]);
 
 /**
  * Authorization service for the synthetic system actor used by unattended

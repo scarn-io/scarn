@@ -166,7 +166,7 @@ describe("scarn work-items answer", () => {
 
   test("a 403 from the API is action_forbidden", async () => {
     const { run } = setup(fakeIo(), {
-      answer: { answerQuestion: () => fail(403, "Missing comments:create.") },
+      answer: { answerQuestion: () => fail(403, "Missing comments:write.") },
     });
 
     const error = await rejection(
@@ -175,7 +175,7 @@ describe("scarn work-items answer", () => {
 
     expect((error as CliError).code).toBe("action_forbidden");
     expect(error.message).toBe(
-      "Could not answer question q-open: Missing comments:create.",
+      "Could not answer question q-open: Missing comments:write.",
     );
   });
 });

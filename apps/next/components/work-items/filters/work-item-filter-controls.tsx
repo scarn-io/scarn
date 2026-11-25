@@ -105,7 +105,7 @@ const activeUpdatedBounds = (
  * A control appears only once its filter actually works. `Assignee` opens on
  * All rather than Mine: most synced items only gain a Scarn assignee once
  * their person links an account. `Awaiting approval` is served, but its button
- * is gated on `work-item-platform-comment:create` (decisions 8/9) — a caller
+ * is gated on `work-item-platform-comment:write` (decisions 8/9) — a caller
  * who cannot act on a draft is not offered a queue they cannot work, though
  * the clause itself still filters and charts for anyone who arrives with it
  * already in the URL. `Sort` is the one exception to "appears only once it
@@ -148,7 +148,7 @@ export function WorkItemFilterControls({
     (filter) => filter.kind === "awaitingApproval",
   );
   const canApproveCommentDrafts = useHasProjectPermission(
-    "work-item-platform-comment:create",
+    "work-item-platform-comment:write",
   );
 
   return (

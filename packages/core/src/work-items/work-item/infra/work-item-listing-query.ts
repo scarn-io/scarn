@@ -194,7 +194,7 @@ const buildFilterPredicates = (
   // Self-contained — correlated on `workItems.id` only, no outer alias — so
   // the fallback count above keeps working untouched. The caller (`listWorkItemsByProject`)
   // is the only place `options.awaitingApproval` is set, and only after
-  // confirming `work-item-platform-comment:create` — the same permission
+  // confirming `work-item-platform-comment:write` — the same permission
   // that gates the pending-draft card on the detail page — so this predicate
   // carries no authorization logic of its own.
   if (options.awaitingApproval) {

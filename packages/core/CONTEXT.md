@@ -176,6 +176,16 @@ _Avoid_: source branch, environment branch
 The branch a readWrite run commits to: a new `scarn/<key>-<id>` branch, or the base branch itself with `WorkBranch.base()`.
 _Avoid_: feature branch, output branch
 
+### Projects
+
+**Project permission**:
+A `<resource>:<action>` string that a check asks for on a project. Every resource has exactly two actions, `read` and `write`; there is no `create`, `update` or `delete`. A finer permission is added only when a role needs it. On a public project, only `:read` permissions fall back to anyone. See `docs/adr/0017-project-permissions-read-write.md`.
+_Avoid_: scope (that's a step grant's), grant (that's a step's or a managed connection's)
+
+**Project role**:
+The name a membership or invite stores (`read`, `write` or `admin`); its project permissions are resolved from it at read time. `read` grants every `:read`; `write` adds `work-items:write`, `comments:write`, `executions:write` and `work-item-platform-comment:write`; `admin` grants everything. A step's grants only narrow what the claiming user's role allows.
+_Avoid_: access level, permission set
+
 ### Work items
 
 **Label**:

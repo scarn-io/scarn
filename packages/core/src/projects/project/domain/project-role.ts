@@ -29,22 +29,13 @@ const READ_PERMISSIONS = ALL_PROJECT_PERMISSIONS.filter((permission) =>
   permission.endsWith(":read"),
 );
 
-const WRITE_RESOURCE_WILDCARDS = ["work-items", "comments"] as const;
-
-const WRITE_EXTRA_PERMISSIONS: readonly ProjectPermission[] = [
+const WRITE_PERMISSIONS: readonly ProjectPermission[] = [
+  ...READ_PERMISSIONS,
+  "comments:write",
   "executions:write",
-  "executions:delete",
-  "work-item-platform-comment:create",
-];
-
-const WRITE_PERMISSIONS = ALL_PROJECT_PERMISSIONS.filter(
-  (permission) =>
-    permission.endsWith(":read") ||
-    WRITE_RESOURCE_WILDCARDS.some((resource) =>
-      permission.startsWith(`${resource}:`),
-    ) ||
-    WRITE_EXTRA_PERMISSIONS.includes(permission),
-);
+  "work-item-platform-comment:write",
+  "work-items:write",
+].sort();
 
 export type ProjectRoleDefinition = {
   readonly name: ProjectRole;

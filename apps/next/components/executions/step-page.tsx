@@ -107,7 +107,7 @@ export function StepPage({
   const scrollRef = useRef<HTMLDivElement>(null);
   const [quote, setQuote] = useState<string | null>(null);
   const canWriteExecutions = useHasProjectPermission("executions:write");
-  const canCreateComments = useHasProjectPermission("comments:create");
+  const canCreateComments = useHasProjectPermission("comments:write");
   const conversationId =
     visit?.nodeKind === "step" ? visit.conversationId : null;
   const conversation = useConversation(conversationId, {

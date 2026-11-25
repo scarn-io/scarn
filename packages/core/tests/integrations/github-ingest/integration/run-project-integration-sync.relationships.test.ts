@@ -259,7 +259,7 @@ describe("GitHub sync relationship ingestion (parent links + blocking edges)", (
   );
 
   test.serial(
-    "a scheduled reconciliation run (SystemAuthorizationService) applies relationships under the work-items:update allowlist entry",
+    "a scheduled reconciliation run (SystemAuthorizationService) applies relationships under the work-items:write allowlist entry",
     async () => {
       const owner = await createTestUserAndSession({
         email: `github-relationships-scheduled-${crypto.randomUUID()}@example.com`,

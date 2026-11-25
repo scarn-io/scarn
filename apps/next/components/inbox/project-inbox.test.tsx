@@ -136,7 +136,7 @@ const renderInbox = async () =>
         initialNotifications={state.notifications}
         pollIntervalMs={60_000}
       />,
-      ["comments:create", "executions:write"],
+      ["comments:write", "executions:write"],
     ),
   );
 

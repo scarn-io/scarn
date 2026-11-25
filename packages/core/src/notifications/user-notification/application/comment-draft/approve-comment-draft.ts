@@ -131,7 +131,7 @@ export const approveCommentDraft = async (
 
   await deps.userAuthz.requireProjectPermission({
     projectId: notification.projectId,
-    permission: "work-item-platform-comment:create",
+    permission: "work-item-platform-comment:write",
     dbExecutor: deps.dbExecutor,
   });
 

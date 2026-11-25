@@ -19,12 +19,12 @@ type ListWorkItemBlocksDeps = {
   dbExecutor?: DbExecutor | undefined;
 };
 
-// `work-items:read` (the sibling read permission to the `work-items:update`
+// `work-items:read` (the sibling read permission to the `work-items:write`
 // required to create/delete blocks — see `docs/apis.md`'s `<resource>:<action>`
 // vocabulary in `project-permission.ts`) rather than `comments:read`: this is
 // data about work items, not comments, and Decision 11 of
 // `docs/work-item-relationships-plan.md` only pins down the *write* side
-// (reuse `work-items:update`, no new permission) — it does not name a read
+// (reuse `work-items:write`, no new permission) — it does not name a read
 // permission, so the natural sibling of the resource being read is used.
 export const listWorkItemBlocks = async (
   input: ListWorkItemBlocksInput,

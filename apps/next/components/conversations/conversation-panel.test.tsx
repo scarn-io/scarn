@@ -19,7 +19,7 @@ const { useConversation } = await import("./use-conversation");
 const { ProjectRouteProvider } =
   await import("@/components/project-route-context");
 
-const ALL = ["comments:create", "executions:write"];
+const ALL = ["comments:write", "executions:write"];
 
 function Harness({
   onShowWork,
@@ -307,7 +307,7 @@ describe("ConversationPanel", () => {
     expect(onChanged).toHaveBeenCalledTimes(1);
   });
 
-  test("no message box or Ask it to finish without comments:create", async () => {
+  test("no message box or Ask it to finish without comments:write", async () => {
     const { view } = renderPanel({ permissions: ["executions:write"] });
     await loaded(view);
 
@@ -357,7 +357,7 @@ describe("ConversationPanel", () => {
 
   test("Done needs executions:write", async () => {
     api.endsWith = "conversation";
-    const { view } = renderPanel({ permissions: ["comments:create"] });
+    const { view } = renderPanel({ permissions: ["comments:write"] });
     await loaded(view);
 
     expect(view.queryByRole("button", { name: "Done" })).toBeNull();

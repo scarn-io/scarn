@@ -255,7 +255,7 @@ export const ingestGitHubIssueRelationships = async (
 
   await userAuthz.requireProjectPermission({
     projectId: input.projectId,
-    permission: "work-items:update",
+    permission: "work-items:write",
   });
 
   const now = timeProvider.now();

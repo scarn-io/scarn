@@ -80,7 +80,7 @@ export function useWaitControls({
   mutations: WaitMutations;
 }): { controls: WaitControls; toast: ReactNode } {
   const canWriteExecutions = useHasProjectPermission("executions:write");
-  const canCreateComments = useHasProjectPermission("comments:create");
+  const canCreateComments = useHasProjectPermission("comments:write");
   const [message, setMessage] = useState<string | null>(null);
 
   const confirmed = async (

@@ -64,9 +64,9 @@ const toArtifactResolution = (
  * N+1 per-notification delivery lookup.
  *
  * Visibility is gated by `comments:read` (the same permission as the rest of
- * the comment thread), not `work-item-platform-comment:create` — reading the
+ * the comment thread), not `work-item-platform-comment:write` — reading the
  * list of pending drafts is a read concern; the UI separately gates the
- * Approve/Reject action buttons behind the create permission.
+ * Approve/Reject action buttons behind the write permission.
  */
 export const listPendingCommentDrafts = async (
   input: ListPendingCommentDraftsInput,

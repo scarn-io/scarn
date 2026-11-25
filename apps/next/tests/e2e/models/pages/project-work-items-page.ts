@@ -20,7 +20,7 @@ export class ProjectWorkItemsPage {
   /** The sort popover's direction row for `label`, once an axis is picked. */
   readonly sortDirectionOption: (label: string) => Locator;
   /** Absent for a viewer who lacks
-   * `work-item-platform-comment:create` (decisions 8/9). */
+   * `work-item-platform-comment:write` (decisions 8/9). */
   readonly awaitingApprovalButton: Locator;
   /** The popover's single toggle item, once `awaitingApprovalButton` is open. */
   readonly awaitingApprovalMenuItem: Locator;

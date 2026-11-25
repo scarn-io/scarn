@@ -106,7 +106,7 @@ const requireCreateWorkItemsProjectPermission = async (
   for (const projectId of projectIds) {
     await userAuthz.requireProjectPermission({
       projectId,
-      permission: "work-items:create",
+      permission: "work-items:write",
       dbExecutor,
     });
   }

@@ -174,7 +174,7 @@ describe("ProjectArtifactsPanel", () => {
       }),
     ];
 
-    const view = renderPanel(artifacts, ["executions:delete"]);
+    const view = renderPanel(artifacts, ["executions:write"]);
 
     expect(view.queryByText(/Delete selected/)).toBeNull();
 
@@ -193,7 +193,7 @@ describe("ProjectArtifactsPanel", () => {
       }),
     ];
 
-    const view = renderPanel(artifacts, ["executions:delete"]);
+    const view = renderPanel(artifacts, ["executions:write"]);
 
     fireEvent.click(view.getByLabelText("Delete one.zip"));
 
@@ -217,7 +217,7 @@ describe("ProjectArtifactsPanel", () => {
       }),
     ];
 
-    const view = renderPanel(artifacts, ["executions:delete"]);
+    const view = renderPanel(artifacts, ["executions:write"]);
 
     fireEvent.click(view.getByLabelText("Delete one.zip"));
     fireEvent.click(view.getByRole("button", { name: "Delete" }));
@@ -240,7 +240,7 @@ describe("ProjectArtifactsPanel", () => {
       }),
     ];
 
-    const view = renderPanel(artifacts, ["executions:delete"]);
+    const view = renderPanel(artifacts, ["executions:write"]);
 
     fireEvent.click(view.getByLabelText("Delete one.zip"));
     fireEvent.click(view.getByRole("button", { name: "Delete" }));
@@ -254,7 +254,7 @@ describe("ProjectArtifactsPanel", () => {
     expect(view.getByText("one.zip")).toBeTruthy();
   });
 
-  test("hides delete affordances when the caller lacks executions:delete", () => {
+  test("hides delete affordances when the caller lacks executions:write", () => {
     const artifacts = [
       buildProjectArtifact({
         id: parseUuidV7("019e9a92-b432-73e8-9341-3519156fa801"),

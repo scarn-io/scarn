@@ -98,7 +98,7 @@ const { ProjectRouteProvider } =
   await import("@/components/project-route-context");
 
 const renderAutomations = ({
-  permissions = ["work-items:update"],
+  permissions = ["work-items:write"],
   state = "open",
 }: {
   permissions?: string[];
@@ -174,7 +174,7 @@ describe("WorkItemAutomations", () => {
     expect(await view.findByText("None")).toBeTruthy();
   });
 
-  test("shows attachments read-only without work-items:update", async () => {
+  test("shows attachments read-only without work-items:write", async () => {
     const view = renderAutomations({ permissions: [] });
 
     expect(await view.findByText("Wayfinder")).toBeTruthy();

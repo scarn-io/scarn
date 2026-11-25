@@ -86,7 +86,7 @@ export const editWorkItem = async (
 
     await userAuthz.requireProjectPermission({
       projectId: workItem.projectId,
-      permission: "work-items:update",
+      permission: "work-items:write",
       dbExecutor: tx,
     });
 

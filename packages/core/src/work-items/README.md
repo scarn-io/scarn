@@ -10,7 +10,7 @@ Current entities in this domain include the `work-item` entity and its projectio
 
 A work item's comments are its conversation. A comment is authored by a project member (`authorKind: "user"`) or by Scarn (`authorKind: "agent"`, no author user):
 
-- `WorkItemCommentEntity.create`: a member's comment, through `createWorkItemComment` (`comments:create`).
+- `WorkItemCommentEntity.create`: a member's comment, through `createWorkItemComment` (`comments:write`).
 - `WorkItemCommentEntity.createFromApprovedDraft`: an agent-drafted comment a member approved; it keeps the agent session and source notification.
 - `WorkItemCommentEntity.createAgentQuestion`: a question the pipeline engine asks, with no session or source notification. The engine writes it straight through the repo, with no permission check. What makes it a question is a `node_visit_questions` row pointing at it, which belongs to `pipeline-executions/pipeline-run`. This domain doesn't know about questions.
 

@@ -56,22 +56,6 @@ describe("SystemAuthorizationService", () => {
     expect(error).toBeNull();
   });
 
-  test("grants work-items:update when the project exists", async () => {
-    const service = new SystemAuthorizationService(makeFakeRepo());
-
-    let error: unknown = null;
-    try {
-      await service.requireProjectPermission({
-        projectId,
-        permission: "work-items:update",
-      });
-    } catch (caught: unknown) {
-      error = caught;
-    }
-
-    expect(error).toBeNull();
-  });
-
   test("grants executions:write when the project exists", async () => {
     const service = new SystemAuthorizationService(makeFakeRepo());
 

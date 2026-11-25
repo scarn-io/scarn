@@ -31,7 +31,7 @@ export type SentConversationMessage = {
 /**
  * A person's message, accepted while the conversation waits for a person or
  * its reply is still pending (`CONVERSATION_NOT_WAITING` otherwise). Locks the
- * row, so it must run in a transaction. Needs `comments:create`.
+ * row, so it must run in a transaction. Needs `comments:write`.
  */
 export const sendConversationMessage = async (
   input: SendConversationMessageInput,
@@ -50,7 +50,7 @@ export const sendConversationMessage = async (
   }
   await deps.userAuthz.requireProjectPermission({
     projectId: conversation.projectId,
-    permission: "comments:create",
+    permission: "comments:write",
     dbExecutor: tx,
   });
   const now = deps.timeProvider.now();

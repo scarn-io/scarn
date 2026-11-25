@@ -52,13 +52,13 @@ export type WorkItemListPageOptions = {
    * Restrict to items with a pending/failed `work_item_platform_comment`
    * draft. Only takes effect when `includeAwaitingApprovalData` is `true` —
    * `listWorkItemsByProject` drops this from the options it builds whenever
-   * the caller lacks `work-item-platform-comment:create`, so `infra` never
+   * the caller lacks `work-item-platform-comment:write`, so `infra` never
    * has to re-check the permission itself.
    */
   awaitingApproval?: boolean;
   /**
    * Internal gate, set once by `listWorkItemsByProject` from the caller's
-   * `work-item-platform-comment:create` permission — never derived from
+   * `work-item-platform-comment:write` permission — never derived from
    * request input. This is the same permission that gates the pending-draft
    * card on the work item detail page, so a caller who sees the badge can
    * always open the item and see the draft it refers to. When `false`, the

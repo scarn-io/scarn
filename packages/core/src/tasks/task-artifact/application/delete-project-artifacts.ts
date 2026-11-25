@@ -144,7 +144,7 @@ export const deleteProjectArtifacts = async (
 
   await deps.userAuthz.requireProjectPermission({
     projectId,
-    permission: "executions:delete",
+    permission: "executions:write",
   });
 
   const loaded = await loadRequiredArtifacts(projectId, artifactIds, deps);

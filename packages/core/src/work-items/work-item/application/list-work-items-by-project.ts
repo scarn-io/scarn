@@ -44,12 +44,12 @@ type ListWorkItemsByProjectDeps = {
  * ids to re-parse.
  *
  * `includeAwaitingApprovalData` is resolved by the caller from the caller's
- * `work-item-platform-comment:create` permission, never from `query` itself
+ * `work-item-platform-comment:write` permission, never from `query` itself
  * (deviates from decisions 13/14 of `docs/plans/awaiting-approval-filter.md`,
  * which gated this on the more permissive `comments:read` — that let a
  * caller see the "Awaiting approval" badge without being able to see the
  * draft it refers to on the detail page, since the detail page's card is
- * gated on `work-item-platform-comment:create`; aligning both surfaces to
+ * gated on `work-item-platform-comment:write`; aligning both surfaces to
  * the stricter permission closes that gap). When `false`, `awaitingApproval`
  * is dropped here regardless of what the request sent — the request still
  * returns 200 with the filter silently having no effect, rather than a 403
@@ -132,7 +132,7 @@ export const listWorkItemsByProject = async (
   // A narrower, separate gate from the `work-items:read` check above: a
   // caller can have list access without approval access, so `awaitingApproval`
   // and its count are only ever computed for a caller who also holds
-  // `work-item-platform-comment:create` — the same permission that gates
+  // `work-item-platform-comment:write` — the same permission that gates
   // the pending-draft card on the work item detail page
   // (`work-item-comments-section.tsx:57-63`). Deliberately the *same*
   // permission as the detail page, not `comments:read`: a caller who can
@@ -143,7 +143,7 @@ export const listWorkItemsByProject = async (
     resolveProjectPermissionGrant(
       project,
       userAuthz.actorId,
-      "work-item-platform-comment:create",
+      "work-item-platform-comment:write",
     ) !== null;
 
   const page = await workItemRepo.listPageByProjectId(

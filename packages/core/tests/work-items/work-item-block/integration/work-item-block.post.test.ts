@@ -334,7 +334,7 @@ describe("create work item block", () => {
   );
 
   concurrentTest(
-    "rejects a caller who lacks work-items:update on the target's project",
+    "rejects a caller who lacks work-items:write on the target's project",
     async () => {
       if (!owner || !project) {
         throw new Error("Expected project auth setup to complete");

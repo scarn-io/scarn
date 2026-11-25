@@ -27,14 +27,14 @@ import type { ProjectArtifactContract } from "@scarn/api/frontend-contracts";
 /**
  * Settings page "Artifacts" section: lists every artifact a pipeline step in
  * this project has produced, and lets project members with the
- * `executions:delete` permission remove artifacts (individually or as a
+ * `executions:write` permission remove artifacts (individually or as a
  * batch) to free up storage.
  *
  * Read access (the list itself) is available to anyone who can reach the
  * Settings page (`executions:read`, gated upstream by project membership);
  * only the delete affordances — checkboxes, per-row delete buttons, and the
  * header "Delete selected" button — are hidden for viewers lacking
- * `executions:delete`.
+ * `executions:write`.
  *
  * NOTE on the `nodeKey` secondary line: the plan asked for it to link to the
  * originating task's detail page. No such page exists in this
@@ -50,7 +50,7 @@ export function ProjectArtifactsPanel({
   initialArtifacts: ProjectArtifactContract[];
   initialHasMore: boolean;
 }) {
-  const canDelete = useHasProjectPermission("executions:delete");
+  const canDelete = useHasProjectPermission("executions:write");
   const { artifacts, hasMore, loading, error, deleteOne, deleteMany } =
     useProjectArtifacts(projectId, initialArtifacts, initialHasMore);
   const [selectedIds, setSelectedIds] = useState<ReadonlySet<string>>(

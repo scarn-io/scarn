@@ -71,7 +71,7 @@ export function WorkItemLabels({
   onWorkItemChanged: (updated: WorkItemContract) => void;
 }) {
   const isMember = useIsProjectMember();
-  const canUpdate = useHasProjectPermission("work-items:update") && isMember;
+  const canUpdate = useHasProjectPermission("work-items:write") && isMember;
   const editable = canUpdate && workItem.platform === "scarn";
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [draft, setDraft] = useState("");

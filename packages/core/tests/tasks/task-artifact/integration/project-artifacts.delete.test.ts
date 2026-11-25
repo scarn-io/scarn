@@ -193,7 +193,7 @@ describe("DELETE /projects/:projectId/artifacts", () => {
   });
 
   serialTest(
-    "returns 403 when the caller has a membership but lacks executions:delete",
+    "returns 403 when the caller has a membership but lacks executions:write",
     async () => {
       if (!project || !ownerAuthHeaders) {
         throw new Error("Expected setup to complete");

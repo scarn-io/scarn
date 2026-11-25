@@ -794,7 +794,7 @@ describe("ExecutionDetailView", () => {
             : visit,
         ),
       };
-      const view = renderDetailView([...WRITER, "comments:create"]);
+      const view = renderDetailView([...WRITER, "comments:write"]);
 
       await waitFor(() => {
         expect(view.getByText("Which browser was it?")).toBeTruthy();
@@ -1696,7 +1696,7 @@ describe("ExecutionDetailView", () => {
   });
 
   describe("step conversation", () => {
-    const COMMENTER = ["comments:create"];
+    const COMMENTER = ["comments:write"];
     const replyInput = (view: ReturnType<typeof render>) =>
       view.getByLabelText("Message Review") as HTMLTextAreaElement;
 
@@ -1750,7 +1750,7 @@ describe("ExecutionDetailView", () => {
       await flushAsyncWork();
     });
 
-    test("a reply goes to the conversation with only comments:create", async () => {
+    test("a reply goes to the conversation with only comments:write", async () => {
       const view = renderDetailView(COMMENTER);
 
       await waitFor(() => {
@@ -1772,7 +1772,7 @@ describe("ExecutionDetailView", () => {
       await flushAsyncWork();
     });
 
-    test("without comments:create there's no reply box", async () => {
+    test("without comments:write there's no reply box", async () => {
       const view = renderDetailView(WRITER);
 
       await waitFor(() => {

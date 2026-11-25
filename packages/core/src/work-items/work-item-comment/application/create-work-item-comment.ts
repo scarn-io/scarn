@@ -48,7 +48,7 @@ export const createWorkItemComment = async (
 
   await userAuthz.requireProjectPermission({
     projectId: workItem.projectId,
-    permission: "comments:create",
+    permission: "comments:write",
     dbExecutor,
   });
 

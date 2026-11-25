@@ -45,7 +45,7 @@ export function PipelineQuestionRow({
 }) {
   const projectPath = useProjectPath();
   const isMember = useIsProjectMember();
-  const canComment = useHasProjectPermission("comments:create") && isMember;
+  const canComment = useHasProjectPermission("comments:write") && isMember;
   const canAct = useHasProjectPermission("executions:write") && isMember;
   const { pending, error, run } = useRowAction(onChanged);
   const questionRoute = () =>

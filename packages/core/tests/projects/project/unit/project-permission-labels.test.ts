@@ -22,11 +22,11 @@ describe("formatProjectPermission", () => {
 
   concurrentTest("reads as an action on a resource", () => {
     expect(formatProjectPermission("work-items:read")).toBe("View work items");
-    expect(formatProjectPermission("executions:delete")).toBe(
-      "Delete pipeline runs",
+    expect(formatProjectPermission("executions:write")).toBe(
+      "Edit pipeline runs",
     );
-    expect(formatProjectPermission("work-item-platform-comment:create")).toBe(
-      "Create tracker comments",
+    expect(formatProjectPermission("work-item-platform-comment:write")).toBe(
+      "Edit tracker comments",
     );
     expect(formatProjectPermission("secrets:write")).toBe(
       "Edit project secrets",

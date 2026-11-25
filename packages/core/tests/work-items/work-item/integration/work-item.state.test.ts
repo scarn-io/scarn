@@ -236,7 +236,7 @@ describe("work item state endpoint", () => {
   });
 
   concurrentTest(
-    "a member without work-items:update cannot close an item",
+    "a member without work-items:write cannot close an item",
     async () => {
       const { project, authHeaders } = setup();
       const other = await createTestUserAndSession({

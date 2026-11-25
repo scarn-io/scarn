@@ -43,7 +43,7 @@ export const labelWorkItemForUser = async (
 
     await deps.userAuthz.requireProjectPermission({
       projectId: workItem.projectId,
-      permission: "work-items:update",
+      permission: "work-items:write",
       dbExecutor: tx,
     });
 

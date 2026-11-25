@@ -73,7 +73,7 @@ export function WorkItemDetailClient({
   const isMember = useIsProjectMember();
   const { data: session } = authClient.useSession();
   const [workItem, setWorkItem] = useState(initialWorkItem);
-  const canUpdateWorkItems = useHasProjectPermission("work-items:update");
+  const canUpdateWorkItems = useHasProjectPermission("work-items:write");
   const canEditWorkItem =
     isMember &&
     session?.user.id === workItem.createdByUserId &&

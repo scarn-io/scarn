@@ -162,7 +162,7 @@ const openQuestion = {
   waitingOn: [{ userId: "u-2", username: "dwight" }],
 } as unknown as WorkItemQuestionContract;
 
-const allPermissions = ["comments:create", "executions:write"];
+const allPermissions = ["comments:write", "executions:write"];
 
 type PanelProps = {
   tasks?: TaskSummary[];

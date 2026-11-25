@@ -180,7 +180,7 @@ describe("attaching and enabling automations", () => {
     expect(closed.error?.value).toMatchObject({ code: "WORK_ITEM_CLOSED" });
   });
 
-  concurrentTest("attach and detach need work-items:update", async () => {
+  concurrentTest("attach and detach need work-items:write", async () => {
     const workItem = await createWorkItem(fixture, fixture.headers);
     const reader = await createMember(fixture, "read");
     expect((await attach(workItem.id, workKey, reader)).error?.status).toBe(

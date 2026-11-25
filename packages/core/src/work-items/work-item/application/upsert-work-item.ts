@@ -141,7 +141,7 @@ const requireUpsertWorkItemsProjectPermission = async (
   for (const projectId of projectIds) {
     await userAuthz.requireProjectPermission({
       projectId,
-      permission: "work-items:update",
+      permission: "work-items:write",
       dbExecutor,
     });
   }

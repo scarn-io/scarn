@@ -48,7 +48,7 @@ const { ConversationSheet } = await import("./conversation-sheet");
 const { ProjectRouteProvider } =
   await import("@/components/project-route-context");
 
-const ALL = ["comments:create", "executions:write"];
+const ALL = ["comments:write", "executions:write"];
 const taskId = "019e9a92-b432-73e8-9341-3519156fa6aa";
 
 const renderSheet = ({
@@ -157,7 +157,7 @@ describe("ConversationSheet", () => {
   });
 
   test("the ⋯ menu respects permissions", async () => {
-    const { view } = renderSheet({ permissions: ["comments:create"] });
+    const { view } = renderSheet({ permissions: ["comments:write"] });
     await loaded(view);
 
     openMenu(view);

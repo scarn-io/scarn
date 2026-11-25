@@ -8,40 +8,24 @@ import { CoreValidationError } from "@scarn/core/lib/errors";
 // on an unrecognized-but-well-formed permission. New permissions are added
 // here and take effect at the grant boundary only.
 //
-// Record resources get every action. Config resources (pipelines, settings,
-// integrations, members) only have `write`: reading them is covered by
-// `executions:read` / `work-items:read`.
-const RECORD_RESOURCES = [
+// Every resource has exactly two actions: `read` and `write`. `write` covers
+// creating, changing and deleting.
+export const PROJECT_RESOURCES = [
   "work-items",
   "executions",
   "comments",
   "work-item-platform-comment",
   "secrets",
-] as const;
-const CONFIG_RESOURCES = [
   "pipelines",
   "settings",
   "integrations",
   "members",
 ] as const;
-export const PROJECT_RESOURCES = [
-  ...RECORD_RESOURCES,
-  ...CONFIG_RESOURCES,
-] as const;
-export const PROJECT_ACTIONS = [
-  "read",
-  "write",
-  "create",
-  "update",
-  "delete",
-] as const;
+export const PROJECT_ACTIONS = ["read", "write"] as const;
 
-export const PROJECT_PERMISSIONS: readonly string[] = [
-  ...RECORD_RESOURCES.flatMap((resource) =>
-    PROJECT_ACTIONS.map((action) => `${resource}:${action}`),
-  ),
-  ...CONFIG_RESOURCES.map((resource) => `${resource}:write`),
-].sort();
+export const PROJECT_PERMISSIONS: readonly string[] = PROJECT_RESOURCES.flatMap(
+  (resource) => PROJECT_ACTIONS.map((action) => `${resource}:${action}`),
+).sort();
 
 const isPermissionFormat = (value: string): boolean => {
   const [resource, action, ...rest] = value.split(":");
@@ -138,7 +122,7 @@ export const hasProjectPermission = (
 // True for any `<resource>:read` permission, regardless of resource. Used to
 // decide whether a permission is eligible for the public-project visibility
 // fallback in `assertProjectPermission` — only reads ever fall back that way,
-// never `write`/`create`/`update`/`delete`, even on a public project.
+// never `write`, even on a public project.
 export const isReadProjectPermission = (
   permission: ProjectPermission,
 ): boolean => permission.endsWith(":read");

@@ -134,7 +134,7 @@ export const createPipelineExecutionRoutes = (appContext: AppContext) =>
         detail: {
           operationId: "answerQuestion",
           description:
-            "Answers the visit waiting on an open question: the reply is saved as a threaded comment under the question's comment, the question becomes answered by the caller, and the wait's result is `{ replied: true, body, commentId }`. A question that isn't open is rejected (`PIPELINE_RUN_QUESTION_NOT_OPEN`) and nothing is saved. Requires `comments:create`.",
+            "Answers the visit waiting on an open question: the reply is saved as a threaded comment under the question's comment, the question becomes answered by the caller, and the wait's result is `{ replied: true, body, commentId }`. A question that isn't open is rejected (`PIPELINE_RUN_QUESTION_NOT_OPEN`) and nothing is saved. Requires `comments:write`.",
           tags: ["PipelineExecutions"],
         },
       },

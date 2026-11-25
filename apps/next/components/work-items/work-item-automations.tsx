@@ -41,7 +41,7 @@ export function WorkItemAutomations({
   workItem: Pick<WorkItemContract, "id" | "state">;
 }) {
   const isMember = useIsProjectMember();
-  const canUpdate = useHasProjectPermission("work-items:update") && isMember;
+  const canUpdate = useHasProjectPermission("work-items:write") && isMember;
   const [attached, setAttached] = useState<WorkItemAutomationContract[] | null>(
     null,
   );

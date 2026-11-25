@@ -107,7 +107,7 @@ export function WorkItemAssignee({
   onWorkItemChanged: (updated: WorkItemContract) => void;
 }) {
   const isMember = useIsProjectMember();
-  const canAssign = useHasProjectPermission("work-items:update") && isMember;
+  const canAssign = useHasProjectPermission("work-items:write") && isMember;
   const { members, error: membersError } = useProjectMembers(
     projectId,
     isMember,

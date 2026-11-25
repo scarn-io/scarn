@@ -87,7 +87,7 @@ const createWorkItemCommentWriteRoutes = (appContext: AppContext) =>
         detail: {
           operationId: "createWorkItemComment",
           description:
-            "Creates a comment, or a reply when `parentCommentId` names a top-level comment. A reply to a question's comment is a plain comment and doesn't answer it; `POST /pipeline-executions/:id/questions/:questionId/answer` does. Requires `comments:create`.",
+            "Creates a comment, or a reply when `parentCommentId` names a top-level comment. A reply to a question's comment is a plain comment and doesn't answer it; `POST /pipeline-executions/:id/questions/:questionId/answer` does. Requires `comments:write`.",
           tags: ["WorkItemComments"],
         },
       },

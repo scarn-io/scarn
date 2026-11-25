@@ -31,7 +31,7 @@ export const deleteWorkItemComment = async (
   if (comment.authorUserId !== userAuthz.actorId) {
     await userAuthz.requireProjectPermission({
       projectId: comment.projectId,
-      permission: "comments:delete",
+      permission: "comments:write",
       dbExecutor,
     });
   }

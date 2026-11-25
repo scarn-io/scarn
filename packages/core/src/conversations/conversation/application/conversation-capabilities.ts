@@ -8,9 +8,9 @@ import type { ConversationCapabilities } from "../contracts/conversation-contrac
 
 /**
  * What `viewerId` may do to a chat started by `creatorUserId`, by permission
- * alone (the chat's state decides the rest): reply with `comments:create`;
+ * alone (the chat's state decides the rest): reply with `comments:write`;
  * retry with `executions:write`; end or delete with `executions:write`, or as
- * the creator while they still have `comments:create`. Public visibility
+ * the creator while they still have `comments:write`. Public visibility
  * only ever grants reads, so an anonymous viewer or outsider can do none.
  */
 export const conversationCapabilities = (
@@ -20,7 +20,7 @@ export const conversationCapabilities = (
 ): ConversationCapabilities => {
   const has = (permission: ProjectPermission) =>
     resolveProjectPermissionGrant(project, viewerId, permission) !== null;
-  const canReply = has("comments:create");
+  const canReply = has("comments:write");
   const canManage = has("executions:write");
   const canManageOwn = canManage || (viewerId === creatorUserId && canReply);
   return {

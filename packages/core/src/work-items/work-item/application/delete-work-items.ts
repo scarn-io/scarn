@@ -56,7 +56,7 @@ const requireDeleteWorkItemsProjectPermission = async (
   for (const projectId of projectIds) {
     await userAuthz.requireProjectPermission({
       projectId,
-      permission: "work-items:delete",
+      permission: "work-items:write",
       dbExecutor,
     });
   }

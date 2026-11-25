@@ -276,7 +276,7 @@ describe("work item comment lifecycle", () => {
   });
 
   serialTest(
-    "a non-author without comments:delete cannot delete another user's comment",
+    "a non-author without comments:write cannot delete another user's comment",
     async () => {
       if (!project || !workItem || !authHeaders) {
         throw new Error("setup incomplete");

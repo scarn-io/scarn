@@ -25,7 +25,7 @@ const timeProvider = fixedTimeProvider(NOW);
 
 describe("createWorkItemComment", () => {
   concurrentTest(
-    "creates with author from actor, projectId from the work item, and checks comments:create",
+    "creates with author from actor, projectId from the work item, and checks comments:write",
     async () => {
       const projectId = createUuidV7();
       const workItemId = aWorkItemId();
@@ -58,7 +58,7 @@ describe("createWorkItemComment", () => {
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(userAuthz.requireProjectPermission).toHaveBeenCalledWith({
         projectId,
-        permission: "comments:create",
+        permission: "comments:write",
         dbExecutor: undefined,
       });
     },
@@ -81,14 +81,14 @@ describe("createWorkItemComment", () => {
   });
 
   concurrentTest(
-    "propagates the authz denial when comments:create is not granted",
+    "propagates the authz denial when comments:write is not granted",
     async () => {
       const projectId = createUuidV7();
       const error = await captureError(() =>
         createWorkItemComment(
           { workItemId: aWorkItemId(), body: "no perms" },
           {
-            userAuthz: denyingAuthz(createUuidV7(), "comments:create"),
+            userAuthz: denyingAuthz(createUuidV7(), "comments:write"),
             workItemRepo: fakeWorkItemRepo({ projectId }),
             workItemCommentRepo: fakeCommentRepo(null).repo,
             usernameReader: fakeUsernameReader(),
@@ -182,7 +182,7 @@ describe("editWorkItemComment", () => {
   });
 
   concurrentTest(
-    "rejects a non-author with PROJECT_FORBIDDEN even if they hold comments:update",
+    "rejects a non-author with PROJECT_FORBIDDEN even if they hold comments:write",
     async () => {
       const projectId = createUuidV7();
       const authorUserId = createUuidV7();
@@ -229,7 +229,7 @@ describe("editWorkItemComment", () => {
 
 describe("setWorkItemCommentPin", () => {
   concurrentTest(
-    "pins team-wide (any comments:update holder, no author check) and persists isPinned",
+    "pins team-wide (any comments:write holder, no author check) and persists isPinned",
     async () => {
       const projectId = createUuidV7();
       const authorUserId = createUuidV7();
@@ -260,7 +260,7 @@ describe("setWorkItemCommentPin", () => {
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(userAuthz.requireProjectPermission).toHaveBeenCalledWith({
         projectId,
-        permission: "comments:update",
+        permission: "comments:write",
         dbExecutor: undefined,
       });
     },
@@ -292,7 +292,7 @@ describe("setWorkItemCommentPin", () => {
   });
 
   concurrentTest(
-    "propagates the authz denial when comments:update is not granted",
+    "propagates the authz denial when comments:write is not granted",
     async () => {
       const projectId = createUuidV7();
       const comment = aComment({
@@ -304,7 +304,7 @@ describe("setWorkItemCommentPin", () => {
         setWorkItemCommentPin(
           { commentId: comment.id, isPinned: true },
           {
-            userAuthz: denyingAuthz(createUuidV7(), "comments:update"),
+            userAuthz: denyingAuthz(createUuidV7(), "comments:write"),
             workItemCommentRepo: fakeCommentRepo(comment).repo,
             usernameReader: fakeUsernameReader(),
             commentTaskNameReader: fakeCommentTaskNameReader(),
@@ -319,7 +319,7 @@ describe("setWorkItemCommentPin", () => {
 
 describe("deleteWorkItemComment", () => {
   concurrentTest(
-    "author deletes their own comment WITHOUT needing comments:delete",
+    "author deletes their own comment WITHOUT needing comments:write",
     async () => {
       const projectId = createUuidV7();
       const authorUserId = createUuidV7();
@@ -345,7 +345,7 @@ describe("deleteWorkItemComment", () => {
   );
 
   concurrentTest(
-    "non-author may delete when they hold comments:delete",
+    "non-author may delete when they hold comments:write",
     async () => {
       const projectId = createUuidV7();
       const authorUserId = createUuidV7();
@@ -368,14 +368,14 @@ describe("deleteWorkItemComment", () => {
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(userAuthz.requireProjectPermission).toHaveBeenCalledWith({
         projectId,
-        permission: "comments:delete",
+        permission: "comments:write",
         dbExecutor: undefined,
       });
     },
   );
 
   concurrentTest(
-    "non-author WITHOUT comments:delete is rejected and nothing is deleted",
+    "non-author WITHOUT comments:write is rejected and nothing is deleted",
     async () => {
       const projectId = createUuidV7();
       const authorUserId = createUuidV7();
@@ -388,7 +388,7 @@ describe("deleteWorkItemComment", () => {
 
       const error = await captureError(() =>
         deleteWorkItemComment(comment.id, {
-          userAuthz: denyingAuthz(createUuidV7(), "comments:delete"),
+          userAuthz: denyingAuthz(createUuidV7(), "comments:write"),
           workItemCommentRepo: repo,
         }),
       );

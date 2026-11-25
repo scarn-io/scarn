@@ -22,9 +22,6 @@ export const RESOURCE_LABELS: Readonly<Record<string, string>> = {
 export const ACTION_LABELS: Readonly<Record<string, string>> = {
   read: "View",
   write: "Edit",
-  create: "Create",
-  update: "Update",
-  delete: "Delete",
 };
 
 export function formatProjectPermission(permission: string): string {

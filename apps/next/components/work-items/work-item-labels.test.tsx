@@ -71,7 +71,7 @@ const renderLabels = (
       projectSlug="demo"
       projectId={PROJECT_ID}
       isMember
-      permissions={["work-items:update"]}
+      permissions={["work-items:write"]}
     >
       <WorkItemLabels
         projectId={PROJECT_ID}

@@ -180,14 +180,14 @@ export type ConversationActionItem = {
 
 /**
  * The waiting actions the viewer may take while the agent waits: **Ask it
- * to finish** on a step with findings (a fixed reply, `comments:create`),
+ * to finish** on a step with findings (a fixed reply, `comments:write`),
  * **Done** on a conversation step and **Continue without reply** (both
  * `executions:write`). Empty otherwise.
  */
 export function useConversationActions(
   data: ConversationData,
 ): ConversationActionItem[] {
-  const canCreateComments = useHasProjectPermission("comments:create");
+  const canCreateComments = useHasProjectPermission("comments:write");
   const canWriteExecutions = useHasProjectPermission("executions:write");
   const { conversation } = data;
   if (conversation?.status !== "waiting_for_person") return [];
@@ -256,7 +256,7 @@ export function ConversationActions({
 
 /**
  * The reply field under the conversation, while it takes replies and the
- * viewer can write (`comments:create`); renders nothing otherwise. On a
+ * viewer can write (`comments:write`); renders nothing otherwise. On a
  * keyboard-and-mouse device Enter sends and Shift+Enter makes a new line; on
  * touch, return makes a new line and the button sends. Cmd/Ctrl+Enter sends
  * everywhere. The text clears as soon as it's sent: the chat holds it as a
@@ -274,7 +274,7 @@ export function ConversationMessageBox({
   autoFocus?: boolean;
   mode?: ConversationPanelMode;
 }) {
-  const canCreateComments = useHasProjectPermission("comments:create");
+  const canCreateComments = useHasProjectPermission("comments:write");
   const coarsePointer = useMediaQuery("(pointer: coarse)");
   const [body, setBody] = useState("");
   const [error, setError] = useState("");

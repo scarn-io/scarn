@@ -202,7 +202,7 @@ const createConversationWriteRoutes = (appContext: AppContext) =>
         detail: {
           operationId: "sendConversationMessage",
           description:
-            "Replies in a conversation. Requires `comments:create`. The first reply while the agent waits queues its next turn; more replies join that turn until it starts. Refused with `CONVERSATION_NOT_WAITING` once the agent has the floor or the conversation is closed, and on a failed chat with `CONVERSATION_TASK_FAILED` (retry it instead).",
+            "Replies in a conversation. Requires `comments:write`. The first reply while the agent waits queues its next turn; more replies join that turn until it starts. Refused with `CONVERSATION_NOT_WAITING` once the agent has the floor or the conversation is closed, and on a failed chat with `CONVERSATION_TASK_FAILED` (retry it instead).",
           tags: ["Conversations"],
         },
       },
@@ -315,7 +315,7 @@ const createConversationWriteRoutes = (appContext: AppContext) =>
         detail: {
           operationId: "endProjectConversation",
           description:
-            "Ends a chat: its conversation closes and a queued, running or waiting turn is cancelled. The transcript stays readable. Ending an ended chat does nothing. Requires `executions:write`, or being its creator with `comments:create`. 404 when the conversation isn't a chat (see `/done` for a conversation step).",
+            "Ends a chat: its conversation closes and a queued, running or waiting turn is cancelled. The transcript stays readable. Ending an ended chat does nothing. Requires `executions:write`, or being its creator with `comments:write`. 404 when the conversation isn't a chat (see `/done` for a conversation step).",
           tags: ["Conversations"],
         },
       },

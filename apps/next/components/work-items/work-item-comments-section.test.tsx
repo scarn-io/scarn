@@ -239,11 +239,11 @@ describe("WorkItemCommentsSection", () => {
     });
   });
 
-  test("renders a pending draft card when the viewer has work-item-platform-comment:create", async () => {
+  test("renders a pending draft card when the viewer has work-item-platform-comment:write", async () => {
     mockSession = member;
     draftsListResult = { data: [buildPendingDraft()], error: null };
 
-    const view = renderSection(true, ["work-item-platform-comment:create"]);
+    const view = renderSection(true, ["work-item-platform-comment:write"]);
 
     await waitFor(() => {
       expect(view.getByText("Awaiting approval")).toBeTruthy();
@@ -272,7 +272,7 @@ describe("WorkItemCommentsSection", () => {
     draftsListResult = { data: [buildPendingDraft()], error: null };
     commentsListResult = { data: [buildSettledComment()], error: null };
 
-    const view = renderSection(true, ["work-item-platform-comment:create"]);
+    const view = renderSection(true, ["work-item-platform-comment:write"]);
 
     await waitFor(() => {
       expect(view.getByText("Settled comment text")).toBeTruthy();

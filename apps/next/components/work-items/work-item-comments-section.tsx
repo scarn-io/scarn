@@ -75,7 +75,7 @@ export function WorkItemCommentsSection({
     refreshComments();
   }, [commentsVersion, refreshComments]);
   const canApproveCommentDrafts = useHasProjectPermission(
-    "work-item-platform-comment:create",
+    "work-item-platform-comment:write",
   );
   const { drafts, setDrafts } = usePendingCommentDrafts(
     workItemId,

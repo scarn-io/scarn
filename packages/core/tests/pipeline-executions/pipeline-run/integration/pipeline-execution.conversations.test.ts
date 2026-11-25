@@ -206,7 +206,7 @@ describe("pipeline execution conversations: a step visit talks with people", () 
   );
 
   serialTest(
-    "replying needs comments:create, and continuing or ending needs executions:write",
+    "replying needs comments:write, and continuing or ending needs executions:write",
     async () => {
       const { conversationId } = await startHandedOverRun(
         requireConversationStepKey(),

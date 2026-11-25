@@ -263,7 +263,7 @@ export const workItemListItemSchema = workItemSchema.extend({
   latestExecutionStatus: z.string().nullable(),
   // Count of pending/failed `work_item_platform_comment` drafts on this item.
   // Always `0` (never omitted or `null`) — for a caller lacking
-  // `work-item-platform-comment:create` it is a literal `0` rather than a
+  // `work-item-platform-comment:write` it is a literal `0` rather than a
   // computed-then-masked real value; see `listWorkItemsByProject`'s
   // `includeAwaitingApprovalData` derivation.
   awaitingApprovalCount: z.number().int(),
@@ -384,7 +384,7 @@ export const listWorkItemsQuerySchema = z.object({
   // exclusive, so the two compose into a range without overlapping.
   updatedAfter: timeBoundSchema.optional(),
   updatedBefore: timeBoundSchema.optional(),
-  // Server-side gated behind the caller's `work-item-platform-comment:create`
+  // Server-side gated behind the caller's `work-item-platform-comment:write`
   // permission — see `listWorkItemsByProject`'s `includeAwaitingApprovalData`
   // derivation. Absent this permission the param is silently dropped rather
   // than rejected, matching this schema's tolerance for the other filter

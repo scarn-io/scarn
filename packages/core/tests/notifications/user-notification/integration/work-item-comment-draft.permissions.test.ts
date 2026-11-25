@@ -13,7 +13,7 @@ import {
 
 /**
  * Exercises Decision 5/7: a project member who lacks
- * `work-item-platform-comment:create` (deliberately granted a permission set
+ * `work-item-platform-comment:write` (deliberately granted a permission set
  * that excludes it) is denied — via a 403 — on both approve and reject,
  * mirroring `work-item.get.test.ts`'s "returns 403 when the user lacks work
  * item read permission" precedent. Never reassigns `globalThis.fetch` (the
@@ -36,7 +36,7 @@ describe("comment draft permission gate", () => {
   const apiClient = createScarnTreaty(app);
 
   concurrentTest(
-    "a member without work-item-platform-comment:create gets 403 on both approve and reject",
+    "a member without work-item-platform-comment:write gets 403 on both approve and reject",
     async () => {
       const owner = await createTestUserAndSession({
         email: `comment-draft-perm-owner-${crypto.randomUUID()}@example.com`,
@@ -55,7 +55,7 @@ describe("comment draft permission gate", () => {
         ),
       );
 
-      // Deliberately insufficient — excludes work-item-platform-comment:create.
+      // Deliberately insufficient — excludes work-item-platform-comment:write.
       await unwrapAsync(
         apiClient.api
           .projects({ projectId: project.id })

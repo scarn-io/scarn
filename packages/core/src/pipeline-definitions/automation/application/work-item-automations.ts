@@ -102,7 +102,7 @@ export const attachWorkItemAutomation = async (
   const { workItemId, key } = workItemAutomationRefInputSchema.parse(input);
   const workItem = await loadAuthorizedWorkItem(
     workItemId,
-    "work-items:update",
+    "work-items:write",
     deps,
   );
   if (!workItem.ok) {
@@ -168,7 +168,7 @@ export const detachWorkItemAutomation = async (
   const { workItemId, key } = workItemAutomationRefInputSchema.parse(input);
   const workItem = await loadAuthorizedWorkItem(
     workItemId,
-    "work-items:update",
+    "work-items:write",
     deps,
   );
   if (!workItem.ok) {

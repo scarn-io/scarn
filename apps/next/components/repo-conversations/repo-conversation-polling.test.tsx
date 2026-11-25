@@ -36,7 +36,7 @@ const renderView = async (pollIntervalsMs?: { active: number; idle: number }) =>
         projectId={projectId}
         {...(pollIntervalsMs ? { pollIntervalsMs } : {})}
       />,
-      ["comments:create"],
+      ["comments:write"],
     ),
   );
 

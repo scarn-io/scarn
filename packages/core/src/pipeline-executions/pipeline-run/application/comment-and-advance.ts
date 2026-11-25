@@ -41,7 +41,7 @@ import {
  * threaded comment under the question's comment, and the run advances with
  * `question_answered` in the same transaction. A question that isn't open,
  * or whose visit isn't waiting, rolls the reply back
- * (`PIPELINE_RUN_QUESTION_NOT_OPEN`). Needs `comments:create`, the
+ * (`PIPELINE_RUN_QUESTION_NOT_OPEN`). Needs `comments:write`, the
  * permission `createWorkItemComment` checks.
  */
 export const answerQuestionAndAdvance = async (

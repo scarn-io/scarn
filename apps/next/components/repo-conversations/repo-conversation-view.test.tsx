@@ -34,7 +34,7 @@ const renderView = async (
         pollIntervalsMs={pollIntervalsMs}
         framed={framed}
       />,
-      ["comments:create", "executions:write"],
+      ["comments:write", "executions:write"],
     ),
   );
 

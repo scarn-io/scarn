@@ -22,13 +22,13 @@ import {
  *
  * Covers everything that never needs a real GitHub post attempt: the
  * predicate itself, the count, the no-fan-out invariant, and the
- * `work-item-platform-comment:create` server-side gate. That gate was
+ * `work-item-platform-comment:write` server-side gate. That gate was
  * originally `comments:read` (decisions 13/14 of
  * `docs/plans/awaiting-approval-filter.md`), but that let a caller see the
  * "Awaiting approval" badge on the list without being able to see the draft
  * it refers to on the detail page (whose card is gated on
- * `work-item-platform-comment:create`) — the built-in `read` role holds
- * `comments:read` without `work-item-platform-comment:create`
+ * `work-item-platform-comment:write`) — the built-in `read` role holds
+ * `comments:read` without `work-item-platform-comment:write`
  * (`project-role.ts`), so this was not a corner case. Both surfaces
  * are now gated on the same, stricter permission. The `failed`/approved
  * status cases live in `project-work-items.awaiting-approval-github
@@ -254,9 +254,9 @@ describe("project work items awaiting approval filter", () => {
     );
   });
 
-  describe("work-item-platform-comment:create gate", () => {
+  describe("work-item-platform-comment:write gate", () => {
     concurrentTest(
-      "a caller with work-items:read but not work-item-platform-comment:create: awaitingApproval has no filtering effect, and the count is always 0 even with a pending draft — the request still returns 200",
+      "a caller with work-items:read but not work-item-platform-comment:write: awaitingApproval has no filtering effect, and the count is always 0 even with a pending draft — the request still returns 200",
       async () => {
         const owner = await createTestUserAndSession({
           email: `awaiting-approval-gate-owner-${crypto.randomUUID()}@example.com`,
@@ -270,7 +270,7 @@ describe("project work items awaiting approval filter", () => {
             {
               name: "Awaiting Approval Gate Project",
               description:
-                "Project for the work-item-platform-comment:create gate suite",
+                "Project for the work-item-platform-comment:write gate suite",
               gitUrl: "https://github.com/example/test-project.git",
             },
             { headers: { ...owner.authHeaders } },
@@ -278,7 +278,7 @@ describe("project work items awaiting approval filter", () => {
         );
 
         // Deliberately insufficient — the `read` role excludes
-        // work-item-platform-comment:create.
+        // work-item-platform-comment:write.
         await unwrapAsync(
           apiClient.api
             .projects({ projectId: project.id })
@@ -338,7 +338,7 @@ describe("project work items awaiting approval filter", () => {
     );
 
     concurrentTest(
-      "a caller with comments:read but not work-item-platform-comment:create (e.g. the read/write roles) also gets a suppressed count — this is the fixed gap: the badge must not outrun what the detail page's draft card will show",
+      "a caller with comments:read but not work-item-platform-comment:write (e.g. the read role) also gets a suppressed count — this is the fixed gap: the badge must not outrun what the detail page's draft card will show",
       async () => {
         const owner = await createTestUserAndSession({
           email: `awaiting-approval-gate-owner-${crypto.randomUUID()}@example.com`,
@@ -352,7 +352,7 @@ describe("project work items awaiting approval filter", () => {
             {
               name: "Awaiting Approval Comments-Read-Only Project",
               description:
-                "Project for the comments:read-without-create regression case",
+                "Project for the comments:read-without-write regression case",
               gitUrl: "https://github.com/example/test-project.git",
             },
             { headers: { ...owner.authHeaders } },
@@ -360,7 +360,7 @@ describe("project work items awaiting approval filter", () => {
         );
 
         // Holds comments:read (enough to have surfaced the badge under the
-        // old gate) but not work-item-platform-comment:create — the built-in
+        // old gate) but not work-item-platform-comment:write — the built-in
         // `read` role (`project-role.ts`).
         await unwrapAsync(
           apiClient.api

@@ -120,7 +120,7 @@ describe("InviteAcceptPanel", () => {
           permissions: [
             "work-items:read",
             "work-items:write",
-            "executions:create",
+            "executions:write",
             "future-thing:launch",
           ],
         }}
@@ -130,7 +130,7 @@ describe("InviteAcceptPanel", () => {
 
     expect(view.getByText("View work items")).toBeTruthy();
     expect(view.getByText("Edit work items")).toBeTruthy();
-    expect(view.getByText("Create pipeline runs")).toBeTruthy();
+    expect(view.getByText("Edit pipeline runs")).toBeTruthy();
     expect(view.getByText("future-thing:launch")).toBeTruthy();
     expect(view.queryByText("work-items:read")).toBeNull();
   });
