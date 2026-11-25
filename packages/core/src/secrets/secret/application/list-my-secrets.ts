@@ -7,18 +7,14 @@ import type {
 import { userSecretOwner } from "../domain/secret-owner";
 import type { SecretRepo } from "./secret-repo";
 import { secretEntityToContract } from "./secret-contract-mapper";
-import { loadSecretUses, type LoadSecretUsesDeps } from "./load-secret-uses";
 
-type ListMySecretsDeps = LoadSecretUsesDeps & {
+type ListMySecretsDeps = {
   userAuthz: UserAuthorizationService;
   secretRepo: SecretRepo;
   timeProvider: TimeProvider;
 };
 
-/**
- * The caller's own secrets, newest first, each with the project
- * integrations it is lent to.
- */
+/** The caller's own secrets, newest first. */
 export const listMySecrets = async (
   input: ListSecretsQuery,
   deps: ListMySecretsDeps,
@@ -28,11 +24,5 @@ export const listMySecrets = async (
     userSecretOwner(deps.userAuthz.actorId),
     { kind: input.kind },
   );
-  const uses = await loadSecretUses(
-    secrets.map((secret) => secret.id),
-    deps,
-  );
-  return secrets.map((secret) =>
-    secretEntityToContract(secret, now, uses.get(secret.id) ?? []),
-  );
+  return secrets.map((secret) => secretEntityToContract(secret, now));
 };

@@ -4,6 +4,7 @@ import type { HealthCheck } from "@scarn/sdk/health-checks";
 import { assertNever } from "../../../common/assert-never";
 import { createUuidV7, type UuidV7 } from "../../../common/contracts/uuid-v7";
 import { planClaimedStepEnv } from "./plan-step-env-with-secrets";
+import { runnerStepEnv } from "./resolve-step-env";
 import { requestProjectSecrets } from "./request-project-secrets";
 import { taskKindUsesAgent } from "./task-kind-runtime";
 import { runAgentStepBranch } from "./process-claimed-task-run-agent-branch";
@@ -229,14 +230,14 @@ export async function startProcessClaimedTaskRun(
             requestProjectSecrets(client, input.claim, names),
           onSecretValues: (values) => logStream?.registerSecretValues(values),
         });
-        stepEnv = plan.resolved.stepEnv;
+        stepEnv = runnerStepEnv(kind, plan.resolved);
         promptEnv = plan.resolved.promptEnv;
         logStream?.registerSecretValues(plan.resolved.secretValues);
         const resolveMcp = plan.resolveMcpEnv;
         const resolveMcpEnv: typeof resolveMcp = resolveMcp
           ? (refs) => {
               const resolved = resolveMcp(refs);
-              stepEnv = resolved.stepEnv;
+              stepEnv = runnerStepEnv(kind, resolved);
               promptEnv = resolved.promptEnv;
               return resolved;
             }
@@ -297,6 +298,7 @@ export async function startProcessClaimedTaskRun(
       logger,
       workerContext,
       environment,
+      claimToken: input.claim.claimToken,
       registerSecretValues: (values) => logStream?.registerSecretValues(values),
       run: input.run,
     });

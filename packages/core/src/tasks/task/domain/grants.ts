@@ -9,13 +9,20 @@ export const labelsSchema = z.array(z.string().trim().min(1).max(200)).max(50);
  *
  * - `self`: the Task's own work item.
  * - `children`: its children, existing or created earlier in the same run.
- * - `project`: any work item in the Task's project. Only `read` and `create`
- *   accept it.
+ * - `project`: any work item in the Task's project. Only `read`, `create` and
+ *   `update` accept it, and `update` on `project` only on `code` steps.
  *
  * `create` on `children` makes children of the Task's work item; `create` on
  * `project` makes top-level items in the Task's project, keyed by an external
- * id so a repeat create returns the existing item. `create` and `label` name
- * the labels they may set, add or remove.
+ * id so a repeat create returns the existing item. `update` on `project` lets
+ * a code step write items the project already has, including closing and
+ * reopening them. `create` and `label` name the labels they may set, add or
+ * remove; `update` on `project` may name them too.
+ *
+ * `create` and `update` on `project` may carry a `keyPrefix`: the grant then
+ * covers only items whose `platformKey` starts with it, so a step can hold
+ * one grant per source. A step's work-item grants never go beyond what the
+ * claiming user may do: every use also checks the user's project permission.
  *
  * `read` includes the item's posted comments under the same scope, with no
  * additional permission. It excludes pending drafts, conversations, execution
@@ -35,7 +42,6 @@ export const grantActionValues = [
 ] as const;
 export const grantScopeValues = ["self", "children", "project"] as const;
 const changeScopeValues = ["self", "children"] as const;
-const createScopeValues = ["children", "project"] as const;
 
 export type GrantResource = (typeof grantResourceValues)[number];
 export type GrantAction = (typeof grantActionValues)[number];
@@ -43,7 +49,7 @@ export type GrantScope = (typeof grantScopeValues)[number];
 /** The scopes a grant that changes work items may cover. */
 export type ChangeGrantScope = (typeof changeScopeValues)[number];
 /** The scopes a `create` grant may cover. */
-export type CreateGrantScope = (typeof createScopeValues)[number];
+export type CreateGrantScope = "children" | "project";
 
 const grantLabelsSchema = labelsSchema
   .min(1)
@@ -51,8 +57,12 @@ const grantLabelsSchema = labelsSchema
     message: "Grant labels must be unique",
   });
 
+/** A `platformKey` prefix a `project` grant is limited to. */
+export const grantKeyPrefixSchema = z.string().min(1).max(200);
+
 const resource = z.literal("workItem");
 const scope = z.enum(changeScopeValues);
+const keyPrefix = grantKeyPrefixSchema.optional();
 
 export const grantSchema = z.discriminatedUnion("action", [
   z.object({
@@ -60,7 +70,16 @@ export const grantSchema = z.discriminatedUnion("action", [
     action: z.literal("read"),
     scope: z.enum(grantScopeValues),
   }),
-  z.object({ resource, action: z.literal("update"), scope }),
+  z.discriminatedUnion("scope", [
+    z.object({ resource, action: z.literal("update"), scope }),
+    z.object({
+      resource,
+      action: z.literal("update"),
+      scope: z.literal("project"),
+      keyPrefix,
+      labels: grantLabelsSchema.optional(),
+    }),
+  ]),
   z.object({ resource, action: z.literal("comment"), scope }),
   z.object({
     resource,
@@ -70,25 +89,69 @@ export const grantSchema = z.discriminatedUnion("action", [
   }),
   z.object({ resource, action: z.literal("block"), scope }),
   z.object({ resource, action: z.literal("close"), scope }),
-  z.object({
-    resource,
-    action: z.literal("create"),
-    scope: z.enum(createScopeValues),
-    labels: grantLabelsSchema,
-  }),
+  z.discriminatedUnion("scope", [
+    z.object({
+      resource,
+      action: z.literal("create"),
+      scope: z.literal("children"),
+      labels: grantLabelsSchema,
+    }),
+    z.object({
+      resource,
+      action: z.literal("create"),
+      scope: z.literal("project"),
+      labels: grantLabelsSchema,
+      keyPrefix,
+    }),
+  ]),
 ]);
 
 export type Grant = z.infer<typeof grantSchema>;
+/** A `create` grant on `project`. */
+export type ProjectCreateGrant = Extract<
+  Grant,
+  { action: "create"; scope: "project" }
+>;
+/** An `update` grant on `project`. */
+export type ProjectUpdateGrant = Extract<
+  Grant,
+  { action: "update"; scope: "project" }
+>;
 
 const grantKey = (grant: Grant) =>
-  `${grant.resource}:${grant.action}:${grant.scope}`;
+  `${grant.resource}:${grant.action}:${grant.scope}:${"keyPrefix" in grant ? (grant.keyPrefix ?? "") : ""}`;
 
-/** At most one grant per `(resource, action, scope)`. */
+/** At most one grant per `(resource, action, scope, keyPrefix)`. */
 export const grantsSchema = z
   .array(grantSchema)
   .refine((grants) => new Set(grants.map(grantKey)).size === grants.length, {
     message:
-      "Grants must have at most one grant per resource, action and scope",
+      "Grants must have at most one grant per resource, action, scope and key prefix",
+  });
+
+/**
+ * Why `grants` don't fit a step of `kind`, one message per grant; empty when
+ * they do. A `code` step may hold only `read`, `create` and `update` on
+ * `project`; other steps may not hold `update` on `project`, which only code
+ * steps use.
+ */
+export const grantKindRefusals = (
+  kind: string,
+  grants: readonly Grant[],
+): string[] =>
+  grants.flatMap((grant) => {
+    if (kind === "code") {
+      return grant.scope === "project"
+        ? []
+        : [
+            `A 'code' step may only hold read, create and update grants on project, not ${grant.action} on ${grant.scope}`,
+          ];
+    }
+    return grant.action === "update" && grant.scope === "project"
+      ? [
+          `Only a 'code' step may hold update on project; a '${kind}' step may not`,
+        ]
+      : [];
   });
 
 const readSelf: Grant = { resource: "workItem", action: "read", scope: "self" };
@@ -124,6 +187,46 @@ export const taskGrants = (
   }
   return [readSelf, ...grants];
 };
+
+/**
+ * The `project` grant for `action` that covers `platformKey`: one with no
+ * `keyPrefix`, or whose `keyPrefix` the key starts with. The longest matching
+ * prefix wins, so labels come from the most specific grant.
+ */
+const projectGrantFor = <G extends ProjectCreateGrant | ProjectUpdateGrant>(
+  grants: readonly Grant[],
+  action: G["action"],
+  platformKey: string,
+): G | undefined => {
+  const covering = grants.filter(
+    (grant): grant is G =>
+      grant.action === action &&
+      grant.scope === "project" &&
+      platformKey.startsWith((grant as G).keyPrefix ?? ""),
+  );
+  return covering.reduce<G | undefined>(
+    (best, grant) =>
+      best === undefined ||
+      (grant.keyPrefix ?? "").length > (best.keyPrefix ?? "").length
+        ? grant
+        : best,
+    undefined,
+  );
+};
+
+/** The `create` grant on `project` that covers `platformKey`, if any. */
+export const createGrantFor = (
+  grants: readonly Grant[],
+  platformKey: string,
+): ProjectCreateGrant | undefined =>
+  projectGrantFor<ProjectCreateGrant>(grants, "create", platformKey);
+
+/** The `update` grant on `project` that covers `platformKey`, if any. */
+export const updateGrantFor = (
+  grants: readonly Grant[],
+  platformKey: string,
+): ProjectUpdateGrant | undefined =>
+  projectGrantFor<ProjectUpdateGrant>(grants, "update", platformKey);
 
 /** The work item grant for `action` on `scope`, if any. */
 export const findGrant = <A extends GrantAction>(

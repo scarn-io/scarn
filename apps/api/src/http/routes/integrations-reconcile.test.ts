@@ -24,11 +24,6 @@ const fakeProjectIntegrationRepo: ProjectIntegrationRepo = {
   listByProjectId: notImplemented,
   findByInstallationId: notImplemented,
   listActive: () => Promise.resolve([]),
-  listDueForAutoSync: notImplemented,
-  listBySyncSecretId: notImplemented,
-  listBySyncSecretIds: notImplemented,
-  claimForSync: notImplemented,
-  releaseSyncClaim: notImplemented,
   delete: notImplemented,
   deleteByInstallationId: notImplemented,
 };

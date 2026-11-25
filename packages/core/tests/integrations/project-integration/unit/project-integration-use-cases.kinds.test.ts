@@ -37,11 +37,6 @@ const makeRepo = (): ProjectIntegrationRepo => {
     },
     findByInstallationId: unsupported,
     listActive: unsupported,
-    listDueForAutoSync: unsupported,
-    listBySyncSecretId: unsupported,
-    listBySyncSecretIds: unsupported,
-    claimForSync: unsupported,
-    releaseSyncClaim: unsupported,
     delete: unsupported,
     deleteByInstallationId: unsupported,
   };

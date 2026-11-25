@@ -125,10 +125,6 @@ export const makeGitHubIntegration = (
     lastSyncedAt: null,
     lastError: null,
     firstSyncHorizonDays: null,
-    syncSecretId: null,
-    autoSyncPausedReason: null,
-    autoSyncPausedAt: null,
-    autoSyncPausedDetail: null,
   });
 
 export const makeGitHubTokenIntegration = (
@@ -142,10 +138,6 @@ export const makeGitHubTokenIntegration = (
     lastSyncedAt: null,
     lastError: null,
     firstSyncHorizonDays: null,
-    syncSecretId: null,
-    autoSyncPausedReason: null,
-    autoSyncPausedAt: null,
-    autoSyncPausedDetail: null,
   });
 
 export const makeJiraIntegration = (): ProjectIntegrationEntity =>
@@ -160,10 +152,6 @@ export const makeJiraIntegration = (): ProjectIntegrationEntity =>
     lastSyncedAt: null,
     lastError: null,
     firstSyncHorizonDays: null,
-    syncSecretId: null,
-    autoSyncPausedReason: null,
-    autoSyncPausedAt: null,
-    autoSyncPausedDetail: null,
   });
 
 /**
@@ -204,21 +192,6 @@ export const makeProjectIntegrationRepo = (
           (entry) => entry.status === "active" || entry.status === "error",
         ),
       );
-    },
-    listDueForAutoSync() {
-      return Promise.resolve([]);
-    },
-    listBySyncSecretId() {
-      return Promise.resolve([]);
-    },
-    listBySyncSecretIds() {
-      return Promise.resolve([]);
-    },
-    claimForSync() {
-      return Promise.resolve(true);
-    },
-    releaseSyncClaim() {
-      return Promise.resolve();
     },
     delete() {
       return Promise.resolve(0);
@@ -264,6 +237,7 @@ const makeWorkItemRepo = (): {
     loadMany: () => Promise.resolve([]),
     listChildren: () => Promise.resolve([]),
     countSpawnedByTask: () => Promise.resolve(0),
+    maxSourceUpdatedAt: () => Promise.resolve(null),
     listPageByProjectId: () => Promise.resolve({ items: [], total: 0 }),
     listFieldOptions: () => Promise.resolve([]),
     listLabels: () => Promise.resolve([]),

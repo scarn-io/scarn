@@ -72,16 +72,15 @@ published port.
 The `scheduler` service POSTs these API routes with
 `Authorization: Bearer <secret>`. Times are UTC.
 
-| Job                       | Route                                            | When                                           | Secret                                 |
-| ------------------------- | ------------------------------------------------ | ---------------------------------------------- | -------------------------------------- |
-| Storage reconciliation    | `/api/internal/usage/reconcile-storage`          | Daily 08:00                                    | `RECONCILE_CRON_SECRET`                |
-| Abandoned-log cleanup     | `/api/internal/executions/purge-abandoned-logs`  | Daily 08:30                                    | `RECONCILE_CRON_SECRET`                |
-| Deleted-storage sweep     | `/api/internal/executions/sweep-deleted-storage` | Daily 09:00                                    | `RECONCILE_CRON_SECRET`                |
-| Managed-connections sweep | `/api/internal/connections/sweep`                | Daily 09:30                                    | `RECONCILE_CRON_SECRET`                |
-| GitHub reconciliation     | `/api/internal/integrations/reconcile`           | Daily 10:00                                    | `GITHUB_RECONCILE_CRON_SECRET`         |
-| Integration auto-sync     | `/api/internal/integrations/poll`                | Every 10 minutes 13:00–23:50, hourly otherwise | `INTEGRATION_POLL_CRON_SECRET`         |
-| Automation schedules      | `/api/internal/automations/schedules/tick`       | Every minute                                   | `AUTOMATION_SCHEDULE_TICK_CRON_SECRET` |
-| Demo project refresh      | `/api/internal/demo-project/refresh`             | 04:00 on the 1st and 15th                      | `DEMO_PROJECT_REFRESH_CRON_SECRET`     |
+| Job                       | Route                                            | When                      | Secret                                 |
+| ------------------------- | ------------------------------------------------ | ------------------------- | -------------------------------------- |
+| Storage reconciliation    | `/api/internal/usage/reconcile-storage`          | Daily 08:00               | `RECONCILE_CRON_SECRET`                |
+| Abandoned-log cleanup     | `/api/internal/executions/purge-abandoned-logs`  | Daily 08:30               | `RECONCILE_CRON_SECRET`                |
+| Deleted-storage sweep     | `/api/internal/executions/sweep-deleted-storage` | Daily 09:00               | `RECONCILE_CRON_SECRET`                |
+| Managed-connections sweep | `/api/internal/connections/sweep`                | Daily 09:30               | `RECONCILE_CRON_SECRET`                |
+| GitHub reconciliation     | `/api/internal/integrations/reconcile`           | Daily 10:00               | `GITHUB_RECONCILE_CRON_SECRET`         |
+| Automation schedules      | `/api/internal/automations/schedules/tick`       | Every minute              | `AUTOMATION_SCHEDULE_TICK_CRON_SECRET` |
+| Demo project refresh      | `/api/internal/demo-project/refresh`             | 04:00 on the 1st and 15th | `DEMO_PROJECT_REFRESH_CRON_SECRET`     |
 
 The API and the scheduler read the same `.env.selfhost`, so they always
 agree on the secrets. Generate each one with `openssl rand -hex 32`. When a
@@ -160,19 +159,19 @@ yourself.
 
 ### Optional
 
-| Variable                                                                                                                                   | What it turns on                                                                                                       |
-| ------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
-| `ENABLE_EMAIL_PASSWORD_LOGIN`                                                                                                              | Email/password sign-in. On unless set to `false`; see [Sign-in](#sign-in).                                             |
-| `GITHUB_APP_*`                                                                                                                             | Sign in with GitHub and App-based GitHub integrations. See [Use your own GitHub App](/scarn/self-hosting/github-app/). |
-| `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`                                                                                     | Sign in with Google.                                                                                                   |
-| `BETTER_AUTH_TRUSTED_ORIGINS`                                                                                                              | Extra comma-separated origins allowed to call the auth endpoints.                                                      |
-| `BETTER_AUTH_APP_NAME`                                                                                                                     | The app name the auth layer uses. Defaults to `Scarn`.                                                                 |
-| `PLATFORM_ADMIN_EMAILS`                                                                                                                    | Comma-separated emails allowed to use platform-operator routes.                                                        |
-| `GITHUB_RECONCILE_CRON_SECRET`, `INTEGRATION_POLL_CRON_SECRET`, `AUTOMATION_SCHEDULE_TICK_CRON_SECRET`, `DEMO_PROJECT_REFRESH_CRON_SECRET` | The other [scheduled jobs](#scheduled-jobs).                                                                           |
-| `SCARN_DEMO_PROJECT`                                                                                                                       | Links to the read-only demo project. See [Run the demo project](/scarn/self-hosting/demo-project/).                    |
-| `SCARN_DEFAULT_PLAN`                                                                                                                       | The plan new organizations start on. Unset means unlimited.                                                            |
-| `POSTHOG_API_KEY`, `POSTHOG_HOST`                                                                                                          | Server-side product analytics. Off while unset.                                                                        |
-| `WORK_SIGNAL_*`, `LOG_FEED_*`                                                                                                              | The [work signal](#work-signal-optional) service.                                                                      |
+| Variable                                                                                                   | What it turns on                                                                                                       |
+| ---------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `ENABLE_EMAIL_PASSWORD_LOGIN`                                                                              | Email/password sign-in. On unless set to `false`; see [Sign-in](#sign-in).                                             |
+| `GITHUB_APP_*`                                                                                             | Sign in with GitHub and App-based GitHub integrations. See [Use your own GitHub App](/scarn/self-hosting/github-app/). |
+| `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`                                                     | Sign in with Google.                                                                                                   |
+| `BETTER_AUTH_TRUSTED_ORIGINS`                                                                              | Extra comma-separated origins allowed to call the auth endpoints.                                                      |
+| `BETTER_AUTH_APP_NAME`                                                                                     | The app name the auth layer uses. Defaults to `Scarn`.                                                                 |
+| `PLATFORM_ADMIN_EMAILS`                                                                                    | Comma-separated emails allowed to use platform-operator routes.                                                        |
+| `GITHUB_RECONCILE_CRON_SECRET`, `AUTOMATION_SCHEDULE_TICK_CRON_SECRET`, `DEMO_PROJECT_REFRESH_CRON_SECRET` | The other [scheduled jobs](#scheduled-jobs).                                                                           |
+| `SCARN_DEMO_PROJECT`                                                                                       | Links to the read-only demo project. See [Run the demo project](/scarn/self-hosting/demo-project/).                    |
+| `SCARN_DEFAULT_PLAN`                                                                                       | The plan new organizations start on. Unset means unlimited.                                                            |
+| `POSTHOG_API_KEY`, `POSTHOG_HOST`                                                                          | Server-side product analytics. Off while unset.                                                                        |
+| `WORK_SIGNAL_*`, `LOG_FEED_*`                                                                              | The [work signal](#work-signal-optional) service.                                                                      |
 
 `SCARN_VERSION` and the `SCARN_*_PORT` variables are read by Compose itself,
 so they go in your shell or a `.env` file, not in `.env.selfhost`.

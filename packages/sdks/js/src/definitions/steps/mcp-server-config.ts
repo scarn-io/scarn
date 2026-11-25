@@ -1,6 +1,7 @@
 import type { z } from "zod";
 import { ENV_VAR_NAME_PATTERN, isReservedEnvVarName } from "../../env-vars";
 import {
+  basicPlaceholderIssues,
   collectEnvPlaceholderNames,
   isEnvPlaceholderValue,
   mcpConnectionAuthSchema,
@@ -72,6 +73,7 @@ const commonConfigKeys = new Set([
   "name",
   "env",
   "optionalEnv",
+  "vars",
   "healthChecks",
 ]);
 
@@ -139,14 +141,19 @@ function assertPlaceholders(
 ): void {
   for (const [key, value] of Object.entries(values ?? {})) {
     if (isEnvPlaceholderValue(value)) continue;
+    const forms =
+      field === "headers"
+        ? "{env:VAR} or {basic:USER_VAR:PASS_VAR}"
+        : "{env:VAR}";
     throw new Error(
-      `defineMcp "${name}": ${field}.${key} must be written as {env:VAR}; a literal ${field} value would be stored in plaintext.`,
+      `defineMcp "${name}": ${field}.${key} must be written as ${forms}; a literal ${field} value would be stored in plaintext.`,
     );
   }
 }
 
 /**
- * The `{env:VAR}` names an inline server reads, which compile into required
+ * The `{env:VAR}` and `{basic:USER_VAR:PASS_VAR}` names an inline server
+ * reads, which compile into required
  * env entries tagged with the server's key. Empty for a `ref`: the worker
  * infers those from the repo's definition.
  */
@@ -209,6 +216,10 @@ export function parseMcpServer(config: McpServerConfig): McpServerDefinition {
         `defineMcp "${name}": type must be "ref", "local" or "remote".`,
       );
   }
+  assertConnectionAuth(
+    name,
+    basicPlaceholderIssues({ ...definition.server, type: definition.type }),
+  );
   assertInferredEnv(definition);
   return definition;
 }

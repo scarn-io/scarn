@@ -2,6 +2,9 @@ import { storedEnvVarsSchema } from "@scarn/core/common/contracts/env-vars";
 import { managedConnectionNameSchema } from "@scarn/sdk/managed-connections";
 import { z } from "zod";
 
+const [value, inherit, secret] = storedEnvVarsSchema.element.options;
+const agentOnly = { applies: z.literal("agent").default("agent") };
+
 const sharedFields = {
   disabled: z.boolean().optional(),
   codemode: z.boolean().optional(),
@@ -15,9 +18,11 @@ const sharedFields = {
   protocol: z.enum(["legacy", "auto", "2026-07-28"]).optional(),
   workerVars: z
     .array(
-      storedEnvVarsSchema.element.options[1].extend({
-        applies: z.literal("agent").default("agent"),
-      }),
+      z.discriminatedUnion("source", [
+        value.extend(agentOnly),
+        inherit.extend(agentOnly),
+        secret.extend(agentOnly),
+      ]),
     )
     .optional(),
 };

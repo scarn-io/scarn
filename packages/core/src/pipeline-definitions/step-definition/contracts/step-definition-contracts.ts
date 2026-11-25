@@ -22,7 +22,10 @@ import {
   rejectConnectorMcpCollisions,
   taskExecutionConfigMcpServersSchema,
 } from "@scarn/core/tasks/task-execution-config/contracts/task-execution-config-contracts";
-import { grantsSchema } from "@scarn/core/tasks/task/domain/grants";
+import {
+  grantKindRefusals,
+  grantsSchema,
+} from "@scarn/core/tasks/task/domain/grants";
 import {
   stepDefinitionKindValues,
   stepDefinitionStatusValues,
@@ -266,6 +269,9 @@ export const createStepDefinitionInputSchema = z
     }
     refineMcpToolStep(value, context);
     refineCodeStepHealthChecks(value, context);
+    for (const message of grantKindRefusals(value.kind, value.grants ?? [])) {
+      context.addIssue({ code: "custom", message, path: ["grants"] });
+    }
   });
 
 export const upsertStepDefinitionInputSchema = createStepDefinitionInputSchema;

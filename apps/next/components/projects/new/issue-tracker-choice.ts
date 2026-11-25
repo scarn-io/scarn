@@ -1,6 +1,5 @@
 import type { GitHost } from "@scarn/sdk/git-url";
 import type { IssueTrackerInput } from "@scarn/core/projects/project/contracts/project-setup-contracts";
-import type { AutoSyncIntegration } from "@/components/integrations/auto-sync-text";
 import type { VerifiedCredential } from "@/components/integrations/token-credential-form";
 
 /**
@@ -30,18 +29,14 @@ export function issueTrackerOptions(
 /** A checked, ready-to-create issue tracker. Credentials stay in memory only. */
 export type IssueTrackerChoice =
   | { type: "github_app"; installationId: string; accountLogin: string | null }
-  | { type: "github_token"; verified: VerifiedCredential; autoSync?: boolean }
+  | { type: "github_token"; verified: VerifiedCredential }
   | { type: "bitbucket"; verified: VerifiedCredential }
   | {
       type: "jira";
       baseUrl: string;
       projectKeys: string[];
       verified: VerifiedCredential;
-      autoSync?: boolean;
     };
-
-const autoSyncField = (autoSync: boolean | undefined) =>
-  autoSync ? { autoSync: true } : {};
 
 export function issueTrackerInput(
   choice: IssueTrackerChoice,
@@ -53,7 +48,6 @@ export function issueTrackerInput(
       return {
         type: "github_token",
         credential: choice.verified.credential,
-        ...autoSyncField(choice.autoSync),
       };
     case "bitbucket":
       return { type: "bitbucket", credential: choice.verified.credential };
@@ -63,33 +57,8 @@ export function issueTrackerInput(
         baseUrl: choice.baseUrl,
         projectKeys: choice.projectKeys,
         credential: choice.verified.credential,
-        ...autoSyncField(choice.autoSync),
       };
   }
-}
-
-/**
- * The integration a saved Jira key or GitHub token would be lent to, for the
- * "Auto-sync with this key" consent. Null for the App, Bitbucket and pasted
- * keys, which can't be lent.
- */
-export function autoSyncCandidate(
-  choice: IssueTrackerChoice | null,
-  repoName: string,
-): AutoSyncIntegration | null {
-  if (!choice || choice.type === "github_app" || choice.type === "bitbucket") {
-    return null;
-  }
-  if (choice.verified.connection.method !== "saved") return null;
-  if (choice.type === "jira") {
-    return { kind: "jira", externalScope: { projectKeys: choice.projectKeys } };
-  }
-  return {
-    kind: "github_token",
-    externalScope: {
-      repos: [{ fullName: choice.verified.repo?.fullName ?? repoName }],
-    },
-  };
 }
 
 export const usesUnsavedToken = (choice: IssueTrackerChoice | null): boolean =>

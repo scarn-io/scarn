@@ -10,7 +10,11 @@ import {
 import type { HealthCheck } from "@scarn/core/common/contracts/health-checks";
 import { CoreValidationError } from "@scarn/core/lib/errors";
 import type { RetryPolicyEntry } from "@scarn/core/tasks/task/domain/retry-decision";
-import { grantsSchema, type Grant } from "@scarn/core/tasks/task/domain/grants";
+import {
+  grantKindRefusals,
+  grantsSchema,
+  type Grant,
+} from "@scarn/core/tasks/task/domain/grants";
 import { BUILT_IN_ERRORS } from "@scarn/sdk/contracts/pipeline-document";
 import { normalizeDate } from "@scarn/core/work-items/work-item/domain/date-utils";
 
@@ -383,6 +387,13 @@ export class StepDefinitionEntity {
     if (!parsedGrants.success) {
       throw new CoreValidationError(
         `Step definition grants are invalid: ${parsedGrants.error.issues.map((issue) => issue.message).join("; ")}`,
+        "STEP_DEFINITION_GRANTS_INVALID",
+      );
+    }
+    const kindRefusals = grantKindRefusals(props.kind, parsedGrants.data);
+    if (kindRefusals.length > 0) {
+      throw new CoreValidationError(
+        `Step definition grants are invalid: ${kindRefusals.join("; ")}`,
         "STEP_DEFINITION_GRANTS_INVALID",
       );
     }

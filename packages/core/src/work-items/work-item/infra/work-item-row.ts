@@ -12,6 +12,16 @@ const syncedDescriptionSet = {
 };
 
 /**
+ * `setWhere` for `saveManyIfSourceNewer` (decisions 6/12): update a
+ * conflicting row only when the incoming one is strictly newer at the source,
+ * or nothing was stored yet. A stale row is left untouched and dropped from
+ * `RETURNING`.
+ */
+export const sourceNewerGuard = sql.raw(
+  `excluded.${workItems.sourceUpdatedAt.name} > work_items.${workItems.sourceUpdatedAt.name} or work_items.${workItems.sourceUpdatedAt.name} is null`,
+);
+
+/**
  * Shared `ON CONFLICT ... DO UPDATE SET` clause for the upsert (conflict on
  * `projectId`/`platform`/`platformKey`). `"sync"` is the ingestion-style
  * upsert behind `saveMany` (unconditional) and `saveManyIfSourceNewer`
@@ -21,7 +31,11 @@ const syncedDescriptionSet = {
  * an existing row's description, which only `saveDescription` writes.
  */
 export const workItemUpsertSet = (writer: "sync" | "scarn") => ({
-  platformId: sql.raw(`excluded.${workItems.platformId.name}`),
+  // A source that doesn't know the item's platform id (GitHub's MCP
+  // `list_issues` has no node id) keeps the one another source stored.
+  platformId: sql.raw(
+    `coalesce(excluded.${workItems.platformId.name}, work_items.${workItems.platformId.name})`,
+  ),
   url: sql.raw(`excluded.${workItems.url.name}`),
   title: sql.raw(`excluded.${workItems.title.name}`),
   ...(writer === "sync" ? syncedDescriptionSet : {}),

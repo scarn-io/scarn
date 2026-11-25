@@ -1,6 +1,5 @@
 import { parseGitHost } from "@scarn/sdk/git-url";
 import { assertNever } from "@scarn/core/lib/assert-never";
-import { CoreValidationError } from "@scarn/core/lib/errors";
 import type { UuidV7 } from "@scarn/core/common/contracts/uuid-v7";
 import type { Logger } from "@scarn/observability/logging";
 import type { ProjectIntegrationRepo } from "@scarn/core/integrations/project-integration/application/project-integration-repo";
@@ -84,24 +83,6 @@ const toIntegrationInput = (
   }
 };
 
-/**
- * The saved key to lend the new integration, or null. Access was already
- * verified against the same repo or Jira keys the integration's scope holds.
- */
-const lentSecretIdOf = (
-  issueTracker: IssueTrackerInput,
-  access: VerifiedIssueTrackerAccess,
-): UuidV7 | null => {
-  if (!("autoSync" in issueTracker) || !issueTracker.autoSync) return null;
-  if (access.type === "github_app" || access.secretId === null) {
-    throw new CoreValidationError(
-      "Only a saved key can sync automatically; save the key first",
-      "PROJECT_INTEGRATION_AUTO_SYNC_NEEDS_SAVED_KEY",
-    );
-  }
-  return access.secretId;
-};
-
 const credentialOf = (
   issueTracker: IssueTrackerInput,
 ): IntegrationCredentialChoice | undefined =>
@@ -111,8 +92,7 @@ const credentialOf = (
  * Creates a project and, when asked, connects its issue tracker:
  * 1. checks the tracker fits the repo's host and that the credential can read
  *    the repo or Jira site, before anything is written;
- * 2. creates the project, then the integration, lending it the caller's saved
- *    key for auto-sync when `autoSync` is set (a pasted key is rejected);
+ * 2. creates the project, then the integration;
  * 3. runs a best-effort first sync with the same credential. A failed sync
  *    keeps the project and integration and sets `initialSyncFailed`.
  * Never saves a credential.
@@ -132,9 +112,6 @@ export const setUpProject = async (
       )
     : null;
 
-  const lentSecretId =
-    issueTracker && access ? lentSecretIdOf(issueTracker, access) : null;
-
   const project = await deps.createProject({
     ...projectInput,
     source: host.host === "other" ? "manual" : host.host,
@@ -145,14 +122,7 @@ export const setUpProject = async (
   }
 
   const integration = await createProjectIntegration(
-    {
-      ...toIntegrationInput(
-        project.id,
-        access,
-        issueTracker.firstSyncHorizonDays,
-      ),
-      syncSecretId: lentSecretId,
-    },
+    toIntegrationInput(project.id, access, issueTracker.firstSyncHorizonDays),
     deps.projectIntegrationRepo,
   );
   if (access.type !== "github_app") {

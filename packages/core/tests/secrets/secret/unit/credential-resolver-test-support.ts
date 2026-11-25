@@ -35,25 +35,10 @@ class InMemorySecretRepo implements SecretRepo {
     return Promise.resolve(entity);
   }
 
-  findById(id: UuidV7) {
-    return Promise.resolve(this.rows.get(id) ?? null);
-  }
-
   findByIdForOwner(id: UuidV7, owner: SecretOwner) {
     const secret = this.rows.get(id);
     return Promise.resolve(
       secret && sameOwner(secret.owner, owner) ? secret : null,
-    );
-  }
-
-  listSummariesByIds(ids: readonly UuidV7[]) {
-    return Promise.resolve(
-      ids.flatMap((id) => {
-        const secret = this.rows.get(id);
-        return secret?.owner.type === "user"
-          ? [{ id, name: secret.name, ownerUserId: secret.owner.userId }]
-          : [];
-      }),
     );
   }
 

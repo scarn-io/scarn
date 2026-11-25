@@ -12,6 +12,9 @@ import type {
   PostApiTaskRunsByTaskRunIdLogsData,
   PostApiTaskRunsByTaskRunIdManagedLaunchData,
   PostApiTaskRunsByTaskRunIdSessionUploadUrlData,
+  PostApiTaskRunsByTaskRunIdWorkItemCreatesData,
+  PostApiTaskRunsByTaskRunIdWorkItemUpsertsData,
+  PostApiTaskRunsByTaskRunIdWorkItemSourceCursorData,
   PostApiTaskRunsByTaskRunIdYieldsData,
   PostApiTaskRunsClaimsData,
 } from "./generated/types.gen";
@@ -137,6 +140,28 @@ const buildTaskPlaneClient = (taskRuns: TaskRuns) => {
       ...body
     }: TaskRunRef & { claimToken: string; workItemId: string }) =>
       unwrap(await taskRuns.readTaskRunWorkItem({ path: { taskRunId }, body })),
+    /**
+     * A code step's import write (`work-item-upserts`). Not unwrapped: the
+     * step bridge relays the API's status, `code` and `meta`.
+     */
+    upsertTaskRunWorkItems: ({
+      taskRunId,
+      ...body
+    }: TaskRunRef & PostApiTaskRunsByTaskRunIdWorkItemUpsertsData["body"]) =>
+      taskRuns.upsertTaskRunWorkItems({ path: { taskRunId }, body }),
+    /** Not unwrapped: the step bridge relays the API's status and error. */
+    createTaskRunWorkItem: ({
+      taskRunId,
+      ...body
+    }: TaskRunRef & PostApiTaskRunsByTaskRunIdWorkItemCreatesData["body"]) =>
+      taskRuns.createTaskRunWorkItem({ path: { taskRunId }, body }),
+    /** Not unwrapped: the step bridge relays the API's status and error. */
+    latestTaskRunSourceUpdate: ({
+      taskRunId,
+      ...body
+    }: TaskRunRef &
+      PostApiTaskRunsByTaskRunIdWorkItemSourceCursorData["body"]) =>
+      taskRuns.latestTaskRunSourceUpdate({ path: { taskRunId }, body }),
     completeTaskRun: async ({
       taskRunId,
       ...body

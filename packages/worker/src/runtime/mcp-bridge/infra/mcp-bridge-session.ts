@@ -16,12 +16,17 @@ import type { ProjectWorkLogger } from "../../../work/task-run/contracts/process
 import { createSdkMcpConnectionPool } from "../../../work/task-run/infra/sdk-mcp-connection-pool";
 import { HOST_GATEWAY_RUN_ARGS } from "../../runtime-service/infra/devcontainer-mount-injection";
 import { McpBridge } from "../application/mcp-bridge";
+import {
+  WorkItemsBridge,
+  type WorkItemsBridgeOptions,
+} from "../application/work-items-bridge";
 import { resolveMcpBridgeBindAddress } from "./mcp-bridge-config";
 import { McpBridgeServer } from "./mcp-bridge-server";
 
 /**
- * One MCP bridge per code step run (ADR 0016): its own server, port, 32-byte
- * bearer token and connection pool. The run's `signal` aborting stops the
+ * One step bridge per code step run (ADR 0016, ADR 0018): its own server,
+ * port, 32-byte bearer token and MCP connection pool, plus the work-item
+ * routes that relay to the API with the run's claim token. The run's `signal` aborting stops the
  * session: in-flight calls are aborted, the pool is closed and the server
  * stops (decision 7).
  *
@@ -60,6 +65,13 @@ export type OpenMcpBridgeSessionInput = {
   env: Record<string, string>;
   logger?: ProjectWorkLogger | undefined;
   signal: AbortSignal;
+  /**
+   * Where the `/work-items/*` routes send a code step's work-item calls (the
+   * run, its claim token and the API); without it they answer 502.
+   */
+  workItems?:
+    | Pick<WorkItemsBridgeOptions, "taskRunId" | "claimToken" | "api">
+    | undefined;
   /** Defaults to {@link resolveMcpBridgeBindAddress} over `process.env`. */
   bindAddress?: string | undefined;
   /** Defaults to {@link createSdkMcpConnectionPool}. */
@@ -82,7 +94,10 @@ export async function openMcpBridgeSession(
     signal: AbortSignal.any([input.signal, stopped.signal]),
   });
   const token = randomBytes(TOKEN_BYTES).toString("hex");
-  const server = new McpBridgeServer({ bridge, token, bindAddress });
+  const workItems = input.workItems
+    ? new WorkItemsBridge({ ...input.workItems, logger: input.logger })
+    : undefined;
+  const server = new McpBridgeServer({ bridge, workItems, token, bindAddress });
 
   let stopping: Promise<void> | null = null;
   const stop = (): Promise<void> => {

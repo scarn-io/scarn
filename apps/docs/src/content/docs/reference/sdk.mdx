@@ -368,6 +368,7 @@ function defineMcp(config: DefineMcpConfig): McpHandle;
 type DefineMcpConfig = (RefServer | LocalServer | RemoteServer) & {
   env?: string[]; // worker variables the server needs
   optionalEnv?: string[]; // worker variables passed through when set
+  vars?: Record<string, EnvEntry>; // the server's own variables, e.g. Env.secret("NAME")
   healthChecks?: Record<string, McpCheckInput>;
 };
 
@@ -439,12 +440,14 @@ type McpCheckPatch = Partial<
 
 `auth` authenticates a `ref` or `remote` server with one of the project's [MCP connections](/scarn/connections/). `connection` is the connection's name: lowercase letters, digits and hyphens, at most 63 characters. A `local` server can't have `auth`. With `auth`, `defineMcp` also throws on:
 
-- `env` or `optionalEnv`;
+- `env`, `optionalEnv` or `vars`;
 - on a `remote` server, a missing `url` (it is never filled in from the connection), a `url` that isn't an absolute `http(s)` URL or has a query string, fragment or credentials, and `headers` or `oauth`.
 
 `defineMcp` doesn't know which URL a connection has. When a run starts, Scarn checks each server's URL, resolved from the repository for a `ref`, against its connection's after normalizing scheme and host case, a default port and a trailing slash, and fails the run with `SCARN_MCP_CONNECTION_AUTH_INVALID` on a mismatch. A `ref` must resolve to a `remote` definition, whose own `headers` and `oauth` are dropped. See [Use the connection in a step](/scarn/connections/notion/#use-the-connection-in-a-step).
 
-Every `{env:VAR}` in a `local` server's `command`, `cwd` or `environment`, or a `remote` server's `url` or `headers`, compiles to a required worker variable tagged with the server's `mcps` key, unless it is listed in `optionalEnv`. See [Variables in inline servers](/scarn/guides/steps/#variables-in-inline-servers).
+Every `{env:VAR}` in a `local` server's `command`, `cwd` or `environment`, or a `remote` server's `url` or `headers`, compiles to a required worker variable tagged with the server's `mcps` key, unless it is listed in `optionalEnv` or `vars`. See [Variables in inline servers](/scarn/guides/steps/#variables-in-inline-servers).
+
+`vars` gives a placeholder's variable a source other than a same-named worker variable: a project secret (`Env.secret`), a renamed worker variable (`Env.inherit`), or a non-secret value (`Env.value` or a literal). The rules match a step's `environment.vars`, except every entry applies to the agent only. The worker resolves `vars` for that server alone. A code step's own process never gets them; its MCP calls go through the worker. Read a value in your own code by declaring it on the step's `environment.vars` as well.
 
 Every `McpHandle` method returns a new handle and leaves its receiver unchanged:
 
@@ -456,7 +459,7 @@ Every `McpHandle` method returns a new handle and leaves its receiver unchanged:
 | `addCheck(name, check)`      | `McpHandle` | Adds an `McpCheckInput` under a new name                          |
 | `disableAllChecks()`         | `McpHandle` | Turns off every check defined so far                              |
 
-`name` is typed from the handle's check names. A server has no severity of its own: each check has its own `severity` (default `"required"`), changed for one step with `overrideCheck(name, { severity })`. A handle also exposes its state as readonly fields: `type`, `name`, `server` (the OpenCode fields), `env`, `optionalEnv`, `checks` and `overrides` (the builder calls, in order). `isMcpHandle(value)` tells a handle from any other value, and `compileMcps(mcps, stepKey)` compiles a record of handles to the wire fields (`opencodeMcpJson`, health checks and env entries) the way `defineStep` does.
+`name` is typed from the handle's check names. A server has no severity of its own: each check has its own `severity` (default `"required"`), changed for one step with `overrideCheck(name, { severity })`. A handle also exposes its state as readonly fields: `type`, `name`, `server` (the OpenCode fields), `env`, `optionalEnv`, `vars` (in the wire shape), `checks` and `overrides` (the builder calls, in order). `isMcpHandle(value)` tells a handle from any other value, and `compileMcps(mcps, stepKey)` compiles a record of handles to the wire fields (`opencodeMcpJson`, health checks and env entries) the way `defineStep` does.
 
 See [MCP servers](/scarn/guides/steps/#mcp-servers) for examples of each type, where refs are looked up, how checks are named and serialized, check severity, and what happens when a variable is missing, and [Secrets](/scarn/guides/steps/#secrets) for where the real values live.
 
@@ -512,16 +515,17 @@ const step = defineStep({
 });
 ```
 
-| Feature                                                                     | Effect                                                                                                                                                                                                                                     |
-| --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `Features.notifications()`                                                  | Adds an optional `$scarn_notifications_v1` result array and prompt text for emitting user notifications.                                                                                                                                   |
-| `Features.feedbackRequests()`                                               | A real specialization of `notifications()` (not an alias): narrows every emitted item to `kind: "feedback_request"`, in the same `$scarn_notifications_v1` array.                                                                          |
-| `Features.workItems.read \| update \| comment \| block \| close({ scope })` | Grants the step's Tasks that action on their work item (`scope: "self"`) or its children (`scope: "children"`), and adds a prompt section naming the tool. `read` also takes `scope: "project"`: any work item in the project.             |
-| `Features.workItems.label({ scope, labels })`                               | Grants adding or removing only the listed labels.                                                                                                                                                                                          |
-| `Features.workItems.create({ scope: "children", labels })`                  | Grants creating child work items with labels from `labels` only.                                                                                                                                                                           |
-| `Features.workItems.create({ scope: "project", labels })`                   | Grants creating top-level work items in the project, each keyed by a `platformKey` from its source system; a key the project already has returns the existing item. For [scheduled steps](/scarn/guides/automations/#creating-work-items). |
+| Feature                                                                     | Effect                                                                                                                                                                                                                                                                                 |
+| --------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Features.notifications()`                                                  | Adds an optional `$scarn_notifications_v1` result array and prompt text for emitting user notifications.                                                                                                                                                                               |
+| `Features.feedbackRequests()`                                               | A real specialization of `notifications()` (not an alias): narrows every emitted item to `kind: "feedback_request"`, in the same `$scarn_notifications_v1` array.                                                                                                                      |
+| `Features.workItems.read \| update \| comment \| block \| close({ scope })` | Grants the step's Tasks that action on their work item (`scope: "self"`) or its children (`scope: "children"`), and adds a prompt section naming the tool. `read` also takes `scope: "project"`: any work item in the project.                                                         |
+| `Features.workItems.label({ scope, labels })`                               | Grants adding or removing only the listed labels.                                                                                                                                                                                                                                      |
+| `Features.workItems.create({ scope: "children", labels })`                  | Grants creating child work items with labels from `labels` only.                                                                                                                                                                                                                       |
+| `Features.workItems.create({ scope: "project", labels, keyPrefix? })`       | Grants creating top-level work items in the project, each keyed by a `platformKey` from its source system; a key the project already has returns the existing item. On a code step, also `upsert` of new keys. For [scheduled steps](/scarn/guides/automations/#importing-work-items). |
+| `Features.workItems.update({ scope: "project", keyPrefix?, labels? })`      | Code steps only: `context.workItems.upsert` of keys the project already has, including closing and reopening them.                                                                                                                                                                     |
 
-Work item features add nothing to the result; they collect into the step's `grants`. Attach each action and scope at most once. See [`Features.workItems.*`](/scarn/guides/steps/#featuresworkitems) for the guide.
+`keyPrefix` limits a `project` grant to `platformKey`s starting with it; `labels` on `update` limits the labels a write may set (any when omitted). Work item features add nothing to the result; they collect into the step's `grants`. Attach each action and scope at most once (per `keyPrefix` for `create` and `update` on `project`). A code step may hold only `read`, `create` and `update` on `project`. See [`Features.workItems.*`](/scarn/guides/steps/#featuresworkitems) for the guide.
 
 `Features` is exclusively for `features: [...]` attachment — value construction (`Notify`) is a separate export, kept apart on purpose so `Features.` autocomplete only ever shows things you attach to a step.
 
@@ -652,6 +656,7 @@ export const sumScores = codeStep({
 | `artifactsDir` | `string`                                 | The absolute path of the step's artifacts folder, which already exists. Write a file there and return `Artifact.path(<relative path>)` in a [`z.artifact`](#zartifactoptions) field. The worker checks that the path stays inside the folder, exists, is non-empty and has an accepted extension |
 | `fail`         | `(name, message, options?) => never`     | Throws a [`StepError`](#steperror). `name` is typed as a built-in error or one of the step's `errors`                                                                                                                                                                                            |
 | `mcp`          | [`McpClients<typeof mcps>`](#mcpclients) | Only when the step declares `mcps`: one client per server key                                                                                                                                                                                                                                    |
+| `workItems`    | [`WorkItemsClient`](#workitemsclient)    | Only when the step has `Features.workItems.read`, `create` or `update` on `project`                                                                                                                                                                                                              |
 
 ### `McpClients`
 
@@ -669,6 +674,30 @@ export const sumScores = codeStep({
 ### `createFakeMcpClients(handles, fakes?)`
 
 Returns `McpClients` for unit-testing `fn`, typed from the handles' catalogs. `fakes` is `FakeMcpClients<typeof handles>`: per server key, a function per catalog tool that gets the parsed arguments and returns the tool's result, plus an optional `call(toolName, args)` fake for the untyped call. Arguments and results are validated as by the real client. A tool with no fake throws `McpUnavailableError` (`no_fake`). See [Testing with fake clients](/scarn/guides/steps/#testing-with-fake-clients).
+
+### `WorkItemsClient`
+
+`context.workItems` of a code step with work item grants on `project`. Each method is on the type only when a grant allows it.
+
+| Method                                       | Needs grant          | Returns                       | Description                                                                                                                                                 |
+| -------------------------------------------- | -------------------- | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `upsert(items: WorkItemUpsertItem[])`        | `create` or `update` | `Promise<UpsertedWorkItem[]>` | 1–100 items, written in one transaction. A new key needs `create`, an existing one `update`. Items not newer than the stored one are left out of the result |
+| `create(item: WorkItemCreateItem)`           | `create`             | `Promise<CreatedWorkItem>`    | One `custom` item: `{ workItemId, created }`, with `created: false` when the key already exists                                                             |
+| `latestSourceUpdate(source: WorkItemSource)` | `read`               | `Promise<string \| null>`     | The newest `sourceUpdatedAt` among items on `source.platform` whose key starts with `source.keyPrefix`, or `null`                                           |
+
+`WorkItemUpsertItem` is `{ platform: "custom" | "jira" | "github"; platformKey; title; description; sourceUpdatedAt; state?; url?; platformId?; sourceCreatedAt?; fields?; labels? }`, with ISO date-times. `UpsertedWorkItem` is `{ workItemId, platform, platformKey, outcome: "created" | "updated" }`. Every call is also checked against the claiming user's project role (`work-items:write` to write, `work-items:read` for the cursor). See [Writing work items from a code step](/scarn/guides/steps/#writing-work-items-from-a-code-step).
+
+| Class                       | `name`             | Extra fields                                                                                         |
+| --------------------------- | ------------------ | ---------------------------------------------------------------------------------------------------- |
+| `WorkItemsRefusedError`     | `Scarn.StepFailed` | `apiCode: string` (`WORK_ITEM_GRANT_MISSING` or `PROJECT_FORBIDDEN`), `refused: number \| undefined` |
+| `WorkItemsInvalidError`     | `Scarn.ArgsError`  |                                                                                                      |
+| `WorkItemsUnavailableError` | `Scarn.StepFailed` | `reason: "no_bridge" \| "bridge"`, `detail: string`                                                  |
+
+### `createFakeWorkItems(features, options?)`
+
+Returns a `WorkItemsClient` for unit-testing `fn`, typed from the same `features` array the step uses, with the project's items kept in memory. It applies the server's rules: argument validation, `create`/`update` grants by `keyPrefix` (longest wins) and `labels`, refusal of the whole call with `WorkItemsRefusedError`, and newer-only writes. `options.items` seeds items the project already has, without a grant check. `.items()` returns the project's items as `FakeWorkItem[]`, in the order first written.
+
+`WorkItemsClient`, `createFakeWorkItems`, the three error classes and the item types are exported from `@scarn/sdk/definitions/steps`.
 
 ### `StepError`
 
@@ -909,6 +938,86 @@ A project automation's `onEvent({ key, event: "schedule", cron, timezone?, concu
 | `cron`          | `string`                                      | 5-field cron or an `@` alias such as `"@hourly"`; no seconds field and no Quartz syntax                      |
 | `timezone`      | `string` (optional)                           | IANA timezone the cron is read in; defaults to `"UTC"`                                                       |
 | `concurrency`   | `{ max: number; waiting: number }` (optional) | Runs of the schedule open at once; defaults to `{ max: 1, waiting: 0 }`, which skips a run while one is open |
+
+---
+
+## Issue import libraries
+
+Ready-made [import steps](/scarn/guides/automations/#importing-work-items) for Jira and GitHub. Each factory returns a `codeStep` with its features, MCP server and `fn` filled in, and `.schedule(step, options?)` returns the schedule rule that runs it.
+
+:::caution[Export the step from your own file]
+Call the factory in a `.ts` file in `.scarn/pipeline-builder/` and export the result by name. The worker re-imports that file and finds the step by `key`; a step that isn't exported from your own file can't run.
+:::
+
+```typescript
+import { defineAutomation } from "@scarn/sdk/automations";
+import { jiraIssueImport } from "@scarn/sdk/library/jira";
+
+export const importJira = jiraIssueImport({
+  key: "import-jira",
+  site: "https://acme.atlassian.net",
+  projectKeys: ["ABC"],
+});
+
+export default defineAutomation({
+  key: "jira-import",
+  title: "Jira import",
+  scope: "project",
+  rules: [jiraIssueImport.schedule(importJira, { cron: "*/10 * * * *" })],
+});
+```
+
+Both factories set `read` on `project`, and `create` and `update` on `project` per Jira project key or repo, with that key prefix and the library's labels. Each run reads every source oldest-updated first from the newest `sourceUpdatedAt` already imported, less 5 minutes; the first run reaches back `firstSyncHorizonDays`. Credentials are resolved by the worker for the library's MCP server only, so they never reach the step's container or `process.env`.
+
+### `jiraIssueImport(options)`
+
+From `@scarn/sdk/library/jira`. Imports issues as `jira` work items keyed `ABC-123`, with grants on `keyPrefix: "ABC-"`.
+
+| Option                 | Type                    | Default                                      | Description                                                                           |
+| ---------------------- | ----------------------- | -------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `key`                  | `string`                | required                                     | The step's key                                                                        |
+| `site`                 | `string`                | required                                     | The Jira Cloud site, an `https://` URL such as `https://acme.atlassian.net`           |
+| `projectKeys`          | `[string, ...string[]]` | required                                     | Jira project keys, uppercase                                                          |
+| `auth`                 | `JiraAuth`              | `{ type: "oauth", connection: "atlassian" }` | How the step reaches Jira; see below                                                  |
+| `labels`               | `[string, ...string[]]` | `["jira"]`                                   | Scarn labels every imported item carries. Jira's own labels go in `fields.jiraLabels` |
+| `firstSyncHorizonDays` | `number`                | `30`                                         | How far back the first run reaches                                                    |
+| `name`                 | `string`                | `Import Jira issues (<keys>)`                | The step's name                                                                       |
+| `status`               | `"draft" \| "active"`   | `"active"`                                   | The step's status                                                                     |
+
+`JiraAuth` is one of:
+
+- `{ type: "oauth", connection?: string }`: the project's [Atlassian connection](/scarn/connections/), signed in in the browser. `connection` defaults to `"atlassian"`. The org's admin may need to allow the connection's domain for Atlassian's MCP server.
+- `{ type: "apiKey", email, token }`: an Atlassian account's email (a string, `Env.secret(...)` or `Env.inherit(...)`) and a scoped API token with Jira read and search scopes, as `Env.secret("NAME")` or `Env.inherit({ secret: true })`. A literal token throws when the step is defined. The org's admin must allow API-token authentication for Atlassian's MCP server.
+
+Each issue maps as in [Jira](/scarn/how-to/integrations/#jira), except that comment counts and custom fields by name aren't imported.
+
+### `githubIssueImport(options)`
+
+From `@scarn/sdk/library/github`. Imports issues as `github` work items keyed `owner/repo#123`, with grants on `keyPrefix: "owner/repo#"`. If you can install the [GitHub App](/scarn/how-to/integrations/#connect-the-github-app), use it instead: it syncs instantly and also imports parent links and blocks.
+
+| Option                 | Type                    | Default                          | Description                                                                               |
+| ---------------------- | ----------------------- | -------------------------------- | ----------------------------------------------------------------------------------------- |
+| `key`                  | `string`                | required                         | The step's key                                                                            |
+| `repos`                | `[string, ...string[]]` | required                         | Repos as `owner/repo`                                                                     |
+| `auth`                 | `GitHubAuth`            | required                         | `{ type: "apiKey", token }`; see below                                                    |
+| `labels`               | `[string, ...string[]]` | `["github"]`                     | Scarn labels every imported item carries. GitHub's own labels go in `fields.githubLabels` |
+| `firstSyncHorizonDays` | `number`                | `30`                             | How far back the first run reaches                                                        |
+| `name`                 | `string`                | `Import GitHub issues (<repos>)` | The step's name                                                                           |
+| `status`               | `"draft" \| "active"`   | `"active"`                       | The step's status                                                                         |
+
+`GitHubAuth` is `{ type: "apiKey", token }`, where `token` is `Env.secret("GITHUB_TOKEN")` or `Env.inherit({ secret: true })`: a fine-grained token with **Issues: read** on the repos, or a classic token with `repo` (`public_repo` for public repos). A literal token throws. It uses GitHub's remote MCP server and needs no Copilot licence. OAuth isn't supported. Pull requests are skipped; parent links, blocks, the close reason and the close time aren't imported.
+
+### `.schedule(step, options?)`
+
+`jiraIssueImport.schedule` and `githubIssueImport.schedule` take the exported step and return a `schedule` rule for a project automation's `rules`.
+
+| Option     | Default         | Description                       |
+| ---------- | --------------- | --------------------------------- |
+| `cron`     | `"*/5 * * * *"` | When to run                       |
+| `timezone` | `"UTC"`         | IANA timezone the cron is read in |
+| `key`      | `"import"`      | The rule's key                    |
+
+Each library also exports its mapper (`mapJiraIssue`, `mapGitHubIssue`) and its `auth` and option types.
 
 ---
 

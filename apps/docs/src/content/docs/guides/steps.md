@@ -940,7 +940,7 @@ A real specialization of `Features.notifications()`, not an alias — it narrows
 
 ### `Features.workItems.*`
 
-Each `Features.workItems.*` feature grants the step's Tasks one action on a work item, and adds a prompt section naming the tool the agent uses for it. `scope: "self"` is the Task's own work item; `scope: "children"` is its child work items. `read` also takes `scope: "project"`, which covers every work item in the project (its parent, siblings and anything else). Every Task can read its own work item without a grant. Attach each action and scope at most once.
+Each `Features.workItems.*` feature grants the step's Tasks one action on a work item, and adds a prompt section naming the tool the agent uses for it. `scope: "self"` is the Task's own work item; `scope: "children"` is its child work items. `read` also takes `scope: "project"`, which covers every work item in the project (its parent, siblings and anything else). Every Task can read its own work item without a grant. Attach each action and scope at most once (per `keyPrefix`, for `create` and `update` on `project`). Code steps use `read`, `create` and `update` on `project` through [`context.workItems`](#writing-work-items-from-a-code-step) instead of tools.
 
 | Feature                                                    | The agent may                                  | Tool                              |
 | ---------------------------------------------------------- | ---------------------------------------------- | --------------------------------- |
@@ -951,6 +951,7 @@ Each `Features.workItems.*` feature grants the step's Tasks one action on a work
 | `Features.workItems.block({ scope })`                      | Mark it as blocked                             | `scarn-block-work-item`           |
 | `Features.workItems.close({ scope })`                      | Close it                                       | `scarn-close-work-item`           |
 | `Features.workItems.create({ scope: "children", labels })` | Create child work items with the listed labels | `scarn-create-work-item`          |
+| `Features.workItems.create({ scope: "project", labels })`  | Create top-level work items in the project     | `scarn-create-work-item`          |
 
 A child work item exists as soon as `scarn-create-work-item` returns, and stays even if the Task fails later. Its `blockedBy` can only name work items that already exist (the Task's own work item or its children), so the agent creates blockers before the items they block. A Task creates at most 10 child work items, counted across its retries, and a work item has at most 50 open children. The other changes (label, block, description, comment, close) apply when the Task succeeds.
 
@@ -1211,11 +1212,11 @@ The worker resolves the step with `@scarn/sdk/code-step-lookup` from the SDK ins
 
 During a run the worker writes a temporary `.code-step-runner-<uuid>.mjs` next to `sourceFile` and removes it afterwards.
 
-`fn(input, { artifactsDir, fail })` also gets the absolute path of the step's artifacts folder. Write files there and return `Artifact.path("<relative path>")` in a `z.artifact` field to declare them (see [Returning a file from a code step](#returning-a-file-from-a-code-step)). `fail` fails the step with a named error (see [Failing with a named error](#failing-with-a-named-error)). A step that declares `mcps` also gets `mcp` (see [Calling MCP tools from a code step](#calling-mcp-tools-from-a-code-step)).
+`fn(input, { artifactsDir, fail })` also gets the absolute path of the step's artifacts folder. Write files there and return `Artifact.path("<relative path>")` in a `z.artifact` field to declare them (see [Returning a file from a code step](#returning-a-file-from-a-code-step)). `fail` fails the step with a named error (see [Failing with a named error](#failing-with-a-named-error)). A step that declares `mcps` also gets `mcp` (see [Calling MCP tools from a code step](#calling-mcp-tools-from-a-code-step)), and one with work item features on `project` gets `workItems` (see [Writing work items from a code step](#writing-work-items-from-a-code-step)).
 
 See [`codeStep(options)`](/scarn/reference/sdk/#codestepoptions) for the full option table, including `errors`.
 
-`codeStep()` also accepts [`features`](#features) — only each feature's result-schema extension applies (there's no prompt to append to on a code step). See [Building notifications at runtime — `Notify`](#building-notifications-at-runtime--notify) for the `Features.notifications()` + `Notify` + code-step pairing.
+`codeStep()` also accepts [`features`](#features) — only each feature's result-schema extension applies (there's no prompt to append to on a code step). Of the work item features, a code step may hold only `read`, `create` and `update` on `project`; any other throws when the step is defined. See [Building notifications at runtime — `Notify`](#building-notifications-at-runtime--notify) for the `Features.notifications()` + `Notify` + code-step pairing.
 
 `codeStep()` also accepts [`environment`](#environment), with the same `vars` forms and rules as `defineStep()` and a `runtime` of `Runtime.managed.<id>()` (the default, `bun1`) or `Runtime.devcontainer()` (see [Runtime for code steps](#runtime-for-code-steps)). It takes `repo` with the same rules too (see [Repo access](#repo-access)): a code step that edits files is committed and pushed like an agent step, unless it uses `Repo.readOnly()`. There is no typed env argument to `fn`: the function reads the resolved variables from `process.env`.
 
@@ -1341,6 +1342,77 @@ const result = await fileReportFn(
 - A fake can throw any of the MCP error classes, such as `new McpToolError("not found", [])`, to test an error path.
 
 There is no way yet to make real MCP calls outside a run.
+
+### Writing work items from a code step
+
+With `Features.workItems.read`, `create` or `update` on `project`, `fn` gets `context.workItems`, typed from those features: a method you have no grant for isn't on the type.
+
+| Method                                        | Needs                | Does                                                                                                                                                                                                                            |
+| --------------------------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `upsert(items)`                               | `create` or `update` | Writes up to 100 items in one transaction, keyed by `(platform, platformKey)`. A new key needs a `create` grant, an existing one an `update` grant. Returns the items written; an item no newer than the stored one is left out |
+| `create(item)`                                | `create`             | Creates one `custom` item, or returns the item its `platformKey` already names, with `created: false`                                                                                                                           |
+| `latestSourceUpdate({ platform, keyPrefix })` | `read`               | The newest `sourceUpdatedAt` among the project's items under the prefix, as an ISO string, or `null`                                                                                                                            |
+
+```typescript
+import { codeStep, Features } from "@scarn/sdk/definitions/steps";
+
+export const importOne = codeStep({
+  key: "import-one",
+  name: "Import one ticket",
+  features: [
+    Features.workItems.create({
+      scope: "project",
+      labels: ["acme"],
+      keyPrefix: "acme:",
+    }),
+    Features.workItems.update({ scope: "project", keyPrefix: "acme:" }),
+  ],
+  fn: async (_input, { workItems }) => {
+    await workItems.upsert([
+      {
+        platform: "custom",
+        platformKey: "acme:42",
+        title: "Login fails on Safari",
+        description: "Reported by support.",
+        state: "open",
+        sourceUpdatedAt: "2026-11-24T09:30:00Z",
+        labels: ["acme"],
+      },
+    ]);
+  },
+});
+```
+
+An upserted item needs `platform` (`custom`, `jira` or `github`), `platformKey`, `title`, `description` and `sourceUpdatedAt`. `state`, `url`, `platformId`, `sourceCreatedAt`, `fields` and `labels` are optional; `state: "closed"` closes the stored item and `"open"` reopens it, and leaving out `labels` keeps an existing item's labels. A `platformId` left out or `null` never clears one already stored. `keyPrefix` on a grant limits it to keys starting with it; when several grants match a key, the longest prefix wins, and its `labels` must cover the item's.
+
+Each call is checked twice: against the step's grants and against the project role of the user whose worker runs the step. A feature never lets the step do more than that user can. See [Importing work items](/scarn/guides/automations/#importing-work-items) for using these in a schedule, including the cursor and the ascending-order rule.
+
+Calls go through the same per-run bridge as `context.mcp`, and the task log gets one line per call:
+
+```text
+work-items: upsert 37 (12 created, 20 updated, 5 unchanged) in 0.4s
+```
+
+A failed call throws one of these `StepError`s, exported from `@scarn/sdk/definitions/steps`:
+
+| Class                       | Error name         | When                                                                                                                                                                                       |
+| --------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `WorkItemsRefusedError`     | `Scarn.StepFailed` | Nothing was written: an item has no matching grant (`apiCode` `WORK_ITEM_GRANT_MISSING`), or the user lacks the project permission (`PROJECT_FORBIDDEN`). One refusal fails the whole call |
+| `WorkItemsInvalidError`     | `Scarn.ArgsError`  | The arguments are invalid or too large, such as more than 100 items or a key twice in one call; nothing was written                                                                        |
+| `WorkItemsUnavailableError` | `Scarn.StepFailed` | The bridge couldn't serve the call. `reason` is `no_bridge` (not inside a Scarn run) or `bridge`                                                                                           |
+
+To unit test `fn`, pass `createFakeWorkItems(features, { items? })` as `workItems`. It has the same methods as the step's context, follows the same grant, `keyPrefix`, label and newer-only rules, and starts with `items` already in the project. `.items()` returns what the project holds:
+
+```typescript
+import { createFakeWorkItems, failStep } from "@scarn/sdk/definitions/steps";
+
+const workItems = createFakeWorkItems(features);
+await importFn(
+  {},
+  { artifactsDir: "/tmp/artifacts", fail: failStep, workItems },
+);
+expect(workItems.items().map((item) => item.platformKey)).toEqual(["acme:42"]);
+```
 
 ### Failing with a named error
 

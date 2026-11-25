@@ -47,10 +47,6 @@ const row = (
   lastSyncedAt: null,
   lastError: null,
   firstSyncHorizonDays: null,
-  syncSecretId: null,
-  autoSyncPausedReason: null,
-  autoSyncPausedAt: null,
-  autoSyncPausedDetail: null,
   ...overrides,
 });
 

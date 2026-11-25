@@ -6,7 +6,10 @@ import {
 } from "@scarn/sdk/auth";
 import { loadTaskLogLines, type TaskLogsClient } from "@scarn/shared-core";
 import { parseUuidV7 } from "../../../common/contracts/uuid-v7";
-import type { TaskRunWorkerClient } from "../contracts/process-project-work-types";
+import type {
+  TaskRunWorkerClient,
+  TaskRunWorkItemsApiResponse,
+} from "../contracts/process-project-work-types";
 import type { TaskRunWorkerContextContract } from "../contracts/task-run-contracts";
 import {
   ProjectUnavailableError,
@@ -156,6 +159,36 @@ async function throwIfProjectUnavailable(response: Response, baseUrl: string) {
 }
 
 /**
+ * A work-item route's answer as `{ status, body }`, for the step bridge to
+ * relay. A project the claiming user lost (which the response hook raises as
+ * {@link ProjectUnavailableError}) comes back as its 403/404 and code; any
+ * other failure rejects.
+ */
+async function relayWorkItemsAnswer(
+  call: () => Promise<{ data?: unknown; error?: unknown; response: Response }>,
+): Promise<TaskRunWorkItemsApiResponse> {
+  try {
+    const result = await call();
+    return {
+      status: result.response.status,
+      body: result.error ?? result.data,
+    };
+  } catch (error) {
+    if (error instanceof ProjectUnavailableError) {
+      return {
+        status: error.status,
+        body: {
+          detail: error.message,
+          code:
+            error.status === 404 ? "PROJECT_NOT_FOUND" : "PROJECT_FORBIDDEN",
+        },
+      };
+    }
+    throw error;
+  }
+}
+
+/**
  * The worker's API client. Requests carry a short-lived API token minted
  * from the session token in `auth.jsonc`, which is read for every request
  * (cached until the file changes), so a long-running worker picks up a
@@ -243,6 +276,16 @@ export async function createTaskPlaneWorkerClient(
     loadTaskLogLines: buildLoadTaskLogLines(planeClient),
     readTaskRunWorkItem: async (input) =>
       await planeClient.readTaskRunWorkItem(input),
+    workItems: {
+      upsertTaskRunWorkItems: (input) =>
+        relayWorkItemsAnswer(() => planeClient.upsertTaskRunWorkItems(input)),
+      createTaskRunWorkItem: (input) =>
+        relayWorkItemsAnswer(() => planeClient.createTaskRunWorkItem(input)),
+      latestTaskRunSourceUpdate: (input) =>
+        relayWorkItemsAnswer(() =>
+          planeClient.latestTaskRunSourceUpdate(input),
+        ),
+    },
     registerTaskRunManagedLaunch: async (input) => {
       const result = await planeClient.registerTaskRunManagedLaunch(input);
       if (result.error !== undefined) {

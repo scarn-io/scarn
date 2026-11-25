@@ -6,7 +6,6 @@ import { createSecret } from "@scarn/core/secrets/secret/application/create-secr
 import { listMySecrets } from "@scarn/core/secrets/secret/application/list-my-secrets";
 import { renameSecret } from "@scarn/core/secrets/secret/application/rename-secret";
 import { deleteSecret } from "@scarn/core/secrets/secret/application/delete-secret";
-import { stopLendingSecret } from "@scarn/core/secrets/secret/application/stop-lending-secret";
 import {
   createSecretSchema,
   deleteSecretResponseSchema,
@@ -21,11 +20,6 @@ import { responseSchemas } from "../response-schemas";
 
 const secretParamsSchema = z.object({
   secretId: uuidV7Schema,
-});
-
-const secretUseParamsSchema = z.object({
-  secretId: uuidV7Schema,
-  integrationId: uuidV7Schema,
 });
 
 /**
@@ -49,8 +43,6 @@ export const createSecretRoutes = (appContext: AppContext) =>
         await listMySecrets(listSecretsQuerySchema.parse(query), {
           userAuthz: auth.userAuthz,
           secretRepo: appContext.secretRepo,
-          projectIntegrationRepo: appContext.projectIntegrationRepo,
-          projectRepo: appContext.projectRepo,
           timeProvider: appContext.timeProvider,
         }),
     )
@@ -96,8 +88,6 @@ export const createSecretRoutes = (appContext: AppContext) =>
           {
             userAuthz: auth.userAuthz,
             secretRepo: appContext.secretRepo,
-            projectIntegrationRepo: appContext.projectIntegrationRepo,
-            projectRepo: appContext.projectRepo,
             timeProvider: appContext.timeProvider,
           },
         );
@@ -121,31 +111,7 @@ export const createSecretRoutes = (appContext: AppContext) =>
           {
             userAuthz: auth.userAuthz,
             secretRepo: appContext.secretRepo,
-            projectIntegrationRepo: appContext.projectIntegrationRepo,
-            notifications: appContext.autoSyncPausedNotifications,
-            timeProvider: appContext.timeProvider,
-            logger: appContext.logger,
           },
         );
       },
-    )
-    .delete(
-      "/me/secrets/:secretId/uses/:integrationId",
-      {
-        params: secretUseParamsSchema,
-        response: responseSchemas({
-          200: secretSchema,
-          404: apiErrorResponseSchema,
-          ...stdErrors,
-        }),
-        detail: { operationId: "stopUsingMySecret", tags: ["Secrets"] },
-      },
-      async ({ params, auth }) =>
-        await stopLendingSecret(secretUseParamsSchema.parse(params), {
-          userAuthz: auth.userAuthz,
-          secretRepo: appContext.secretRepo,
-          projectIntegrationRepo: appContext.projectIntegrationRepo,
-          projectRepo: appContext.projectRepo,
-          timeProvider: appContext.timeProvider,
-        }),
     );

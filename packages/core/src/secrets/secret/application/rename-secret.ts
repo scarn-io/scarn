@@ -10,14 +10,13 @@ import {
 import { userSecretOwner } from "../domain/secret-owner";
 import type { SecretRepo } from "./secret-repo";
 import { secretEntityToContract } from "./secret-contract-mapper";
-import { loadSecretUses, type LoadSecretUsesDeps } from "./load-secret-uses";
 
 type RenameSecretArgs = {
   secretId: UuidV7;
   rename: RenameSecretInput;
 };
 
-type RenameSecretDeps = LoadSecretUsesDeps & {
+type RenameSecretDeps = {
   userAuthz: UserAuthorizationService;
   secretRepo: SecretRepo;
   timeProvider: TimeProvider;
@@ -38,6 +37,5 @@ export const renameSecret = async (
   }
 
   const saved = await deps.secretRepo.save(secret.rename(name, now));
-  const uses = await loadSecretUses([saved.id], deps);
-  return secretEntityToContract(saved, now, uses.get(saved.id) ?? []);
+  return secretEntityToContract(saved, now);
 };

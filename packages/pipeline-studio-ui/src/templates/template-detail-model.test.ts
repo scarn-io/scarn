@@ -314,6 +314,21 @@ describe("describeGrants", () => {
       "read self; create children: wayfinder:research, wayfinder:prototype; close self",
     );
   });
+
+  test("shows a project grant's keyPrefix, and update on project without labels", () => {
+    expect(
+      describeGrants([
+        {
+          resource: "workItem",
+          action: "create",
+          scope: "project",
+          labels: ["jira"],
+          keyPrefix: "ACME-",
+        },
+        { resource: "workItem", action: "update", scope: "project" },
+      ]),
+    ).toBe("create project (keys ACME-*): jira; update project");
+  });
 });
 
 describe("useSuccessMessage", () => {

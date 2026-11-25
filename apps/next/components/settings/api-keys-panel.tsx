@@ -26,7 +26,6 @@ import {
 import { AddJiraApiKeyForm } from "./add-jira-api-key-form";
 import { AddGitHubTokenForm } from "./add-github-token-form";
 import { AddBitbucketApiTokenForm } from "./add-bitbucket-api-token-form";
-import { ApiKeyUsedBy } from "./api-key-used-by";
 import {
   DeleteApiKeyDialog,
   RenameApiKeyDialog,
@@ -47,10 +46,7 @@ const PROVIDER_LABEL: Record<SecretContract["kind"], string> = {
   bitbucket_api_token: "Bitbucket",
 };
 
-const ADD_FORMS: Record<
-  SecretContract["kind"],
-  typeof AddJiraApiKeyForm
-> = {
+const ADD_FORMS: Record<SecretContract["kind"], typeof AddJiraApiKeyForm> = {
   jira_api_key: AddJiraApiKeyForm,
   github_token: AddGitHubTokenForm,
   bitbucket_api_token: AddBitbucketApiTokenForm,
@@ -97,7 +93,8 @@ export function ApiKeysPanel() {
   const [isRenaming, setIsRenaming] = useState(false);
   const [deleting, setDeleting] = useState<SecretContract | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [addKind, setAddKind] = useState<SecretContract["kind"]>("jira_api_key");
+  const [addKind, setAddKind] =
+    useState<SecretContract["kind"]>("jira_api_key");
   const AddForm = ADD_FORMS[addKind];
 
   useEffect(() => {
@@ -254,18 +251,6 @@ export function ApiKeysPanel() {
                           "Never used"
                         )}
                       </Typography>
-                      <ApiKeyUsedBy
-                        apiKey={key}
-                        onStart={clearMessages}
-                        onError={setErrorMessage}
-                        onUpdated={(updated) => {
-                          setKeys((current) =>
-                            current.map((existing) =>
-                              existing.id === updated.id ? updated : existing,
-                            ),
-                          );
-                        }}
-                      />
                     </Stack>
                     <Stack direction="row" spacing={1}>
                       <IconButton

@@ -59,12 +59,6 @@ export const scheduledJobs: readonly ScheduledJob[] = [
     secretEnv: "GITHUB_RECONCILE_CRON_SECRET",
   },
   {
-    name: "integration-poll",
-    path: "/api/internal/integrations/poll",
-    schedules: ["*/10 13-23 * * *", "0 0-12 * * *"],
-    secretEnv: "INTEGRATION_POLL_CRON_SECRET",
-  },
-  {
     name: "automation-schedule-tick",
     path: "/api/internal/automations/schedules/tick",
     schedules: ["* * * * *"],

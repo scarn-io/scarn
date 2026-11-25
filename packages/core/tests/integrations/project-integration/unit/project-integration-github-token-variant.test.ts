@@ -112,10 +112,6 @@ describe("GitHubTokenProjectIntegration", () => {
           lastSyncedAt: null,
           lastError: null,
           firstSyncHorizonDays: null,
-          syncSecretId: null,
-          autoSyncPausedReason: null,
-          autoSyncPausedAt: null,
-          autoSyncPausedDetail: null,
         }),
       ),
     ).toBe("PROJECT_INTEGRATION_ROW_INVALID");

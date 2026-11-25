@@ -86,5 +86,5 @@ export const createSecret = async (
     }),
   );
 
-  return secretEntityToContract(await deps.secretRepo.save(entity), now, []);
+  return secretEntityToContract(await deps.secretRepo.save(entity), now);
 };

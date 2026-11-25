@@ -45,6 +45,7 @@ import { prepareGitCredentialRelay } from "./local-project-git-credentials";
 import { launchPlan } from "./resolve-launch-environment";
 import {
   launchMcpCallingKind,
+  launchServesStepBridge,
   mcpCallLaunchFields,
   planMcpCallLaunch,
   type McpCallingTaskKind,
@@ -211,7 +212,7 @@ export class DefaultLocalProjectRuntimeEnvironmentOrchestrator implements LocalP
           lookupBranch: devcontainerLookupBranch,
           runtime: resolvedEnvironment.runtime,
           installPipelineBuilder: plan.installPipelineBuilder,
-          servesMcpBridge: mcpCallingKind === "code",
+          servesMcpBridge: launchServesStepBridge(input, plan.kind),
           logger: input.logger,
         });
         devcontainerConfigPath = devcontainer.devcontainerConfigPath;

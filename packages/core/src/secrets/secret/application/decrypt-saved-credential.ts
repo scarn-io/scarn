@@ -32,17 +32,17 @@ const isSecretOfKind = <K extends SecretKind>(
   kind: K,
 ): secret is SecretOfKind<K> => secret.kind === kind;
 
-export type CheckedSecret<K extends SecretKind> =
+type CheckedSecret<K extends SecretKind> =
   | { ok: true; secret: SecretOfKind<K>; value: string }
   | { ok: false; problem: "wrong_kind" | "expired" };
 
 /**
  * Checks an already-loaded secret is of `kind` and not expired, then
  * decrypts it with its AAD. Returns the problem rather than throwing so each
- * caller can phrase its own error. Only `decryptSavedCredential` and
- * `resolveIntegrationSyncCredential` call this; nothing else decrypts.
+ * caller can phrase its own error. Only `decryptSavedCredential` calls this;
+ * nothing else decrypts.
  */
-export const checkAndDecryptSecret = <K extends SecretKind>(
+const checkAndDecryptSecret = <K extends SecretKind>(
   secret: SecretEntity,
   kind: K,
   deps: Pick<ResolveCredentialDeps, "secretCipher" | "timeProvider">,

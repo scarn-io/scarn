@@ -87,8 +87,9 @@ server, so its worker, logs and saved settings stay apart from an installed
 8. **Pipelines.** Runs `pipelines build`, commits and pushes to
    `acme-shop.git`, then runs `pipelines push`, which publishes the
    `local-secrets` environment before the steps and also publishes the
-   pipelines and the `default` and `ld-schedule` project automations, then
-   enables both with `automations enable`.
+   pipelines and the `default`, `ld-schedule` and `ld-github-import` project
+   automations, then enables `default` and `ld-schedule` with
+   `automations enable`.
 9. **Work items.** Upserts 28 work items. The default automation routes and
    queues each one as it becomes ready.
 10. **Prints** the project URL and a table of each item's key, pipeline,
@@ -131,8 +132,9 @@ steps, so those branches are exact.
 | `ld-secrets`           | Named environment (`local-secrets`) with a `secret` var, log masking              | The `LOCAL_DEV_API_KEY` project secret seed saves             |
 | `ld-codestep-with-mcp` | Typed MCP tool step, code step calling `context.mcp`, declared error caught       | `sku`: `MUG-01`, `TEE-02` (short), `SCARF-09` (unknown)       |
 
-`ld-schedule.ts` is a project automation rather than a pipeline; see
-[Schedules](#schedules).
+`ld-schedule.ts` and `ld-github-import.ts` are project automations rather
+than pipelines; see [Schedules](#schedules) and
+[GitHub import](#github-import).
 
 ### Typed MCP calls
 
@@ -210,6 +212,36 @@ either:
 Follow it with **History** on the _Pipelines & Automations_ tab, the
 **Scheduled** filter on _Runs_, or `automations list`.
 
+### GitHub import
+
+`ld-github-import.ts` holds the `ld-github-import` project automation, built
+with the `@scarn/sdk/library/github` library. Its `import` rule runs the
+`import-github` code step every 5 minutes. The step reads `scarn-io/scarn`'s
+issues through GitHub's remote MCP server and upserts each one as a `github`
+work item keyed `scarn-io/scarn#<number>`, labelled `github`, with GitHub's
+own labels in `fields.githubLabels`. The first run reaches back 30 days;
+later runs read only what changed since the newest imported update. The
+`default` automation skips items labelled `github`, so imports don't start
+pipelines.
+
+It needs a GitHub token: any classic or fine-grained token with read access
+to public repos' issues works. To try it:
+
+1. Set `SCARN_LOCAL_DEV_GITHUB_TOKEN` and rerun `seed`, which saves it as the
+   `GITHUB_TOKEN` project secret. The token stays on the worker; the step's
+   container never sees it.
+2. Start the worker (`work`).
+3. Select **Run now** next to the schedule, or run
+   `bun apps/cli/src/index.ts automations run ld-github-import import` from
+   `~/.scarn-local-dev/acme-shop`.
+
+Run it again and items whose issue hasn't changed come back unchanged.
+Seed leaves the automation disabled, so it doesn't fail every 5 minutes
+without a token; enable it with
+`bun apps/cli/src/index.ts automations enable ld-github-import` to have the
+tick run it. Without the secret, a run fails at startup with
+`SCARN_ENVIRONMENT_UNRESOLVED`.
+
 ### Adding a demo
 
 1. Add `ld-<name>.ts` in the pipeline-builder folder, with any new steps in
@@ -253,6 +285,7 @@ The checkout is generated output, so edits there are lost on the next seed.
 | `SCARN_LOCAL_DEV_TEMPLATE_REF`  | `main`                                               |
 | `SCARN_LOCAL_DEV_EMAIL`         | `local-dev@scarn.local` (only used with no profile)  |
 | `SCARN_LOCAL_DEV_API_KEY`       | `ld-sandbox-not-a-real-key-7f3a` (the seeded secret) |
+| `SCARN_LOCAL_DEV_GITHUB_TOKEN`  | unset (`ld-github-import`'s `GITHUB_TOKEN` secret)   |
 
 The scripts load the root `.env`, which supplies `DATABASE_URL`.
 

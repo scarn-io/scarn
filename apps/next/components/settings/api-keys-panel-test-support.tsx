@@ -101,7 +101,6 @@ export const buildKey = (overrides: KeyOverrides = {}): SecretContract =>
     status: "active",
     createdAt: "2026-06-01T00:00:00.000Z",
     updatedAt: "2026-06-01T00:00:00.000Z",
-    usedBy: [],
     ...overrides,
   }) as SecretContract;
 

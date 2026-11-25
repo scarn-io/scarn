@@ -45,11 +45,27 @@ type ReferencedSecretDeps = {
   environmentRepo: Pick<EnvironmentRepo, "findVersionById">;
 };
 
+type McpServers = Readonly<
+  Record<string, { auth?: unknown; workerVars?: EnvVars }>
+> | null;
+
 /**
- * The project secret names the run's environment references: the `secret`
- * vars of its inline environment, or of the named environment version
- * pinned on the run when its worker context was built. The repo default,
- * and a named environment not yet pinned, reference none.
+ * The `secret` worker vars of the step's MCP servers. A server with `auth`
+ * is authenticated by its connection and reads none.
+ */
+const mcpSecretNamesOf = (servers: McpServers): Set<string> =>
+  new Set(
+    Object.values(servers ?? {}).flatMap((server) =>
+      server.auth === undefined ? [...secretNamesOf(server.workerVars)] : [],
+    ),
+  );
+
+/**
+ * The project secret names the run's step references: the `secret` vars of
+ * its inline environment, or of the named environment version pinned on the
+ * run when its worker context was built, and the `secret` worker vars of its
+ * MCP servers. The repo default, and a named environment not yet pinned,
+ * reference none of their own.
  */
 const loadEnvironmentSecretNames = async (
   task: TaskRunEntity,
@@ -62,7 +78,26 @@ const loadEnvironmentSecretNames = async (
   const config = task.taskExecutionConfigId
     ? await taskExecutionConfigRepo.load(task.taskExecutionConfigId, tx)
     : null;
-  const { environment } = inlineConfigFieldsFromTaskExecutionConfig(config);
+  const { environment, opencodeMcpJson } =
+    inlineConfigFieldsFromTaskExecutionConfig(config);
+  const names = await loadOwnEnvironmentSecretNames(
+    task,
+    environment,
+    environmentRepo,
+    tx,
+  );
+  for (const name of mcpSecretNamesOf(opencodeMcpJson)) names.add(name);
+  return names;
+};
+
+const loadOwnEnvironmentSecretNames = async (
+  task: TaskRunEntity,
+  environment: ReturnType<
+    typeof inlineConfigFieldsFromTaskExecutionConfig
+  >["environment"],
+  environmentRepo: ReferencedSecretDeps["environmentRepo"],
+  tx: DbExecutor,
+): Promise<Set<string>> => {
   if (environment === null) return new Set();
   if (environment.kind === "inline") return secretNamesOf(environment.envJson);
   if (task.environmentVersionId === null) return new Set();

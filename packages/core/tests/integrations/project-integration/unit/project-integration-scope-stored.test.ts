@@ -50,11 +50,6 @@ const integrationRow = (fixture: Fixture) => ({
   lastSyncedAt: null,
   lastError: null,
   firstSyncHorizonDays: null,
-  syncSecretId: null,
-  syncLockedUntil: null,
-  autoSyncPausedReason: null,
-  autoSyncPausedAt: null,
-  autoSyncPausedDetail: null,
   createdAt: new Date("2026-11-01T00:00:00.000Z"),
   updatedAt: new Date("2026-11-01T00:00:00.000Z"),
 });

@@ -1,4 +1,4 @@
-import { equal } from "@scarn/sdk/pipelines";
+import { contains, equal } from "@scarn/sdk/pipelines";
 import { defineAutomation, onEvent, skip } from "@scarn/sdk/automations";
 import ldChoice from "./ld-choice";
 import ldDecision from "./ld-decision";
@@ -15,7 +15,8 @@ import ldSecrets from "./ld-secrets";
 
 /**
  * Closed items are never ready, so they never reach this rule. Resolved items
- * are skipped; `fields.demo` (a pipeline key without `ld-`) picks the
+ * and the issues `ld-github-import` imports (labelled `github`) are skipped;
+ * `fields.demo` (a pipeline key without `ld-`) picks the
  * pipeline; anything else runs `ld-linear`, including the items the
  * `ld-schedule` automation creates (`demo: "schedule"`).
  */
@@ -30,6 +31,10 @@ export default defineAutomation({
       routes: [
         {
           when: (r) => equal(r.workItem.fields.status, "resolved"),
+          to: skip,
+        },
+        {
+          when: (r) => contains(r.workItem.labels, "github"),
           to: skip,
         },
         {

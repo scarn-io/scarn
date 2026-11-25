@@ -69,6 +69,7 @@ export const storedGrantV1 = z.object({
   action: z.string(),
   scope: z.string(),
   labels: z.array(z.string()).optional(),
+  keyPrefix: z.string().optional(),
 });
 
 export const storedGrantsV1 = z.array(storedGrantV1);

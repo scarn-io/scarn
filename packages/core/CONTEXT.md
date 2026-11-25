@@ -186,6 +186,10 @@ _Avoid_: scope (that's a step grant's), grant (that's a step's or a managed conn
 The name a membership or invite stores (`read`, `write` or `admin`); its project permissions are resolved from it at read time. `read` grants every `:read`; `write` adds `work-items:write`, `comments:write`, `executions:write` and `work-item-platform-comment:write`; `admin` grants everything. A step's grants only narrow what the claiming user's role allows.
 _Avoid_: access level, permission set
 
+**Step feature**:
+What a step declares it will do with work items, such as `Features.workItems.update({ scope: "project", keyPrefix: "acme:" })`; stored as the step's grants. A feature never adds a power: a step's work-item call is allowed only when the claiming user has the project permission, checked on every call, and the step declares a matching feature. Removing a member's role stops their worker's writes on its next call. See `docs/adr/0018-user-built-issue-import.md`.
+_Avoid_: permission (that's the user's), sync grant, import grant
+
 ### Work items
 
 **Label**:
@@ -203,6 +207,14 @@ _Avoid_: stuck, idle, unrouted
 **Work item link**:
 A link in a work item's description to another work item's page in the same project. It shows that work item's current status and title instead of the link's own text. It's how one work item refers to another, whether the other was created in Scarn or synced.
 _Avoid_: reference, mention, short id, `#N` (for a work item created in Scarn)
+
+**Source**:
+Where a project's imported work items come from, named by a platform and a key prefix, such as `{ platform: "jira", keyPrefix: "ABC-" }` or `{ platform: "custom", keyPrefix: "acme:" }`. Every work item whose `platformKey` starts with the prefix on that platform belongs to it. An import step writes one or more sources, and its `update` feature's `keyPrefix` keeps it inside them. See `docs/adr/0018-user-built-issue-import.md`.
+_Avoid_: integration (that's a project's configured tracker), connection (that's a managed connection), feed
+
+**Source cursor**:
+The newest `sourceUpdatedAt` among a project's work items in one source, or null when it has none, returned by `workItems.latestSourceUpdate`. It is derived from what was saved, never stored, and is in the source's clock, so an import asks the source for what changed since it, minus a small overlap. It is a safe resume point only when the import reads in ascending update order and saves page by page.
+_Avoid_: checkpoint (that's a stored cursor, not built yet), previousScheduledFor (that's Scarn's clock, per schedule), last sync, since
 
 ### Automations
 

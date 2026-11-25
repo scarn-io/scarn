@@ -191,6 +191,18 @@ function describeApplicationError(error: unknown): Problem {
   };
 }
 
+/**
+ * Elysia wraps whatever a route's `parse` hook throws in a `ParseError`; a
+ * `CoreError` the hook threw on purpose (a body over a route's cap) is the
+ * error to report.
+ */
+// eslint-disable-next-line local/no-unknown-parameter-type
+function unwrapParseHookError(error: unknown): unknown {
+  return error instanceof ParseError && error.cause instanceof CoreError
+    ? error.cause
+    : error;
+}
+
 // eslint-disable-next-line local/no-unknown-parameter-type
 function describeProblem(error: unknown): Problem {
   if (error instanceof ValidationError) return describeValidationError(error);
@@ -230,9 +242,10 @@ export function getRetryAfterSeconds(error: unknown): number | undefined {
 }
 
 export function createProblemDetails({
-  error,
+  error: thrown,
   request,
 }: ProblemDetailsOptions): ApiErrorResponse {
+  const error = unwrapParseHookError(thrown);
   const { type, title, status, code, detail, errors } = describeProblem(error);
 
   return {

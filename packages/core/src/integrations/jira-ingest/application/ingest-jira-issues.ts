@@ -5,7 +5,7 @@ import {
   fetchJiraFieldNameMap,
   fetchJiraAccountTimeZone,
 } from "../infra/jira-issues-client";
-import { mapJiraIssueToWorkItem } from "./map-jira-issue-to-work-item";
+import { mapJiraIssue } from "@scarn/sdk/library/jira";
 
 export type JiraProjectIngestResult = {
   key: string;
@@ -62,9 +62,17 @@ export const ingestJiraIssues = async (
       timeZone,
     });
 
-    const workItems = issues.map((issue) =>
-      mapJiraIssueToWorkItem(input.projectId, input.baseUrl, issue, fieldNameMap),
-    );
+    const workItems = issues.map((issue): UpsertWorkItemInput => {
+      const item = mapJiraIssue(issue, {
+        site: input.baseUrl,
+        fieldNames: fieldNameMap,
+      });
+      return {
+        ...item,
+        projectId: input.projectId,
+        fields: { commentsCount: 0, ...item.fields },
+      };
+    });
 
     if (workItems.length > 0) {
       await upsertWorkItems(workItems);

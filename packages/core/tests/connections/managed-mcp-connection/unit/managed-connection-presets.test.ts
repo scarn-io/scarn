@@ -72,6 +72,26 @@ describe("managedConnectionDefinitionFromPreset", () => {
     },
   );
 
+  concurrentTest(
+    "copies Atlassian's narrowed scopes onto the v2 server",
+    () => {
+      expect(managedConnectionDefinitionFromPreset("atlassian").server).toEqual(
+        {
+          resource: "https://mcp.atlassian.com/v2/mcp",
+          issuerOrigin: "https://auth.atlassian.com",
+          clientRegistration: "cimd",
+          scopes: [
+            "read:me",
+            "read:account",
+            "offline_access",
+            "read:jira:agent-interface",
+            "search:jira:agent-interface",
+          ],
+        },
+      );
+    },
+  );
+
   concurrentTest("every preset has a valid resource URL", () => {
     for (const key of Object.keys(MANAGED_CONNECTION_PRESETS)) {
       expect(() =>
@@ -118,6 +138,7 @@ describe("managedConnectionPresetCatalog", () => {
       { key: "posthog", preset: MANAGED_CONNECTION_PRESETS.posthog },
       { key: "stripe", preset: MANAGED_CONNECTION_PRESETS.stripe },
       { key: "netlify", preset: MANAGED_CONNECTION_PRESETS.netlify },
+      { key: "atlassian", preset: MANAGED_CONNECTION_PRESETS.atlassian },
     ]);
   });
 

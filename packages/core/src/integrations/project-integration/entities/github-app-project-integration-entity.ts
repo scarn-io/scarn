@@ -35,7 +35,7 @@ export class GitHubAppProjectIntegration extends GitHubRepoScopedProjectIntegrat
 
   private constructor(props: GitHubAppProjectIntegrationProps) {
     const { installationId, ...rest } = props;
-    super(rest, "github_app");
+    super(rest);
     const trimmed = installationId.trim();
     if (!trimmed) {
       throw new CoreValidationError(

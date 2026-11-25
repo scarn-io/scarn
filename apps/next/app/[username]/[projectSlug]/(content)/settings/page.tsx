@@ -20,7 +20,11 @@ import {
 import { getServerSession } from "@/app/_lib/auth";
 import { resolveProjectBySlug } from "@/app/(protected)/projects/_lib/project-work-items-server";
 import { isProjectMember } from "@/app/_lib/project-membership";
-import type { NotificationRuleContract } from "@scarn/api/frontend-contracts";
+import {
+  parseUuidV7,
+  type NotificationRuleContract,
+} from "@scarn/api/frontend-contracts";
+import { stepGrantsByKey } from "@/components/automation-graph/step-grants";
 
 const ERROR_MESSAGES: Record<string, string> = {
   missing_params:
@@ -169,6 +173,19 @@ export default async function ProjectSettingsPage({
     ? automationsResponse.data
     : [];
 
+  const stepDefinitionsResponse = await scarnApiClient.api[
+    "step-definitions"
+  ].get({
+    query: { projectId: parseUuidV7(projectId) },
+    headers: requestHeaders,
+  });
+
+  const stepGrants = stepGrantsByKey(
+    Array.isArray(stepDefinitionsResponse.data)
+      ? stepDefinitionsResponse.data
+      : [],
+  );
+
   const githubAppConfigured = getGitHubAppConfig() !== null;
 
   return (
@@ -186,6 +203,8 @@ export default async function ProjectSettingsPage({
           projectGitUrl={project.gitUrl}
           initialIntegrations={integrations}
           githubAppConfigured={githubAppConfigured}
+          automations={automations}
+          stepGrants={stepGrants}
           flashMessage={flashMessage}
         />
       </Stack>

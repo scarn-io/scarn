@@ -8,7 +8,7 @@ import {
 import { createScarnTreaty } from "tests/treaty";
 import { createAppContext } from "@/lib/di";
 import { getDb } from "@/lib/db";
-import { automations, taskRuns } from "@/lib/db/schema";
+import { automations, projectMemberships, taskRuns } from "@/lib/db/schema";
 import { AutomationScheduleEntity } from "@/pipeline-definitions/automation/domain/automation-schedule-entity";
 import type { Grant } from "@/tasks/task/domain/grants";
 import { TaskEntity } from "@/tasks/task/domain/task-entity";
@@ -94,10 +94,14 @@ describe("task run project work item create", () => {
     return schedule.id;
   };
 
-  /** A running, claimed run of a Task with `grants`, scheduled unless `workItemId` is given. */
+  /**
+   * A running run of a Task with `grants`, scheduled unless `workItemId` is
+   * given, claimed by the project owner unless `claimedByUserId` is given.
+   */
   const startClaimedRun = async (
     grants: Grant[],
     owner: { workItemId: UuidV7 } | { scheduled: true } = { scheduled: true },
+    claimedByUserId?: UuidV7,
   ): Promise<Claim> => {
     const { projectId, ownerUserId } = requireSetup();
     const task = await appContext.taskRepo.create(
@@ -130,7 +134,7 @@ describe("task run project work item create", () => {
         workItemId: task.workItemId,
         status: "running",
         claimedBy: "create-project-work-item",
-        claimedByUserId: ownerUserId,
+        claimedByUserId: claimedByUserId ?? ownerUserId,
         claimToken,
         claimedAt: NOW,
         lastHeartbeatAt: NOW,
@@ -256,6 +260,63 @@ describe("task run project work item create", () => {
 
         expectRefused(await create(claim, input), "no create grant on project");
         expect(await workItemRepo.load(input.workItemId)).toBeNull();
+      },
+    );
+  });
+
+  describe("the claiming user's permissions", () => {
+    const readMember = async () => {
+      const { projectId } = requireSetup();
+      const member = await createTestUserAndSession({
+        email: `task-run-create-project-reader-${crypto.randomUUID()}@example.com`,
+      });
+      const userId = parseUuidV7(member.userId);
+      await getDb()
+        .insert(projectMemberships)
+        .values({ projectId, userId, role: "read" });
+      return userId;
+    };
+
+    concurrentTest(
+      "a run claimed by a read member is denied, even with a create grant",
+      async () => {
+        const claim = await startClaimedRun(
+          [grant("create", "project", ["intake"])],
+          { scheduled: true },
+          await readMember(),
+        );
+        const input = projectInput(claim, { labels: ["intake"] });
+
+        const response = await create(claim, input);
+
+        expect(response.error?.status).toBe(403);
+        expect(response.error?.value).toMatchObject({
+          code: "PROJECT_FORBIDDEN",
+        });
+        expect(await workItemRepo.load(input.workItemId)).toBeNull();
+      },
+    );
+
+    concurrentTest(
+      "a read member's run can't see an existing key through a repeat create",
+      async () => {
+        const owners = await startClaimedRun([
+          grant("create", "project", ["intake"]),
+        ]);
+        const first = projectInput(owners);
+        await unwrapAsync(create(owners, first));
+        const claim = await startClaimedRun(
+          [grant("create", "project", ["intake"])],
+          { scheduled: true },
+          await readMember(),
+        );
+
+        const response = await create(
+          claim,
+          projectInput(claim, { platformKey: first.platformKey }),
+        );
+
+        expect(response.error?.status).toBe(403);
       },
     );
   });

@@ -90,7 +90,6 @@ export * from "./integrations/project-integration/contracts/project-integration-
 export * from "./integrations/project-integration/domain/project-integration-entity";
 export * from "./integrations/project-integration/infra/drizzle-project-integration-repo";
 export * from "./integrations/github-ingest/application/ingest-github-issues";
-export * from "./integrations/github-ingest/application/map-github-issue-to-work-item";
 export * from "./integrations/github-ingest/application/run-project-integration-sync";
 export * from "./integrations/github-ingest/infra/github-issues-client";
 

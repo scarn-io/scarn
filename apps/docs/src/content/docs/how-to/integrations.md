@@ -11,8 +11,9 @@ including one created with **Skip for now**.
 
 The GitHub App is the recommended path: issue changes reach Scarn instantly,
 in the background, for as long as the integration is connected. Everything
-else (a GitHub token, Bitbucket, Jira) uses your own token, so it syncs only
-when you ask it to.
+else (a GitHub token, Bitbucket, Jira) uses your own token, so it syncs when
+you click **Sync now**. Jira and GitHub-token projects can also
+[import on a schedule](#import-on-a-schedule) from your own worker.
 
 Every work item has a top-level `state`, either `open` or `closed`, that
 tracks whether the source issue is still open. Each integration maps its own
@@ -75,8 +76,9 @@ by reconnecting and choosing more repos — then connect again.
 
 A personal access token connects one repository with your own GitHub access,
 with no App to install. Use it when you can't install the App. The trade-off:
-it's **manual only**. There are no webhooks or daily sync; issues arrive when
-someone clicks **Sync now**, and each sync asks for a token.
+there are no webhooks or daily sync. Issues arrive when someone clicks **Sync
+now**, and each sync asks for a token, or on a schedule you
+[add yourself](#import-on-a-schedule).
 
 1. Click **Create a GitHub token** in Scarn. It opens GitHub's fine-grained
    token form with the name, the longest expiry (366 days), the repository's
@@ -148,11 +150,9 @@ one or more project keys — there's no install flow or app to authorize. Choose
 **Jira** on the **Issues** step of a new project (which also asks for a key, to
 check the site and run the first sync), or **Connect Jira** under **Settings →
 Integrations**. The integration doesn't store an email or token: each person
-who syncs or posts to Jira uses their own Jira API key. Because of that, it's
-**manual only**: every sync asks for a key, and nothing syncs on a schedule.
-If you want work items to keep arriving without you clicking anything, the
-GitHub App is the integration that does that — Jira is better suited to an
-occasional pull.
+who syncs or posts to Jira uses their own Jira API key, and every **Sync now**
+asks for one. To keep issues arriving without clicking anything,
+[import on a schedule](#import-on-a-schedule).
 
 ### Save a Jira API key
 
@@ -214,14 +214,98 @@ before `state` existed stays `open` until its Jira issue is next updated, even
 if that issue is already Done.
 :::
 
+## Import on a schedule
+
+Scarn's server never syncs Jira or a GitHub token in the background. Instead,
+add an import step from the SDK's library and a schedule that runs it. It runs
+on a teammate's [worker](/scarn/guides/workers/), as that teammate, so issues
+arrive only while a worker for the project is online, and that teammate needs
+**write** access to work items in the project.
+
+Put this in a `.ts` file in `.scarn/pipeline-builder/`, for example
+`issue-import.ts`. **Export the step by name from this file**: the worker
+re-imports the file to find the step.
+
+```typescript
+import { defineAutomation } from "@scarn/sdk/automations";
+import { jiraIssueImport } from "@scarn/sdk/library/jira";
+
+export const importJira = jiraIssueImport({
+  key: "import-jira",
+  site: "https://acme.atlassian.net",
+  projectKeys: ["ABC"],
+});
+
+export default defineAutomation({
+  key: "jira-import",
+  title: "Jira import",
+  scope: "project",
+  rules: [jiraIssueImport.schedule(importJira)],
+});
+```
+
+By default it signs in to Jira with the project's **Atlassian** connection:
+add it from the [Connections](/scarn/connections/) page and sign in in the
+browser. To use an API token instead, save it as a
+[project secret](/scarn/guides/secrets/) and pass:
+
+```typescript
+auth: {
+  type: "apiKey",
+  email: "bot@acme.com",
+  token: Env.secret("JIRA_API_TOKEN"),
+},
+```
+
+Import `Env` from `@scarn/sdk/definitions/steps`. Create the token with
+**Create API token with scopes** and Jira read and search scopes. Your
+Atlassian org admin must allow API-token access (or, for the connection, your
+domain) for Atlassian's MCP server.
+
+For GitHub, save a token as the [project secret](/scarn/guides/secrets/) `GITHUB_TOKEN` (a fine-grained
+token with **Issues: read** on the repos, or a classic `repo` token) and use
+`githubIssueImport`:
+
+```typescript
+import { Env } from "@scarn/sdk/definitions/steps";
+import { githubIssueImport } from "@scarn/sdk/library/github";
+
+export const importGitHub = githubIssueImport({
+  key: "import-github",
+  repos: ["acme/web"],
+  auth: { type: "apiKey", token: Env.secret("GITHUB_TOKEN") },
+});
+```
+
+Then push and enable the automation:
+
+```bash
+scarn pipelines push
+scarn automations enable jira-import
+```
+
+|              |                                                                                                                      |
+| ------------ | -------------------------------------------------------------------------------------------------------------------- |
+| Cadence      | Every 5 minutes by default (`schedule(step, { cron })` to change it)                                                 |
+| First run    | Looks back 30 days (`firstSyncHorizonDays`)                                                                          |
+| Later runs   | Issues updated since the newest one imported, with 5 minutes of overlap                                              |
+| Labels       | Imported items carry `jira` or `github`; the source's own labels are in `fields.jiraLabels` or `fields.githubLabels` |
+| Not imported | Jira comment counts and custom fields; GitHub pull requests, parent links, blocks and close reasons                  |
+
+The integration's card under **Settings → Integrations** shows the import
+schedule's last run, and **Pipelines & Automations** shows its failures and
+last error. All options are in the
+[SDK reference](/scarn/reference/sdk/#issue-import-libraries). To import from
+another tracker, see [Import from any tracker](/scarn/how-to/import-from-any-tracker/).
+
 ## Choosing between them
 
-|                                 | GitHub App                                | GitHub token                                                  | Bitbucket                              | Jira                                            |
-| ------------------------------- | ----------------------------------------- | ------------------------------------------------------------- | -------------------------------------- | ----------------------------------------------- |
-| Repo host                       | GitHub                                    | GitHub                                                        | Bitbucket Cloud                        | Any                                             |
-| Setup                           | Install a GitHub App (needs admin rights) | Paste a personal access token                                 | Paste an Atlassian email and API token | Enter base URL, project keys and a Jira API key |
-| Sync                            | Automatic and instant, via webhooks       | Manual — click **Sync now** and pick a saved key or paste one | Manual                                 | Manual                                          |
-| Status/issue-type on work items | No (open/closed only)                     | No (open/closed only)                                         | Kind and priority, no workflow status  | Yes                                             |
+|                                 | GitHub App                                | GitHub token                                                   | Bitbucket                              | Jira                                            |
+| ------------------------------- | ----------------------------------------- | -------------------------------------------------------------- | -------------------------------------- | ----------------------------------------------- |
+| Repo host                       | GitHub                                    | GitHub                                                         | Bitbucket Cloud                        | Any                                             |
+| Setup                           | Install a GitHub App (needs admin rights) | Paste a personal access token                                  | Paste an Atlassian email and API token | Enter base URL, project keys and a Jira API key |
+| Sync                            | Automatic and instant, via webhooks       | **Sync now** with a saved or pasted key, or an import schedule | Manual                                 | **Sync now**, or an import schedule             |
+| Status/issue-type on work items | No (open/closed only)                     | No (open/closed only)                                          | Kind and priority, no workflow status  | Yes                                             |
 
 Nothing stops you connecting more than one to the same project — issues from any
 land as work items and route through the same

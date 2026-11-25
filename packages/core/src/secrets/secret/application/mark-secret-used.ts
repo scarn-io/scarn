@@ -29,24 +29,3 @@ export const markSecretUsed = async (
   }
   await deps.secretRepo.save(secret.markUsed(deps.timeProvider.now()));
 };
-
-export type MarkLentSecretUsedDeps = {
-  secretRepo: Pick<SecretRepo, "findById" | "save">;
-  timeProvider: TimeProvider;
-};
-
-/**
- * Records that a key lent to a project integration was just used by the
- * auto-sync poller, which runs with no user and so can't scope the lookup to
- * an owner. Does nothing if the secret has since been deleted.
- */
-export const markLentSecretUsed = async (
-  secretId: UuidV7,
-  deps: MarkLentSecretUsedDeps,
-): Promise<void> => {
-  const secret = await deps.secretRepo.findById(secretId);
-  if (!secret) {
-    return;
-  }
-  await deps.secretRepo.save(secret.markUsed(deps.timeProvider.now()));
-};

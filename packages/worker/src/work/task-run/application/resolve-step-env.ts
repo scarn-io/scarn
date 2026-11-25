@@ -11,6 +11,7 @@ import type {
   OpenCodeMcpServerConfig,
   OpenCodeMcpServers,
 } from "../../../common/contracts/opencode-mcp";
+import type { TaskKind } from "../contracts/task-run-contracts";
 
 /**
  * Resolves an environment's declared vars against a run's input and the worker's
@@ -45,7 +46,29 @@ export type ResolvedStepEnv = {
   promptEnv: Record<string, string>;
   /** Resolved values of secret entries, agent or setup, to register with the log masker. */
   secretValues: string[];
+  /**
+   * Names in `stepEnv` that only the step's MCP servers read (inferred or
+   * `workerVars`, not declared by the step). A code step's runner never
+   * gets them: its MCP calls go through the worker-side bridge.
+   */
+  mcpOnlyEnvNames?: readonly string[] | undefined;
 };
+
+/**
+ * The env a step's own process gets: a code step's runner leaves out the
+ * variables only its MCP servers read, which stay on the worker side of the
+ * MCP bridge (`environment.mcpCalls.env`). Every other kind gets `stepEnv`.
+ */
+export function runnerStepEnv(
+  kind: TaskKind,
+  resolved: Pick<ResolvedStepEnv, "stepEnv" | "mcpOnlyEnvNames">,
+): Record<string, string> {
+  if (kind !== "code") return resolved.stepEnv;
+  const mcpOnly = new Set(resolved.mcpOnlyEnvNames ?? []);
+  return Object.fromEntries(
+    Object.entries(resolved.stepEnv).filter(([name]) => !mcpOnly.has(name)),
+  );
+}
 
 export class MissingStepEnvError extends Error {
   readonly missing: readonly string[];
@@ -193,7 +216,9 @@ export function resolveStepEnv(
  * `X` itself for the agent (D4: the step's own entry wins; a setup-only entry
  * does not reach the agent, so the MCP still gets its own). A name read by
  * several servers is unowned. Explicit declarations suppress inference only
- * on their own server; across servers, required and secret win.
+ * on their own server; across servers, required and secret win. A
+ * `workerVars` project secret or value is taken as declared; two servers
+ * may share one only when both give it the same source.
  *
  * A server with `auth: { connection }` is authenticated by the connection
  * alone (decision 9): it contributes no `workerVars`, and its ref's
@@ -209,8 +234,7 @@ export function withInferredMcpEnv(
       .filter((entry) => appliesToAgent(entry.applies))
       .map((entry) => entry.name),
   );
-  type Inherited = Extract<EnvVarSpec, { source: "inherit" }>;
-  const entries = new Map<string, Inherited>();
+  const entries = new Map<string, EnvVarSpec>();
   const keys = new Set([
     ...Object.keys(servers ?? {}),
     ...refs.map((ref) => ref.key),
@@ -221,10 +245,12 @@ export function withInferredMcpEnv(
       server === undefined || usesConnectionAuth(server)
         ? []
         : (server.workerVars ?? []);
-    const serverEntries = new Map<string, Inherited>(
+    const serverEntries = new Map<string, EnvVarSpec>(
       workerVars.map((entry) => [
         entry.name,
-        { ...entry, mcp: key, applies: "agent" },
+        entry.source === "inherit"
+          ? { ...entry, mcp: key, applies: "agent" }
+          : { ...entry, applies: "agent" },
       ]),
     );
     for (const name of refs.find((ref) => ref.key === key)?.requiredEnv ?? []) {
@@ -246,6 +272,12 @@ export function withInferredMcpEnv(
         entries.set(name, entry);
         continue;
       }
+      if (existing.source !== "inherit" || entry.source !== "inherit") {
+        if (sameSource(existing, entry)) continue;
+        throw new Error(
+          `MCP servers give the variable ${name} different sources; give them different names.`,
+        );
+      }
       const shared = { ...existing };
       delete shared.mcp;
       entries.set(name, {
@@ -256,6 +288,16 @@ export function withInferredMcpEnv(
     }
   }
   return [...(envJson ?? []), ...entries.values()];
+}
+
+function sameSource(a: EnvVarSpec, b: EnvVarSpec): boolean {
+  if (a.source === "secret" && b.source === "secret") {
+    return a.secretName === b.secretName;
+  }
+  if (a.source === "value" && b.source === "value") {
+    return a.value === b.value && a.secret === b.secret;
+  }
+  return false;
 }
 
 function usesConnectionAuth(server: OpenCodeMcpServerConfig): boolean {
@@ -340,13 +382,16 @@ export function planStepEnv(input: {
   resolved: ResolvedStepEnv;
   resolveMcpEnv: ((refs: readonly McpEnvRef[]) => ResolvedStepEnv) | undefined;
 } {
-  const resolve = (envVars: readonly EnvVarSpec[] | null | undefined) =>
-    resolveStepEnv({
+  const declaredCount = (input.envVars ?? []).length;
+  const resolve = (envVars: readonly EnvVarSpec[]): ResolvedStepEnv => ({
+    ...resolveStepEnv({
       envVars,
       inputJson: input.inputJson,
       workerEnv: input.workerEnv,
       projectSecrets: input.projectSecrets,
-    });
+    }),
+    mcpOnlyEnvNames: envVars.slice(declaredCount).map((entry) => entry.name),
+  });
   const needsDiscovery = hasMcpRefs(input.opencodeMcpJson);
   const declared = withInferredMcpEnv(input.envVars, [], input.opencodeMcpJson);
   return {

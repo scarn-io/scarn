@@ -13,12 +13,9 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import GitHubIcon from "@mui/icons-material/GitHub";
 import SourceOutlinedIcon from "@mui/icons-material/SourceOutlined";
 import SyncIcon from "@mui/icons-material/Sync";
-import type {
-  ProjectIntegrationAutoSyncContract,
-  ProjectIntegrationContract,
-} from "@scarn/core/integrations/project-integration/contracts/project-integration-contracts";
 import type { CredentialPlatform } from "@/components/integrations/credential-platforms";
-import { IntegrationAutoSyncSection } from "@/components/integrations/integration-auto-sync-section";
+import type { ImportSchedule } from "@/components/integrations/import-schedules";
+import { IntegrationImportSchedule } from "@/components/integrations/integration-import-schedule";
 
 type RepoRef = { id: number; fullName: string };
 type GitHubScope = { repos: RepoRef[] };
@@ -31,7 +28,6 @@ type ProjectIntegrationViewBase = {
   id: string;
   projectId: string;
   status: "active" | "paused" | "error";
-  autoSync: ProjectIntegrationAutoSyncContract;
   lastSyncedAt: string | null;
   lastError: string | null;
   createdAt: string;
@@ -131,25 +127,19 @@ export function ProjectIntegrationCard({
   integration,
   isSyncing,
   disabled,
-  canManage,
-  githubAppConfigured,
+  importSchedules,
   onSync,
   onRemove,
-  onIntegrationChange,
 }: {
   integration: ProjectIntegrationView;
   isSyncing: boolean;
   disabled: boolean;
-  canManage: boolean;
-  githubAppConfigured: boolean;
+  /** The schedule rules importing this integration's issues. */
+  importSchedules: readonly ImportSchedule[];
   onSync: () => void;
   onRemove: () => void;
-  onIntegrationChange: (integration: ProjectIntegrationContract) => void;
 }) {
   const summary = integrationSummary(integration);
-  const manualSyncOnly =
-    credentialPlatformFor(integration) !== null &&
-    integration.autoSync.state !== "on";
   return (
     <Card variant="outlined">
       <CardContent>
@@ -180,9 +170,7 @@ export function ProjectIntegrationCard({
               </Typography>
             ) : null}
             <Typography variant="caption" color="text.secondary">
-              {manualSyncOnly
-                ? `${summary.method} · Manual sync only`
-                : summary.method}
+              {summary.method}
             </Typography>
             <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
               {summary.chips}
@@ -201,12 +189,9 @@ export function ProjectIntegrationCard({
             ) : null}
             {integration.kind === "jira" ||
             integration.kind === "github_token" ? (
-              <IntegrationAutoSyncSection
-                projectId={integration.projectId}
+              <IntegrationImportSchedule
                 integration={integration}
-                githubAppConfigured={githubAppConfigured}
-                canManage={canManage}
-                onIntegrationChange={onIntegrationChange}
+                schedules={importSchedules}
               />
             ) : null}
           </Stack>

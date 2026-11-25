@@ -4,7 +4,6 @@ import { Alert, Box, Collapse, Stack, Typography } from "@mui/material";
 import { RecordListRow } from "@/components/common/record-list/record-list-row";
 import { RespondDialog } from "./respond-dialog";
 import { CommentSuppressedNotice } from "./comment-suppressed-notice";
-import { AutoSyncPausedNotice } from "./auto-sync-paused-notice";
 import {
   DeliveriesRow,
   NotificationActions,
@@ -54,7 +53,6 @@ export function NotificationRow({
               {notification.body}
             </Typography>
             <CommentSuppressedNotice notification={notification} />
-            <AutoSyncPausedNotice notification={notification} />
           </Stack>
         }
         secondary={
@@ -74,7 +72,9 @@ export function NotificationRow({
         }
         expanded={
           <Collapse in={expanded}>
-            <Box sx={{ borderTop: 1, borderColor: "divider", pt: 1.5, mt: 1.5 }}>
+            <Box
+              sx={{ borderTop: 1, borderColor: "divider", pt: 1.5, mt: 1.5 }}
+            >
               <DeliveriesRow
                 notificationId={notification.id}
                 projectId={projectId}

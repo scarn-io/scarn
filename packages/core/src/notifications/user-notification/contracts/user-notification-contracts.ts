@@ -9,7 +9,6 @@ export const userNotificationKindSchema = z.enum([
   "blocked",
   "result_ready",
   "warning",
-  "integration_auto_sync_paused",
 ]);
 
 export const notificationAudienceSchema = z.enum([

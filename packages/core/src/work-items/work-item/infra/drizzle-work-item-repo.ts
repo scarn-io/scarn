@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, ne, or, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, ne, or, sql, type SQL } from "drizzle-orm";
 import { getDb } from "@scarn/core/lib/db";
 import type { DbExecutor } from "@scarn/core/lib/db/db-executor";
 import { PersistenceError } from "@scarn/core/lib/errors";
@@ -16,6 +16,7 @@ import {
   queryWorkItemFieldOptions,
   queryWorkItemListPage,
 } from "./work-item-listing-query";
+import { queryMaxSourceUpdatedAt } from "./work-item-source-cursor-query";
 import { queryWorkItemLabels } from "./work-item-labels-query";
 import {
   WorkItemEntity,
@@ -23,6 +24,7 @@ import {
 } from "../domain/work-item-entity";
 import { WorkItemDescriptionConflict } from "../domain/work-item-description-conflict";
 import {
+  sourceNewerGuard,
   toClosureColumns,
   toWorkItemRow,
   workItemUpsertSet,
@@ -240,6 +242,20 @@ export class DrizzleWorkItemRepo implements WorkItemRepo {
     return rows.map((row) => this.toEntity(row));
   }
 
+  async maxSourceUpdatedAt(
+    projectId: UuidV7,
+    platform: WorkItemPlatform,
+    keyPrefix: string,
+    dbExecutor?: DbExecutor,
+  ): Promise<Date | null> {
+    return await queryMaxSourceUpdatedAt(
+      dbExecutor ?? getDb(),
+      projectId,
+      platform,
+      keyPrefix,
+    );
+  }
+
   async save(
     workItem: WorkItemEntity,
     dbExecutor?: DbExecutor,
@@ -339,6 +355,7 @@ export class DrizzleWorkItemRepo implements WorkItemRepo {
     workItemEntities: WorkItemEntity[],
     writer: "sync" | "scarn",
     dbExecutor?: DbExecutor,
+    setWhere?: SQL,
   ): Promise<WorkItemEntity[]> {
     if (workItemEntities.length === 0) {
       return [];
@@ -355,6 +372,7 @@ export class DrizzleWorkItemRepo implements WorkItemRepo {
           workItems.platformKey,
         ],
         set: workItemUpsertSet(writer),
+        ...(setWhere ? { setWhere } : {}),
       })
       .returning();
 
@@ -362,36 +380,10 @@ export class DrizzleWorkItemRepo implements WorkItemRepo {
   }
 
   async saveManyIfSourceNewer(
-    workItemEntities: WorkItemEntity[],
+    items: WorkItemEntity[],
     dbExecutor?: DbExecutor,
   ): Promise<WorkItemEntity[]> {
-    if (workItemEntities.length === 0) {
-      return [];
-    }
-
-    const db = dbExecutor ?? getDb();
-    const rows = await db
-      .insert(workItems)
-      .values(workItemEntities.map((workItem) => toWorkItemRow(workItem)))
-      .onConflictDoUpdate({
-        target: [
-          workItems.projectId,
-          workItems.platform,
-          workItems.platformKey,
-        ],
-        // Atomic idempotency guard (decisions 6/12): only apply the update
-        // when the incoming row is strictly newer than what's stored, or
-        // nothing was stored yet. A stale/out-of-order conflicting row is
-        // left untouched and dropped from `RETURNING` entirely — see the
-        // interface doc comment on `WorkItemRepo.saveManyIfSourceNewer`.
-        setWhere: sql.raw(
-          `excluded.${workItems.sourceUpdatedAt.name} > work_items.${workItems.sourceUpdatedAt.name} or work_items.${workItems.sourceUpdatedAt.name} is null`,
-        ),
-        set: workItemUpsertSet("sync"),
-      })
-      .returning();
-
-    return rows.map((row) => this.toEntity(row));
+    return await this.upsertMany(items, "sync", dbExecutor, sourceNewerGuard);
   }
 
   async setStateMany(

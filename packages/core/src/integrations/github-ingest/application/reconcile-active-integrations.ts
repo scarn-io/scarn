@@ -68,9 +68,8 @@ const RECONCILE_CONCURRENCY = 5;
  *
  * Scope decision: every `user_credential` integration (GitHub token,
  * Bitbucket or Jira) is skipped entirely (not counted as attempted,
- * succeeded, or failed). Those sign in with a person's credential: the ones
- * a project member lent a key to are synced by `pollLentKeyIntegrations`,
- * and the rest only sync when someone runs a sync with their own key.
+ * succeeded, or failed). Those sign in with a person's credential, so they
+ * only sync when someone runs a sync with their own key.
  */
 export const reconcileActiveIntegrations = async (
   deps: ReconcileActiveIntegrationsDeps,

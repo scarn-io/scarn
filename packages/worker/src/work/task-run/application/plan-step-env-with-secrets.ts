@@ -1,6 +1,6 @@
 import type { EnvVarSpec } from "@scarn/sdk/env-vars";
 import type { OpenCodeMcpServers } from "../../../common/contracts/opencode-mcp";
-import { planStepEnv } from "./resolve-step-env";
+import { planStepEnv, withInferredMcpEnv } from "./resolve-step-env";
 import {
   planDryRunSecretEnv,
   resolveSecretEnv,
@@ -18,6 +18,11 @@ type PlanInput = {
   opencodeMcpJson: OpenCodeMcpServers | null | undefined;
 };
 
+/** The step's vars and its MCP servers' declared `workerVars`, project secrets included. */
+function withMcpWorkerVars(input: PlanInput): EnvVarSpec[] {
+  return withInferredMcpEnv(input.envVars, [], input.opencodeMcpJson);
+}
+
 /**
  * A claimed run's step env: project secrets resolved first (one Scarn call at
  * most), every value handed to `onSecretValues` for masking before the plan,
@@ -29,7 +34,10 @@ export async function planClaimedStepEnv(
     onSecretValues?: ((values: readonly string[]) => void) | undefined;
   },
 ): Promise<ReturnType<typeof planStepEnv>> {
-  const secrets = await resolveSecretEnv(input);
+  const secrets = await resolveSecretEnv({
+    ...input,
+    envVars: withMcpWorkerVars(input),
+  });
   input.onSecretValues?.(Object.values(secrets.values));
   return planStepEnv({ ...input, projectSecrets: secrets.values });
 }
@@ -39,7 +47,10 @@ export function planDryRunStepEnv(input: PlanInput): {
   plan: ReturnType<typeof planStepEnv>;
   secrets: DryRunSecretReport[];
 } {
-  const dryRun = planDryRunSecretEnv(input.envVars, input.localEnvVars);
+  const dryRun = planDryRunSecretEnv(
+    withMcpWorkerVars(input),
+    input.localEnvVars,
+  );
   return {
     plan: planStepEnv({ ...input, projectSecrets: dryRun.values }),
     secrets: dryRun.secrets,

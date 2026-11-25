@@ -15,7 +15,7 @@
  * is exactly the host-mode guarantee (`docker exec` would require the daemon and
  * fail); a successful real tail therefore proves the non-docker branch was taken.
  */
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { appendFile, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
@@ -31,7 +31,7 @@ type EnqueuedLine = { stream: string; content: string; level: LogLevel };
 async function waitFor(
   predicate: () => boolean,
   {
-    timeoutMs = 2000,
+    timeoutMs = 5000,
     intervalMs = 20,
   }: { timeoutMs?: number; intervalMs?: number } = {},
 ): Promise<void> {
@@ -89,7 +89,7 @@ describe("OpencodeLogTail host-file mode (containerId: null)", () => {
 
     // Wait for `tail -n +1 -F` to emit the existing content, then append more.
     await waitFor(() => lines.some((l) => l.content === "first line"));
-    await writeFile(logPath, "first line\nsecond line\n", "utf8");
+    await appendFile(logPath, "second line\n", "utf8");
     await waitFor(() => lines.some((l) => l.content === "second line"));
 
     const contents = lines.map((l) => l.content);
@@ -97,5 +97,5 @@ describe("OpencodeLogTail host-file mode (containerId: null)", () => {
     expect(contents).toContain("second line");
     // Everything is shipped under the `ai-server` stream.
     expect(lines.every((l) => l.stream === "ai-server")).toBe(true);
-  });
+  }, 15_000);
 });

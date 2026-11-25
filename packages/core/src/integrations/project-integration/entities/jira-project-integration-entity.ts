@@ -53,7 +53,7 @@ export class JiraProjectIntegration extends ProjectIntegrationEntityBase {
 
   private constructor(props: JiraProjectIntegrationProps) {
     const { scope, ...baseProps } = props;
-    super(baseProps, "jira");
+    super(baseProps);
     this.scope = scope;
   }
 

@@ -54,7 +54,6 @@ describe("/me/secrets with GitHub and Bitbucket tokens", () => {
           "name": "Personal GitHub",
           "status": "active",
           "updatedAt": "<updatedAt>",
-          "usedBy": [],
         }
       `,
       );

@@ -113,12 +113,6 @@ export function DeleteApiKeyDialog({
           You won&apos;t be able to pick this key for Jira syncs or comments any
           more. This can&apos;t be undone.
         </DialogContentText>
-        {apiKey && apiKey.usedBy.length > 0 ? (
-          <DialogContentText sx={{ mt: 1.5 }}>
-            Auto-sync will pause for:{" "}
-            {apiKey.usedBy.map((use) => use.projectName).join(", ")}.
-          </DialogContentText>
-        ) : null}
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>

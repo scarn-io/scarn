@@ -8,9 +8,8 @@ import { createTolerantReader } from "@scarn/core/lib/db/stored-json";
  * a payload it doesn't recognise.
  *
  * The column is a JSON object or null. Each notification kind writes its
- * own keys (`conversationId`, `questionId`, auto-sync `integrationId` /
- * `reason` / `detail`, the task result's payload and `commentSuppressed`,
- * and `response` once answered). The one key read in SQL is
+ * own keys (`conversationId`, `questionId`, the task result's payload and
+ * `commentSuppressed`, and `response` once answered). The one key read in SQL is
  * `payload_json ->> 'conversationId'` (`deleteByTaskOrConversation` in
  * `drizzle-user-notification-repo.ts`), so it is pinned as a string when
  * present. Every other key is kept as-is.

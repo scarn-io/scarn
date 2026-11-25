@@ -19,7 +19,9 @@ import type {
   OpenMcpBridgeSessionInput,
 } from "../../../../src/runtime/mcp-bridge/infra";
 import type { LaunchedRuntime } from "../../../../src/work/task-run/contracts/process-project-work-types";
+import type { EnvVarSpec } from "@scarn/sdk/env-vars";
 import {
+  createCodeStepWorkerContext,
   projectId,
   requestedByUserId,
   taskRunId,
@@ -118,6 +120,197 @@ describe("startProcessClaimedTaskRun kind: 'code' MCP bridge", () => {
       "bridge-token-value",
     );
     expect(stop).toHaveBeenCalledTimes(1);
+  });
+
+  test("keeps the step's MCP worker vars out of the runner's env", async () => {
+    workspacePath = await mkdtemp(
+      path.join(os.tmpdir(), "scarn-code-step-branch-bridge-env-"),
+    );
+    const runCodeStepCommand = vi.fn<RunCodeStepCommand>(() =>
+      Promise.resolve({ exitCode: 0, stdout: "", stderr: "" }),
+    );
+    const workerVar = (name: string) => ({
+      name,
+      source: "inherit" as const,
+      from: name,
+      secret: true,
+      optional: false,
+      applies: "agent" as const,
+    });
+    const envJson: EnvVarSpec[] = [
+      {
+        name: "REGION",
+        source: "value",
+        value: "eu",
+        secret: false,
+        applies: "agent",
+      },
+    ];
+    const { deps, tracker } = buildCodeStepDeps({
+      workspacePath,
+      entrypointJson: { sourceFile: "steps/poll.ts" },
+      runCodeStepCommand,
+      mcpCalls: {
+        servers: {},
+        env: {},
+        placement: { kind: "host", workspaceDir: workspacePath },
+      },
+      openMcpBridgeSession: () =>
+        Promise.resolve({
+          endpoint: "http://127.0.0.1:4321",
+          token: "bridge-token-value",
+          runArgs: [],
+          pool: { call: vi.fn() },
+          stop: () => Promise.resolve(),
+        }),
+    });
+    deps.workerClient.getTaskRunWorkerContext = vi.fn(() => {
+      const context = createCodeStepWorkerContext(
+        { sourceFile: "steps/poll.ts" },
+        envJson,
+      );
+      return Promise.resolve({
+        ...context,
+        runtime: {
+          ...context.runtime,
+          opencodeMcpJson: {
+            jira: {
+              type: "remote" as const,
+              url: "https://mcp.atlassian.com/v1/mcp",
+              headers: {
+                Authorization: "Basic {basic:JIRA_EMAIL:JIRA_API_TOKEN}",
+              },
+              workerVars: [
+                workerVar("JIRA_EMAIL"),
+                workerVar("JIRA_API_TOKEN"),
+              ],
+            },
+          },
+        },
+      });
+    });
+
+    await startProcessClaimedTaskRun(
+      {
+        projectId,
+        requestedByUserId,
+        claim: { task: { id: taskRunId }, claimToken: "claim-token" },
+        leaseDurationSeconds: 30,
+        localEnvVars: {
+          JIRA_EMAIL: "bot@example.com",
+          JIRA_API_TOKEN: "jira-token-value",
+        },
+      },
+      deps,
+      deps.workerClient,
+      tracker,
+    );
+
+    const runnerEnv = runCodeStepCommand.mock.calls[0]?.[0].env ?? {};
+    expect(runnerEnv).toMatchObject({ REGION: "eu" });
+    expect(runnerEnv).not.toHaveProperty("JIRA_EMAIL");
+    expect(runnerEnv).not.toHaveProperty("JIRA_API_TOKEN");
+    expect(Object.values(runnerEnv)).not.toContain("jira-token-value");
+  });
+
+  test("resolves a project-secret token and literal email for the bridge only", async () => {
+    workspacePath = await mkdtemp(
+      path.join(os.tmpdir(), "scarn-code-step-branch-bridge-secret-"),
+    );
+    const runCodeStepCommand = vi.fn<RunCodeStepCommand>(() =>
+      Promise.resolve({ exitCode: 0, stdout: "", stderr: "" }),
+    );
+    const { deps, tracker, launch } = buildCodeStepDeps({
+      workspacePath,
+      entrypointJson: { sourceFile: "steps/poll.ts" },
+      runCodeStepCommand,
+      mcpCalls: {
+        servers: {},
+        env: {},
+        placement: { kind: "host", workspaceDir: workspacePath },
+      },
+      openMcpBridgeSession: () =>
+        Promise.resolve({
+          endpoint: "http://127.0.0.1:4321",
+          token: "bridge-token-value",
+          runArgs: [],
+          pool: { call: vi.fn() },
+          stop: () => Promise.resolve(),
+        }),
+    });
+    deps.workerClient.getTaskRunWorkerContext = vi.fn(() => {
+      const context = createCodeStepWorkerContext(
+        { sourceFile: "steps/poll.ts" },
+        [],
+      );
+      return Promise.resolve({
+        ...context,
+        runtime: {
+          ...context.runtime,
+          opencodeMcpJson: {
+            atlassian: {
+              type: "remote" as const,
+              url: "https://mcp.atlassian.com/v2/mcp",
+              headers: {
+                Authorization: "Basic {basic:JIRA_EMAIL:JIRA_API_TOKEN}",
+              },
+              workerVars: [
+                {
+                  name: "JIRA_EMAIL",
+                  source: "value" as const,
+                  value: "bot@acme.com",
+                  secret: false,
+                  applies: "agent" as const,
+                },
+                {
+                  name: "JIRA_API_TOKEN",
+                  source: "secret" as const,
+                  secretName: "JIRA_TOKEN",
+                  applies: "agent" as const,
+                },
+              ],
+            },
+          },
+        },
+      });
+    });
+    const resolveTaskRunEnvironment = vi.fn(() =>
+      Promise.resolve({
+        secrets: {
+          JIRA_TOKEN: { value: "jira-token-value", expiresAt: null },
+        },
+        missing: [],
+      }),
+    );
+    deps.workerClient.resolveTaskRunEnvironment = resolveTaskRunEnvironment;
+
+    await startProcessClaimedTaskRun(
+      {
+        projectId,
+        requestedByUserId,
+        claim: { task: { id: taskRunId }, claimToken: "claim-token" },
+        leaseDurationSeconds: 30,
+      },
+      deps,
+      deps.workerClient,
+      tracker,
+    );
+
+    expect(resolveTaskRunEnvironment).toHaveBeenCalledWith({
+      taskRunId,
+      claimToken: "claim-token",
+      secretNames: ["JIRA_TOKEN"],
+    });
+    const launchInput = launch.mock.calls[0]?.[0] as
+      { stepEnv?: Record<string, string> } | undefined;
+    expect(launchInput?.stepEnv).toEqual({
+      JIRA_EMAIL: "bot@acme.com",
+      JIRA_API_TOKEN: "jira-token-value",
+    });
+    const runnerEnv = runCodeStepCommand.mock.calls[0]?.[0].env ?? {};
+    expect(runnerEnv).not.toHaveProperty("JIRA_EMAIL");
+    expect(runnerEnv).not.toHaveProperty("JIRA_API_TOKEN");
+    expect(Object.values(runnerEnv)).not.toContain("jira-token-value");
   });
 
   test("stops the MCP bridge when the code step fails", async () => {

@@ -206,11 +206,42 @@ function buildEnvironmentField(step: StepDefContract): EnvironmentField | null {
   };
 }
 
+function objectSource(options: Record<string, unknown>): string {
+  const entries = Object.entries(options).map(
+    ([key, value]) => `${key}: ${JSON.stringify(value)}`,
+  );
+  return `{ ${entries.join(", ")} }`;
+}
+
 function grantToFeature(grant: Grant): {
   feature: AnyStepFeature;
   source: string;
 } {
   const { workItems } = Features;
+  if (grant.action === "update" && grant.scope === "project") {
+    const options = {
+      scope: "project" as const,
+      ...(grant.keyPrefix !== undefined ? { keyPrefix: grant.keyPrefix } : {}),
+      ...(grant.labels !== undefined
+        ? { labels: grant.labels as [string, ...string[]] }
+        : {}),
+    };
+    return {
+      feature: workItems.update(options),
+      source: `Features.workItems.update(${objectSource(options)})`,
+    };
+  }
+  if (grant.action === "create" && grant.scope === "project") {
+    const options = {
+      scope: "project" as const,
+      labels: grant.labels as [string, ...string[]],
+      ...(grant.keyPrefix !== undefined ? { keyPrefix: grant.keyPrefix } : {}),
+    };
+    return {
+      feature: workItems.create(options),
+      source: `Features.workItems.create(${objectSource(options)})`,
+    };
+  }
   switch (grant.action) {
     case "label":
       return {

@@ -58,21 +58,6 @@ const makeFakeRepo = (): {
         ),
       );
     },
-    listDueForAutoSync() {
-      return Promise.resolve([]);
-    },
-    listBySyncSecretId() {
-      return Promise.resolve([]);
-    },
-    listBySyncSecretIds() {
-      return Promise.resolve([]);
-    },
-    claimForSync() {
-      return Promise.resolve(true);
-    },
-    releaseSyncClaim() {
-      return Promise.resolve();
-    },
     delete(id, targetProjectId) {
       const existing = stored.get(id);
       if (existing && existing.projectId === targetProjectId) {
@@ -335,10 +320,6 @@ describe("project integration use cases", () => {
       lastSyncedAt: null,
       lastError: null,
       firstSyncHorizonDays: null,
-      syncSecretId: null,
-      autoSyncPausedReason: null,
-      autoSyncPausedAt: null,
-      autoSyncPausedDetail: null,
     });
     stored.set(paused.id, paused);
 

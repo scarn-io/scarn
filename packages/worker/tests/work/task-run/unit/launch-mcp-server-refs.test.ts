@@ -13,6 +13,7 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import type { OpenCodeMcpServers } from "../../../../src/common/contracts/opencode-mcp";
 import { createUuidV7 } from "../../../../src/common/contracts/uuid-v7";
+import { ConfigurationError } from "../../../../src/lib/errors";
 import {
   MissingStepEnvError,
   planStepEnv,
@@ -135,6 +136,29 @@ describe("workspace launch resolves MCP server refs", () => {
     expect(log).not.toContain("ensurePayload");
     expect(log).not.toContain("launchDevcontainer");
     expect(deps.workspaceManager.removeCalls).toEqual([workspacePath]);
+  });
+
+  test("an agent step's server with a {basic:…} header fails before the payload is provisioned", async () => {
+    const log: CallLog = [];
+    const { orchestrator } = buildOrchestrator(log);
+
+    const error = await rejectionOf(
+      orchestrator.launch({
+        ...buildLaunchInput(),
+        opencodeMcpJson: {
+          jira: {
+            type: "remote",
+            url: "https://mcp.atlassian.com/v1/mcp",
+            headers: { Authorization: "Basic {basic:JIRA_EMAIL:JIRA_TOKEN}" },
+          },
+        },
+      }),
+    );
+
+    expect(error).toBeInstanceOf(ConfigurationError);
+    expect(error.message).toContain('"jira"');
+    expect(log).not.toContain("ensurePayload");
+    expect(log).not.toContain("launchDevcontainer");
   });
 });
 

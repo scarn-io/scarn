@@ -39,6 +39,7 @@ describe("per-server workerVars", () => {
       setupEnv: {},
       promptEnv: { REGION: "us" },
       secretValues: ["private-key"],
+      mcpOnlyEnvNames: ["KEY", "REGION", "OPTIONAL"],
     });
   });
 

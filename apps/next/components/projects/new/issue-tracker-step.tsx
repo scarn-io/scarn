@@ -20,9 +20,7 @@ import {
   parseJiraProjectKeys,
 } from "@/components/integrations/jira-site-fields";
 import { TokenCredentialForm } from "@/components/integrations/token-credential-form";
-import { AutoSyncConsentField } from "./auto-sync-consent-field";
 import {
-  autoSyncCandidate,
   connectionSummary,
   issueTrackerOptions,
   type IssueTrackerChoice,
@@ -127,7 +125,6 @@ export function IssueTrackerStep({
   const [jiraBaseUrl, setJiraBaseUrl] = useState("");
   const [jiraProjectKeysRaw, setJiraProjectKeysRaw] = useState("");
   const [firstSyncHorizonDays, setFirstSyncHorizonDays] = useState(7);
-  const [autoSync, setAutoSync] = useState(false);
 
   const appChoice: IssueTrackerChoice | null =
     selected === "github_app" && check.githubApp
@@ -139,22 +136,11 @@ export function IssueTrackerStep({
       : null;
   const choice =
     appChoice ?? (verified && verified.type === selected ? verified : null);
-  const autoSyncIntegration = autoSyncCandidate(choice, repoName);
-  const autoSyncOn = autoSyncIntegration !== null && autoSync;
-  const createChoice: IssueTrackerChoice | null =
-    autoSyncOn && (choice?.type === "jira" || choice?.type === "github_token")
-      ? { ...choice, autoSync: true }
-      : choice;
-
-  const changeVerified = (next: IssueTrackerChoice | null) => {
-    setVerified(next);
-    setAutoSync(false);
-  };
 
   const select = (option: IssueTrackerOption) => {
     if (option === selected) return;
     setSelected(option);
-    changeVerified(null);
+    setVerified(null);
   };
 
   const optionBody = (option: IssueTrackerOption) => {
@@ -178,7 +164,7 @@ export function IssueTrackerStep({
             type="button"
             variant="body2"
             onClick={() => {
-              changeVerified(null);
+              setVerified(null);
             }}
           >
             Change
@@ -195,7 +181,7 @@ export function IssueTrackerStep({
             checkIssueTracker(gitUrl, { type: "bitbucket", credential })
           }
           onVerified={(result) => {
-            changeVerified({ type: "bitbucket", verified: result });
+            setVerified({ type: "bitbucket", verified: result });
           }}
           renderError={(failure) =>
             failure.code === "BITBUCKET_ISSUES_DISABLED" &&
@@ -219,7 +205,7 @@ export function IssueTrackerStep({
             checkIssueTracker(gitUrl, { type: "github_token", credential })
           }
           onVerified={(result) => {
-            changeVerified({ type: "github_token", verified: result });
+            setVerified({ type: "github_token", verified: result });
           }}
         />
       );
@@ -245,7 +231,7 @@ export function IssueTrackerStep({
             })
           }
           onVerified={(result) => {
-            changeVerified({
+            setVerified({
               type: "jira",
               baseUrl: jiraBaseUrl.trim(),
               projectKeys,
@@ -295,23 +281,12 @@ export function IssueTrackerStep({
         </TextField>
       ) : null}
 
-      {autoSyncIntegration ? (
-        <AutoSyncConsentField
-          integration={autoSyncIntegration}
-          githubAppConfigured={githubAppConfigured}
-          checked={autoSync}
-          onChange={setAutoSync}
-        />
-      ) : null}
-
       {choice ? (
         <Typography variant="body2" aria-label="Connection summary">
           Issues will sync {connectionSummary(choice)}.
           {choice.type === "github_app"
             ? null
-            : autoSyncOn
-              ? " Syncs run every 5 minutes."
-              : " Syncs run only when you ask for them."}
+            : " Syncs run only when you ask for them."}
         </Typography>
       ) : null}
       {createError ? <Alert severity="error">{createError}</Alert> : null}
@@ -329,9 +304,9 @@ export function IssueTrackerStep({
         <Button
           variant="contained"
           loading={isCreating}
-          disabled={!createChoice}
+          disabled={!choice}
           onClick={() => {
-            if (createChoice) onCreate(createChoice, firstSyncHorizonDays);
+            if (choice) onCreate(choice, firstSyncHorizonDays);
           }}
         >
           Create project

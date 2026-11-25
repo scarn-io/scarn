@@ -1,9 +1,7 @@
 import { getDb } from "@scarn/core/lib/db";
 import type { DbExecutor } from "@scarn/core/lib/db/db-executor";
-import type { UuidV7 } from "@scarn/core/common/contracts/uuid-v7";
 import {
   CoreValidationError,
-  InvariantViolationError,
   ResourceNotFoundError,
 } from "@scarn/core/lib/errors";
 import { Result } from "@scarn/core/lib/result";
@@ -16,6 +14,7 @@ import {
 import type { TaskRepo } from "@scarn/core/tasks/task/application/task-repo";
 import { WORK_ITEM_CHANGES_INVALID } from "@scarn/core/tasks/task/application/validate-work-item-changes";
 import {
+  createGrantFor,
   findGrant,
   grantLabelsRefusal,
 } from "@scarn/core/tasks/task/domain/grants";
@@ -38,18 +37,21 @@ import {
   type CreatedTaskRunWorkItemContract,
   type CreateTaskRunWorkItemInput,
 } from "../contracts/task-run-work-item-contracts";
-import { assertClaimOwnership } from "./task-run-claim-helpers";
+import {
+  assertClaimOwnership,
+  requireClaimingUserProjectPermission,
+  type ClaimingUserDeps,
+} from "./task-run-claim-helpers";
+import { grantMissing } from "./code-step-work-item-access";
 import type { TaskRunRepo } from "./task-run-repo";
 
-export type CreateTaskRunWorkItemDeps = {
+export type CreateTaskRunWorkItemDeps = ClaimingUserDeps & {
   taskRunRepo: Pick<TaskRunRepo, "load">;
   taskRepo: Pick<TaskRepo, "load" | "lockSpawnedWorkItems">;
   workItemRepo: WorkItemRepo;
   workItemBlockRepo: WorkItemBlockRepo;
   workItemEvents: WorkItemEventsPort;
   timeProvider: TimeProvider;
-  /** Builds the actor for the user who claimed the run. */
-  createUserAuthorizationService: (actorId: UuidV7) => UserAuthorizationService;
   dbExecutor?: DbExecutor | undefined;
 };
 
@@ -119,7 +121,37 @@ const checkBlockers = async (
   }
 };
 
+const requireCodeStepCreateGrant = (
+  task: TaskEntity,
+  parsed: ParsedCreate,
+): void => {
+  const platformKey = parsed.platformKey;
+  const grant =
+    parsed.scope === "project" && platformKey !== undefined
+      ? createGrantFor(task.grants, platformKey)
+      : undefined;
+  if (!grant) {
+    throw grantMissing(
+      parsed.scope === "project"
+        ? `This step may not create the new item ${platformKey ?? ""}: it has no create grant on project covering that key`
+        : `This step may not create work items on ${parsed.scope}: a code step only creates on project`,
+    );
+  }
+  const labelsRefusal = grantLabelsRefusal(
+    grant,
+    parsed.labels ?? [],
+    parsed.workItemId,
+  );
+  if (labelsRefusal) {
+    throw grantMissing(labelsRefusal);
+  }
+};
+
 const requireCreateGrant = (task: TaskEntity, parsed: ParsedCreate): void => {
+  if (task.kind === "code") {
+    requireCodeStepCreateGrant(task, parsed);
+    return;
+  }
   const grant = findGrant(task.grants, "create", parsed.scope);
   if (!grant) {
     throw invalid(
@@ -210,12 +242,14 @@ const createInProject = async (
       `Work item id ${parsed.workItemId} is already used; make a new id`,
     );
   }
-  await checkCreatedCap(
-    task,
-    MAX_PROJECT_WORK_ITEMS_CREATED_PER_TASK,
-    deps,
-    tx,
-  );
+  if (task.kind !== "code") {
+    await checkCreatedCap(
+      task,
+      MAX_PROJECT_WORK_ITEMS_CREATED_PER_TASK,
+      deps,
+      tx,
+    );
+  }
 
   const workItemEvents = new DeferredWorkItemEvents(deps.workItemEvents);
   const result = await createProjectWorkItem(
@@ -255,6 +289,11 @@ const createInProject = async (
  *
  * The run's claim token is the only credential; the item is created as the
  * user who claimed the run.
+ *
+ * A `code` step's run is checked like its upserts: only `project` creates,
+ * under a `create` grant whose `keyPrefix` covers the `platformKey` and whose
+ * labels cover the item's, a miss failing with `WORK_ITEM_GRANT_MISSING`, and
+ * no per-Task cap.
  */
 export const createTaskRunWorkItem = async (
   taskRunIdInput: GetTaskRunInput,
@@ -271,12 +310,12 @@ export const createTaskRunWorkItem = async (
       return Result.err(new ResourceNotFoundError("Task", taskRunId));
     }
     assertClaimOwnership(run, parsed.claimToken, deps.timeProvider.now());
-    if (!run.claimedByUserId) {
-      throw new InvariantViolationError(
-        `Task run ${run.id} is running with no claiming user`,
-        "TASK_RUN_CLAIMED_BY_USER_MISSING",
-      );
-    }
+    const userAuthz = await requireClaimingUserProjectPermission(
+      run,
+      "work-items:write",
+      deps,
+      tx,
+    );
 
     const task = await deps.taskRepo.load(run.taskId, tx);
     if (!task || task.projectId !== run.projectId) {
@@ -293,7 +332,6 @@ export const createTaskRunWorkItem = async (
     }
 
     requireCreateGrant(task, parsed);
-    const userAuthz = deps.createUserAuthorizationService(run.claimedByUserId);
     return Result.ok(
       parsed.scope === "project"
         ? await createInProject(task, parsed, userAuthz, deps, tx)

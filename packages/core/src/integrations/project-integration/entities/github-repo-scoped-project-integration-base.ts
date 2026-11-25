@@ -63,10 +63,9 @@ export abstract class GitHubRepoScopedProjectIntegrationBase extends ProjectInte
     props: ProjectIntegrationEntityBaseProps & {
       scope: GitHubProjectIntegrationScope;
     },
-    kind: "github_app" | "github_token",
   ) {
     const { scope, ...baseProps } = props;
-    super(baseProps, kind);
+    super(baseProps);
     this.scope = scope;
   }
 

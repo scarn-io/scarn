@@ -31,7 +31,11 @@ import {
   type RepoField,
   type RepoSpec,
 } from "./repo";
-import { assertNoConnectorMcpCollisions, mergeStepMcps } from "./compile-mcps";
+import {
+  assertNoAgentBasicPlaceholders,
+  assertNoConnectorMcpCollisions,
+  mergeStepMcps,
+} from "./compile-mcps";
 import { isEnvironmentHandle } from "../../push/code-step-lookup";
 import type { McpHandle } from "./define-mcp";
 import type { ArgsTemplate } from "./args-template";
@@ -284,8 +288,11 @@ function assertStepMcpInput(config: {
   );
 }
 
-/** The grants a step's features carry, at most one per resource, action and scope. */
-function collectGrants(
+/**
+ * The grants a step's features carry, at most one per resource, action, scope
+ * and `keyPrefix`.
+ */
+export function collectGrants(
   stepKey: string,
   features: readonly AnyStepFeature[],
 ): Grant[] {
@@ -294,15 +301,20 @@ function collectGrants(
   for (const feature of features) {
     const grant = feature._grant;
     if (!grant) continue;
-    const key = `${grant.resource}:${grant.action}:${grant.scope}`;
+    const keyPrefix = "keyPrefix" in grant ? grant.keyPrefix : undefined;
+    const key = `${grant.resource}:${grant.action}:${grant.scope}:${keyPrefix ?? ""}`;
     if (seen.has(key)) {
+      const prefixText =
+        keyPrefix === undefined
+          ? ""
+          : `, keyPrefix: ${JSON.stringify(keyPrefix)}`;
       throw new Error(
-        `Step "${stepKey}": more than one Features.${grant.resource}s.${grant.action}({ scope: "${grant.scope}" }). Attach each work item grant once.`,
+        `Step "${stepKey}": more than one Features.${grant.resource}s.${grant.action}({ scope: "${grant.scope}"${prefixText} }). Attach each work item grant once.`,
       );
     }
     seen.add(key);
     grants.push(
-      "labels" in grant
+      "labels" in grant && grant.labels
         ? { ...grant, labels: [...grant.labels] }
         : { ...grant },
     );
@@ -336,6 +348,15 @@ export function defineStep<
 > {
   const features = (config.features ?? []) as AnyStepFeature[];
   const grants = collectGrants(config.key, features);
+  if (
+    grants.some(
+      (grant) => grant.action === "update" && grant.scope === "project",
+    )
+  ) {
+    throw new Error(
+      `Step "${config.key}": Features.workItems.update({ scope: "project" }) is for code steps only. Use it in codeStep(), or use scope "self" or "children" here.`,
+    );
+  }
 
   // Merge each feature's result extension into the base schema.
   let effectiveResult: ZodType | undefined = config.result;
@@ -379,6 +400,7 @@ export function defineStep<
   );
   assertStepMcpInput(config);
   assertNoConnectorMcpCollisions(config.key, config.environment, config.mcps);
+  assertNoAgentBasicPlaceholders(config.key, config.mcps);
   const mcpFields = mergeStepMcps(config.key, {
     mcps: config.mcps,
     healthChecks: config.healthChecks,

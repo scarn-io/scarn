@@ -17,6 +17,11 @@ export type ManagedConnectionPreset = {
   issuerOrigin: string;
   /** Presets never supply a client (decision 6). */
   clientRegistration: Exclude<ManagedConnectionClientRegistration, "supplied">;
+  /**
+   * The scopes every sign-in asks for, copied onto the connection. When
+   * absent, a sign-in asks for what the server's metadata advertises.
+   */
+  scopes?: readonly string[];
   /** Where people remove Scarn's access on the provider's side. */
   removalUrl?: string;
   /** Reads who signed in from the raw token response; null when the identity fields are malformed. */
@@ -54,6 +59,7 @@ export function managedConnectionDefinitionOf(
       resource,
       issuerOrigin: preset.issuerOrigin,
       clientRegistration: preset.clientRegistration,
+      ...(preset.scopes === undefined ? {} : { scopes: [...preset.scopes] }),
     },
   };
 }

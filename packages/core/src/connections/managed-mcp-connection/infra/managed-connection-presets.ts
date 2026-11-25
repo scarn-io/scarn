@@ -74,6 +74,22 @@ export const MANAGED_CONNECTION_PRESETS = {
     requireIssParameter: false,
     revokeReplacedGrants: false,
   },
+  atlassian: {
+    label: "Atlassian",
+    resource: "https://mcp.atlassian.com/v2/mcp",
+    issuerOrigin: "https://auth.atlassian.com",
+    clientRegistration: "cimd",
+    scopes: [
+      "read:me",
+      "read:account",
+      "offline_access",
+      "read:jira:agent-interface",
+      "search:jira:agent-interface",
+    ],
+    removalUrl: "https://id.atlassian.com/manage-profile/apps",
+    requireIssParameter: false,
+    revokeReplacedGrants: false,
+  },
 } satisfies Record<string, ManagedConnectionPreset>;
 
 export type ManagedConnectionPresetKey =

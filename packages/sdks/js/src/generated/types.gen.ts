@@ -985,7 +985,6 @@ export type PostApiProjectsData = {
                 apiToken: string;
             };
             firstSyncHorizonDays?: number;
-            autoSync?: boolean;
         } | {
             type: 'bitbucket';
             credential: {
@@ -1016,7 +1015,6 @@ export type PostApiProjectsData = {
                 apiToken: string;
             };
             firstSyncHorizonDays?: number;
-            autoSync?: boolean;
         };
     };
     path?: never;
@@ -1638,6 +1636,12 @@ export type GetApiStepDefinitionsResponses = {
             scope: 'self' | 'children';
         } | {
             resource: 'workItem';
+            action: 'update';
+            scope: 'project';
+            keyPrefix?: string;
+            labels?: Array<string>;
+        } | {
+            resource: 'workItem';
             action: 'comment';
             scope: 'self' | 'children';
         } | {
@@ -1656,8 +1660,14 @@ export type GetApiStepDefinitionsResponses = {
         } | {
             resource: 'workItem';
             action: 'create';
-            scope: 'children' | 'project';
+            scope: 'children';
             labels: Array<string>;
+        } | {
+            resource: 'workItem';
+            action: 'create';
+            scope: 'project';
+            labels: Array<string>;
+            keyPrefix?: string;
         }>;
         maxTurns: number | null;
         concurrency: {
@@ -1688,6 +1698,17 @@ export type GetApiStepDefinitionsResponses = {
                     optional: boolean;
                     default?: string;
                     mcp?: string;
+                    applies: 'agent';
+                } | {
+                    name: string;
+                    source: 'secret';
+                    secretName: string;
+                    applies: 'agent';
+                } | {
+                    name: string;
+                    source: 'value';
+                    value: string;
+                    secret: boolean;
                     applies: 'agent';
                 }>;
             } | {
@@ -1721,6 +1742,17 @@ export type GetApiStepDefinitionsResponses = {
                     default?: string;
                     mcp?: string;
                     applies: 'agent';
+                } | {
+                    name: string;
+                    source: 'secret';
+                    secretName: string;
+                    applies: 'agent';
+                } | {
+                    name: string;
+                    source: 'value';
+                    value: string;
+                    secret: boolean;
+                    applies: 'agent';
                 }>;
                 auth?: {
                     connection: string;
@@ -1736,6 +1768,17 @@ export type GetApiStepDefinitionsResponses = {
                     optional: boolean;
                     default?: string;
                     mcp?: string;
+                    applies: 'agent';
+                } | {
+                    name: string;
+                    source: 'secret';
+                    secretName: string;
+                    applies: 'agent';
+                } | {
+                    name: string;
+                    source: 'value';
+                    value: string;
+                    secret: boolean;
                     applies: 'agent';
                 }>;
                 auth?: {
@@ -1878,6 +1921,12 @@ export type PostApiStepDefinitionsData = {
             scope: 'self' | 'children';
         } | {
             resource: 'workItem';
+            action: 'update';
+            scope: 'project';
+            keyPrefix?: string;
+            labels?: Array<string>;
+        } | {
+            resource: 'workItem';
             action: 'comment';
             scope: 'self' | 'children';
         } | {
@@ -1896,8 +1945,14 @@ export type PostApiStepDefinitionsData = {
         } | {
             resource: 'workItem';
             action: 'create';
-            scope: 'children' | 'project';
+            scope: 'children';
             labels: Array<string>;
+        } | {
+            resource: 'workItem';
+            action: 'create';
+            scope: 'project';
+            labels: Array<string>;
+            keyPrefix?: string;
         }>;
         maxTurns?: number | null;
         concurrency?: {
@@ -1928,6 +1983,17 @@ export type PostApiStepDefinitionsData = {
                     optional: boolean;
                     default?: string;
                     mcp?: string;
+                    applies: 'agent';
+                } | {
+                    name: string;
+                    source: 'secret';
+                    secretName: string;
+                    applies: 'agent';
+                } | {
+                    name: string;
+                    source: 'value';
+                    value: string;
+                    secret: boolean;
                     applies: 'agent';
                 }>;
             } | {
@@ -1961,6 +2027,17 @@ export type PostApiStepDefinitionsData = {
                     default?: string;
                     mcp?: string;
                     applies: 'agent';
+                } | {
+                    name: string;
+                    source: 'secret';
+                    secretName: string;
+                    applies: 'agent';
+                } | {
+                    name: string;
+                    source: 'value';
+                    value: string;
+                    secret: boolean;
+                    applies: 'agent';
                 }>;
                 auth?: {
                     connection: string;
@@ -1976,6 +2053,17 @@ export type PostApiStepDefinitionsData = {
                     optional: boolean;
                     default?: string;
                     mcp?: string;
+                    applies: 'agent';
+                } | {
+                    name: string;
+                    source: 'secret';
+                    secretName: string;
+                    applies: 'agent';
+                } | {
+                    name: string;
+                    source: 'value';
+                    value: string;
+                    secret: boolean;
                     applies: 'agent';
                 }>;
                 auth?: {
@@ -2259,6 +2347,12 @@ export type PostApiStepDefinitionsResponses = {
             scope: 'self' | 'children';
         } | {
             resource: 'workItem';
+            action: 'update';
+            scope: 'project';
+            keyPrefix?: string;
+            labels?: Array<string>;
+        } | {
+            resource: 'workItem';
             action: 'comment';
             scope: 'self' | 'children';
         } | {
@@ -2277,8 +2371,14 @@ export type PostApiStepDefinitionsResponses = {
         } | {
             resource: 'workItem';
             action: 'create';
-            scope: 'children' | 'project';
+            scope: 'children';
             labels: Array<string>;
+        } | {
+            resource: 'workItem';
+            action: 'create';
+            scope: 'project';
+            labels: Array<string>;
+            keyPrefix?: string;
         }>;
         maxTurns: number | null;
         concurrency: {
@@ -2309,6 +2409,17 @@ export type PostApiStepDefinitionsResponses = {
                     optional: boolean;
                     default?: string;
                     mcp?: string;
+                    applies: 'agent';
+                } | {
+                    name: string;
+                    source: 'secret';
+                    secretName: string;
+                    applies: 'agent';
+                } | {
+                    name: string;
+                    source: 'value';
+                    value: string;
+                    secret: boolean;
                     applies: 'agent';
                 }>;
             } | {
@@ -2342,6 +2453,17 @@ export type PostApiStepDefinitionsResponses = {
                     default?: string;
                     mcp?: string;
                     applies: 'agent';
+                } | {
+                    name: string;
+                    source: 'secret';
+                    secretName: string;
+                    applies: 'agent';
+                } | {
+                    name: string;
+                    source: 'value';
+                    value: string;
+                    secret: boolean;
+                    applies: 'agent';
                 }>;
                 auth?: {
                     connection: string;
@@ -2357,6 +2479,17 @@ export type PostApiStepDefinitionsResponses = {
                     optional: boolean;
                     default?: string;
                     mcp?: string;
+                    applies: 'agent';
+                } | {
+                    name: string;
+                    source: 'secret';
+                    secretName: string;
+                    applies: 'agent';
+                } | {
+                    name: string;
+                    source: 'value';
+                    value: string;
+                    secret: boolean;
                     applies: 'agent';
                 }>;
                 auth?: {
@@ -2499,6 +2632,12 @@ export type PutApiStepDefinitionsData = {
             scope: 'self' | 'children';
         } | {
             resource: 'workItem';
+            action: 'update';
+            scope: 'project';
+            keyPrefix?: string;
+            labels?: Array<string>;
+        } | {
+            resource: 'workItem';
             action: 'comment';
             scope: 'self' | 'children';
         } | {
@@ -2517,8 +2656,14 @@ export type PutApiStepDefinitionsData = {
         } | {
             resource: 'workItem';
             action: 'create';
-            scope: 'children' | 'project';
+            scope: 'children';
             labels: Array<string>;
+        } | {
+            resource: 'workItem';
+            action: 'create';
+            scope: 'project';
+            labels: Array<string>;
+            keyPrefix?: string;
         }>;
         maxTurns?: number | null;
         concurrency?: {
@@ -2549,6 +2694,17 @@ export type PutApiStepDefinitionsData = {
                     optional: boolean;
                     default?: string;
                     mcp?: string;
+                    applies: 'agent';
+                } | {
+                    name: string;
+                    source: 'secret';
+                    secretName: string;
+                    applies: 'agent';
+                } | {
+                    name: string;
+                    source: 'value';
+                    value: string;
+                    secret: boolean;
                     applies: 'agent';
                 }>;
             } | {
@@ -2582,6 +2738,17 @@ export type PutApiStepDefinitionsData = {
                     default?: string;
                     mcp?: string;
                     applies: 'agent';
+                } | {
+                    name: string;
+                    source: 'secret';
+                    secretName: string;
+                    applies: 'agent';
+                } | {
+                    name: string;
+                    source: 'value';
+                    value: string;
+                    secret: boolean;
+                    applies: 'agent';
                 }>;
                 auth?: {
                     connection: string;
@@ -2597,6 +2764,17 @@ export type PutApiStepDefinitionsData = {
                     optional: boolean;
                     default?: string;
                     mcp?: string;
+                    applies: 'agent';
+                } | {
+                    name: string;
+                    source: 'secret';
+                    secretName: string;
+                    applies: 'agent';
+                } | {
+                    name: string;
+                    source: 'value';
+                    value: string;
+                    secret: boolean;
                     applies: 'agent';
                 }>;
                 auth?: {
@@ -2842,6 +3020,12 @@ export type PutApiStepDefinitionsResponses = {
             scope: 'self' | 'children';
         } | {
             resource: 'workItem';
+            action: 'update';
+            scope: 'project';
+            keyPrefix?: string;
+            labels?: Array<string>;
+        } | {
+            resource: 'workItem';
             action: 'comment';
             scope: 'self' | 'children';
         } | {
@@ -2860,8 +3044,14 @@ export type PutApiStepDefinitionsResponses = {
         } | {
             resource: 'workItem';
             action: 'create';
-            scope: 'children' | 'project';
+            scope: 'children';
             labels: Array<string>;
+        } | {
+            resource: 'workItem';
+            action: 'create';
+            scope: 'project';
+            labels: Array<string>;
+            keyPrefix?: string;
         }>;
         maxTurns: number | null;
         concurrency: {
@@ -2892,6 +3082,17 @@ export type PutApiStepDefinitionsResponses = {
                     optional: boolean;
                     default?: string;
                     mcp?: string;
+                    applies: 'agent';
+                } | {
+                    name: string;
+                    source: 'secret';
+                    secretName: string;
+                    applies: 'agent';
+                } | {
+                    name: string;
+                    source: 'value';
+                    value: string;
+                    secret: boolean;
                     applies: 'agent';
                 }>;
             } | {
@@ -2925,6 +3126,17 @@ export type PutApiStepDefinitionsResponses = {
                     default?: string;
                     mcp?: string;
                     applies: 'agent';
+                } | {
+                    name: string;
+                    source: 'secret';
+                    secretName: string;
+                    applies: 'agent';
+                } | {
+                    name: string;
+                    source: 'value';
+                    value: string;
+                    secret: boolean;
+                    applies: 'agent';
                 }>;
                 auth?: {
                     connection: string;
@@ -2940,6 +3152,17 @@ export type PutApiStepDefinitionsResponses = {
                     optional: boolean;
                     default?: string;
                     mcp?: string;
+                    applies: 'agent';
+                } | {
+                    name: string;
+                    source: 'secret';
+                    secretName: string;
+                    applies: 'agent';
+                } | {
+                    name: string;
+                    source: 'value';
+                    value: string;
+                    secret: boolean;
                     applies: 'agent';
                 }>;
                 auth?: {
@@ -3195,6 +3418,12 @@ export type GetApiStepDefinitionsByStepDefinitionIdResponses = {
             scope: 'self' | 'children';
         } | {
             resource: 'workItem';
+            action: 'update';
+            scope: 'project';
+            keyPrefix?: string;
+            labels?: Array<string>;
+        } | {
+            resource: 'workItem';
             action: 'comment';
             scope: 'self' | 'children';
         } | {
@@ -3213,8 +3442,14 @@ export type GetApiStepDefinitionsByStepDefinitionIdResponses = {
         } | {
             resource: 'workItem';
             action: 'create';
-            scope: 'children' | 'project';
+            scope: 'children';
             labels: Array<string>;
+        } | {
+            resource: 'workItem';
+            action: 'create';
+            scope: 'project';
+            labels: Array<string>;
+            keyPrefix?: string;
         }>;
         maxTurns: number | null;
         concurrency: {
@@ -3245,6 +3480,17 @@ export type GetApiStepDefinitionsByStepDefinitionIdResponses = {
                     optional: boolean;
                     default?: string;
                     mcp?: string;
+                    applies: 'agent';
+                } | {
+                    name: string;
+                    source: 'secret';
+                    secretName: string;
+                    applies: 'agent';
+                } | {
+                    name: string;
+                    source: 'value';
+                    value: string;
+                    secret: boolean;
                     applies: 'agent';
                 }>;
             } | {
@@ -3278,6 +3524,17 @@ export type GetApiStepDefinitionsByStepDefinitionIdResponses = {
                     default?: string;
                     mcp?: string;
                     applies: 'agent';
+                } | {
+                    name: string;
+                    source: 'secret';
+                    secretName: string;
+                    applies: 'agent';
+                } | {
+                    name: string;
+                    source: 'value';
+                    value: string;
+                    secret: boolean;
+                    applies: 'agent';
                 }>;
                 auth?: {
                     connection: string;
@@ -3293,6 +3550,17 @@ export type GetApiStepDefinitionsByStepDefinitionIdResponses = {
                     optional: boolean;
                     default?: string;
                     mcp?: string;
+                    applies: 'agent';
+                } | {
+                    name: string;
+                    source: 'secret';
+                    secretName: string;
+                    applies: 'agent';
+                } | {
+                    name: string;
+                    source: 'value';
+                    value: string;
+                    secret: boolean;
                     applies: 'agent';
                 }>;
                 auth?: {
@@ -3548,6 +3816,12 @@ export type PutApiStepDefinitionsByStepDefinitionIdArchiveResponses = {
             scope: 'self' | 'children';
         } | {
             resource: 'workItem';
+            action: 'update';
+            scope: 'project';
+            keyPrefix?: string;
+            labels?: Array<string>;
+        } | {
+            resource: 'workItem';
             action: 'comment';
             scope: 'self' | 'children';
         } | {
@@ -3566,8 +3840,14 @@ export type PutApiStepDefinitionsByStepDefinitionIdArchiveResponses = {
         } | {
             resource: 'workItem';
             action: 'create';
-            scope: 'children' | 'project';
+            scope: 'children';
             labels: Array<string>;
+        } | {
+            resource: 'workItem';
+            action: 'create';
+            scope: 'project';
+            labels: Array<string>;
+            keyPrefix?: string;
         }>;
         maxTurns: number | null;
         concurrency: {
@@ -3598,6 +3878,17 @@ export type PutApiStepDefinitionsByStepDefinitionIdArchiveResponses = {
                     optional: boolean;
                     default?: string;
                     mcp?: string;
+                    applies: 'agent';
+                } | {
+                    name: string;
+                    source: 'secret';
+                    secretName: string;
+                    applies: 'agent';
+                } | {
+                    name: string;
+                    source: 'value';
+                    value: string;
+                    secret: boolean;
                     applies: 'agent';
                 }>;
             } | {
@@ -3631,6 +3922,17 @@ export type PutApiStepDefinitionsByStepDefinitionIdArchiveResponses = {
                     default?: string;
                     mcp?: string;
                     applies: 'agent';
+                } | {
+                    name: string;
+                    source: 'secret';
+                    secretName: string;
+                    applies: 'agent';
+                } | {
+                    name: string;
+                    source: 'value';
+                    value: string;
+                    secret: boolean;
+                    applies: 'agent';
                 }>;
                 auth?: {
                     connection: string;
@@ -3646,6 +3948,17 @@ export type PutApiStepDefinitionsByStepDefinitionIdArchiveResponses = {
                     optional: boolean;
                     default?: string;
                     mcp?: string;
+                    applies: 'agent';
+                } | {
+                    name: string;
+                    source: 'secret';
+                    secretName: string;
+                    applies: 'agent';
+                } | {
+                    name: string;
+                    source: 'value';
+                    value: string;
+                    secret: boolean;
                     applies: 'agent';
                 }>;
                 auth?: {
@@ -3921,6 +4234,12 @@ export type PostApiTasksResponses = {
                 scope: 'self' | 'children';
             } | {
                 resource: 'workItem';
+                action: 'update';
+                scope: 'project';
+                keyPrefix?: string;
+                labels?: Array<string>;
+            } | {
+                resource: 'workItem';
                 action: 'comment';
                 scope: 'self' | 'children';
             } | {
@@ -3939,8 +4258,14 @@ export type PostApiTasksResponses = {
             } | {
                 resource: 'workItem';
                 action: 'create';
-                scope: 'children' | 'project';
+                scope: 'children';
                 labels: Array<string>;
+            } | {
+                resource: 'workItem';
+                action: 'create';
+                scope: 'project';
+                labels: Array<string>;
+                keyPrefix?: string;
             }>;
             maxTurns: number | null;
             heartbeatSeconds: number | null;
@@ -4395,6 +4720,12 @@ export type GetApiTasksByTaskIdResponses = {
             scope: 'self' | 'children';
         } | {
             resource: 'workItem';
+            action: 'update';
+            scope: 'project';
+            keyPrefix?: string;
+            labels?: Array<string>;
+        } | {
+            resource: 'workItem';
             action: 'comment';
             scope: 'self' | 'children';
         } | {
@@ -4413,8 +4744,14 @@ export type GetApiTasksByTaskIdResponses = {
         } | {
             resource: 'workItem';
             action: 'create';
-            scope: 'children' | 'project';
+            scope: 'children';
             labels: Array<string>;
+        } | {
+            resource: 'workItem';
+            action: 'create';
+            scope: 'project';
+            labels: Array<string>;
+            keyPrefix?: string;
         }>;
         maxTurns: number | null;
         heartbeatSeconds: number | null;
@@ -5553,6 +5890,12 @@ export type PostApiTaskRunsByTaskRunIdWorkerContextResponses = {
                 scope: 'self' | 'children';
             } | {
                 resource: 'workItem';
+                action: 'update';
+                scope: 'project';
+                keyPrefix?: string;
+                labels?: Array<string>;
+            } | {
+                resource: 'workItem';
                 action: 'comment';
                 scope: 'self' | 'children';
             } | {
@@ -5571,8 +5914,14 @@ export type PostApiTaskRunsByTaskRunIdWorkerContextResponses = {
             } | {
                 resource: 'workItem';
                 action: 'create';
-                scope: 'children' | 'project';
+                scope: 'children';
                 labels: Array<string>;
+            } | {
+                resource: 'workItem';
+                action: 'create';
+                scope: 'project';
+                labels: Array<string>;
+                keyPrefix?: string;
             }>;
         };
         runtime: {
@@ -5713,6 +6062,17 @@ export type PostApiTaskRunsByTaskRunIdWorkerContextResponses = {
                         default?: string;
                         mcp?: string;
                         applies: 'agent';
+                    } | {
+                        name: string;
+                        source: 'secret';
+                        secretName: string;
+                        applies: 'agent';
+                    } | {
+                        name: string;
+                        source: 'value';
+                        value: string;
+                        secret: boolean;
+                        applies: 'agent';
                     }>;
                 } | {
                     type: 'remote';
@@ -5745,6 +6105,17 @@ export type PostApiTaskRunsByTaskRunIdWorkerContextResponses = {
                         default?: string;
                         mcp?: string;
                         applies: 'agent';
+                    } | {
+                        name: string;
+                        source: 'secret';
+                        secretName: string;
+                        applies: 'agent';
+                    } | {
+                        name: string;
+                        source: 'value';
+                        value: string;
+                        secret: boolean;
+                        applies: 'agent';
                     }>;
                     auth?: {
                         connection: string;
@@ -5760,6 +6131,17 @@ export type PostApiTaskRunsByTaskRunIdWorkerContextResponses = {
                         optional: boolean;
                         default?: string;
                         mcp?: string;
+                        applies: 'agent';
+                    } | {
+                        name: string;
+                        source: 'secret';
+                        secretName: string;
+                        applies: 'agent';
+                    } | {
+                        name: string;
+                        source: 'value';
+                        value: string;
+                        secret: boolean;
                         applies: 'agent';
                     }>;
                     auth?: {
@@ -7579,6 +7961,334 @@ export type PostApiTaskRunsByTaskRunIdWorkItemCreatesResponses = {
 };
 
 export type PostApiTaskRunsByTaskRunIdWorkItemCreatesResponse = PostApiTaskRunsByTaskRunIdWorkItemCreatesResponses[keyof PostApiTaskRunsByTaskRunIdWorkItemCreatesResponses];
+
+export type PostApiTaskRunsByTaskRunIdWorkItemUpsertsData = {
+    body: {
+        claimToken: string;
+        items: Array<{
+            platformId?: string | null;
+            platformKey: string;
+            url?: string | null;
+            title: string;
+            description: string;
+            sourceCreatedAt?: string | null;
+            fields?: {
+                [key: string]: unknown;
+            };
+            state?: 'open' | 'closed';
+            labels?: Array<string>;
+            platform: 'custom' | 'jira' | 'github';
+            sourceUpdatedAt: string;
+        }>;
+    };
+    path: {
+        taskRunId: string;
+    };
+    query?: never;
+    url: '/api/task-runs/{taskRunId}/work-item-upserts';
+};
+
+export type PostApiTaskRunsByTaskRunIdWorkItemUpsertsErrors = {
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 404
+     */
+    404: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 409
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 413
+     */
+    413: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type PostApiTaskRunsByTaskRunIdWorkItemUpsertsError = PostApiTaskRunsByTaskRunIdWorkItemUpsertsErrors[keyof PostApiTaskRunsByTaskRunIdWorkItemUpsertsErrors];
+
+export type PostApiTaskRunsByTaskRunIdWorkItemUpsertsResponses = {
+    /**
+     * Response for status 200
+     */
+    200: {
+        items: Array<{
+            workItemId: string;
+            platform: 'jira' | 'github' | 'bitbucket' | 'linear' | 'scarn' | 'custom';
+            platformKey: string;
+            outcome: 'created' | 'updated';
+        }>;
+        counts: {
+            created: number;
+            updated: number;
+            unchanged: number;
+        };
+    };
+};
+
+export type PostApiTaskRunsByTaskRunIdWorkItemUpsertsResponse = PostApiTaskRunsByTaskRunIdWorkItemUpsertsResponses[keyof PostApiTaskRunsByTaskRunIdWorkItemUpsertsResponses];
+
+export type PostApiTaskRunsByTaskRunIdWorkItemSourceCursorData = {
+    body: {
+        claimToken: string;
+        platform: 'custom' | 'jira' | 'github';
+        keyPrefix?: string;
+    };
+    path: {
+        taskRunId: string;
+    };
+    query?: never;
+    url: '/api/task-runs/{taskRunId}/work-item-source-cursor';
+};
+
+export type PostApiTaskRunsByTaskRunIdWorkItemSourceCursorErrors = {
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 404
+     */
+    404: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 409
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type PostApiTaskRunsByTaskRunIdWorkItemSourceCursorError = PostApiTaskRunsByTaskRunIdWorkItemSourceCursorErrors[keyof PostApiTaskRunsByTaskRunIdWorkItemSourceCursorErrors];
+
+export type PostApiTaskRunsByTaskRunIdWorkItemSourceCursorResponses = {
+    /**
+     * Response for status 200
+     */
+    200: {
+        sourceUpdatedAt: string | null;
+    };
+};
+
+export type PostApiTaskRunsByTaskRunIdWorkItemSourceCursorResponse = PostApiTaskRunsByTaskRunIdWorkItemSourceCursorResponses[keyof PostApiTaskRunsByTaskRunIdWorkItemSourceCursorResponses];
 
 export type PostApiTaskRunsByTaskRunIdArtifactUploadUrlData = {
     body: {
@@ -19821,7 +20531,7 @@ export type GetApiWorkItemCommentDraftsResponses = {
             taskId: string | null;
             agentSessionId: string | null;
             recipientUserId: string | null;
-            kind: 'feedback_request' | 'status_update' | 'blocked' | 'result_ready' | 'warning' | 'integration_auto_sync_paused';
+            kind: 'feedback_request' | 'status_update' | 'blocked' | 'result_ready' | 'warning';
             audience: 'assignee' | 'reporter' | 'project_admins' | 'specific_users';
             title: string;
             body: string;
@@ -20231,7 +20941,7 @@ export type PostApiWorkItemCommentDraftsByNotificationIdRejectResponses = {
         taskId: string | null;
         agentSessionId: string | null;
         recipientUserId: string | null;
-        kind: 'feedback_request' | 'status_update' | 'blocked' | 'result_ready' | 'warning' | 'integration_auto_sync_paused';
+        kind: 'feedback_request' | 'status_update' | 'blocked' | 'result_ready' | 'warning';
         audience: 'assignee' | 'reporter' | 'project_admins' | 'specific_users';
         title: string;
         body: string;
@@ -21293,7 +22003,7 @@ export type GetApiProjectsByProjectIdNotificationsResponses = {
         taskId: string | null;
         agentSessionId: string | null;
         recipientUserId: string | null;
-        kind: 'feedback_request' | 'status_update' | 'blocked' | 'result_ready' | 'warning' | 'integration_auto_sync_paused';
+        kind: 'feedback_request' | 'status_update' | 'blocked' | 'result_ready' | 'warning';
         audience: 'assignee' | 'reporter' | 'project_admins' | 'specific_users';
         title: string;
         body: string;
@@ -21432,7 +22142,7 @@ export type GetApiProjectsByProjectIdNotificationsByNotificationIdResponses = {
         taskId: string | null;
         agentSessionId: string | null;
         recipientUserId: string | null;
-        kind: 'feedback_request' | 'status_update' | 'blocked' | 'result_ready' | 'warning' | 'integration_auto_sync_paused';
+        kind: 'feedback_request' | 'status_update' | 'blocked' | 'result_ready' | 'warning';
         audience: 'assignee' | 'reporter' | 'project_admins' | 'specific_users';
         title: string;
         body: string;
@@ -21701,7 +22411,7 @@ export type PostApiProjectsByProjectIdNotificationsByNotificationIdRespondRespon
         taskId: string | null;
         agentSessionId: string | null;
         recipientUserId: string | null;
-        kind: 'feedback_request' | 'status_update' | 'blocked' | 'result_ready' | 'warning' | 'integration_auto_sync_paused';
+        kind: 'feedback_request' | 'status_update' | 'blocked' | 'result_ready' | 'warning';
         audience: 'assignee' | 'reporter' | 'project_admins' | 'specific_users';
         title: string;
         body: string;
@@ -22135,7 +22845,7 @@ export type GetApiProjectsByProjectIdNotificationRulesResponses = {
     200: Array<{
         id: string;
         projectId: string;
-        kind: 'feedback_request' | 'status_update' | 'blocked' | 'result_ready' | 'warning' | 'integration_auto_sync_paused';
+        kind: 'feedback_request' | 'status_update' | 'blocked' | 'result_ready' | 'warning';
         channel: 'in_app' | 'work_item_platform_comment' | 'email' | 'slack';
         enabled: boolean;
         minPriority: 'low' | 'normal' | 'high' | 'urgent' | null;
@@ -22151,7 +22861,7 @@ export type GetApiProjectsByProjectIdNotificationRulesResponse = GetApiProjectsB
 
 export type PutApiProjectsByProjectIdNotificationRulesData = {
     body: {
-        kind: 'feedback_request' | 'status_update' | 'blocked' | 'result_ready' | 'warning' | 'integration_auto_sync_paused';
+        kind: 'feedback_request' | 'status_update' | 'blocked' | 'result_ready' | 'warning';
         channel: 'in_app' | 'work_item_platform_comment' | 'email' | 'slack';
         enabled: boolean;
         minPriority: 'low' | 'normal' | 'high' | 'urgent' | null;
@@ -22273,7 +22983,7 @@ export type PutApiProjectsByProjectIdNotificationRulesResponses = {
     200: {
         id: string;
         projectId: string;
-        kind: 'feedback_request' | 'status_update' | 'blocked' | 'result_ready' | 'warning' | 'integration_auto_sync_paused';
+        kind: 'feedback_request' | 'status_update' | 'blocked' | 'result_ready' | 'warning';
         channel: 'in_app' | 'work_item_platform_comment' | 'email' | 'slack';
         enabled: boolean;
         minPriority: 'low' | 'normal' | 'high' | 'urgent' | null;
@@ -22404,18 +23114,6 @@ export type GetApiProjectsByProjectIdIntegrationsResponses = {
         id: string;
         projectId: string;
         status: 'active' | 'paused' | 'error';
-        autoSync: {
-            supported: boolean;
-            state: 'off' | 'on' | 'paused';
-            syncsAs: {
-                userId: string;
-                displayName: string | null;
-                secretName: string;
-            } | null;
-            pausedReason: 'key_removed' | 'key_rejected' | 'key_expired' | 'owner_left_project' | 'access_lost' | null;
-            pausedDetail: string | null;
-            pausedAt: string | null;
-        };
         lastSyncedAt: string | null;
         lastError: string | null;
         firstSyncHorizonDays: number | null;
@@ -22435,18 +23133,6 @@ export type GetApiProjectsByProjectIdIntegrationsResponses = {
         id: string;
         projectId: string;
         status: 'active' | 'paused' | 'error';
-        autoSync: {
-            supported: boolean;
-            state: 'off' | 'on' | 'paused';
-            syncsAs: {
-                userId: string;
-                displayName: string | null;
-                secretName: string;
-            } | null;
-            pausedReason: 'key_removed' | 'key_rejected' | 'key_expired' | 'owner_left_project' | 'access_lost' | null;
-            pausedDetail: string | null;
-            pausedAt: string | null;
-        };
         lastSyncedAt: string | null;
         lastError: string | null;
         firstSyncHorizonDays: number | null;
@@ -22465,18 +23151,6 @@ export type GetApiProjectsByProjectIdIntegrationsResponses = {
         id: string;
         projectId: string;
         status: 'active' | 'paused' | 'error';
-        autoSync: {
-            supported: boolean;
-            state: 'off' | 'on' | 'paused';
-            syncsAs: {
-                userId: string;
-                displayName: string | null;
-                secretName: string;
-            } | null;
-            pausedReason: 'key_removed' | 'key_rejected' | 'key_expired' | 'owner_left_project' | 'access_lost' | null;
-            pausedDetail: string | null;
-            pausedAt: string | null;
-        };
         lastSyncedAt: string | null;
         lastError: string | null;
         firstSyncHorizonDays: number | null;
@@ -22496,18 +23170,6 @@ export type GetApiProjectsByProjectIdIntegrationsResponses = {
         id: string;
         projectId: string;
         status: 'active' | 'paused' | 'error';
-        autoSync: {
-            supported: boolean;
-            state: 'off' | 'on' | 'paused';
-            syncsAs: {
-                userId: string;
-                displayName: string | null;
-                secretName: string;
-            } | null;
-            pausedReason: 'key_removed' | 'key_rejected' | 'key_expired' | 'owner_left_project' | 'access_lost' | null;
-            pausedDetail: string | null;
-            pausedAt: string | null;
-        };
         lastSyncedAt: string | null;
         lastError: string | null;
         firstSyncHorizonDays: number | null;
@@ -22661,18 +23323,6 @@ export type PostApiProjectsByProjectIdIntegrationsResponses = {
         id: string;
         projectId: string;
         status: 'active' | 'paused' | 'error';
-        autoSync: {
-            supported: boolean;
-            state: 'off' | 'on' | 'paused';
-            syncsAs: {
-                userId: string;
-                displayName: string | null;
-                secretName: string;
-            } | null;
-            pausedReason: 'key_removed' | 'key_rejected' | 'key_expired' | 'owner_left_project' | 'access_lost' | null;
-            pausedDetail: string | null;
-            pausedAt: string | null;
-        };
         lastSyncedAt: string | null;
         lastError: string | null;
         firstSyncHorizonDays: number | null;
@@ -22692,18 +23342,6 @@ export type PostApiProjectsByProjectIdIntegrationsResponses = {
         id: string;
         projectId: string;
         status: 'active' | 'paused' | 'error';
-        autoSync: {
-            supported: boolean;
-            state: 'off' | 'on' | 'paused';
-            syncsAs: {
-                userId: string;
-                displayName: string | null;
-                secretName: string;
-            } | null;
-            pausedReason: 'key_removed' | 'key_rejected' | 'key_expired' | 'owner_left_project' | 'access_lost' | null;
-            pausedDetail: string | null;
-            pausedAt: string | null;
-        };
         lastSyncedAt: string | null;
         lastError: string | null;
         firstSyncHorizonDays: number | null;
@@ -22722,18 +23360,6 @@ export type PostApiProjectsByProjectIdIntegrationsResponses = {
         id: string;
         projectId: string;
         status: 'active' | 'paused' | 'error';
-        autoSync: {
-            supported: boolean;
-            state: 'off' | 'on' | 'paused';
-            syncsAs: {
-                userId: string;
-                displayName: string | null;
-                secretName: string;
-            } | null;
-            pausedReason: 'key_removed' | 'key_rejected' | 'key_expired' | 'owner_left_project' | 'access_lost' | null;
-            pausedDetail: string | null;
-            pausedAt: string | null;
-        };
         lastSyncedAt: string | null;
         lastError: string | null;
         firstSyncHorizonDays: number | null;
@@ -22753,18 +23379,6 @@ export type PostApiProjectsByProjectIdIntegrationsResponses = {
         id: string;
         projectId: string;
         status: 'active' | 'paused' | 'error';
-        autoSync: {
-            supported: boolean;
-            state: 'off' | 'on' | 'paused';
-            syncsAs: {
-                userId: string;
-                displayName: string | null;
-                secretName: string;
-            } | null;
-            pausedReason: 'key_removed' | 'key_rejected' | 'key_expired' | 'owner_left_project' | 'access_lost' | null;
-            pausedDetail: string | null;
-            pausedAt: string | null;
-        };
         lastSyncedAt: string | null;
         lastError: string | null;
         firstSyncHorizonDays: number | null;
@@ -23076,562 +23690,6 @@ export type DeleteApiProjectsByProjectIdIntegrationsByIntegrationIdResponses = {
      */
     200: unknown;
 };
-
-export type DeleteApiProjectsByProjectIdIntegrationsByIntegrationIdAutoSyncData = {
-    body?: never;
-    path: {
-        projectId: string;
-        integrationId: string;
-    };
-    query?: never;
-    url: '/api/projects/{projectId}/integrations/{integrationId}/auto-sync';
-};
-
-export type DeleteApiProjectsByProjectIdIntegrationsByIntegrationIdAutoSyncErrors = {
-    /**
-     * Response for status 400
-     */
-    400: {
-        type: string;
-        title: string;
-        status: number;
-        detail?: string;
-        instance?: string;
-        code?: string;
-        errors?: Array<{
-            path: string;
-            message: string;
-            summary?: string;
-        }>;
-        meta?: {
-            [key: string]: unknown;
-        };
-    };
-    /**
-     * Response for status 401
-     */
-    401: {
-        type: string;
-        title: string;
-        status: number;
-        detail?: string;
-        instance?: string;
-        code?: string;
-        errors?: Array<{
-            path: string;
-            message: string;
-            summary?: string;
-        }>;
-        meta?: {
-            [key: string]: unknown;
-        };
-    };
-    /**
-     * Response for status 403
-     */
-    403: {
-        type: string;
-        title: string;
-        status: number;
-        detail?: string;
-        instance?: string;
-        code?: string;
-        errors?: Array<{
-            path: string;
-            message: string;
-            summary?: string;
-        }>;
-        meta?: {
-            [key: string]: unknown;
-        };
-    };
-    /**
-     * Response for status 404
-     */
-    404: {
-        type: string;
-        title: string;
-        status: number;
-        detail?: string;
-        instance?: string;
-        code?: string;
-        errors?: Array<{
-            path: string;
-            message: string;
-            summary?: string;
-        }>;
-        meta?: {
-            [key: string]: unknown;
-        };
-    };
-    /**
-     * Response for status 422
-     */
-    422: {
-        type: string;
-        title: string;
-        status: number;
-        detail?: string;
-        instance?: string;
-        code?: string;
-        errors?: Array<{
-            path: string;
-            message: string;
-            summary?: string;
-        }>;
-        meta?: {
-            [key: string]: unknown;
-        };
-    };
-    /**
-     * Response for status 500
-     */
-    500: {
-        type: string;
-        title: string;
-        status: number;
-        detail?: string;
-        instance?: string;
-        code?: string;
-        errors?: Array<{
-            path: string;
-            message: string;
-            summary?: string;
-        }>;
-        meta?: {
-            [key: string]: unknown;
-        };
-    };
-    /**
-     * Response for status 502
-     */
-    502: {
-        type: string;
-        title: string;
-        status: number;
-        detail?: string;
-        instance?: string;
-        code?: string;
-        errors?: Array<{
-            path: string;
-            message: string;
-            summary?: string;
-        }>;
-        meta?: {
-            [key: string]: unknown;
-        };
-    };
-};
-
-export type DeleteApiProjectsByProjectIdIntegrationsByIntegrationIdAutoSyncError = DeleteApiProjectsByProjectIdIntegrationsByIntegrationIdAutoSyncErrors[keyof DeleteApiProjectsByProjectIdIntegrationsByIntegrationIdAutoSyncErrors];
-
-export type DeleteApiProjectsByProjectIdIntegrationsByIntegrationIdAutoSyncResponses = {
-    /**
-     * Response for status 200
-     */
-    200: {
-        id: string;
-        projectId: string;
-        status: 'active' | 'paused' | 'error';
-        autoSync: {
-            supported: boolean;
-            state: 'off' | 'on' | 'paused';
-            syncsAs: {
-                userId: string;
-                displayName: string | null;
-                secretName: string;
-            } | null;
-            pausedReason: 'key_removed' | 'key_rejected' | 'key_expired' | 'owner_left_project' | 'access_lost' | null;
-            pausedDetail: string | null;
-            pausedAt: string | null;
-        };
-        lastSyncedAt: string | null;
-        lastError: string | null;
-        firstSyncHorizonDays: number | null;
-        createdAt: string;
-        updatedAt: string;
-        kind: 'github_app';
-        platform: 'github';
-        authMode: 'github_app';
-        installationId: string;
-        externalScope: {
-            repos: Array<{
-                id: number;
-                fullName: string;
-            }>;
-        };
-    } | {
-        id: string;
-        projectId: string;
-        status: 'active' | 'paused' | 'error';
-        autoSync: {
-            supported: boolean;
-            state: 'off' | 'on' | 'paused';
-            syncsAs: {
-                userId: string;
-                displayName: string | null;
-                secretName: string;
-            } | null;
-            pausedReason: 'key_removed' | 'key_rejected' | 'key_expired' | 'owner_left_project' | 'access_lost' | null;
-            pausedDetail: string | null;
-            pausedAt: string | null;
-        };
-        lastSyncedAt: string | null;
-        lastError: string | null;
-        firstSyncHorizonDays: number | null;
-        createdAt: string;
-        updatedAt: string;
-        kind: 'github_token';
-        platform: 'github';
-        authMode: 'user_credential';
-        externalScope: {
-            repos: Array<{
-                id: number;
-                fullName: string;
-            }>;
-        };
-    } | {
-        id: string;
-        projectId: string;
-        status: 'active' | 'paused' | 'error';
-        autoSync: {
-            supported: boolean;
-            state: 'off' | 'on' | 'paused';
-            syncsAs: {
-                userId: string;
-                displayName: string | null;
-                secretName: string;
-            } | null;
-            pausedReason: 'key_removed' | 'key_rejected' | 'key_expired' | 'owner_left_project' | 'access_lost' | null;
-            pausedDetail: string | null;
-            pausedAt: string | null;
-        };
-        lastSyncedAt: string | null;
-        lastError: string | null;
-        firstSyncHorizonDays: number | null;
-        createdAt: string;
-        updatedAt: string;
-        kind: 'bitbucket';
-        platform: 'bitbucket';
-        authMode: 'user_credential';
-        externalScope: {
-            repos: Array<{
-                workspace: string;
-                slug: string;
-                fullName: string;
-            }>;
-        };
-    } | {
-        id: string;
-        projectId: string;
-        status: 'active' | 'paused' | 'error';
-        autoSync: {
-            supported: boolean;
-            state: 'off' | 'on' | 'paused';
-            syncsAs: {
-                userId: string;
-                displayName: string | null;
-                secretName: string;
-            } | null;
-            pausedReason: 'key_removed' | 'key_rejected' | 'key_expired' | 'owner_left_project' | 'access_lost' | null;
-            pausedDetail: string | null;
-            pausedAt: string | null;
-        };
-        lastSyncedAt: string | null;
-        lastError: string | null;
-        firstSyncHorizonDays: number | null;
-        createdAt: string;
-        updatedAt: string;
-        kind: 'jira';
-        platform: 'jira';
-        authMode: 'user_credential';
-        externalScope: {
-            baseUrl: string;
-            projectKeys: Array<string>;
-        };
-    };
-};
-
-export type DeleteApiProjectsByProjectIdIntegrationsByIntegrationIdAutoSyncResponse = DeleteApiProjectsByProjectIdIntegrationsByIntegrationIdAutoSyncResponses[keyof DeleteApiProjectsByProjectIdIntegrationsByIntegrationIdAutoSyncResponses];
-
-export type PutApiProjectsByProjectIdIntegrationsByIntegrationIdAutoSyncData = {
-    body: {
-        secretId: string;
-    };
-    path: {
-        projectId: string;
-        integrationId: string;
-    };
-    query?: never;
-    url: '/api/projects/{projectId}/integrations/{integrationId}/auto-sync';
-};
-
-export type PutApiProjectsByProjectIdIntegrationsByIntegrationIdAutoSyncErrors = {
-    /**
-     * Response for status 400
-     */
-    400: {
-        type: string;
-        title: string;
-        status: number;
-        detail?: string;
-        instance?: string;
-        code?: string;
-        errors?: Array<{
-            path: string;
-            message: string;
-            summary?: string;
-        }>;
-        meta?: {
-            [key: string]: unknown;
-        };
-    };
-    /**
-     * Response for status 401
-     */
-    401: {
-        type: string;
-        title: string;
-        status: number;
-        detail?: string;
-        instance?: string;
-        code?: string;
-        errors?: Array<{
-            path: string;
-            message: string;
-            summary?: string;
-        }>;
-        meta?: {
-            [key: string]: unknown;
-        };
-    };
-    /**
-     * Response for status 403
-     */
-    403: {
-        type: string;
-        title: string;
-        status: number;
-        detail?: string;
-        instance?: string;
-        code?: string;
-        errors?: Array<{
-            path: string;
-            message: string;
-            summary?: string;
-        }>;
-        meta?: {
-            [key: string]: unknown;
-        };
-    };
-    /**
-     * Response for status 404
-     */
-    404: {
-        type: string;
-        title: string;
-        status: number;
-        detail?: string;
-        instance?: string;
-        code?: string;
-        errors?: Array<{
-            path: string;
-            message: string;
-            summary?: string;
-        }>;
-        meta?: {
-            [key: string]: unknown;
-        };
-    };
-    /**
-     * Response for status 422
-     */
-    422: {
-        type: string;
-        title: string;
-        status: number;
-        detail?: string;
-        instance?: string;
-        code?: string;
-        errors?: Array<{
-            path: string;
-            message: string;
-            summary?: string;
-        }>;
-        meta?: {
-            [key: string]: unknown;
-        };
-    };
-    /**
-     * Response for status 500
-     */
-    500: {
-        type: string;
-        title: string;
-        status: number;
-        detail?: string;
-        instance?: string;
-        code?: string;
-        errors?: Array<{
-            path: string;
-            message: string;
-            summary?: string;
-        }>;
-        meta?: {
-            [key: string]: unknown;
-        };
-    };
-    /**
-     * Response for status 502
-     */
-    502: {
-        type: string;
-        title: string;
-        status: number;
-        detail?: string;
-        instance?: string;
-        code?: string;
-        errors?: Array<{
-            path: string;
-            message: string;
-            summary?: string;
-        }>;
-        meta?: {
-            [key: string]: unknown;
-        };
-    };
-};
-
-export type PutApiProjectsByProjectIdIntegrationsByIntegrationIdAutoSyncError = PutApiProjectsByProjectIdIntegrationsByIntegrationIdAutoSyncErrors[keyof PutApiProjectsByProjectIdIntegrationsByIntegrationIdAutoSyncErrors];
-
-export type PutApiProjectsByProjectIdIntegrationsByIntegrationIdAutoSyncResponses = {
-    /**
-     * Response for status 200
-     */
-    200: {
-        id: string;
-        projectId: string;
-        status: 'active' | 'paused' | 'error';
-        autoSync: {
-            supported: boolean;
-            state: 'off' | 'on' | 'paused';
-            syncsAs: {
-                userId: string;
-                displayName: string | null;
-                secretName: string;
-            } | null;
-            pausedReason: 'key_removed' | 'key_rejected' | 'key_expired' | 'owner_left_project' | 'access_lost' | null;
-            pausedDetail: string | null;
-            pausedAt: string | null;
-        };
-        lastSyncedAt: string | null;
-        lastError: string | null;
-        firstSyncHorizonDays: number | null;
-        createdAt: string;
-        updatedAt: string;
-        kind: 'github_app';
-        platform: 'github';
-        authMode: 'github_app';
-        installationId: string;
-        externalScope: {
-            repos: Array<{
-                id: number;
-                fullName: string;
-            }>;
-        };
-    } | {
-        id: string;
-        projectId: string;
-        status: 'active' | 'paused' | 'error';
-        autoSync: {
-            supported: boolean;
-            state: 'off' | 'on' | 'paused';
-            syncsAs: {
-                userId: string;
-                displayName: string | null;
-                secretName: string;
-            } | null;
-            pausedReason: 'key_removed' | 'key_rejected' | 'key_expired' | 'owner_left_project' | 'access_lost' | null;
-            pausedDetail: string | null;
-            pausedAt: string | null;
-        };
-        lastSyncedAt: string | null;
-        lastError: string | null;
-        firstSyncHorizonDays: number | null;
-        createdAt: string;
-        updatedAt: string;
-        kind: 'github_token';
-        platform: 'github';
-        authMode: 'user_credential';
-        externalScope: {
-            repos: Array<{
-                id: number;
-                fullName: string;
-            }>;
-        };
-    } | {
-        id: string;
-        projectId: string;
-        status: 'active' | 'paused' | 'error';
-        autoSync: {
-            supported: boolean;
-            state: 'off' | 'on' | 'paused';
-            syncsAs: {
-                userId: string;
-                displayName: string | null;
-                secretName: string;
-            } | null;
-            pausedReason: 'key_removed' | 'key_rejected' | 'key_expired' | 'owner_left_project' | 'access_lost' | null;
-            pausedDetail: string | null;
-            pausedAt: string | null;
-        };
-        lastSyncedAt: string | null;
-        lastError: string | null;
-        firstSyncHorizonDays: number | null;
-        createdAt: string;
-        updatedAt: string;
-        kind: 'bitbucket';
-        platform: 'bitbucket';
-        authMode: 'user_credential';
-        externalScope: {
-            repos: Array<{
-                workspace: string;
-                slug: string;
-                fullName: string;
-            }>;
-        };
-    } | {
-        id: string;
-        projectId: string;
-        status: 'active' | 'paused' | 'error';
-        autoSync: {
-            supported: boolean;
-            state: 'off' | 'on' | 'paused';
-            syncsAs: {
-                userId: string;
-                displayName: string | null;
-                secretName: string;
-            } | null;
-            pausedReason: 'key_removed' | 'key_rejected' | 'key_expired' | 'owner_left_project' | 'access_lost' | null;
-            pausedDetail: string | null;
-            pausedAt: string | null;
-        };
-        lastSyncedAt: string | null;
-        lastError: string | null;
-        firstSyncHorizonDays: number | null;
-        createdAt: string;
-        updatedAt: string;
-        kind: 'jira';
-        platform: 'jira';
-        authMode: 'user_credential';
-        externalScope: {
-            baseUrl: string;
-            projectKeys: Array<string>;
-        };
-    };
-};
-
-export type PutApiProjectsByProjectIdIntegrationsByIntegrationIdAutoSyncResponse = PutApiProjectsByProjectIdIntegrationsByIntegrationIdAutoSyncResponses[keyof PutApiProjectsByProjectIdIntegrationsByIntegrationIdAutoSyncResponses];
 
 export type GetApiIntegrationsGithubInstallData = {
     body?: never;
@@ -25286,12 +25344,6 @@ export type GetApiMeSecretsResponses = {
         status: 'active' | 'expiring_soon' | 'expired';
         createdAt: string;
         updatedAt: string;
-        usedBy: Array<{
-            projectId: string;
-            projectName: string;
-            integrationId: string;
-            platform: 'jira' | 'github' | 'bitbucket' | 'linear' | 'scarn' | 'custom';
-        }>;
     } | {
         id: string;
         kind: 'github_token';
@@ -25305,12 +25357,6 @@ export type GetApiMeSecretsResponses = {
         status: 'active' | 'expiring_soon' | 'expired';
         createdAt: string;
         updatedAt: string;
-        usedBy: Array<{
-            projectId: string;
-            projectName: string;
-            integrationId: string;
-            platform: 'jira' | 'github' | 'bitbucket' | 'linear' | 'scarn' | 'custom';
-        }>;
     } | {
         id: string;
         kind: 'bitbucket_api_token';
@@ -25324,12 +25370,6 @@ export type GetApiMeSecretsResponses = {
         status: 'active' | 'expiring_soon' | 'expired';
         createdAt: string;
         updatedAt: string;
-        usedBy: Array<{
-            projectId: string;
-            projectName: string;
-            integrationId: string;
-            platform: 'jira' | 'github' | 'bitbucket' | 'linear' | 'scarn' | 'custom';
-        }>;
     }>;
 };
 
@@ -25477,12 +25517,6 @@ export type PostApiMeSecretsResponses = {
         status: 'active' | 'expiring_soon' | 'expired';
         createdAt: string;
         updatedAt: string;
-        usedBy: Array<{
-            projectId: string;
-            projectName: string;
-            integrationId: string;
-            platform: 'jira' | 'github' | 'bitbucket' | 'linear' | 'scarn' | 'custom';
-        }>;
     } | {
         id: string;
         kind: 'github_token';
@@ -25496,12 +25530,6 @@ export type PostApiMeSecretsResponses = {
         status: 'active' | 'expiring_soon' | 'expired';
         createdAt: string;
         updatedAt: string;
-        usedBy: Array<{
-            projectId: string;
-            projectName: string;
-            integrationId: string;
-            platform: 'jira' | 'github' | 'bitbucket' | 'linear' | 'scarn' | 'custom';
-        }>;
     } | {
         id: string;
         kind: 'bitbucket_api_token';
@@ -25515,12 +25543,6 @@ export type PostApiMeSecretsResponses = {
         status: 'active' | 'expiring_soon' | 'expired';
         createdAt: string;
         updatedAt: string;
-        usedBy: Array<{
-            projectId: string;
-            projectName: string;
-            integrationId: string;
-            platform: 'jira' | 'github' | 'bitbucket' | 'linear' | 'scarn' | 'custom';
-        }>;
     };
 };
 
@@ -25793,12 +25815,6 @@ export type PatchApiMeSecretsBySecretIdResponses = {
         status: 'active' | 'expiring_soon' | 'expired';
         createdAt: string;
         updatedAt: string;
-        usedBy: Array<{
-            projectId: string;
-            projectName: string;
-            integrationId: string;
-            platform: 'jira' | 'github' | 'bitbucket' | 'linear' | 'scarn' | 'custom';
-        }>;
     } | {
         id: string;
         kind: 'github_token';
@@ -25812,12 +25828,6 @@ export type PatchApiMeSecretsBySecretIdResponses = {
         status: 'active' | 'expiring_soon' | 'expired';
         createdAt: string;
         updatedAt: string;
-        usedBy: Array<{
-            projectId: string;
-            projectName: string;
-            integrationId: string;
-            platform: 'jira' | 'github' | 'bitbucket' | 'linear' | 'scarn' | 'custom';
-        }>;
     } | {
         id: string;
         kind: 'bitbucket_api_token';
@@ -25831,192 +25841,10 @@ export type PatchApiMeSecretsBySecretIdResponses = {
         status: 'active' | 'expiring_soon' | 'expired';
         createdAt: string;
         updatedAt: string;
-        usedBy: Array<{
-            projectId: string;
-            projectName: string;
-            integrationId: string;
-            platform: 'jira' | 'github' | 'bitbucket' | 'linear' | 'scarn' | 'custom';
-        }>;
     };
 };
 
 export type PatchApiMeSecretsBySecretIdResponse = PatchApiMeSecretsBySecretIdResponses[keyof PatchApiMeSecretsBySecretIdResponses];
-
-export type DeleteApiMeSecretsBySecretIdUsesByIntegrationIdData = {
-    body?: never;
-    path: {
-        secretId: string;
-        integrationId: string;
-    };
-    query?: never;
-    url: '/api/me/secrets/{secretId}/uses/{integrationId}';
-};
-
-export type DeleteApiMeSecretsBySecretIdUsesByIntegrationIdErrors = {
-    /**
-     * Response for status 401
-     */
-    401: {
-        type: string;
-        title: string;
-        status: number;
-        detail?: string;
-        instance?: string;
-        code?: string;
-        errors?: Array<{
-            path: string;
-            message: string;
-            summary?: string;
-        }>;
-        meta?: {
-            [key: string]: unknown;
-        };
-    };
-    /**
-     * Response for status 403
-     */
-    403: {
-        type: string;
-        title: string;
-        status: number;
-        detail?: string;
-        instance?: string;
-        code?: string;
-        errors?: Array<{
-            path: string;
-            message: string;
-            summary?: string;
-        }>;
-        meta?: {
-            [key: string]: unknown;
-        };
-    };
-    /**
-     * Response for status 404
-     */
-    404: {
-        type: string;
-        title: string;
-        status: number;
-        detail?: string;
-        instance?: string;
-        code?: string;
-        errors?: Array<{
-            path: string;
-            message: string;
-            summary?: string;
-        }>;
-        meta?: {
-            [key: string]: unknown;
-        };
-    };
-    /**
-     * Response for status 422
-     */
-    422: {
-        type: string;
-        title: string;
-        status: number;
-        detail?: string;
-        instance?: string;
-        code?: string;
-        errors?: Array<{
-            path: string;
-            message: string;
-            summary?: string;
-        }>;
-        meta?: {
-            [key: string]: unknown;
-        };
-    };
-    /**
-     * Response for status 500
-     */
-    500: {
-        type: string;
-        title: string;
-        status: number;
-        detail?: string;
-        instance?: string;
-        code?: string;
-        errors?: Array<{
-            path: string;
-            message: string;
-            summary?: string;
-        }>;
-        meta?: {
-            [key: string]: unknown;
-        };
-    };
-};
-
-export type DeleteApiMeSecretsBySecretIdUsesByIntegrationIdError = DeleteApiMeSecretsBySecretIdUsesByIntegrationIdErrors[keyof DeleteApiMeSecretsBySecretIdUsesByIntegrationIdErrors];
-
-export type DeleteApiMeSecretsBySecretIdUsesByIntegrationIdResponses = {
-    /**
-     * Response for status 200
-     */
-    200: {
-        id: string;
-        kind: 'jira_api_key';
-        name: string;
-        metadata: {
-            email: string;
-        };
-        lastFour: string;
-        expiresAt: string;
-        lastUsedAt: string | null;
-        status: 'active' | 'expiring_soon' | 'expired';
-        createdAt: string;
-        updatedAt: string;
-        usedBy: Array<{
-            projectId: string;
-            projectName: string;
-            integrationId: string;
-            platform: 'jira' | 'github' | 'bitbucket' | 'linear' | 'scarn' | 'custom';
-        }>;
-    } | {
-        id: string;
-        kind: 'github_token';
-        name: string;
-        metadata: {
-            login: string | null;
-        };
-        lastFour: string;
-        expiresAt: string | null;
-        lastUsedAt: string | null;
-        status: 'active' | 'expiring_soon' | 'expired';
-        createdAt: string;
-        updatedAt: string;
-        usedBy: Array<{
-            projectId: string;
-            projectName: string;
-            integrationId: string;
-            platform: 'jira' | 'github' | 'bitbucket' | 'linear' | 'scarn' | 'custom';
-        }>;
-    } | {
-        id: string;
-        kind: 'bitbucket_api_token';
-        name: string;
-        metadata: {
-            email: string;
-        };
-        lastFour: string;
-        expiresAt: string;
-        lastUsedAt: string | null;
-        status: 'active' | 'expiring_soon' | 'expired';
-        createdAt: string;
-        updatedAt: string;
-        usedBy: Array<{
-            projectId: string;
-            projectName: string;
-            integrationId: string;
-            platform: 'jira' | 'github' | 'bitbucket' | 'linear' | 'scarn' | 'custom';
-        }>;
-    };
-};
-
-export type DeleteApiMeSecretsBySecretIdUsesByIntegrationIdResponse = DeleteApiMeSecretsBySecretIdUsesByIntegrationIdResponses[keyof DeleteApiMeSecretsBySecretIdUsesByIntegrationIdResponses];
 
 export type GetApiProjectsByProjectIdSecretsData = {
     body?: never;

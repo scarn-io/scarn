@@ -23,16 +23,14 @@ export type CreateGitHubTokenProjectIntegrationProps =
 
 /**
  * A GitHub integration that reads its repositories with a user's personal
- * access token, chosen on each request. It has no installation. It syncs on a
- * schedule only while a project member lends it a saved GitHub token
- * (`syncSecretId`); otherwise a scheduled run has no token to use.
+ * access token, chosen on each request. It has no installation.
  */
 export class GitHubTokenProjectIntegration extends GitHubRepoScopedProjectIntegrationBase {
   public readonly kind = "github_token" as const;
   public readonly authMode = "user_credential" as const;
 
   private constructor(props: GitHubTokenProjectIntegrationProps) {
-    super(props, "github_token");
+    super(props);
   }
 
   static create(

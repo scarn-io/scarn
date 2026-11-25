@@ -30,34 +30,6 @@ export type ProjectIntegrationRepo = {
     dbExecutor?: DbExecutor,
     options?: { pageSize?: number },
   ): Promise<ProjectIntegrationEntity[]>;
-  /**
-   * Integrations the auto-sync poller should consider: a lent key is set
-   * (`sync_secret_id IS NOT NULL`) and status is `active` or `error`.
-   * Keyset-paged internally like `listActive`.
-   */
-  listDueForAutoSync(
-    dbExecutor?: DbExecutor,
-    options?: { pageSize?: number },
-  ): Promise<ProjectIntegrationEntity[]>;
-  listBySyncSecretId(
-    secretId: UuidV7,
-    dbExecutor?: DbExecutor,
-  ): Promise<ProjectIntegrationEntity[]>;
-  listBySyncSecretIds(
-    secretIds: UuidV7[],
-    dbExecutor?: DbExecutor,
-  ): Promise<ProjectIntegrationEntity[]>;
-  /**
-   * Atomically takes the sync lock until `until`. Succeeds only when the
-   * lock is unset or already expired relative to the database's `now()`.
-   * Returns whether the claim was taken.
-   */
-  claimForSync(
-    id: UuidV7,
-    until: Date,
-    dbExecutor?: DbExecutor,
-  ): Promise<boolean>;
-  releaseSyncClaim(id: UuidV7, dbExecutor?: DbExecutor): Promise<void>;
   delete(
     id: UuidV7,
     projectId: UuidV7,

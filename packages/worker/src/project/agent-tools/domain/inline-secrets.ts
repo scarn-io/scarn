@@ -2,7 +2,8 @@
  * The heuristic for "this literal looks like a credential", used so discovery
  * never retains a secret value a repo committed into an MCP config.
  *
- * The literal is the value with every `{env:VAR}` placeholder removed and a
+ * The literal is the value with every `{env:VAR}` and
+ * `{basic:USER_VAR:PASS_VAR}` placeholder removed and a
  * leading auth scheme (`Bearer`, `Basic`, `Token`) stripped. It is a secret
  * when either:
  *
@@ -52,7 +53,7 @@ const TOKEN_VALUE_PATTERNS: readonly RegExp[] = [
   /^[a-z][a-z0-9+.-]*:\/\/[^/\s:@]*:[^/\s@]+@/iu,
 ];
 
-const ENV_PLACEHOLDER_PATTERN = /\{env:[^}]*\}/gu;
+const ENV_PLACEHOLDER_PATTERN = /\{(?:env|basic):[^}]*\}/gu;
 
 const AUTH_SCHEME_PATTERN = /^(?:bearer|basic|token)\s+/iu;
 

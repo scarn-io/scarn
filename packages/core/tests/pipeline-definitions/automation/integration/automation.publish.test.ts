@@ -260,12 +260,13 @@ describe("publishing automations", () => {
   });
 
   describe("a schedule rule's step", () => {
-    const stepWith = async (grants: Grant[]) =>
+    const stepWith = async (grants: Grant[], overrides: object = {}) =>
       (
         await unwrapAsync(
           fixture.apiClient.api["step-definitions"].post(
             {
               ...buildAgentStepDefinitionPayload(fixture.projectId),
+              ...overrides,
               grants,
             },
             { headers: { ...fixture.headers } },
@@ -319,6 +320,45 @@ describe("publishing automations", () => {
 
       expect(published.published).toBe(true);
     });
+
+    concurrentTest(
+      "is accepted for a code step with read, create and update on project",
+      async () => {
+        const stepKey = await stepWith(
+          [
+            grant("read", "project"),
+            {
+              resource: "workItem",
+              action: "create",
+              scope: "project",
+              labels: ["acme"],
+              keyPrefix: "acme:",
+            },
+            {
+              resource: "workItem",
+              action: "update",
+              scope: "project",
+              keyPrefix: "acme:",
+            },
+          ],
+          {
+            kind: "code",
+            prompt: null,
+            entrypointJson: { sourceFile: ".scarn/import.ts" },
+          },
+        );
+
+        const published = await unwrapAsync(
+          publishAutomationRequest(
+            fixture,
+            scheduleStarting(stepKey),
+            fixture.headers,
+          ),
+        );
+
+        expect(published.published).toBe(true);
+      },
+    );
   });
 
   concurrentTest("the document key must match the route key", async () => {

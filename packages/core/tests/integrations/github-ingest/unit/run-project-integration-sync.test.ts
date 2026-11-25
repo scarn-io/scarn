@@ -49,6 +49,7 @@ const makeWorkItemRepo = (): WorkItemRepo => ({
   loadMany: () => Promise.resolve([]),
   listChildren: () => Promise.resolve([]),
   countSpawnedByTask: () => Promise.resolve(0),
+  maxSourceUpdatedAt: () => Promise.resolve(null),
   listPageByProjectId: () => Promise.resolve({ items: [], total: 0 }),
   listFieldOptions: () => Promise.resolve([]),
   listLabels: () => Promise.resolve([]),
@@ -93,11 +94,6 @@ const makeIntegrationRepo = (
     listActive() {
       return Promise.resolve([stored]);
     },
-    listDueForAutoSync: () => Promise.resolve([]),
-    listBySyncSecretId: () => Promise.resolve([]),
-    listBySyncSecretIds: () => Promise.resolve([]),
-    claimForSync: () => Promise.resolve(true),
-    releaseSyncClaim: () => Promise.resolve(),
     delete() {
       return Promise.resolve(1);
     },
@@ -242,10 +238,6 @@ const singleRepoIntegration = (
         lastSyncedAt: extra.lastSyncedAt,
         lastError: null,
         firstSyncHorizonDays: extra.firstSyncHorizonDays ?? null,
-        syncSecretId: null,
-        autoSyncPausedReason: null,
-        autoSyncPausedAt: null,
-        autoSyncPausedDetail: null,
       })
     : ProjectIntegrationEntity.create({
         id: createUuidV7(),

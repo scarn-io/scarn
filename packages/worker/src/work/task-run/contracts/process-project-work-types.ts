@@ -4,6 +4,7 @@ import type {
   ResolvedEnvironmentRefInput,
 } from "@scarn/sdk/environment";
 import type { RepoConfig } from "@scarn/sdk/repo-config";
+import type { StepBridgeUpsertRequest } from "@scarn/sdk/contracts/step-bridge";
 import type { WorkItemChange } from "@scarn/sdk/contracts/work-item-changes";
 import type { LaunchedRuntime } from "./launched-runtime";
 import type {
@@ -169,8 +170,46 @@ export type TaskLogLine = {
 
 export type { WorkSignalToken } from "./socket-token-types";
 
+/** An API answer the step bridge relays as is: its status and parsed body. */
+export type TaskRunWorkItemsApiResponse = { status: number; body: unknown };
+
+/**
+ * A code step's work-item routes, called by its step bridge with the run's
+ * claim token. Each resolves with any HTTP answer, and rejects only when the
+ * API couldn't be reached or the worker's own credentials were refused.
+ */
+export type TaskRunWorkItemsApi = {
+  upsertTaskRunWorkItems(
+    input: { taskRunId: string; claimToken: string } & StepBridgeUpsertRequest,
+  ): Promise<TaskRunWorkItemsApiResponse>;
+  createTaskRunWorkItem(input: {
+    taskRunId: string;
+    claimToken: string;
+    workItemId: string;
+    scope: "project";
+    platformKey: string;
+    url?: string | undefined;
+    title: string;
+    description: string;
+    fields?: Record<string, unknown> | undefined;
+    labels?: string[] | undefined;
+  }): Promise<TaskRunWorkItemsApiResponse>;
+  latestTaskRunSourceUpdate(input: {
+    taskRunId: string;
+    claimToken: string;
+    platform: "custom" | "jira" | "github";
+    keyPrefix?: string | undefined;
+  }): Promise<TaskRunWorkItemsApiResponse>;
+};
+
 export type TaskRunWorkerClient = {
   userId: UuidV7;
+  /**
+   * A code step's work-item routes for its step bridge. Absent on clients
+   * with no API behind them; a step's `context.workItems` calls then fail
+   * with 502.
+   */
+  workItems?: TaskRunWorkItemsApi | undefined;
   /**
    * The Scarn base URL this client talks to. The agent's live work item reads
    * go there too; absent on clients with no API behind them, which leaves the

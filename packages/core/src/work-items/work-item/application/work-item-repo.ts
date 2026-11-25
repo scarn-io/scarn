@@ -158,6 +158,17 @@ export type WorkItemRepo = {
     }[],
     dbExecutor?: DbExecutor,
   ): Promise<WorkItemEntity[]>;
+  /**
+   * The newest `sourceUpdatedAt` among the project's items on `platform`
+   * whose `platformKey` starts with `keyPrefix` (taken literally, not as a
+   * pattern); null when none has one.
+   */
+  maxSourceUpdatedAt(
+    projectId: UuidV7,
+    platform: WorkItemPlatform,
+    keyPrefix: string,
+    dbExecutor?: DbExecutor,
+  ): Promise<Date | null>;
   create(
     workItem: WorkItemEntity,
     dbExecutor?: DbExecutor,

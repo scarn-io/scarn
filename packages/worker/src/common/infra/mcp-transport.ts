@@ -21,13 +21,53 @@ export type RemoteMcpServerConfig = Extract<
 >;
 
 const ENV_PLACEHOLDER = /\{env:([^}]+)\}/gu;
+const BASIC_PLACEHOLDER = /\{basic:([^}:]*):([^}]*)\}/gu;
 
-/** Replace every `{env:VAR}` with `env[VAR]`, or `""` when it is unset. */
+/** `base64(user + ":" + password)`, UTF-8 encoded: a `Basic` credential. */
+export function encodeBasicCredentials(user: string, password: string): string {
+  return Buffer.from(`${user}:${password}`, "utf8").toString("base64");
+}
+
+/**
+ * Replace every `{env:VAR}` with `env[VAR]`, and every
+ * `{basic:USER_VAR:PASS_VAR}` with {@link encodeBasicCredentials} of the two,
+ * each unset variable read as `""`.
+ */
 export function substituteEnv(
   value: string,
   env: Readonly<Record<string, string>>,
 ): string {
-  return value.replace(ENV_PLACEHOLDER, (_, name: string) => env[name] ?? "");
+  return value
+    .replace(BASIC_PLACEHOLDER, (_, user: string, password: string) =>
+      encodeBasicCredentials(env[user] ?? "", env[password] ?? ""),
+    )
+    .replace(ENV_PLACEHOLDER, (_, name: string) => env[name] ?? "");
+}
+
+/**
+ * The encoded credential of every `{basic:…}` in `servers`' remote headers,
+ * resolved against `env`, for the log masker: a server or an error can echo
+ * the header back.
+ */
+export function basicCredentialSecretValues(
+  servers: Readonly<Record<string, ResolvedOpenCodeMcpServerConfig>>,
+  env: Readonly<Record<string, string>>,
+): string[] {
+  const values = new Set<string>();
+  for (const server of Object.values(servers)) {
+    if (server.type !== "remote") continue;
+    for (const header of Object.values(server.headers ?? {})) {
+      for (const [, user = "", password = ""] of header.matchAll(
+        BASIC_PLACEHOLDER,
+      )) {
+        const userValue = env[user] ?? "";
+        const passwordValue = env[password] ?? "";
+        if (userValue === "" && passwordValue === "") continue;
+        values.add(encodeBasicCredentials(userValue, passwordValue));
+      }
+    }
+  }
+  return [...values];
 }
 
 /**

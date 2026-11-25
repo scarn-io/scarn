@@ -199,6 +199,10 @@ export default defineConfig({
               label: "Connect GitHub, Bitbucket or Jira",
               slug: "how-to/integrations",
             },
+            {
+              label: "Import from any tracker",
+              slug: "how-to/import-from-any-tracker",
+            },
           ],
         },
         {

@@ -84,6 +84,7 @@ export const makeWorkItemRepo = (
       ),
     listChildren: () => Promise.resolve([]),
     countSpawnedByTask: () => Promise.resolve(0),
+    maxSourceUpdatedAt: () => Promise.resolve(null),
     listPageByProjectId: () => Promise.resolve({ items: [], total: 0 }),
     listFieldOptions: () => Promise.resolve([]),
     listLabels: () => Promise.resolve([]),

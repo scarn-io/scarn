@@ -4,6 +4,7 @@ import {
   MissingStepEnvError,
   planStepEnv,
   resolveStepEnv,
+  runnerStepEnv,
   withInferredMcpEnv,
 } from "../../../../src/work/task-run/application/resolve-step-env";
 
@@ -221,6 +222,65 @@ describe("planStepEnv", () => {
     expect(error.missing).toEqual(['DATADOG_API_KEY (for MCP "datadog")']);
   });
 
+  test.concurrent(
+    "a server's project-secret and value workerVars are MCP-only",
+    () => {
+      const plan = planStepEnv({
+        envVars: [inherit("PLAIN")],
+        inputJson: {},
+        workerEnv: { PLAIN: "x" },
+        projectSecrets: { JIRA_TOKEN: "jira-token-value" },
+        opencodeMcpJson: {
+          atlassian: {
+            type: "remote",
+            url: "https://mcp.atlassian.com/v2/mcp",
+            headers: {
+              Authorization: "Basic {basic:JIRA_EMAIL:JIRA_API_TOKEN}",
+            },
+            workerVars: [
+              { ...value("JIRA_EMAIL", "bot@acme.com"), applies: "agent" },
+              {
+                name: "JIRA_API_TOKEN",
+                source: "secret",
+                secretName: "JIRA_TOKEN",
+                applies: "agent",
+              },
+            ],
+          },
+        },
+      });
+      expect(plan.resolved.stepEnv).toEqual({
+        PLAIN: "x",
+        JIRA_EMAIL: "bot@acme.com",
+        JIRA_API_TOKEN: "jira-token-value",
+      });
+      expect(plan.resolved.mcpOnlyEnvNames).toEqual([
+        "JIRA_EMAIL",
+        "JIRA_API_TOKEN",
+      ]);
+      expect(plan.resolved.secretValues).toEqual(["jira-token-value"]);
+      expect(runnerStepEnv("code", plan.resolved)).toEqual({ PLAIN: "x" });
+    },
+  );
+
+  test.concurrent(
+    "two servers giving one variable different sources fail",
+    () => {
+      const secret = (secretName: string) => ({
+        name: "TOKEN",
+        source: "secret" as const,
+        secretName,
+        applies: "agent" as const,
+      });
+      expect(() =>
+        withInferredMcpEnv(null, [], {
+          a: { type: "ref", workerVars: [secret("A")] },
+          b: { type: "ref", workerVars: [secret("B")] },
+        }),
+      ).toThrow(/give the variable TOKEN different sources/);
+    },
+  );
+
   test.concurrent("injects and masks an inferred variable that is set", () => {
     const plan = planStepEnv({
       envVars: null,
@@ -233,6 +293,7 @@ describe("planStepEnv", () => {
       setupEnv: {},
       promptEnv: {},
       secretValues: ["dd-api-key-value"],
+      mcpOnlyEnvNames: ["DATADOG_API_KEY"],
     });
   });
 });

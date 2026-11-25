@@ -90,6 +90,30 @@ describe("tasks stored reader", () => {
     expect(read.success && (read.value.grants as unknown)).toEqual(grantsJson);
   });
 
+  concurrentTest("keeps a project grant's keyPrefix", () => {
+    const grantsJson = [
+      { resource: "workItem", action: "read", scope: "project" },
+      {
+        resource: "workItem",
+        action: "create",
+        scope: "project",
+        labels: ["acme"],
+        keyPrefix: "acme:",
+      },
+      {
+        resource: "workItem",
+        action: "update",
+        scope: "project",
+        keyPrefix: "acme:",
+      },
+    ];
+    const read = readStoredTask(1, {
+      ...columnsOf(storedTaskFixtures.scheduled),
+      grants: grantsJson,
+    });
+    expect(read.success && (read.value.grants as unknown)).toEqual(grantsJson);
+  });
+
   concurrentTest("an error without a message is unreadable", () => {
     const read = readStoredTask(1, {
       ...columnsOf(storedTaskFixtures.failed),

@@ -20,13 +20,41 @@ const intentStyles: Record<
   ChipColor,
   { bg: string; fg: string; border: string }
 > = {
-  default: { bg: colors.borderMuted, fg: colors.textMuted, border: colors.border },
-  success: { bg: colors.successSubtle, fg: colors.successFg, border: colors.successMuted },
-  warning: { bg: colors.attentionSubtle, fg: colors.attentionFg, border: colors.attentionMuted },
-  error: { bg: colors.dangerSubtle, fg: colors.dangerFg, border: colors.dangerMuted },
-  info: { bg: colors.accentSubtle, fg: colors.accentFg, border: colors.accentMuted },
-  primary: { bg: colors.accentSubtle, fg: colors.accentFg, border: colors.accentMuted },
-  secondary: { bg: colors.doneSubtle, fg: colors.doneFg, border: colors.doneMuted },
+  default: {
+    bg: colors.borderMuted,
+    fg: colors.textMuted,
+    border: colors.border,
+  },
+  success: {
+    bg: colors.successSubtle,
+    fg: colors.successFg,
+    border: colors.successMuted,
+  },
+  warning: {
+    bg: colors.attentionSubtle,
+    fg: colors.attentionFg,
+    border: colors.attentionMuted,
+  },
+  error: {
+    bg: colors.dangerSubtle,
+    fg: colors.dangerFg,
+    border: colors.dangerMuted,
+  },
+  info: {
+    bg: colors.accentSubtle,
+    fg: colors.accentFg,
+    border: colors.accentMuted,
+  },
+  primary: {
+    bg: colors.accentSubtle,
+    fg: colors.accentFg,
+    border: colors.accentMuted,
+  },
+  secondary: {
+    bg: colors.doneSubtle,
+    fg: colors.doneFg,
+    border: colors.doneMuted,
+  },
 };
 
 const colorByStatus: Record<string, ChipColor> = {
@@ -66,7 +94,6 @@ const colorByStatus: Record<string, ChipColor> = {
   status_update: "info",
   result_ready: "success",
   warning: "warning",
-  integration_auto_sync_paused: "warning",
   // Notification priorities
   normal: "default",
   urgent: "error",

@@ -11,106 +11,6 @@ import {
 } from "@/secrets/secret/domain/secret-owner";
 import { DrizzleSecretRepo } from "@/secrets/secret/infra/drizzle-secret-repo";
 
-describe("DrizzleSecretRepo.listSummariesByIds", () => {
-  const repo = new DrizzleSecretRepo();
-
-  concurrentTest(
-    "returns only id, name and owner for any owner's secrets, omitting unknown ids",
-    async () => {
-      const ownerA = createUuidV7();
-      const ownerB = createUuidV7();
-      const teamKey = {
-        id: createUuidV7(),
-        ownerUserId: ownerA,
-        name: "Team Jira key",
-      };
-      const myToken = {
-        id: createUuidV7(),
-        ownerUserId: ownerB,
-        name: "My GitHub token",
-      };
-      const rows = [teamKey, myToken];
-      await getDb()
-        .insert(secrets)
-        .values(
-          rows.map((row) => ({
-            ...row,
-            kind: "jira_api_key" as const,
-            metadataJson: {},
-            schemaVersion: 1,
-            ciphertext: Buffer.from("ciphertext"),
-            iv: Buffer.from("iv"),
-            authTag: Buffer.from("tag"),
-            keyVersion: 1,
-            lastFour: "wxyz",
-          })),
-        );
-      try {
-        const summaries = await repo.listSummariesByIds([
-          teamKey.id,
-          myToken.id,
-          createUuidV7(),
-        ]);
-
-        expect(
-          [...summaries].sort((a, b) => a.name.localeCompare(b.name)),
-        ).toEqual([myToken, teamKey]);
-        expect(await repo.listSummariesByIds([])).toEqual([]);
-      } finally {
-        await getDb()
-          .delete(secrets)
-          .where(
-            inArray(
-              secrets.id,
-              rows.map((row) => row.id),
-            ),
-          );
-      }
-    },
-  );
-});
-
-describe("DrizzleSecretRepo.findById", () => {
-  const repo = new DrizzleSecretRepo();
-
-  concurrentTest(
-    "loads any owner's secret with its ciphertext, and null for an unknown id",
-    async () => {
-      const ownerUserId = createUuidV7();
-      const id = createUuidV7();
-      await getDb()
-        .insert(secrets)
-        .values({
-          id,
-          ownerUserId,
-          name: "Lent Jira key",
-          kind: "jira_api_key",
-          metadataJson: { email: "owner@example.com" },
-          schemaVersion: 1,
-          ciphertext: Buffer.from("ciphertext"),
-          iv: Buffer.from("iv"),
-          authTag: Buffer.from("tag"),
-          keyVersion: 1,
-          lastFour: "wxyz",
-          expiresAt: new Date("2099-01-01T00:00:00.000Z"),
-        });
-      try {
-        const secret = await repo.findById(id);
-
-        expect(secret?.id).toBe(id);
-        expect(secret?.kind).toBe("jira_api_key");
-        expect(secret?.owner).toEqual({ type: "user", userId: ownerUserId });
-        expect(secret?.encryptedValue.ciphertext).toEqual(
-          Buffer.from("ciphertext"),
-        );
-        expect(await repo.findById(createUuidV7())).toBeNull();
-      } finally {
-        await getDb().delete(secrets).where(eq(secrets.id, id));
-      }
-    },
-  );
-});
-
 describe("DrizzleSecretRepo with a project owner", () => {
   const repo = new DrizzleSecretRepo();
   const encryptedValue = {
@@ -179,10 +79,9 @@ describe("DrizzleSecretRepo with a project owner", () => {
         expect(
           (await repo.listByOwner(owner)).map((secret) => secret.id),
         ).toEqual([saved.id]);
-        expect(await repo.listSummariesByIds([saved.id])).toEqual([]);
 
         await getDb().delete(projects).where(eq(projects.id, projectId));
-        expect(await repo.findById(saved.id)).toBeNull();
+        expect(await repo.findByIdForOwner(saved.id, owner)).toBeNull();
       } finally {
         await getDb()
           .delete(projects)

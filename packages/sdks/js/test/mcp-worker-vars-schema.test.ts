@@ -44,3 +44,31 @@ test("workerVars retain inherited-variable write validation and require agent sc
     ).toBe(false);
   }
 });
+
+test("workerVars accept a project secret and a value, with value write rules", () => {
+  const secret = {
+    source: "secret" as const,
+    name: "TOKEN",
+    secretName: "PROJECT_TOKEN",
+    applies: "agent" as const,
+  };
+  const value = {
+    source: "value" as const,
+    name: "EMAIL",
+    value: "bot@acme.com",
+    secret: false,
+    applies: "agent" as const,
+  };
+  const servers = { api: { type: "ref" as const, workerVars: [secret, value] } };
+  expect(openCodeMcpServersSchema.parse(servers)).toEqual(servers);
+  for (const bad of [
+    { ...value, secret: true },
+    { ...secret, applies: "setup" },
+  ]) {
+    expect(
+      openCodeMcpServersSchema.safeParse({
+        api: { type: "ref", workerVars: [bad] },
+      }).success,
+    ).toBe(false);
+  }
+});

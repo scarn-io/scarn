@@ -8,6 +8,8 @@ import { vi } from "bun:test";
 import type {
   LaunchedRuntime,
   ProcessProjectWorkDeps,
+  TaskRunWorkerClient,
+  TaskRunWorkerContext,
 } from "../../../../../src/work/task-run/contracts/process-project-work-types";
 import {
   createCodeStepWorkerContext,
@@ -24,6 +26,8 @@ export function buildCodeStepDeps(input: {
   runtime?: Parameters<typeof createCodeStepWorkerContext>[2];
   mcpCalls?: LaunchedRuntime["mcpCalls"];
   openMcpBridgeSession?: ProcessProjectWorkDeps["openMcpBridgeSession"];
+  grants?: TaskRunWorkerContext["task"]["grants"];
+  workItems?: TaskRunWorkerClient["workItems"];
 }): {
   deps: ProcessProjectWorkDeps;
   tracker: ReturnType<typeof createRunTracker>;
@@ -42,15 +46,19 @@ export function buildCodeStepDeps(input: {
   });
 
   const workerClient = createWorkerClient();
-  workerClient.getTaskRunWorkerContext = vi.fn(() =>
-    Promise.resolve(
-      createCodeStepWorkerContext(
-        input.entrypointJson,
-        input.envJson,
-        input.runtime,
-      ),
-    ),
-  );
+  workerClient.workItems = input.workItems;
+  workerClient.getTaskRunWorkerContext = vi.fn(() => {
+    const context = createCodeStepWorkerContext(
+      input.entrypointJson,
+      input.envJson,
+      input.runtime,
+    );
+    return Promise.resolve(
+      input.grants
+        ? { ...context, task: { ...context.task, grants: input.grants } }
+        : context,
+    );
+  });
 
   const tracker = createRunTracker();
   const deps = {

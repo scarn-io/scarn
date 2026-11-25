@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { basicCredentialSecretValues } from "../../../common/infra/mcp-transport";
 import { ConfigurationError } from "../../../lib/errors";
 import {
   HOST_GATEWAY_RUN_ARGS,
@@ -16,6 +17,7 @@ import type { McpCallLaunch } from "../contracts/launched-runtime-handles";
 import type { LaunchedRuntime } from "../contracts/launched-runtime";
 import type { LaunchedRuntimeOrchestrator } from "../contracts/process-project-work-types";
 import type { TaskKind } from "../contracts/task-run-contracts";
+import { hasProjectWorkItemGrant } from "../application/code-step-work-item-grants";
 import {
   applyStepMcpEnv,
   planStepMcpServers,
@@ -85,7 +87,10 @@ export async function planMcpCallLaunch(input: {
   }
   const env = { ...launch.stepEnv };
   return {
-    secretValues: launch.secretValues,
+    secretValues: [
+      ...launch.secretValues,
+      ...basicCredentialSecretValues(servers, env),
+    ],
     place: (placement) => ({ servers, env, placement }),
   };
 }
@@ -115,6 +120,25 @@ export function launchMcpCallingKind(
 }
 
 /**
+ * Whether a launch's code step talks to a step bridge on the worker host: it
+ * declares MCP servers or holds a `project` work-item grant (ADR 0018). Its
+ * container then needs {@link prepareMcpBridgeDevcontainer}.
+ */
+export function launchServesStepBridge(
+  input: Pick<
+    LaunchInput,
+    "startAgent" | "opencodeMcpJson" | "currentExecutionInfo"
+  >,
+  kind: TaskKind,
+): boolean {
+  if (input.startAgent || kind !== "code") return false;
+  return (
+    declaresMcpServers(input.opencodeMcpJson) ||
+    hasProjectWorkItemGrant(input.currentExecutionInfo.grants)
+  );
+}
+
+/**
  * The `LaunchedRuntime` field an MCP call launch is handed down in:
  * `mcpTool` for an `mcp_tool` step, `mcpCalls` for a code step's MCP bridge.
  */
@@ -127,7 +151,7 @@ export function mcpCallLaunchFields(
 }
 
 /**
- * Lets a code step's container reach its MCP bridge on the worker host at
+ * Lets a code step's container reach its step bridge on the worker host at
  * `host.docker.internal`: patches {@link HOST_GATEWAY_RUN_ARGS} into the
  * cloned devcontainer config before `devcontainer up`. A compose-based
  * devcontainer ignores `runArgs`, so it fails with a {@link ConfigurationError}
@@ -144,7 +168,7 @@ export async function prepareMcpBridgeDevcontainer(input: {
   const parsed = parseDevcontainerConfigContent(raw) as Record<string, unknown>;
   if ("dockerComposeFile" in parsed) {
     throw new ConfigurationError(
-      "compose devcontainers aren't supported for code steps with `mcps` yet. " +
+      "compose devcontainers aren't supported for code steps with `mcps` or work-item features yet. " +
         "Use an `image` or Dockerfile (`build`) devcontainer, or a managed runtime.",
       "DEVCONTAINER_COMPOSE_MCP_BRIDGE_UNSUPPORTED",
     );

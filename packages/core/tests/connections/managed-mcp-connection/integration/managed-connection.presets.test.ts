@@ -248,6 +248,12 @@ describe("managed connections from presets", () => {
           removalUrl: null,
         },
         {
+          key: "atlassian",
+          label: "Atlassian",
+          resource: "https://mcp.atlassian.com/v2/mcp",
+          removalUrl: "https://id.atlassian.com/manage-profile/apps",
+        },
+        {
           key: FAKE_PRESET_KEY,
           label: "Fake Docs",
           resource: fake.resource,
@@ -262,7 +268,7 @@ describe("managed connections from presets", () => {
       await addWriteMember(apiClient, projectId, owner, writer);
       const stranger = await createProjectSecretsTestUser("presets-stranger");
 
-      expect(await unwrapAsync(presetsOf(writer, projectId))).toHaveLength(9);
+      expect(await unwrapAsync(presetsOf(writer, projectId))).toHaveLength(10);
       expect((await presetsOf(stranger, projectId)).error?.status).toBe(404);
     });
   });

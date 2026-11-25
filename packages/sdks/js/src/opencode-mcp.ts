@@ -8,7 +8,12 @@
  * `@opencode/client`'s generated `ConfigEntry` type.
  */
 import { z } from "zod";
-import { inheritEnvVarSchema, MAX_ENV_VARS } from "./env-vars";
+import {
+  inheritEnvVarSchema,
+  MAX_ENV_VARS,
+  secretEnvVarSchema,
+  valueEnvVarSchema,
+} from "./env-vars";
 import {
   managedConnectionNameSchema,
   normalizeMcpResourceUrl,
@@ -25,8 +30,19 @@ export const mcpConnectionAuthSchema = z.strictObject({
 
 export type McpConnectionAuth = z.infer<typeof mcpConnectionAuthSchema>;
 
+/**
+ * A server's own variables, resolved on the worker for that server only: a
+ * worker variable, a project secret, or a value. A code step's runner never
+ * gets them; its MCP calls go through the worker-side bridge.
+ */
 const workerVarsSchema = z
-  .array(inheritEnvVarSchema.safeExtend({ applies: z.literal("agent") }))
+  .array(
+    z.union([
+      inheritEnvVarSchema.safeExtend({ applies: z.literal("agent") }),
+      secretEnvVarSchema.safeExtend({ applies: z.literal("agent") }),
+      valueEnvVarSchema.safeExtend({ applies: z.literal("agent") }),
+    ]),
+  )
   .max(MAX_ENV_VARS)
   .refine(
     (entries) =>
@@ -189,9 +205,13 @@ const addIssues = (
  * OpenCode.
  */
 export const openCodeMcpServerConfigSchema = z.discriminatedUnion("type", [
-  openCodeMcpLocalConfigSchema.extend({
-    workerVars: workerVarsSchema.optional(),
-  }),
+  openCodeMcpLocalConfigSchema
+    .extend({
+      workerVars: workerVarsSchema.optional(),
+    })
+    .superRefine((entry, ctx) => {
+      addIssues(basicPlaceholderIssues(entry), ctx);
+    }),
   openCodeMcpRemoteConfigSchema
     .extend({
       workerVars: workerVarsSchema.optional(),
@@ -199,9 +219,11 @@ export const openCodeMcpServerConfigSchema = z.discriminatedUnion("type", [
     })
     .superRefine((entry, ctx) => {
       addIssues(remoteConnectionAuthIssues(entry), ctx);
+      addIssues(basicPlaceholderIssues(entry), ctx);
     }),
   openCodeMcpRefConfigSchema.superRefine((entry, ctx) => {
     addIssues(refConnectionAuthIssues(entry), ctx);
+    addIssues(basicPlaceholderIssues(entry), ctx);
   }),
 ]);
 
@@ -212,21 +234,40 @@ export const openCodeMcpServersSchema = z.record(
 
 const ENV_PLACEHOLDER_PATTERN = /\{env:[A-Za-z_][A-Za-z0-9_]*\}/gu;
 const ENV_PLACEHOLDER_NAME_PATTERN = /\{env:([^}]+)\}/gu;
+const BASIC_PLACEHOLDER_VALUE_PATTERN =
+  /\{basic:[A-Za-z_][A-Za-z0-9_]*:[A-Za-z_][A-Za-z0-9_]*\}/gu;
 const AUTH_SCHEME_PATTERN = /^(?:bearer|basic|token)\s+/iu;
 
 /**
- * Whether `value` carries nothing but `{env:VAR}` placeholders, optionally
- * behind an HTTP auth scheme (`Bearer {env:TOKEN}`). Anything else is a
- * literal that would be stored in plaintext, so a `local` server's
+ * `{basic:USER_VAR:PASS_VAR}`: the worker substitutes
+ * `base64(USER_VAR + ":" + PASS_VAR)`, both read like `{env:VAR}`. Only a
+ * `remote` server's `headers` may use it (`Basic {basic:EMAIL:TOKEN}`);
+ * OpenCode doesn't understand it. Groups 1 and 2 are the two names.
+ */
+export const BASIC_PLACEHOLDER_PATTERN = /\{basic:([^}:]*):([^}]*)\}/gu;
+
+/**
+ * Whether `value` carries nothing but `{env:VAR}` or
+ * `{basic:USER_VAR:PASS_VAR}` placeholders, optionally behind an HTTP auth
+ * scheme (`Bearer {env:TOKEN}`, `Basic {basic:EMAIL:TOKEN}`). Anything else
+ * is a literal that would be stored in plaintext, so a `local` server's
  * `environment` values and a `remote` server's `headers` values must pass it.
+ * Where `{basic:…}` may appear is checked separately
+ * ({@link containsBasicPlaceholder}).
  */
 export function isEnvPlaceholderValue(value: string): boolean {
-  if (value.match(ENV_PLACEHOLDER_PATTERN) === null) return false;
+  if (
+    value.match(ENV_PLACEHOLDER_PATTERN) === null &&
+    value.match(BASIC_PLACEHOLDER_VALUE_PATTERN) === null
+  ) {
+    return false;
+  }
   return (
     value
       .trim()
       .replace(AUTH_SCHEME_PATTERN, "")
       .replace(ENV_PLACEHOLDER_PATTERN, "")
+      .replace(BASIC_PLACEHOLDER_VALUE_PATTERN, "")
       .trim() === ""
   );
 }
@@ -241,22 +282,66 @@ export type EnvPlaceholderSource =
   | readonly EnvPlaceholderSource[]
   | { readonly [key: string]: EnvPlaceholderSource };
 
-/** Every variable name a value reads as `{env:VAR}`, at any depth, sorted. */
+function visitStrings(
+  value: EnvPlaceholderSource,
+  onString: (item: string) => void,
+): void {
+  if (typeof value === "string") {
+    onString(value);
+  } else if (typeof value === "object" && value !== null) {
+    for (const child of Object.values(value)) visitStrings(child, onString);
+  }
+}
+
+/**
+ * Every variable name a value reads as `{env:VAR}` or
+ * `{basic:USER_VAR:PASS_VAR}`, at any depth, sorted.
+ */
 export function collectEnvPlaceholderNames(
   value: EnvPlaceholderSource,
 ): string[] {
   const names = new Set<string>();
-  const visit = (item: EnvPlaceholderSource): void => {
-    if (typeof item === "string") {
-      for (const match of item.matchAll(ENV_PLACEHOLDER_NAME_PATTERN)) {
-        if (match[1] !== undefined) names.add(match[1]);
-      }
-    } else if (typeof item === "object" && item !== null) {
-      for (const child of Object.values(item)) visit(child);
+  visitStrings(value, (item) => {
+    for (const match of item.matchAll(ENV_PLACEHOLDER_NAME_PATTERN)) {
+      if (match[1] !== undefined) names.add(match[1]);
     }
-  };
-  visit(value);
+    for (const match of item.matchAll(BASIC_PLACEHOLDER_PATTERN)) {
+      for (const name of [match[1], match[2]]) {
+        if (name !== undefined && name !== "") names.add(name);
+      }
+    }
+  });
   return [...names].sort();
+}
+
+/** Whether any string in `value`, at any depth, holds a `{basic:…}` placeholder. */
+export function containsBasicPlaceholder(value: EnvPlaceholderSource): boolean {
+  let found = false;
+  visitStrings(value, (item) => {
+    found ||= item.includes("{basic:");
+  });
+  return found;
+}
+
+/**
+ * Where an authored entry uses `{basic:…}` outside a `remote` server's
+ * `headers`, the only place the worker substitutes it.
+ */
+export function basicPlaceholderIssues(
+  entry: Readonly<Record<string, EnvPlaceholderSource>> & { type: string },
+): { path: string; message: string }[] {
+  return Object.entries(entry).flatMap(([field, value]) =>
+    (entry.type === "remote" && field === "headers") ||
+    !containsBasicPlaceholder(value)
+      ? []
+      : [
+          {
+            path: field,
+            message:
+              "may not use {basic:USER_VAR:PASS_VAR}; only a remote server's headers accept it",
+          },
+        ],
+  );
 }
 
 export type OpenCodeMcpRefConfig = z.infer<typeof openCodeMcpRefConfigSchema>;

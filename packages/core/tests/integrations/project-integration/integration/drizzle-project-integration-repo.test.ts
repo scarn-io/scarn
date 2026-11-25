@@ -68,10 +68,6 @@ describe("DrizzleProjectIntegrationRepo", () => {
             lastSyncedAt: null,
             lastError: null,
             firstSyncHorizonDays: null,
-            syncSecretId: null,
-            autoSyncPausedReason: null,
-            autoSyncPausedAt: null,
-            autoSyncPausedDetail: null,
           });
 
         // 5 active/error rows against a pageSize of 2 forces `listActive()`
@@ -118,10 +114,6 @@ describe("DrizzleProjectIntegrationRepo", () => {
           lastSyncedAt: null,
           lastError: null,
           firstSyncHorizonDays: null,
-          syncSecretId: null,
-          autoSyncPausedReason: null,
-          autoSyncPausedAt: null,
-          autoSyncPausedDetail: null,
         });
         await repo.create(integration);
 

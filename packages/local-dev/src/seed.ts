@@ -80,7 +80,9 @@ async function main(): Promise<void> {
   log(`committed and pushed ${paths.checkout}`);
 
   await runCliChecked(["pipelines", "push"], paths.checkout);
-  log("pushed steps, pipelines and the default and ld-schedule automations");
+  log(
+    "pushed steps, pipelines and the default, ld-schedule and ld-github-import automations",
+  );
 
   await runCliChecked(["automations", "enable", "default"], paths.checkout);
   log("enabled the default automation");

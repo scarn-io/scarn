@@ -1,8 +1,9 @@
-import type { EnvVarSpec, EnvVarsInput } from "../../env-vars";
+import type { EnvVarSpecInput, EnvVarsInput } from "../../env-vars";
 import type { HealthChecksInput } from "../../health-checks";
-import type {
-  OpenCodeMcpServerConfig,
-  OpenCodeMcpServers,
+import {
+  containsBasicPlaceholder,
+  type OpenCodeMcpServerConfig,
+  type OpenCodeMcpServers,
 } from "../../opencode-mcp";
 import { isMcpHandle, resolveMcpChecks, type McpHandle } from "./define-mcp";
 import { inferredMcpEnv } from "./mcp-server-config";
@@ -18,9 +19,7 @@ import { isEnvironmentHandle } from "../../push/code-step-lookup";
  * from the step environment and combining health checks.
  */
 
-type InheritEnvVarSpec = Extract<EnvVarSpec, { source: "inherit" }> & {
-  applies: "agent";
-};
+type WorkerVar = EnvVarSpecInput & { applies: "agent" };
 
 export type CompiledMcps = {
   opencodeMcpJson: OpenCodeMcpServers;
@@ -72,14 +71,15 @@ function compileChecks(key: string, handle: McpHandle): HealthChecksInput {
 }
 
 /**
- * MCP variables always apply to the agent: MCP servers run inside it. An
+ * MCP variables always apply to the agent: MCP servers run inside it.
+ * `vars` come first, as declared. An
  * inline server's `{env:VAR}` names are required unless listed in
  * `optionalEnv`, the same as the worker infers them for a `ref`. A server
  * with `auth` gets none: the connection authenticates it.
  */
-function compileEnv(key: string, handle: McpHandle): InheritEnvVarSpec[] {
+function compileEnv(key: string, handle: McpHandle): WorkerVar[] {
   if (handle.type !== "local" && handle.server.auth !== undefined) return [];
-  const entry = (name: string, optional: boolean): InheritEnvVarSpec => ({
+  const entry = (name: string, optional: boolean): WorkerVar => ({
     source: "inherit",
     name,
     from: name,
@@ -88,9 +88,20 @@ function compileEnv(key: string, handle: McpHandle): InheritEnvVarSpec[] {
     mcp: key,
     applies: "agent",
   });
-  const listed = new Set([...handle.env, ...handle.optionalEnv]);
+  const declared = handle.vars.map(
+    (spec): WorkerVar =>
+      spec.source === "inherit"
+        ? { ...spec, mcp: key, applies: "agent" }
+        : { ...spec, applies: "agent" },
+  );
+  const listed = new Set([
+    ...handle.env,
+    ...handle.optionalEnv,
+    ...declared.map((spec) => spec.name),
+  ]);
   const inferred = inferredMcpEnv(handle).filter((name) => !listed.has(name));
   return [
+    ...declared,
     ...handle.env.map((name) => entry(name, false)),
     ...inferred.map((name) => entry(name, false)),
     ...handle.optionalEnv.map((name) => entry(name, true)),
@@ -138,6 +149,24 @@ export function assertNoConnectorMcpCollisions(
   throw new Error(
     `Step "${stepKey}" environment "${environment.name}": ${connectorMcpCollisionMessage(collisions)}`,
   );
+}
+
+/**
+ * Throws when an agent step's `mcps` holds a server whose headers use
+ * `{basic:…}`: OpenCode can't read it, and the worker only substitutes it
+ * for the MCP calls it makes itself (code and MCP tool steps).
+ */
+export function assertNoAgentBasicPlaceholders(
+  stepKey: string,
+  mcps: Readonly<Record<string, McpHandle>> | undefined,
+): void {
+  for (const [key, handle] of Object.entries(mcps ?? {})) {
+    if (!isMcpHandle(handle) || handle.type !== "remote") continue;
+    if (!containsBasicPlaceholder(handle.server.headers)) continue;
+    throw new Error(
+      `Step "${stepKey}" mcps.${key}: headers use {basic:USER_VAR:PASS_VAR}, which an agent's OpenCode can't read. Use the server from a code step or an MCP tool step.`,
+    );
+  }
 }
 
 function nonEmpty<T>(items: T[]): T[] | null {

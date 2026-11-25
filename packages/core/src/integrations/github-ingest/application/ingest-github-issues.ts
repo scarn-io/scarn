@@ -5,7 +5,7 @@ import {
   type GitHubIssue,
 } from "../infra/github-issues-client";
 import type { GitHubRateLimitSignal } from "../infra/github-rate-limit";
-import { mapGitHubIssueToWorkItem } from "./map-github-issue-to-work-item";
+import { mapGitHubIssue } from "@scarn/sdk/library/github";
 import type { UpsertWorkItemInput } from "@scarn/core/work-items/work-item/contracts/work-item-contracts";
 
 export type RepoIngestResult = {
@@ -71,13 +71,10 @@ export const ingestGitHubIssues = async (
     }
 
     const issuesOnly = issues.filter((issue) => !issue.pull_request);
-    const workItems = issuesOnly.map((issue) =>
-      mapGitHubIssueToWorkItem({
-        projectId: input.projectId,
-        repoFullName: repo.fullName,
-        issue,
-      }),
-    );
+    const workItems: UpsertWorkItemInput[] = issuesOnly.map((issue) => ({
+      projectId: input.projectId,
+      ...mapGitHubIssue(issue, { repo: repo.fullName }),
+    }));
 
     if (workItems.length > 0) {
       await upsertWorkItems(workItems);

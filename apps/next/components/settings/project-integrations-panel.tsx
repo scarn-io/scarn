@@ -15,10 +15,12 @@ import { useRouter } from "next/navigation";
 import { getBrowserScarnApiClient } from "@/app/_lib/scarn-browser-api-client";
 import { parseApiError } from "@/app/_lib/api-error";
 import type { IntegrationCredentialChoice } from "@scarn/core/secrets/secret/contracts/secret-contracts";
+import type { AutomationListItemContract } from "@scarn/api/frontend-contracts";
+import type { Grant } from "@scarn/sdk/definitions/steps";
 import { IntegrationCredentialDialog } from "@/components/integrations/integration-credential-dialog";
 import { CREDENTIAL_PLATFORMS } from "@/components/integrations/credential-platforms";
 import { parseJiraProjectKeys } from "@/components/integrations/jira-site-fields";
-import { useHasProjectPermission } from "@/components/project-route-context";
+import { importSchedulesFor } from "@/components/integrations/import-schedules";
 import { githubInstallHref } from "@/app/_lib/scarn-api-url";
 import {
   ConnectBitbucketDialog,
@@ -43,16 +45,21 @@ export function ProjectIntegrationsPanel({
   projectGitUrl,
   initialIntegrations,
   githubAppConfigured,
+  automations,
+  stepGrants,
   flashMessage,
 }: {
   projectId: string;
   projectGitUrl: string;
   initialIntegrations: ProjectIntegrationView[];
   githubAppConfigured: boolean;
+  /** The project's automations, to find each token integration's import schedule. */
+  automations: readonly AutomationListItemContract[];
+  /** Each step key's grants, from its highest active version. */
+  stepGrants: ReadonlyMap<string, readonly Grant[]>;
   flashMessage: FlashMessage | null;
 }) {
   const router = useRouter();
-  const canManage = useHasProjectPermission("integrations:write");
   const [integrations, setIntegrations] = useState(initialIntegrations);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [syncSummary, setSyncSummary] = useState<string | null>(null);
@@ -71,12 +78,6 @@ export function ProjectIntegrationsPanel({
   const credentialPlatform = credentialDialogFor
     ? credentialPlatformFor(credentialDialogFor)
     : null;
-
-  const handleIntegrationChange = (updated: ProjectIntegrationView) => {
-    setIntegrations((current) =>
-      current.map((entry) => (entry.id === updated.id ? updated : entry)),
-    );
-  };
 
   const handleRemove = (integrationId: string) => {
     setErrorMessage(null);
@@ -255,15 +256,18 @@ export function ProjectIntegrationsPanel({
               integration={integration}
               isSyncing={syncingId === integration.id}
               disabled={isPending}
-              canManage={canManage}
-              githubAppConfigured={githubAppConfigured}
+              importSchedules={
+                integration.kind === "jira" ||
+                integration.kind === "github_token"
+                  ? importSchedulesFor(integration, automations, stepGrants)
+                  : []
+              }
               onSync={() => {
                 handleSyncClick(integration);
               }}
               onRemove={() => {
                 handleRemove(integration.id);
               }}
-              onIntegrationChange={handleIntegrationChange}
             />
           ))}
         </Stack>

@@ -31,7 +31,6 @@ export const NOTIFICATION_KIND_LABELS: Record<string, string> = {
   blocked: "Blocked",
   result_ready: "Result Ready",
   warning: "Warning",
-  integration_auto_sync_paused: "Auto-sync paused",
 };
 
 export const PRIORITY_LABELS: Record<string, string> = {

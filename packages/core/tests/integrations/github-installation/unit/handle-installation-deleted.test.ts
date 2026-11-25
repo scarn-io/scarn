@@ -46,21 +46,6 @@ const makeProjectIntegrationRepo = (
     listActive() {
       return Promise.resolve([]);
     },
-    listDueForAutoSync() {
-      return Promise.resolve([]);
-    },
-    listBySyncSecretId() {
-      return Promise.resolve([]);
-    },
-    listBySyncSecretIds() {
-      return Promise.resolve([]);
-    },
-    claimForSync() {
-      return Promise.resolve(true);
-    },
-    releaseSyncClaim() {
-      return Promise.resolve();
-    },
     delete() {
       return Promise.resolve(1);
     },

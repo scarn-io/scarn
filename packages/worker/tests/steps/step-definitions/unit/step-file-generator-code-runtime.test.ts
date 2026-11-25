@@ -120,6 +120,48 @@ describe("generateStepsFileContent code step runtime", () => {
     );
   });
 
+  test("emits project update and keyPrefix grants as their builders", () => {
+    const content = generateStepsFileContent([
+      makeStep({
+        kind: "code",
+        prompt: null,
+        environment: {
+          kind: "inline",
+          runtime: { kind: "managed", id: "bun1" },
+        },
+        grants: [
+          { resource: "workItem", action: "read", scope: "project" },
+          {
+            resource: "workItem",
+            action: "create",
+            scope: "project",
+            labels: ["acme"],
+            keyPrefix: "ACME-",
+          },
+          {
+            resource: "workItem",
+            action: "update",
+            scope: "project",
+            keyPrefix: "ACME-",
+            labels: ["acme"],
+          },
+          { resource: "workItem", action: "update", scope: "project" },
+        ],
+      }),
+    ]);
+
+    expect(content).toContain('Features.workItems.read({ scope: "project" }),');
+    expect(content).toContain(
+      'Features.workItems.create({ scope: "project", labels: ["acme"], keyPrefix: "ACME-" }),',
+    );
+    expect(content).toContain(
+      'Features.workItems.update({ scope: "project", keyPrefix: "ACME-", labels: ["acme"] }),',
+    );
+    expect(content).toContain(
+      'Features.workItems.update({ scope: "project" }),',
+    );
+  });
+
   test("keeps the config emission for a non-managed code step with a config path", () => {
     const content = generateStepsFileContent([
       makeStep({

@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { uuidV7Schema } from "@scarn/core/common/contracts/uuid-v7";
-import { WORK_ITEM_PLATFORMS } from "@scarn/core/work-items/work-item/domain/work-item-platform";
 import {
   SECRET_NAME_MAX_LENGTH,
   secretStatusValues,
@@ -71,14 +70,6 @@ export const listSecretsQuerySchema = z.object({
   kind: secretKindSchema.optional(),
 });
 
-/** A project integration the key is lent to for auto-sync. */
-export const secretUseSchema = z.object({
-  projectId: uuidV7Schema,
-  projectName: z.string(),
-  integrationId: uuidV7Schema,
-  platform: z.enum(WORK_ITEM_PLATFORMS),
-});
-
 export const jiraApiKeySecretSchema = z.object({
   id: uuidV7Schema,
   kind: z.literal("jira_api_key"),
@@ -90,7 +81,6 @@ export const jiraApiKeySecretSchema = z.object({
   status: secretStatusSchema,
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
-  usedBy: z.array(secretUseSchema),
 });
 
 export const githubTokenSecretSchema = z.object({
@@ -104,7 +94,6 @@ export const githubTokenSecretSchema = z.object({
   status: secretStatusSchema,
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
-  usedBy: z.array(secretUseSchema),
 });
 
 export const bitbucketApiTokenSecretSchema = z.object({
@@ -118,7 +107,6 @@ export const bitbucketApiTokenSecretSchema = z.object({
   status: secretStatusSchema,
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
-  usedBy: z.array(secretUseSchema),
 });
 
 export const secretSchema = z.discriminatedUnion("kind", [
@@ -198,7 +186,6 @@ export type CreateSecretInput = z.infer<typeof createSecretSchema>;
 export type RenameSecretInput = z.infer<typeof renameSecretSchema>;
 export type ListSecretsQuery = z.infer<typeof listSecretsQuerySchema>;
 export type SecretContract = z.infer<typeof secretSchema>;
-export type SecretUseContract = z.infer<typeof secretUseSchema>;
 export type JiraApiKeySecretContract = z.infer<typeof jiraApiKeySecretSchema>;
 export type GitHubTokenSecretContract = z.infer<typeof githubTokenSecretSchema>;
 export type BitbucketApiTokenSecretContract = z.infer<

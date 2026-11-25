@@ -72,11 +72,6 @@ export const makeProjectIntegrationRepo = (
       integrations.filter((i) => i.installationId === installationId),
     ),
   listActive: notImplemented,
-  listDueForAutoSync: notImplemented,
-  listBySyncSecretId: notImplemented,
-  listBySyncSecretIds: notImplemented,
-  claimForSync: notImplemented,
-  releaseSyncClaim: notImplemented,
   delete: notImplemented,
   deleteByInstallationId: notImplemented,
 });
@@ -98,10 +93,6 @@ export const makeGitHubIntegration = (opts: {
     lastSyncedAt: null,
     lastError: null,
     firstSyncHorizonDays: null,
-    syncSecretId: null,
-    autoSyncPausedReason: null,
-    autoSyncPausedAt: null,
-    autoSyncPausedDetail: null,
   });
 
 export const makeWorkItemRepo = (
@@ -121,6 +112,7 @@ export const makeWorkItemRepo = (
     loadMany: () => Promise.resolve([]),
     listChildren: notImplemented,
     countSpawnedByTask: notImplemented,
+    maxSourceUpdatedAt: notImplemented,
     listPageByProjectId: notImplemented,
     listFieldOptions: notImplemented,
     listLabels: notImplemented,

@@ -4,6 +4,7 @@ import { defineStep } from "../src/definitions/steps/define-step";
 import {
   Features,
   type AnyStepFeature,
+  type WorkItemFeature,
 } from "../src/definitions/steps/step-features";
 
 describe("defineStep", () => {
@@ -336,9 +337,12 @@ describe("defineStep", () => {
       ["block", "scarn-block-work-item"],
       ["close", "scarn-close-work-item"],
     ] as const)("%s names %s", (action, tool) => {
-      expect(
-        Features.workItems[action]({ scope: "self" })._promptAddition,
-      ).toContain(`\`${tool}\``);
+      const builder = Features.workItems[action] as (options: {
+        scope: "self";
+      }) => WorkItemFeature;
+      expect(builder({ scope: "self" })._promptAddition).toContain(
+        `\`${tool}\``,
+      );
     });
 
     test("label names scarn-label-work-item and its labels", () => {

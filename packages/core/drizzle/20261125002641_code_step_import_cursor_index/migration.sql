@@ -1,0 +1,1 @@
+CREATE INDEX "work_items_project_platform_key_prefix_idx" ON "app"."work_items" ("project_id","platform","platform_key" text_pattern_ops,"source_updated_at");

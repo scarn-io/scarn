@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { ENV_VAR_NAME_PATTERN, isReservedEnvVarName } from "../../env-vars";
+import {
+  ENV_VAR_NAME_PATTERN,
+  isReservedEnvVarName,
+  type EnvVarSpecInput,
+} from "../../env-vars";
+import { normalizeEnv, type EnvRecord } from "./env";
 import { toolHealthCheckSchema } from "../../health-checks";
 import {
   parseMcpServer,
@@ -96,7 +101,11 @@ export type McpOp =
  * `{ type: "ref", name }`, `{ type: "local", name, command, cwd?,
  * environment? }` or `{ type: "remote", name, url, headers?, oauth? }`, each
  * with the shared OpenCode fields (`timeout`, `protocol`, `codemode`). Inline
- * `environment` and `headers` values must be written as `{env:VAR}`.
+ * `environment` and `headers` values must be written as `{env:VAR}`. A
+ * `remote` server's `headers` may also use `{basic:USER_VAR:PASS_VAR}`
+ * (`Basic {basic:EMAIL:TOKEN}`), which the worker encodes as
+ * `base64(USER_VAR:PASS_VAR)`; OpenCode can't read it, so such a server
+ * serves code and MCP tool steps, not agent steps.
  */
 export type DefineMcpConfig<TChecks extends Record<string, McpCheckInput>> =
   McpServerConfig & {
@@ -104,12 +113,21 @@ export type DefineMcpConfig<TChecks extends Record<string, McpCheckInput>> =
     env?: readonly string[];
     /** Worker env vars passed through when set. */
     optionalEnv?: readonly string[];
+    /**
+     * The server's own variables, by the name its `{env:…}`/`{basic:…}`
+     * placeholders read: `Env.secret`, `Env.inherit`, `Env.value` or a
+     * literal. Resolved on the worker for this server only; a code step's
+     * own process never gets them.
+     */
+    vars?: EnvRecord;
     healthChecks?: TChecks;
   };
 
 type McpHandleData = {
   readonly env: readonly string[];
   readonly optionalEnv: readonly string[];
+  /** `vars`, in the `envJson` wire shape. */
+  readonly vars: readonly EnvVarSpecInput[];
   /** The checks from `defineMcp`; `addCheck`ed checks live in `overrides`. */
   readonly checks: Readonly<Record<string, Readonly<McpCheckInput>>>;
   readonly overrides: readonly McpOp[];
@@ -251,6 +269,28 @@ function assertEnvNames(
   }
 }
 
+/** `vars` in the wire shape; each applies to the server alone, never setup. */
+function serverVars(
+  label: string,
+  vars: EnvRecord | undefined,
+): EnvVarSpecInput[] {
+  let specs: EnvVarSpecInput[];
+  try {
+    specs = normalizeEnv(vars) ?? [];
+  } catch (error) {
+    throw new Error(
+      `defineMcp "${label}": vars: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+  for (const spec of specs) {
+    if ((spec.applies ?? "agent") === "agent") continue;
+    throw new Error(
+      `defineMcp "${label}": vars.${spec.name}: applies must be "agent"; a server's variables never reach setup.`,
+    );
+  }
+  return specs;
+}
+
 function connectionOf(state: McpServerDefinition): string | undefined {
   return state.type === "local" ? undefined : state.server.auth?.connection;
 }
@@ -261,7 +301,7 @@ function connectionOf(state: McpServerDefinition): string | undefined {
  */
 function assertConnectionAuthFree(
   state: McpServerDefinition,
-  what: "env" | "optionalEnv",
+  what: "env" | "optionalEnv" | "vars",
 ): void {
   const connection = connectionOf(state);
   if (connection === undefined) return;
@@ -385,9 +425,14 @@ export function defineMcp<
   if (config.optionalEnv !== undefined) {
     assertConnectionAuthFree(definition, "optionalEnv");
   }
+  if (config.vars !== undefined) assertConnectionAuthFree(definition, "vars");
   const env = config.env ?? [];
   const optionalEnv = config.optionalEnv ?? [];
-  assertEnvNames(definition.name, env, optionalEnv);
+  const vars = serverVars(definition.name, config.vars);
+  assertEnvNames(definition.name, env, [
+    ...optionalEnv,
+    ...vars.map((entry) => entry.name),
+  ]);
   const checks: Record<string, McpCheckInput> = config.healthChecks ?? {};
   for (const [name, check] of Object.entries(checks)) {
     assertCheckInput(definition.name, name, check);
@@ -397,6 +442,7 @@ export function defineMcp<
       ...frozenCopy(definition),
       env: frozenCopy([...env]),
       optionalEnv: frozenCopy([...optionalEnv]),
+      vars: frozenCopy(vars),
       checks: frozenCopy({ ...checks }),
       overrides: Object.freeze([]),
     },

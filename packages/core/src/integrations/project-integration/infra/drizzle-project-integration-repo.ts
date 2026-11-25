@@ -1,23 +1,8 @@
-import {
-  and,
-  eq,
-  gt,
-  inArray,
-  isNotNull,
-  isNull,
-  lt,
-  or,
-  sql,
-  type SQL,
-} from "drizzle-orm";
+import { and, eq, gt, inArray, type SQL } from "drizzle-orm";
 import { getDb } from "@scarn/core/lib/db";
 import type { DbExecutor } from "@scarn/core/lib/db/db-executor";
 import { parseUuidV7, type UuidV7 } from "@scarn/core/common/contracts/uuid-v7";
-import {
-  CoreError,
-  CoreValidationError,
-  PersistenceError,
-} from "@scarn/core/lib/errors";
+import { CoreError, PersistenceError } from "@scarn/core/lib/errors";
 import { projectIntegrations } from "@scarn/core/lib/db/schema";
 import {
   readRowsSkippingUnreadable,
@@ -30,11 +15,9 @@ import {
   readStoredProjectIntegrationScope,
 } from "../contracts/project-integration-scope-stored";
 import {
-  AUTO_SYNC_PAUSED_REASONS,
   PROJECT_INTEGRATION_STATUSES,
   ProjectIntegrationEntity,
   isGitHubAppIntegration,
-  type AutoSyncPausedReason,
   type GitHubAppProjectIntegration,
   type ProjectIntegrationStatus,
 } from "../domain/project-integration-entity";
@@ -43,21 +26,6 @@ const parseStatus = (value: string): ProjectIntegrationStatus =>
   (PROJECT_INTEGRATION_STATUSES as readonly string[]).includes(value)
     ? (value as ProjectIntegrationStatus)
     : "active";
-
-const parseAutoSyncPausedReason = (
-  value: string | null,
-): AutoSyncPausedReason | null => {
-  if (value === null) {
-    return null;
-  }
-  if (!(AUTO_SYNC_PAUSED_REASONS as readonly string[]).includes(value)) {
-    throw new CoreValidationError(
-      `Project integration row has an unknown auto-sync paused reason '${value}'`,
-      "PROJECT_INTEGRATION_ROW_INVALID",
-    );
-  }
-  return value as AutoSyncPausedReason;
-};
 
 const toRow = (integration: ProjectIntegrationEntity) => {
   const row = integration.toJSON();
@@ -72,17 +40,13 @@ const toRow = (integration: ProjectIntegrationEntity) => {
     lastSyncedAt: row.lastSyncedAt,
     lastError: row.lastError,
     firstSyncHorizonDays: row.firstSyncHorizonDays,
-    syncSecretId: row.syncSecretId,
-    autoSyncPausedReason: row.autoSyncPausedReason,
-    autoSyncPausedAt: row.autoSyncPausedAt,
-    autoSyncPausedDetail: row.autoSyncPausedDetail,
     createdAt: row.createdAt ?? new Date(),
     updatedAt: row.updatedAt ?? new Date(),
   };
 };
 
 /**
- * Page size for `listActive()` / `listDueForAutoSync()` internal keyset pagination. Overridable via
+ * Page size for `listActive()` internal keyset pagination. Overridable via
  * the (test-only) `pageSize` option so tests can exercise multi-page
  * traversal without seeding hundreds of rows.
  */
@@ -113,13 +77,6 @@ export const readProjectIntegrationRow = (
         lastSyncedAt: row.lastSyncedAt,
         lastError: row.lastError,
         firstSyncHorizonDays: row.firstSyncHorizonDays,
-        syncSecretId:
-          row.syncSecretId === null ? null : parseUuidV7(row.syncSecretId),
-        autoSyncPausedReason: parseAutoSyncPausedReason(
-          row.autoSyncPausedReason,
-        ),
-        autoSyncPausedAt: row.autoSyncPausedAt,
-        autoSyncPausedDetail: row.autoSyncPausedDetail,
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
       }),
@@ -204,10 +161,6 @@ export class DrizzleProjectIntegrationRepo implements ProjectIntegrationRepo {
         lastSyncedAt: row.lastSyncedAt,
         lastError: row.lastError,
         firstSyncHorizonDays: row.firstSyncHorizonDays,
-        syncSecretId: row.syncSecretId,
-        autoSyncPausedReason: row.autoSyncPausedReason,
-        autoSyncPausedAt: row.autoSyncPausedAt,
-        autoSyncPausedDetail: row.autoSyncPausedDetail,
         updatedAt: new Date(),
       })
       .where(eq(projectIntegrations.id, integration.id))
@@ -280,79 +233,6 @@ export class DrizzleProjectIntegrationRepo implements ProjectIntegrationRepo {
       dbExecutor,
       options,
     );
-  }
-
-  async listDueForAutoSync(
-    dbExecutor?: DbExecutor,
-    options?: { pageSize?: number },
-  ): Promise<ProjectIntegrationEntity[]> {
-    return this.listPaged(
-      and(
-        isNotNull(projectIntegrations.syncSecretId),
-        inArray(projectIntegrations.status, ["active", "error"]),
-      ),
-      dbExecutor,
-      options,
-    );
-  }
-
-  async listBySyncSecretId(
-    secretId: UuidV7,
-    dbExecutor?: DbExecutor,
-  ): Promise<ProjectIntegrationEntity[]> {
-    const db = dbExecutor ?? getDb();
-    const rows = await db
-      .select()
-      .from(projectIntegrations)
-      .where(eq(projectIntegrations.syncSecretId, secretId))
-      .orderBy(projectIntegrations.id);
-    return rows.map((row) => projectIntegrationFromRow(row));
-  }
-
-  async listBySyncSecretIds(
-    secretIds: UuidV7[],
-    dbExecutor?: DbExecutor,
-  ): Promise<ProjectIntegrationEntity[]> {
-    if (secretIds.length === 0) {
-      return [];
-    }
-    const db = dbExecutor ?? getDb();
-    const rows = await db
-      .select()
-      .from(projectIntegrations)
-      .where(inArray(projectIntegrations.syncSecretId, secretIds))
-      .orderBy(projectIntegrations.id);
-    return this.readRows(rows);
-  }
-
-  async claimForSync(
-    id: UuidV7,
-    until: Date,
-    dbExecutor?: DbExecutor,
-  ): Promise<boolean> {
-    const db = dbExecutor ?? getDb();
-    const rows = await db
-      .update(projectIntegrations)
-      .set({ syncLockedUntil: until })
-      .where(
-        and(
-          eq(projectIntegrations.id, id),
-          or(
-            isNull(projectIntegrations.syncLockedUntil),
-            lt(projectIntegrations.syncLockedUntil, sql`now()`),
-          ),
-        ),
-      )
-      .returning({ id: projectIntegrations.id });
-    return rows.length > 0;
-  }
-
-  async releaseSyncClaim(id: UuidV7, dbExecutor?: DbExecutor): Promise<void> {
-    const db = dbExecutor ?? getDb();
-    await db
-      .update(projectIntegrations)
-      .set({ syncLockedUntil: null })
-      .where(eq(projectIntegrations.id, id));
   }
 
   private async listPaged(

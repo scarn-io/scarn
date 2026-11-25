@@ -12,6 +12,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "bun:test";
 import type { ResolvedEnvironmentRef } from "@scarn/sdk/environment";
 import type { OpenCodeMcpServers } from "../../../../src/common/contracts/opencode-mcp";
 import { ConfigurationError } from "../../../../src/lib/errors";
+import type { Grant } from "@scarn/sdk";
 import { HOST_GATEWAY_RUN_ARGS } from "../../../../src/runtime/runtime-service/infra/devcontainer-mount-injection";
 import { taskKindResolvesMcpServers } from "../../../../src/work/task-run/application/task-kind-runtime";
 import type {
@@ -67,7 +68,10 @@ describe("code step launch with MCP servers", () => {
     environment?: ResolvedEnvironmentRef;
     opencodeMcpJson: OpenCodeMcpServers | null;
     devcontainerJson?: Record<string, unknown>;
+    grants?: Grant[];
+    stepEnv?: Record<string, string>;
   }) {
+    const stepEnv = input.stepEnv ?? { BASE: "base" };
     const log: CallLog = [];
     const deps = buildOrchestratorFakeDeps({
       workspacePath,
@@ -97,7 +101,7 @@ describe("code step launch with MCP servers", () => {
     const resolveMcpEnv = (refs: readonly McpEnvRef[]): ResolvedStepEnv => {
       resolvedRefs.push(refs);
       return {
-        stepEnv: { BASE: "base" },
+        stepEnv,
         setupEnv: {},
         promptEnv: { BASE: "base" },
         secretValues: [],
@@ -107,16 +111,21 @@ describe("code step launch with MCP servers", () => {
       undefined,
       deps,
     );
+    const launchInput = buildLaunchInput();
     const launch = () =>
       orchestrator.launch({
-        ...buildLaunchInput(),
+        ...launchInput,
+        currentExecutionInfo: {
+          ...launchInput.currentExecutionInfo,
+          grants: input.grants ?? [],
+        },
         ...(input.environment !== undefined
           ? { environment: input.environment }
           : {}),
         taskKind: "code",
         startAgent: false,
         opencodeMcpJson: input.opencodeMcpJson,
-        stepEnv: { BASE: "base" },
+        stepEnv,
         resolveMcpEnv,
         registerManagedLaunch,
       });
@@ -174,6 +183,30 @@ describe("code step launch with MCP servers", () => {
     await env.cleanup();
   });
 
+  test("masks the encoded credential of a {basic:…} header", async () => {
+    const { launch } = setup({
+      environment: BUN1,
+      opencodeMcpJson: {
+        jira: {
+          type: "remote",
+          url: "https://mcp.atlassian.com/v1/mcp",
+          headers: {
+            Authorization: "Basic {basic:JIRA_EMAIL:JIRA_API_TOKEN}",
+          },
+        },
+      },
+      stepEnv: { JIRA_EMAIL: "bot@example.com", JIRA_API_TOKEN: "tok:ü" },
+    });
+
+    const env = await launch();
+
+    expect(env.mcpCalls?.env).toMatchObject({ JIRA_API_TOKEN: "tok:ü" });
+    expect(env.secretValues).toContain(
+      Buffer.from("bot@example.com:tok:ü", "utf8").toString("base64"),
+    );
+    await env.cleanup();
+  });
+
   test("a code step without servers launches no bridge and patches no run args", async () => {
     const { registerManagedLaunch, resolvedRefs, launch } = setup({
       environment: BUN1,
@@ -190,6 +223,30 @@ describe("code step launch with MCP servers", () => {
     await env.cleanup();
   });
 
+  test("a code step with only a project work-item grant patches the run args for its step bridge but resolves no servers", async () => {
+    const { registerManagedLaunch, resolvedRefs, launch } = setup({
+      environment: BUN1,
+      opencodeMcpJson: null,
+      grants: [
+        {
+          resource: "workItem",
+          action: "create",
+          scope: "project",
+          labels: [],
+        },
+      ],
+    });
+
+    const env = await launch();
+
+    expect(env.mcpCalls).toBeUndefined();
+    expect(registerManagedLaunch).not.toHaveBeenCalled();
+    expect(resolvedRefs.flat()).toEqual([]);
+    const config = await readConfig(BUN1_CONFIG_PATH);
+    expect(config["runArgs"]).toEqual([...HOST_GATEWAY_RUN_ARGS]);
+    await env.cleanup();
+  });
+
   test("a compose devcontainer fails before the container starts", async () => {
     const { log, launch } = setup({
       opencodeMcpJson: { db: { type: "ref" } },
@@ -203,7 +260,7 @@ describe("code step launch with MCP servers", () => {
 
     expect(error).toBeInstanceOf(ConfigurationError);
     expect((error as Error).message).toContain(
-      "compose devcontainers aren't supported for code steps with `mcps` yet",
+      "compose devcontainers aren't supported for code steps with `mcps` or work-item features yet",
     );
     expect(log).not.toContain("launchDevcontainer");
   });

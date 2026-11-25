@@ -43,7 +43,7 @@ export class OpencodeLogTail {
         `tail -n +1 -F "${this.deps.logPath}" 2>/dev/null`;
       const [command, args] =
         this.deps.containerId === null
-          ? (["sh", ["-lc", tailScript]] as const)
+          ? (["sh", ["-c", tailScript]] as const)
           : ([
               "docker",
               ["exec", this.deps.containerId, "sh", "-lc", tailScript],

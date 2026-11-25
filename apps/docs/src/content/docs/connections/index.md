@@ -21,6 +21,7 @@ with that access.
 | PostHog                                                    | `posthog`                  | `https://mcp.posthog.com/mcp`                  |
 | Stripe                                                     | `stripe`                   | `https://mcp.stripe.com`                       |
 | Netlify                                                    | `netlify`                  | `https://netlify-mcp.netlify.app/mcp`          |
+| Atlassian                                                  | `atlassian`                | `https://mcp.atlassian.com/v2/mcp`             |
 
 You can connect these from settings or from the CLI. Any other remote MCP
 server in your repository's MCP config, such as

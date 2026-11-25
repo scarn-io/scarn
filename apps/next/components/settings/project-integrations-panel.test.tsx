@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import { cleanup, fireEvent, render, waitFor } from "@testing-library/react";
+import type { AutomationListItemContract } from "@scarn/api/frontend-contracts";
+import type { Grant } from "@scarn/sdk/definitions/steps";
 import type { ProjectIntegrationView } from "./project-integrations-panel";
 import { installDom } from "@/tests/support/install-dom";
 
@@ -89,15 +91,8 @@ const { ProjectIntegrationsPanel } =
   await import("./project-integrations-panel");
 const { ProjectRouteProvider } =
   await import("@/components/project-route-context");
-
-const autoSyncOff: ProjectIntegrationView["autoSync"] = {
-  supported: true,
-  state: "off",
-  syncsAs: null,
-  pausedReason: null,
-  pausedDetail: null,
-  pausedAt: null,
-};
+const { poller } =
+  await import("@/components/pipelines/pipeline-page-tabs-fixtures");
 
 const jiraIntegration: ProjectIntegrationView = {
   id: "01966a2c-9494-7db5-aa46-0f8f5cbbeb01",
@@ -108,7 +103,6 @@ const jiraIntegration: ProjectIntegrationView = {
     projectKeys: ["PROJ"],
   },
   status: "active",
-  autoSync: autoSyncOff,
   lastSyncedAt: null,
   lastError: null,
   createdAt: "2026-06-01T00:00:00.000Z",
@@ -121,7 +115,6 @@ const githubIntegration: ProjectIntegrationView = {
   installationId: "123",
   externalScope: { repos: [{ id: 1, fullName: "acme/widgets" }] },
   status: "active",
-  autoSync: autoSyncOff,
   lastSyncedAt: null,
   lastError: null,
   createdAt: "2026-06-01T00:00:00.000Z",
@@ -133,15 +126,42 @@ const githubTokenIntegration: ProjectIntegrationView = {
   kind: "github_token",
   externalScope: { repos: [{ id: 1, fullName: "acme/widgets" }] },
   status: "active",
-  autoSync: autoSyncOff,
   lastSyncedAt: null,
   lastError: null,
   createdAt: "2026-06-01T00:00:00.000Z",
 };
 
+const jiraImporter: AutomationListItemContract = {
+  ...poller,
+  title: "Issue import",
+  latestVersion: {
+    id: poller.id,
+    version: 1,
+    schemaVersion: 1,
+    contentHash: "hash",
+    publishedAt: "2026-11-01T12:00:00.000Z",
+    document: {
+      kind: "automation",
+      schemaVersion: 1,
+      key: poller.key,
+      scope: "project",
+      rules: [
+        {
+          key: "hourly",
+          event: "schedule",
+          cron: "0 * * * *",
+          next: { routes: [{ kind: "step", to: "import-jira" }] },
+        },
+      ],
+    },
+  },
+};
+
 const renderPanel = (
   integrations: ProjectIntegrationView[],
   permissions: string[] = ["work-items:read", "integrations:write"],
+  automations: AutomationListItemContract[] = [],
+  stepGrants: ReadonlyMap<string, readonly Grant[]> = new Map(),
 ) =>
   render(
     <ProjectRouteProvider
@@ -156,6 +176,8 @@ const renderPanel = (
         projectGitUrl="https://github.com/acme/widgets"
         initialIntegrations={integrations}
         githubAppConfigured
+        automations={automations}
+        stepGrants={stepGrants}
         flashMessage={null}
       />
     </ProjectRouteProvider>,
@@ -235,13 +257,11 @@ describe("ProjectIntegrationsPanel sync", () => {
     });
   });
 
-  test("cards show the connection method, and manual sync only for token integrations", () => {
+  test("cards show the connection method", () => {
     const view = renderPanel([githubIntegration, githubTokenIntegration]);
 
     expect(view.getByText("Connected through GitHub App")).toBeTruthy();
-    expect(
-      view.getByText("Connected with your token · Manual sync only"),
-    ).toBeTruthy();
+    expect(view.getByText("Connected with your token")).toBeTruthy();
   });
 
   test("syncing a GitHub token integration asks for a GitHub token", async () => {
@@ -275,24 +295,40 @@ describe("ProjectIntegrationsPanel sync", () => {
     expect(syncCalls).toEqual([]);
   });
 
-  test("token integrations show auto-sync controls to members who can manage them", () => {
-    const view = renderPanel([
-      githubIntegration,
-      { ...jiraIntegration, autoSync: autoSyncOff },
-    ]);
+  test("token integrations without an import schedule explain the library poller", () => {
+    const view = renderPanel([githubIntegration, jiraIntegration]);
 
-    expect(view.getAllByText("Auto-sync off")).toHaveLength(1);
+    expect(view.getAllByText(/To import on a schedule/)).toHaveLength(1);
+    expect(view.getByText("@scarn/sdk/library/jira")).toBeTruthy();
     expect(
-      view.getAllByRole("button", { name: "Turn on auto-sync" }),
-    ).toHaveLength(1);
+      view.getByRole("link", { name: /Pipelines & Automations/ }),
+    ).toBeTruthy();
   });
 
-  test("read-only members see the auto-sync status without the controls", () => {
-    const view = renderPanel([jiraIntegration], ["work-items:read"]);
+  test("a token integration shows its import schedule's last run", () => {
+    const view = renderPanel(
+      [jiraIntegration],
+      undefined,
+      [jiraImporter],
+      new Map([
+        [
+          "import-jira",
+          [
+            {
+              resource: "workItem",
+              action: "update",
+              scope: "project",
+              keyPrefix: "PROJ-",
+            },
+          ],
+        ],
+      ]),
+    );
 
-    expect(view.getByText("Auto-sync off")).toBeTruthy();
-    expect(
-      view.queryByRole("button", { name: "Turn on auto-sync" }),
-    ).toBeNull();
+    expect(view.getByTestId("integration-import-schedule").textContent).toMatch(
+      /^Imported by Issue import · last run .+Failed/,
+    );
+    expect(view.getByText("3 failures in a row")).toBeTruthy();
+    expect(view.queryByText(/To import on a schedule/)).toBeNull();
   });
 });

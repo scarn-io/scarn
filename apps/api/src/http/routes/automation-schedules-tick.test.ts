@@ -7,7 +7,7 @@ import { apiErrorHandler } from "../error-handler";
 import { createAutomationSchedulesTickRoutes } from "./automation-schedules-tick";
 
 const SECRET = "test-automation-schedule-tick-token-0123456789";
-const OTHER_SECRET = "test-integration-poll-token-0123456789abcdef";
+const OTHER_SECRET = "test-github-reconcile-token-0123456789abcdef";
 
 // A fake repo with nothing due, so the route runs the real tick. Every other
 // method throws if called.
@@ -60,8 +60,8 @@ describe("POST /internal/automations/schedules/tick", () => {
   beforeEach(() => {
     original = process.env["AUTOMATION_SCHEDULE_TICK_CRON_SECRET"];
     process.env["AUTOMATION_SCHEDULE_TICK_CRON_SECRET"] = SECRET;
-    originalOther = process.env["INTEGRATION_POLL_CRON_SECRET"];
-    process.env["INTEGRATION_POLL_CRON_SECRET"] = OTHER_SECRET;
+    originalOther = process.env["GITHUB_RECONCILE_CRON_SECRET"];
+    process.env["GITHUB_RECONCILE_CRON_SECRET"] = OTHER_SECRET;
   });
 
   afterEach(() => {
@@ -71,9 +71,9 @@ describe("POST /internal/automations/schedules/tick", () => {
       process.env["AUTOMATION_SCHEDULE_TICK_CRON_SECRET"] = original;
     }
     if (originalOther === undefined) {
-      delete process.env["INTEGRATION_POLL_CRON_SECRET"];
+      delete process.env["GITHUB_RECONCILE_CRON_SECRET"];
     } else {
-      process.env["INTEGRATION_POLL_CRON_SECRET"] = originalOther;
+      process.env["GITHUB_RECONCILE_CRON_SECRET"] = originalOther;
     }
   });
 

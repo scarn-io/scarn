@@ -47,6 +47,35 @@ export {
   type FakeMcpClients,
   type FakeMcpTool,
 } from "./fake-mcp-clients";
+export {
+  createCodeStepWorkItemsClient,
+  type CodeStepWorkItemsClientOptions,
+  type WorkItemsBridgeFetch,
+  type WorkItemsClient,
+  type WorkItemsCreate,
+  type WorkItemsLatestSourceUpdate,
+  type WorkItemsUpsert,
+} from "./code-step-work-items-client";
+export {
+  createFakeWorkItems,
+  type FakeWorkItem,
+  type FakeWorkItems,
+  type FakeWorkItemsOptions,
+} from "./fake-work-items";
+export {
+  WorkItemsInvalidError,
+  WorkItemsRefusedError,
+  WorkItemsUnavailableError,
+  type WorkItemsUnavailableReason,
+} from "./work-items-errors";
+export type {
+  CreatedWorkItem,
+  UpsertedWorkItem,
+  WorkItemCreateItem,
+  WorkItemSource,
+  WorkItemUpsertItem,
+  WorkItemUpsertPlatform,
+} from "../../contracts/step-bridge";
 export * from "./env";
 export * from "./prompt-template";
 export * from "./args-template";

@@ -57,7 +57,6 @@ describe("POST /me/secrets", () => {
         },
         "name": "Work Jira",
         "status": "active",
-        "usedBy": [],
       }
     `);
   });

@@ -24,6 +24,7 @@ import type { WorkReporter } from "../contracts/work-reporter";
 import { buildFakeProviderConfig } from "./fake-ai";
 import {
   applyStepMcpEnv,
+  assertNoAgentBasicPlaceholders,
   planStepMcpServers,
 } from "./resolve-launch-mcp-servers";
 
@@ -81,6 +82,7 @@ export async function startHostAgent(input: {
     stepEnv: input.stepEnv,
     resolveMcpEnv: input.resolveMcpEnv,
   });
+  assertNoAgentBasicPlaceholders(mcpLaunch.servers);
   const { opencodeConfigContent } = await buildOpencodeContext({
     workspacePath,
     stepMcpServers: mcpLaunch.servers,

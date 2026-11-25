@@ -26,13 +26,20 @@ import { getBrowserScarnApiClient } from "@/app/_lib/scarn-browser-api-client";
 import { parseApiError } from "@/app/_lib/api-error";
 import { useHasProjectPermission } from "@/components/project-route-context";
 
-const KIND_LABELS: Record<UserNotificationKind, string> = {
+const NOTIFICATION_KINDS = [
+  "feedback_request",
+  "status_update",
+  "blocked",
+  "result_ready",
+  "warning",
+] as const satisfies readonly UserNotificationKind[];
+
+const KIND_LABELS: Record<(typeof NOTIFICATION_KINDS)[number], string> = {
   feedback_request: "Feedback Request",
   status_update: "Status Update",
   blocked: "Blocked",
   result_ready: "Result Ready",
   warning: "Warning",
-  integration_auto_sync_paused: "Auto-sync Paused",
 };
 
 const CHANNEL_LABELS: Record<NotificationChannel, string> = {
@@ -42,21 +49,15 @@ const CHANNEL_LABELS: Record<NotificationChannel, string> = {
   slack: "Slack",
 };
 
-const PRIORITY_OPTIONS: Array<{ value: NotificationPriority | ""; label: string }> = [
+const PRIORITY_OPTIONS: Array<{
+  value: NotificationPriority | "";
+  label: string;
+}> = [
   { value: "", label: "Any priority" },
   { value: "low", label: "Low and above" },
   { value: "normal", label: "Normal and above" },
   { value: "high", label: "High and above" },
   { value: "urgent", label: "Urgent only" },
-];
-
-const NOTIFICATION_KINDS: UserNotificationKind[] = [
-  "feedback_request",
-  "status_update",
-  "blocked",
-  "result_ready",
-  "warning",
-  "integration_auto_sync_paused",
 ];
 
 const NOTIFICATION_CHANNELS: NotificationChannel[] = [
@@ -110,7 +111,8 @@ function RuleRow({ kind, channel, rule, projectId, onUpdated }: RuleRowProps) {
           kind,
           channel,
           enabled: patch.enabled ?? enabled,
-          minPriority: patch.minPriority !== undefined ? patch.minPriority : minPriority,
+          minPriority:
+            patch.minPriority !== undefined ? patch.minPriority : minPriority,
           conditionsJson: rule?.conditionsJson ?? null,
         });
       if (err) {
@@ -202,7 +204,9 @@ export function NotificationRulesPanel({
   projectId,
   initialRules,
 }: NotificationRulesPanelProps) {
-  const [ruleMap, setRuleMap] = useState<RuleMap>(() => buildRuleMap(initialRules));
+  const [ruleMap, setRuleMap] = useState<RuleMap>(() =>
+    buildRuleMap(initialRules),
+  );
 
   const handleUpdated = (rule: NotificationRuleContract) => {
     setRuleMap((prev) => {

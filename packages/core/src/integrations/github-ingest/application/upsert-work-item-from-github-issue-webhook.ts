@@ -4,7 +4,7 @@ import {
   type UpsertWorkItemsDeps,
 } from "@scarn/core/work-items/work-item/application/upsert-work-item";
 import type { GitHubIssue } from "../infra/github-issues-client";
-import { mapGitHubIssueToWorkItem } from "./map-github-issue-to-work-item";
+import { mapGitHubIssue } from "@scarn/sdk/library/github";
 
 export type UpsertWorkItemFromGitHubIssueWebhookInput = {
   projectId: UuidV7;
@@ -29,7 +29,7 @@ export type UpsertWorkItemFromGitHubIssueWebhookResult = {
  * single `issues.*` webhook payload straight to a work-item upsert with zero
  * follow-up GitHub API calls (decision 5) — the webhook payload's `issue`
  * already carries title/state/labels/assignees. Shares
- * `mapGitHubIssueToWorkItem` with the poll path so the two mappings can never
+ * `mapGitHubIssue` with the poll path so the two mappings can never
  * drift apart, and persists through the same front door, `upsertWorkItems`,
  * so parent preservation and default pipeline assignment are shared too.
  *
@@ -51,11 +51,10 @@ export const upsertWorkItemFromGitHubIssueWebhook = async (
   input: UpsertWorkItemFromGitHubIssueWebhookInput,
   deps: UpsertWorkItemFromGitHubIssueWebhookDeps,
 ): Promise<UpsertWorkItemFromGitHubIssueWebhookResult> => {
-  const mapped = mapGitHubIssueToWorkItem({
+  const mapped = {
     projectId: input.projectId,
-    repoFullName: input.repoFullName,
-    issue: input.issue,
-  });
+    ...mapGitHubIssue(input.issue, { repo: input.repoFullName }),
+  };
 
   const saved = await upsertWorkItems([mapped], deps, {
     onlyIfSourceNewer: true,

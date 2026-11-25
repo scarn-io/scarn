@@ -43,6 +43,7 @@ const buildUpsertWorkItem = (
   input: UpsertWorkItemsInput[number],
   now: Date,
   createdByUserId: UuidV7,
+  spawnedByTaskId: UuidV7 | undefined,
 ): WorkItemEntity => {
   const createWorkItemProps = upsertWorkItemInputToCreateWorkItemProps(input);
 
@@ -50,6 +51,7 @@ const buildUpsertWorkItem = (
     ...WorkItemEntity.create({
       ...createWorkItemProps,
       createdByUserId,
+      spawnedByTaskId,
     }).toJSON(),
     createdAt: now,
     updatedAt: now,
@@ -124,6 +126,11 @@ export type UpsertWorkItemsOptions = {
    * inputs were stale no-ops.
    */
   onlyIfSourceNewer?: boolean;
+  /**
+   * The Task the write is for, stamped on the items it creates. An existing
+   * item keeps its own.
+   */
+  spawnedByTaskId?: UuidV7;
 };
 
 const requireUpsertWorkItemsProjectPermission = async (
@@ -201,7 +208,12 @@ const executeUpsertWorkItems = async (
   const parsedInput = upsertWorkItemsInputSchema.parse(input);
   const now = timeProvider.now();
   const upsertCandidates = parsedInput.map((workItem) =>
-    buildUpsertWorkItem(workItem, now, userAuthz.actorId),
+    buildUpsertWorkItem(
+      workItem,
+      now,
+      userAuthz.actorId,
+      options.spawnedByTaskId,
+    ),
   );
   const dedupedWorkItems = Array.from(
     new Map(

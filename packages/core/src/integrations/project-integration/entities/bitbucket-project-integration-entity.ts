@@ -74,7 +74,7 @@ export class BitbucketProjectIntegration extends ProjectIntegrationEntityBase {
 
   private constructor(props: BitbucketProjectIntegrationProps) {
     const { scope, ...baseProps } = props;
-    super(baseProps, "bitbucket");
+    super(baseProps);
     this.scope = scope;
   }
 

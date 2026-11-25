@@ -6,9 +6,6 @@ import { CoreValidationError } from "@scarn/core/lib/errors";
 import { createProjectIntegration } from "@scarn/core/integrations/project-integration/application/create-project-integration";
 import { listProjectIntegrations } from "@scarn/core/integrations/project-integration/application/list-project-integrations";
 import { deleteProjectIntegration } from "@scarn/core/integrations/project-integration/application/delete-project-integration";
-import { enableIntegrationAutoSync } from "@scarn/core/integrations/project-integration/application/enable-integration-auto-sync";
-import { disableIntegrationAutoSync } from "@scarn/core/integrations/project-integration/application/disable-integration-auto-sync";
-import { loadAutoSyncDisplay } from "@scarn/core/integrations/project-integration/application/load-auto-sync-display";
 import { projectIntegrationEntityToContract } from "@scarn/core/integrations/project-integration/application/project-integration-contract-mapper";
 import {
   createProjectIntegrationInputSchema,
@@ -30,21 +27,6 @@ const projectIntegrationItemParamsSchema = z.object({
   projectId: uuidV7Schema,
   integrationId: uuidV7Schema,
 });
-
-const enableAutoSyncBodySchema = z.object({
-  secretId: uuidV7Schema,
-});
-
-const autoSyncResponses = {
-  200: projectIntegrationSchema,
-  400: apiErrorResponseSchema,
-  401: apiErrorResponseSchema,
-  403: apiErrorResponseSchema,
-  404: apiErrorResponseSchema,
-  422: apiErrorResponseSchema,
-  500: apiErrorResponseSchema,
-  502: apiErrorResponseSchema,
-};
 
 export const createProjectIntegrationRoutes = (appContext: AppContext) =>
   new Elysia()
@@ -77,13 +59,9 @@ export const createProjectIntegrationRoutes = (appContext: AppContext) =>
           projectId,
           appContext.projectIntegrationRepo,
         );
-        const autoSyncDisplay = await loadAutoSyncDisplay(
-          integrations,
-          appContext,
-        );
         const now = appContext.timeProvider.now();
         return integrations.map((integration) =>
-          projectIntegrationEntityToContract(integration, now, autoSyncDisplay),
+          projectIntegrationEntityToContract(integration, now),
         );
       },
     )
@@ -129,7 +107,6 @@ export const createProjectIntegrationRoutes = (appContext: AppContext) =>
         return projectIntegrationEntityToContract(
           created,
           appContext.timeProvider.now(),
-          await loadAutoSyncDisplay([created], appContext),
         );
       },
     )
@@ -243,58 +220,5 @@ export const createProjectIntegrationRoutes = (appContext: AppContext) =>
         );
 
         return Response.json(null);
-      },
-    )
-    .put(
-      "/projects/:projectId/integrations/:integrationId/auto-sync",
-      {
-        params: projectIntegrationItemParamsSchema,
-        body: enableAutoSyncBodySchema,
-        response: responseSchemas(autoSyncResponses),
-        detail: {
-          operationId: "enableProjectIntegrationAutoSync",
-          tags: ["ProjectIntegrations"],
-        },
-      },
-      async ({ params, body, auth }) => {
-        const { projectId, integrationId } =
-          projectIntegrationItemParamsSchema.parse(params);
-
-        const integration = await enableIntegrationAutoSync(
-          { projectId, integrationId, secretId: body.secretId },
-          { ...appContext, userAuthz: auth.userAuthz },
-        );
-
-        return projectIntegrationEntityToContract(
-          integration,
-          appContext.timeProvider.now(),
-          await loadAutoSyncDisplay([integration], appContext),
-        );
-      },
-    )
-    .delete(
-      "/projects/:projectId/integrations/:integrationId/auto-sync",
-      {
-        params: projectIntegrationItemParamsSchema,
-        response: responseSchemas(autoSyncResponses),
-        detail: {
-          operationId: "disableProjectIntegrationAutoSync",
-          tags: ["ProjectIntegrations"],
-        },
-      },
-      async ({ params, auth }) => {
-        const { projectId, integrationId } =
-          projectIntegrationItemParamsSchema.parse(params);
-
-        const integration = await disableIntegrationAutoSync(
-          { projectId, integrationId },
-          { ...appContext, userAuthz: auth.userAuthz },
-        );
-
-        return projectIntegrationEntityToContract(
-          integration,
-          appContext.timeProvider.now(),
-          await loadAutoSyncDisplay([integration], appContext),
-        );
       },
     );

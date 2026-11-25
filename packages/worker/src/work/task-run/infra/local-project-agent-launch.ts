@@ -22,6 +22,7 @@ import { buildFakeProviderConfig } from "./fake-ai";
 import type { LocalProjectRuntimeEnvironmentDeps } from "./local-project-runtime-environment-deps";
 import {
   applyStepMcpEnv,
+  assertNoAgentBasicPlaceholders,
   planStepMcpServers,
   type StepMcpLaunch,
 } from "./resolve-launch-mcp-servers";
@@ -98,6 +99,7 @@ export async function prepareAgentLaunch(input: {
     stepEnv: input.stepEnv,
     resolveMcpEnv: input.resolveMcpEnv,
   });
+  assertNoAgentBasicPlaceholders(mcp.servers);
 
   const payload = await deps.payloadProvisioner.ensure();
   logWork("runtime", "OpenCode runtime payload ready", {

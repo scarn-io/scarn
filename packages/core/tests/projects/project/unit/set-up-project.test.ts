@@ -210,30 +210,9 @@ describe("setUpProject", () => {
     expect(events).toContain("integration:github_token");
   });
 
-  test("autoSync with a saved token lends it to the new integration", async () => {
-    const { deps, integrations, saveGitHubToken, userId } = createHarness();
-    const secret = await saveGitHubToken();
-
-    await setUpProject(
-      {
-        name: "API",
-        description: null,
-        gitUrl: GIT_URL,
-        userId,
-        issueTracker: {
-          type: "github_token",
-          credential: { secretId: secret.id },
-          autoSync: true,
-        },
-      },
-      deps,
-    );
-
-    expect(integrations[0]?.syncSecretId).toBe(secret.id);
-  });
-
-  test("a saved token without autoSync is not lent", async () => {
-    const { deps, integrations, saveGitHubToken, userId } = createHarness();
+  test("a saved token creates the integration and syncs with it", async () => {
+    const { deps, events, integrations, saveGitHubToken, userId } =
+      createHarness();
     const secret = await saveGitHubToken();
 
     await setUpProject(
@@ -250,31 +229,8 @@ describe("setUpProject", () => {
       deps,
     );
 
-    expect(integrations[0]?.syncSecretId).toBeNull();
-  });
-
-  test("autoSync with a pasted token is rejected before anything is created", async () => {
-    const { deps, events, userId } = createHarness();
-
-    const code = await caughtCode(() =>
-      setUpProject(
-        {
-          name: "API",
-          description: null,
-          gitUrl: GIT_URL,
-          userId,
-          issueTracker: {
-            type: "github_token",
-            credential: { token: "t" },
-            autoSync: true,
-          },
-        },
-        deps,
-      ),
-    );
-
-    expect(code).toBe("PROJECT_INTEGRATION_AUTO_SYNC_NEEDS_SAVED_KEY");
-    expect(events).not.toContain("project:github");
+    expect(integrations[0]?.kind).toBe("github_token");
+    expect(events).toContain(`sync:${JSON.stringify({ secretId: secret.id })}`);
   });
 
   test("a GitHub App tracker uses the installation's repo and syncs without a credential", async () => {

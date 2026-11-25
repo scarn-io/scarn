@@ -7,7 +7,7 @@ import { describe, expect } from "bun:test";
 import { eq } from "drizzle-orm";
 import type { Logger } from "@scarn/observability/logging";
 import { getDb } from "@/lib/db";
-import { projectIntegrations, projects, secrets } from "@/lib/db/schema";
+import { projectIntegrations, projects } from "@/lib/db/schema";
 import { createUuidV7, type UuidV7 } from "@/common/contracts/uuid-v7";
 import { DrizzleProjectIntegrationRepo } from "@/integrations/project-integration/infra/drizzle-project-integration-repo";
 import { concurrentTest } from "tests/utils";
@@ -45,30 +45,9 @@ const seedProject = async (): Promise<UuidV7> => {
   return projectId;
 };
 
-const seedSecret = async (): Promise<UuidV7> => {
-  const id = createUuidV7();
-  await getDb()
-    .insert(secrets)
-    .values({
-      id,
-      ownerUserId: createUuidV7(),
-      kind: "jira_api_key",
-      name: `stored scope compat ${id}`,
-      metadataJson: {},
-      schemaVersion: 1,
-      ciphertext: Buffer.from("ciphertext"),
-      iv: Buffer.from("iv"),
-      authTag: Buffer.from("tag"),
-      keyVersion: 1,
-      lastFour: "abcd",
-    });
-  return id;
-};
-
 const insertRow = async (
   projectId: UuidV7,
   row: StoredRow,
-  syncSecretId: UuidV7 | null = null,
 ): Promise<UuidV7> => {
   const id = createUuidV7();
   await getDb()
@@ -84,7 +63,6 @@ const insertRow = async (
       externalScopeJson: row.externalScopeJson,
       schemaVersion: row.schemaVersion,
       status: "active",
-      syncSecretId,
     });
   return id;
 };
@@ -127,44 +105,30 @@ describe("project integration stored scope compatibility", () => {
     "an unreadable integration is logged with its id and skipped by list reads, and throws on single reads",
     async () => {
       const projectId = await seedProject();
-      const secretId = await seedSecret();
       const { logger, errors } = recordingLogger();
       const repo = new DrizzleProjectIntegrationRepo(logger);
       try {
         const readableId = await insertRow(
           projectId,
           v1JiraFixture as StoredRow,
-          secretId,
         );
-        const unreadableId = await insertRow(
-          projectId,
-          {
-            schemaVersion: 1,
-            kind: "jira",
-            installationId: null,
-            externalScopeJson: v1GitHubFixture.externalScopeJson,
-          },
-          secretId,
-        );
+        const unreadableId = await insertRow(projectId, {
+          schemaVersion: 1,
+          kind: "jira",
+          installationId: null,
+          externalScopeJson: v1GitHubFixture.externalScopeJson,
+        });
 
         const byProject = await repo.listByProjectId(projectId);
         expect(byProject.map((integration) => integration.id)).toEqual([
           readableId,
         ]);
 
-        const bySecret = await repo.listBySyncSecretIds([secretId]);
-        expect(bySecret.map((integration) => integration.id)).toEqual([
-          readableId,
-        ]);
-
-        for (const listed of [
-          await repo.listDueForAutoSync(),
-          await repo.listActive(),
-        ]) {
-          const ids = listed.map((integration) => integration.id);
-          expect(ids).toContain(readableId);
-          expect(ids).not.toContain(unreadableId);
-        }
+        const ids = (await repo.listActive()).map(
+          (integration) => integration.id,
+        );
+        expect(ids).toContain(readableId);
+        expect(ids).not.toContain(unreadableId);
 
         expect(
           errors.some(
@@ -179,7 +143,6 @@ describe("project integration stored scope compatibility", () => {
         });
       } finally {
         await getDb().delete(projects).where(eq(projects.id, projectId));
-        await getDb().delete(secrets).where(eq(secrets.id, secretId));
       }
     },
   );

@@ -40,8 +40,8 @@ Fill in:
 | Webhook secret                                         | A random string: `openssl rand -hex 32`                      |
 
 GitHub must be able to reach the webhook URL. On a private network, leave
-the webhook inactive: the daily reconciliation and the integration auto-sync
-[scheduled jobs](/scarn/self-hosting/quickstart/#scheduled-jobs) still pick up
+the webhook inactive: the daily reconciliation
+[scheduled job](/scarn/self-hosting/quickstart/#scheduled-jobs) still picks up
 issue changes, just not within seconds.
 
 ### Permissions

@@ -10,6 +10,7 @@ import { createScarnTreaty } from "tests/treaty";
 import { createAppContext } from "@/lib/di";
 import { getDb } from "@/lib/db";
 import {
+  projectMemberships,
   tasks,
   workItemBlocks,
   workItemComments,
@@ -153,6 +154,10 @@ describe("work item changes on run completion", () => {
     workItemId: UuidV7,
     workItemChanges: WorkItemChange[],
     client = apiClient,
+    claimant?: {
+      headers: { authorization: string };
+      beforeCompletion: () => Promise<void>;
+    },
   ) => {
     const { projectId, headers, wayfinderStep } = requireSetup();
     const started = await startTask(workItemId, wayfinderStep);
@@ -169,7 +174,7 @@ describe("work item changes on run completion", () => {
           batchSize: 1,
           leaseDurationSeconds: 30,
         },
-        { headers },
+        { headers: claimant?.headers ?? headers },
       ),
     );
     const claimToken = claims.find(
@@ -178,6 +183,7 @@ describe("work item changes on run completion", () => {
     if (!claimToken) {
       throw new Error("Expected to claim the run");
     }
+    await claimant?.beforeCompletion();
     const run = await unwrapAsync(
       client.api["task-runs"]({ taskRunId }).completions.post(
         {
@@ -299,6 +305,53 @@ describe("work item changes on run completion", () => {
 
       expect(run.status).toBe("failed");
       expect(run.errorJson).toMatchObject({ name: "Scarn.WorkItemNotNative" });
+    },
+  );
+
+  concurrentTest(
+    "a claiming user who lost work-items:write fails the run and applies nothing",
+    async () => {
+      const { projectId } = requireSetup();
+      const root = await seedNativeItem();
+      const member = await createTestUserAndSession({
+        email: `work-item-changes-member-${crypto.randomUUID()}@example.com`,
+      });
+      const memberId = parseUuidV7(member.userId);
+      await getDb()
+        .insert(projectMemberships)
+        .values({ projectId, userId: memberId, role: "write" });
+
+      const { run } = await runWayfinder(
+        root,
+        [{ kind: "comment", workItemId: root, body: "Hi" }],
+        apiClient,
+        {
+          headers: member.authHeaders,
+          beforeCompletion: async () => {
+            await getDb()
+              .update(projectMemberships)
+              .set({ role: "read" })
+              .where(
+                and(
+                  eq(projectMemberships.projectId, projectId),
+                  eq(projectMemberships.userId, memberId),
+                ),
+              );
+          },
+        },
+      );
+
+      expect(run.status).toBe("failed");
+      expect(run.errorJson).toMatchObject({
+        name: "Scarn.WorkItemChangesInvalid",
+      });
+      expect(JSON.stringify(run.errorJson)).toContain("work-items:write");
+      expect(
+        await getDb()
+          .select()
+          .from(workItemComments)
+          .where(eq(workItemComments.workItemId, root)),
+      ).toEqual([]);
     },
   );
 

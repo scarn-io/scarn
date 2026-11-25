@@ -77,21 +77,6 @@ const makeRepos = (
         ),
       );
     },
-    listDueForAutoSync() {
-      return Promise.resolve([]);
-    },
-    listBySyncSecretId() {
-      return Promise.resolve([]);
-    },
-    listBySyncSecretIds() {
-      return Promise.resolve([]);
-    },
-    claimForSync() {
-      return Promise.resolve(true);
-    },
-    releaseSyncClaim() {
-      return Promise.resolve();
-    },
     delete(id) {
       const removed = stored.delete(id) ? 1 : 0;
       return Promise.resolve(removed);

@@ -51,11 +51,15 @@ describe("DrizzleWorkItemRepo.saveManyIfSourceNewer", () => {
     platformKey: string;
     title: string;
     sourceUpdatedAt: Date | null;
+    platformId?: string | null;
   }) =>
     WorkItemEntity.create({
       projectId: parseUuidV7(opts.projectId),
       platform: "github",
-      platformId: `node-${opts.platformKey}`,
+      platformId:
+        opts.platformId === undefined
+          ? `node-${opts.platformKey}`
+          : opts.platformId,
       platformKey: opts.platformKey,
       url: `https://github.com/acme/repo/issues/${opts.platformKey}`,
       title: opts.title,
@@ -136,6 +140,48 @@ describe("DrizzleWorkItemRepo.saveManyIfSourceNewer", () => {
 
       const persisted = await appContext.workItemRepo.load(created.id);
       expect(persisted?.title).toBe("Newer title");
+    },
+  );
+
+  concurrentTest(
+    "an update without a platformId keeps the stored one",
+    async () => {
+      if (!project) throw new Error("Expected project setup to complete");
+      const platformKey = `acme/repo#${uuidv7()}`;
+
+      await appContext.workItemRepo.saveManyIfSourceNewer([
+        buildGitHubIssue({
+          projectId: project.id,
+          platformKey,
+          title: "From the App",
+          sourceUpdatedAt: new Date("2026-06-01T00:00:00.000Z"),
+          platformId: "I_kwApp",
+        }),
+      ]);
+      const [fromLibrary] = await appContext.workItemRepo.saveManyIfSourceNewer(
+        [
+          buildGitHubIssue({
+            projectId: project.id,
+            platformKey,
+            title: "From the library",
+            sourceUpdatedAt: new Date("2026-06-02T00:00:00.000Z"),
+            platformId: null,
+          }),
+        ],
+      );
+      const [fromApp] = await appContext.workItemRepo.saveManyIfSourceNewer([
+        buildGitHubIssue({
+          projectId: project.id,
+          platformKey,
+          title: "From the App again",
+          sourceUpdatedAt: new Date("2026-06-03T00:00:00.000Z"),
+          platformId: "I_kwAppNew",
+        }),
+      ]);
+
+      expect(fromLibrary?.title).toBe("From the library");
+      expect(fromLibrary?.platformId).toBe("I_kwApp");
+      expect(fromApp?.platformId).toBe("I_kwAppNew");
     },
   );
 

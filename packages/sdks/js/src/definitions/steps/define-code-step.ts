@@ -24,7 +24,14 @@ import {
   type NamedStepEnvironment,
 } from "./runtime";
 import type { EnvRecord, PromptEnvContext } from "./env";
-import type { CodeStepFeature } from "./step-features";
+import type { CodeStepFeature, FeatureGrants, Grant } from "./step-features";
+import { collectGrants } from "./define-step";
+import {
+  createCodeStepWorkItemsClient,
+  grantsHaveWorkItemsClient,
+  type HasWorkItemsClient,
+  type WorkItemsClient,
+} from "./code-step-work-items-client";
 import {
   assertBaseBranchFitsEnvironment,
   compileRepo,
@@ -56,11 +63,14 @@ export type CodeStepFail<TErrors extends string = never> = (
 
 /**
  * What a code step's `fn` gets besides its input. `mcp` is present only when
- * the step declares `mcps`: one client per server key.
+ * the step declares `mcps`: one client per server key. `workItems` is present
+ * only when its features grant `read`, `create` or `update` on `project`, with
+ * the methods those grants allow.
  */
 export type CodeStepContext<
   TMcps extends CodeStepMcps = Record<never, never>,
   TErrors extends string = never,
+  TGrants extends Grant = never,
 > = {
   /**
    * Absolute path of the step-artifacts folder, which already exists. Write
@@ -75,16 +85,20 @@ export type CodeStepContext<
    * name as `Scarn.StepFailed`. In a unit test, pass `failStep`.
    */
   fail: CodeStepFail<TErrors>;
-} & ([keyof TMcps] extends [never] ? unknown : { mcp: McpClients<TMcps> });
+} & ([keyof TMcps] extends [never] ? unknown : { mcp: McpClients<TMcps> }) &
+  (HasWorkItemsClient<TGrants> extends true
+    ? { workItems: WorkItemsClient<TGrants> }
+    : unknown);
 
 export type CodeStepFn<
   TInput,
   TResult,
   TMcps extends CodeStepMcps = Record<never, never>,
   TErrors extends string = never,
+  TGrants extends Grant = never,
 > = (
   input: TInput,
-  context: CodeStepContext<TMcps, TErrors>,
+  context: CodeStepContext<TMcps, TErrors, TGrants>,
 ) => TResult | Promise<TResult>;
 
 export type DefineCodeStepInput<
@@ -119,12 +133,16 @@ export type DefineCodeStepInput<
    * `createFakeMcpClients(...)` as `mcp` instead.
    *
    * `context.fail(name, message)` fails the step with a named error.
+   *
+   * With `Features.workItems.*` grants on `project`, the context also carries
+   * `workItems`. In a unit test, pass `createFakeWorkItems(features)`.
    */
   fn: CodeStepFn<
     TInput["_output"],
     EffectiveResult<TResult["_output"], TFeatures>,
     TMcps,
-    NoInfer<TErrors>
+    NoInfer<TErrors>,
+    FeatureGrants<TFeatures>
   >;
   inputSchema?: TInput;
   resultSchema?: TResult;
@@ -138,8 +156,10 @@ export type DefineCodeStepInput<
   /**
    * Step features to attach — unlike `defineStep()`, only each feature's
    * `_resultExtension` applies here (there is no prompt to append
-   * to on a `kind: "code"` step). `Features.workItems.*` is rejected: a code
-   * step has no agent tools to use a grant with.
+   * to on a `kind: "code"` step). `Features.workItems.read`, `create` and
+   * `update` on `project` give `fn` a `context.workItems`; any other work item
+   * feature is a type error and throws, since a code step has no agent tools
+   * to use it with.
    */
   features?: TFeatures;
   /**
@@ -186,18 +206,36 @@ type EntrypointFn = NonNullable<StepDefinitionSpec["entrypoint"]>["fn"];
 
 /**
  * The function the worker runs. With `mcps` it wraps `fn` to add `mcp` to the
- * worker's context; the clients read the bridge env on their first call, so
- * the runner script stays unaware of MCP. Without `mcps` it is `fn` itself.
- * The runner supplies `artifactsDir` and `fail`.
+ * worker's context, and with work item grants on `project` to add
+ * `workItems`; the clients read the bridge env on their first call, so the
+ * runner script stays unaware of them. Otherwise it is `fn` itself. The
+ * runner supplies `artifactsDir` and `fail`.
  */
 function entrypointFn(
   fn: (input: never, context: never) => unknown,
   mcps: CodeStepMcps | undefined,
+  grants: readonly Grant[],
 ): EntrypointFn {
   const run = fn as unknown as EntrypointFn;
-  if (mcps === undefined || Object.keys(mcps).length === 0) return run;
-  const mcp = createCodeStepMcpClient(mcps);
-  return (input, context) => run(input, { ...context, mcp } as typeof context);
+  const extras: Record<string, unknown> = {};
+  if (mcps !== undefined && Object.keys(mcps).length > 0) {
+    extras["mcp"] = createCodeStepMcpClient(mcps);
+  }
+  if (grantsHaveWorkItemsClient(grants)) {
+    extras["workItems"] = createCodeStepWorkItemsClient(grants);
+  }
+  if (Object.keys(extras).length === 0) return run;
+  return (input, context) => run(input, { ...context, ...extras });
+}
+
+/** Throws for a work item grant a code step may not hold. */
+function assertCodeStepGrants(stepKey: string, grants: readonly Grant[]): void {
+  for (const grant of grants) {
+    if (grant.scope === "project") continue;
+    throw new Error(
+      `Step "${stepKey}": a code step may only use Features.workItems.read, create and update with scope "project", not ${grant.action} on "${grant.scope}". It has no agent tools to use other grants with.`,
+    );
+  }
 }
 
 /**
@@ -239,6 +277,8 @@ export function codeStep<
   TErrors
 > {
   const features = (config.features ?? []) as CodeStepFeature[];
+  const grants = collectGrants(config.key, features);
+  assertCodeStepGrants(config.key, grants);
 
   // Merge each feature's result extension into the base schema — same
   // approach as `defineStep()`, minus the prompt-append step (code steps
@@ -303,7 +343,8 @@ export function codeStep<
           concurrency: compileStepConcurrency(config.key, config.concurrency),
         }
       : {}),
-    entrypoint: { fn: entrypointFn(config.fn, config.mcps) },
+    ...(grants.length > 0 ? { grants } : {}),
+    entrypoint: { fn: entrypointFn(config.fn, config.mcps, grants) },
   };
 
   return toStepHandle(spec, environmentHandle) as StepHandle<

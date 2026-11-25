@@ -66,11 +66,6 @@ const makeRepo = (): ProjectIntegrationRepo => {
     },
     findByInstallationId: unsupported,
     listActive: unsupported,
-    listDueForAutoSync: unsupported,
-    listBySyncSecretId: unsupported,
-    listBySyncSecretIds: unsupported,
-    claimForSync: unsupported,
-    releaseSyncClaim: unsupported,
     delete: unsupported,
     deleteByInstallationId: unsupported,
   };
@@ -86,10 +81,6 @@ const storedRow = (externalScopeJson: AnyJsonObject) => ({
   lastSyncedAt: null,
   lastError: null,
   firstSyncHorizonDays: null,
-  syncSecretId: null,
-  autoSyncPausedReason: null,
-  autoSyncPausedAt: null,
-  autoSyncPausedDetail: null,
 });
 
 describe("BitbucketProjectIntegration", () => {

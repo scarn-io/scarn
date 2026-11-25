@@ -95,7 +95,7 @@ export function isUninheritableWorkerEnvVarName(name: string): boolean {
   return name.toUpperCase().startsWith(RESERVED_ENV_VAR_PREFIX);
 }
 
-const valueEnvVarSchema = z
+export const valueEnvVarSchema = z
   .object({
     name: envVarNameSchema,
     source: z.literal("value"),

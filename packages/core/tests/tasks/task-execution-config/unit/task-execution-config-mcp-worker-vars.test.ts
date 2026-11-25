@@ -33,3 +33,33 @@ test("all stored versions preserve additive MCP metadata without current write r
     }
   }
 });
+
+test("stored MCP workerVars read project-secret and value sources", () => {
+  const workerVars = [
+    {
+      source: "value" as const,
+      name: "JIRA_EMAIL",
+      value: "bot@acme.com",
+      secret: false,
+      applies: "agent" as const,
+    },
+    {
+      source: "secret" as const,
+      name: "JIRA_API_TOKEN",
+      secretName: "JIRA_TOKEN",
+      applies: "agent" as const,
+    },
+  ];
+  const mcpJson = {
+    atlassian: { type: "remote" as const, url: "https://x", workerVars },
+  };
+  const result = readStoredTaskExecutionConfig(3, {
+    gitJson: null,
+    mcpJson,
+    healthChecksJson: null,
+    environmentJson: null,
+  });
+  expect(result.success).toBe(true);
+  if (!result.success) throw new Error(result.reason);
+  expect(result.content.mcp).toEqual(mcpJson);
+});

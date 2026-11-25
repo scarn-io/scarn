@@ -245,94 +245,22 @@ describe("IssueTrackerStep", () => {
     );
   });
 
-  const autoSyncBox = (view: ReturnType<typeof render>) =>
-    view.queryByRole("checkbox", { name: "Auto-sync with this key" });
-
-  test("a saved GitHub token offers auto-sync, unchecked, with the consent and App hint", () => {
-    const view = renderStep(buildRepoCheck());
-
-    fireEvent.click(view.getByRole("radio", { name: "GitHub token" }));
-    fireEvent.click(view.getByRole("button", { name: "Use saved github key" }));
-
-    expect((autoSyncBox(view) as HTMLInputElement).checked).toBe(false);
-    expect(
-      view.getByText(/Scarn will read issues from acme\/api using your GitHub/),
-    ).toBeTruthy();
-    expect(view.getByText(/Installing the GitHub App is better/)).toBeTruthy();
-  });
-
-  test("checking auto-sync on a saved GitHub token hands autoSync to create", () => {
+  test("a saved key creates without auto-sync and syncs only on request", () => {
     const onCreate = mock(() => {});
     const view = renderStep(buildRepoCheck(), { onCreate });
 
     fireEvent.click(view.getByRole("radio", { name: "GitHub token" }));
     fireEvent.click(view.getByRole("button", { name: "Use saved github key" }));
-    fireEvent.click(autoSyncBox(view) as HTMLElement);
 
-    expect(view.getByText(/Syncs run every 5 minutes\./)).toBeTruthy();
-    fireEvent.click(view.getByRole("button", { name: "Create project" }));
-    expect(onCreate).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "github_token", autoSync: true }),
-      7,
-    );
-  });
-
-  test("checking auto-sync on a saved Jira key hands autoSync to create", () => {
-    const onCreate = mock(() => {});
-    const view = renderStep(buildRepoCheck({ host: "other" }), { onCreate });
-
-    fireEvent.change(view.getByLabelText(/Project keys/), {
-      target: { value: "ABC" },
-    });
-    fireEvent.click(view.getByRole("button", { name: "Use saved jira key" }));
+    expect(view.queryByRole("checkbox")).toBeNull();
     expect(
-      view.getByText(/Scarn will read issues from ABC using your Jira/),
+      view.getByText(/Syncs run only when you ask for them\./),
     ).toBeTruthy();
-    fireEvent.click(autoSyncBox(view) as HTMLElement);
     fireEvent.click(view.getByRole("button", { name: "Create project" }));
-
-    expect(onCreate).toHaveBeenCalledWith(
-      expect.objectContaining({
-        type: "jira",
-        projectKeys: ["ABC"],
-        autoSync: true,
-      }),
-      7,
-    );
-  });
-
-  test("a saved key left unchecked is created without autoSync", () => {
-    const onCreate = mock(() => {});
-    const view = renderStep(buildRepoCheck(), { onCreate });
-
-    fireEvent.click(view.getByRole("radio", { name: "GitHub token" }));
-    fireEvent.click(view.getByRole("button", { name: "Use saved github key" }));
-    fireEvent.click(view.getByRole("button", { name: "Create project" }));
-
     expect(onCreate).toHaveBeenCalledWith(
       expect.not.objectContaining({ autoSync: true }),
       7,
     );
-  });
-
-  test("auto-sync isn't offered for a pasted token, Bitbucket or the App", () => {
-    const view = renderStep(
-      buildRepoCheck({
-        githubApp: { installationId: "42", accountLogin: "acme" },
-      }),
-    );
-    expect(autoSyncBox(view)).toBeNull();
-
-    fireEvent.click(view.getByRole("radio", { name: "GitHub token" }));
-    fireEvent.click(view.getByRole("button", { name: "Verify github token" }));
-    expect(autoSyncBox(view)).toBeNull();
-    cleanup();
-
-    const bitbucket = renderStep(buildRepoCheck({ host: "bitbucket" }));
-    fireEvent.click(
-      bitbucket.getByRole("button", { name: "Use saved bitbucket key" }),
-    );
-    expect(autoSyncBox(bitbucket)).toBeNull();
   });
 
   test("Skip for now creates with no issue tracker", () => {

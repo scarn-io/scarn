@@ -5,12 +5,6 @@ import { createProjectInputSchema, projectSchema } from "./project-contracts";
 
 const firstSyncHorizonDaysSchema = z.number().int().nonnegative().optional();
 
-/**
- * Lends the saved credential to the new integration so Scarn syncs it every
- * 5 minutes. Only a saved key can be lent; a pasted one is rejected.
- */
-const autoSyncSchema = z.boolean().optional();
-
 const githubAppIssueTrackerSchema = z
   .object({
     type: z.literal("github_app"),
@@ -24,7 +18,6 @@ const githubTokenIssueTrackerSchema = z
     type: z.literal("github_token"),
     credential: integrationCredentialChoiceSchema,
     firstSyncHorizonDays: firstSyncHorizonDaysSchema,
-    autoSync: autoSyncSchema,
   })
   .strict();
 
@@ -43,7 +36,6 @@ const jiraIssueTrackerSchema = z
     projectKeys: z.array(z.string().trim().min(1)).min(1),
     credential: integrationCredentialChoiceSchema,
     firstSyncHorizonDays: firstSyncHorizonDaysSchema,
-    autoSync: autoSyncSchema,
   })
   .strict();
 
@@ -64,9 +56,9 @@ export const issueTrackerSchema = z.discriminatedUnion("type", [
  * installation's coverage of the repo is answered by `/projects/repo-check`.
  */
 export const issueTrackerCheckSchema = z.discriminatedUnion("type", [
-  githubTokenIssueTrackerSchema.omit({ autoSync: true }),
+  githubTokenIssueTrackerSchema,
   bitbucketIssueTrackerSchema,
-  jiraIssueTrackerSchema.omit({ autoSync: true }),
+  jiraIssueTrackerSchema,
 ]);
 
 export const setUpProjectInputSchema = createProjectInputSchema.extend({

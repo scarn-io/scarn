@@ -51,7 +51,7 @@ export type TaskExecutionConfigEnvVarsInput = z.input<
 /**
  * `OpenCodeMcpServers` with D10's secret rule: every `environment` value of a
  * `local` server and every `headers` value of a `remote` server is written as
- * `{env:VAR}`.
+ * `{env:VAR}` (a remote header may also use `{basic:USER_VAR:PASS_VAR}`).
  */
 export const taskExecutionConfigMcpServersSchema =
   openCodeMcpServersSchema.superRefine((servers, context) => {

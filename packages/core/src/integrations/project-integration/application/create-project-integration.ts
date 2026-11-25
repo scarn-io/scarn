@@ -12,8 +12,6 @@ import type { ProjectIntegrationRepo } from "./project-integration-repo";
 type CreateProjectIntegrationCommonInput = {
   projectId: UuidV7;
   firstSyncHorizonDays?: number | null | undefined;
-  /** A saved key lent for auto-sync; the caller has verified it reads the scope. */
-  syncSecretId?: UuidV7 | null | undefined;
 };
 
 export type CreateProjectIntegrationInput =
@@ -130,7 +128,5 @@ export const createProjectIntegration = async (
       "PROJECT_INTEGRATION_DUPLICATE",
     );
   }
-  return repo.create(
-    input.syncSecretId ? entity.withAutoSync(input.syncSecretId) : entity,
-  );
+  return repo.create(entity);
 };

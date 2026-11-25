@@ -1,0 +1,84 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "ea485418-b61e-4062-93ae-11c54c78500a",
+  "prevIds": [
+    "08d9210f-28a6-4acd-9ed8-237c0569abc3"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "app",
+        "work_items",
+        "work_items_project_platform_key_prefix_idx"
+      ],
+      "writes": [
+        "s|idx|app.work_items_project_platform_key_prefix_idx",
+        "n|idx|app.work_items_project_platform_key_prefix_idx",
+        "e|idx|app.work_items_project_platform_key_prefix_idx",
+        "n|rel|app.work_items_project_platform_key_prefix_idx"
+      ],
+      "reads": [
+        "n|tbl|app.work_items",
+        "n|sch|app",
+        "n|col|app.work_items.project_id",
+        "n|col|app.work_items.platform",
+        "n|col|app.work_items.platform_key",
+        "n|col|app.work_items.source_updated_at"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "work_items",
+        "name": "work_items_project_platform_key_prefix_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "project_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "platform",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "platform_key",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": {
+              "name": "text_pattern_ops",
+              "default": false
+            }
+          },
+          {
+            "value": "source_updated_at",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    }
+  ]
+}

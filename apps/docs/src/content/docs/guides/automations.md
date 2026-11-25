@@ -68,7 +68,7 @@ Every rule has a `key`, unique within its automation: letters, digits, `_` and `
 
 ## Schedules
 
-A `schedule` rule in a project automation starts a step on a cron. The usual job is polling an external system: the step creates a work item for each new item it finds, and your `workItem.created` and `workItem.ready` rules take it from there.
+A `schedule` rule in a project automation starts a step on a cron. The usual job is polling an external system: the step imports each new or changed item it finds as a work item (see [Importing work items](#importing-work-items)), and your `workItem.created` and `workItem.ready` rules take it from there.
 
 ```typescript
 import { defineAutomation, onEvent } from "@scarn/sdk/automations";
@@ -102,7 +102,7 @@ export default defineAutomation({
 
 `defineAutomation` and publishing both check the cron and timezone. The rule's `key` names the schedule: the summary, `scarn automations run` and the run history all use it.
 
-A schedule rule is about no work item, so it can only target a step, without `.on(...)`, or `skip`. A pipeline or `attach(...)` needs a work item; start a step that creates one instead. The step may only have `project` grants (see [Creating work items](#creating-work-items)); publishing rejects a step with grants on `self` or `children`. With `match: "all"`, at most one route may match per run.
+A schedule rule is about no work item, so it can only target a step, without `.on(...)`, or `skip`. A pipeline or `attach(...)` needs a work item; start a step that creates one instead. The step may only have `project` grants (see [Importing work items](#importing-work-items)); publishing rejects a step with grants on `self` or `children`. With `match: "all"`, at most one route may match per run.
 
 A project's enabled automations can have at most 20 schedules together. Publishing or enabling an automation that would go over fails.
 
@@ -140,27 +140,75 @@ It goes through the same concurrency check as a scheduled run, with `scheduledFo
 
 The usual order is: push, Run now until the step does what you want, then `scarn automations enable`.
 
-### Creating work items
+### Importing work items
 
-`Features.workItems.create({ scope: "project", labels })` lets a scheduled Task create top-level work items in its project:
+An import is a [code step](/scarn/guides/steps/#code-steps) that reads an external source and writes what it finds through [`context.workItems`](/scarn/guides/steps/#writing-work-items-from-a-code-step). It needs these grants on `project`:
+
+| Feature                                                                | Allows                                                                        |
+| ---------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `Features.workItems.read({ scope: "project" })`                        | `latestSourceUpdate`, the import's cursor                                     |
+| `Features.workItems.create({ scope: "project", labels, keyPrefix? })`  | `upsert` of a key the project doesn't have yet, and `create`                  |
+| `Features.workItems.update({ scope: "project", keyPrefix?, labels? })` | `upsert` of a key the project already has, including closing and reopening it |
+
+`keyPrefix` limits a grant to keys that start with it, so a mistake in your mapper can't touch another source's items. `labels` limits the labels a write may set.
 
 ```typescript
-import { defineStep, Features, Runtime, z } from "@scarn/sdk/definitions/steps";
+import { codeStep, Features, z } from "@scarn/sdk/definitions/steps";
+import { listAcmeTickets } from "./acme"; // your client for the source
 
-export const pollAcme = defineStep({
-  key: "poll-acme-api",
-  name: "Poll Acme",
+const ACME = { platform: "custom", keyPrefix: "acme:" } as const;
+const grant = {
+  scope: "project",
+  keyPrefix: "acme:",
+  labels: ["acme"],
+} as const;
+
+export const importAcme = codeStep({
+  key: "import-acme",
+  name: "Import Acme tickets",
   status: "active",
-  environment: { runtime: Runtime.host() },
-  agentPrompt:
-    "List Acme tickets updated in the window you were given and create a work item for each.",
-  input: z.object({ since: z.string().nullable(), until: z.string() }),
-  result: z.object({ found: z.number() }),
-  features: [Features.workItems.create({ scope: "project", labels: ["acme"] })],
+  features: [
+    Features.workItems.read({ scope: "project" }),
+    Features.workItems.create(grant),
+    Features.workItems.update(grant),
+  ],
+  resultSchema: z.object({ upserted: z.number() }),
+  fn: async (_input, { workItems }) => {
+    const latest = await workItems.latestSourceUpdate(ACME);
+    const since = latest ? new Date(Date.parse(latest) - 5 * 60_000) : null;
+    let upserted = 0;
+    // Oldest-updated first, one page (≤ 100 tickets) at a time.
+    for await (const page of listAcmeTickets({ updatedSince: since })) {
+      const saved = await workItems.upsert(
+        page.map((ticket) => ({
+          platform: ACME.platform,
+          platformKey: `${ACME.keyPrefix}${ticket.id}`,
+          title: ticket.title,
+          description: ticket.body,
+          state: ticket.closed ? ("closed" as const) : ("open" as const),
+          sourceUpdatedAt: ticket.updatedAt,
+          labels: ["acme"],
+        })),
+      );
+      upserted += saved.length;
+    }
+    return { upserted };
+  },
 });
 ```
 
-The agent gives each item a `platformKey`, a stable id from the system it came from. A key the project already has returns the existing item unchanged, and `workItem.created` doesn't fire again, so the step can send every item it sees without checking for duplicates. New items fire `workItem.created` (and `workItem.ready`) as usual. They live on platform `custom` and can't be edited or relabelled in Scarn. A Task creates at most 100 work items this way.
+- **`upsert` writes by `(platform, platformKey)`.** A new key is created and fires `workItem.created` (and `workItem.ready`) once; an existing key is updated. An item overwrites the stored one only when its `sourceUpdatedAt` is newer, so re-reading the same tickets is harmless.
+- **`latestSourceUpdate({ platform, keyPrefix })` is the cursor.** It returns the newest `sourceUpdatedAt` among the project's items under that prefix, or `null` before the first import. Scarn stores no other state for the import.
+- **Read the source in ascending order.** Ask the source for items oldest-updated first and `upsert` page by page. Every saved page is then older than every unsaved one, so if a run fails halfway, the next run resumes from the cursor without skipping anything. Subtract a few minutes of overlap from the cursor to cover equal timestamps and sources that filter by the minute.
+- **Platforms.** `platform` is `custom`, `jira` or `github`. Jira and GitHub items keep their platform, so comments and links work as for synced items.
+
+Jira and GitHub have ready-made import steps; see [Import Jira or GitHub issues on a schedule](/scarn/how-to/integrations/#import-on-a-schedule). For a step-by-step version of the example above, see [Import from any tracker](/scarn/how-to/import-from-any-tracker/).
+
+:::note[A worker can do only what its user can]
+A scheduled Task runs as the user whose worker claimed it, and every `context.workItems` call is checked against that user's project role as well as the step's grants: `work-items:write` for `upsert` and `create`, `work-items:read` for `latestSourceUpdate`. Grants only narrow what the user may do; they never add to it. If the user lacks the permission, or loses it, the next call fails with `WorkItemsRefusedError` and the schedule shows the error.
+:::
+
+An agent step can create items too, with `Features.workItems.create({ scope: "project", labels })` and the `scarn-create-work-item` tool. Its items live on platform `custom`, a key the project already has returns that item unchanged, and a Task creates at most 100 this way. `update` on `project` is for code steps only.
 
 ### Following a schedule
 

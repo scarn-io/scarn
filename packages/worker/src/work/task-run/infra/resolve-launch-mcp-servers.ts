@@ -3,6 +3,8 @@ import type {
   ResolvedOpenCodeMcpServers,
 } from "../../../common/contracts/opencode-mcp";
 import { mergeConnectorMcpServers } from "@scarn/sdk/connectors";
+import { containsBasicPlaceholder } from "@scarn/sdk/opencode-mcp";
+import { ConfigurationError } from "../../../lib/errors";
 import { discoverRepoAgentTools } from "../../../project/agent-tools/infra/discover-repo-agent-tools";
 import type {
   McpEnvRef,
@@ -172,6 +174,29 @@ async function pointAtManagedRelay(input: {
     keys,
   });
   return secretValues;
+}
+
+/**
+ * Throws when a server an agent's OpenCode would load uses
+ * `{basic:USER_VAR:PASS_VAR}`: OpenCode can't read it, and the worker only
+ * substitutes it for the MCP calls it makes itself. `defineStep` rejects it
+ * first; this catches a hand-pushed definition.
+ */
+export function assertNoAgentBasicPlaceholders(
+  servers: ResolvedOpenCodeMcpServers | null,
+): void {
+  const keys = Object.entries(servers ?? {}).flatMap(([key, server]) =>
+    server.disabled !== true &&
+    server.type === "remote" &&
+    containsBasicPlaceholder(server.headers)
+      ? [key]
+      : [],
+  );
+  if (keys.length === 0) return;
+  throw new ConfigurationError(
+    `MCP servers ${keys.map((key) => `"${key}"`).join(", ")} use {basic:USER_VAR:PASS_VAR} in headers, which an agent's OpenCode can't read. Use them from a code step or an MCP tool step.`,
+    "MCP_BASIC_PLACEHOLDER_AGENT_UNSUPPORTED",
+  );
 }
 
 export type StepMcpLaunch = {

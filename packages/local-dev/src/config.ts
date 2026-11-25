@@ -27,16 +27,22 @@ export const TEMPLATE_REPO_URL =
 export const TEMPLATE_REF =
   process.env["SCARN_LOCAL_DEV_TEMPLATE_REF"] ?? "main";
 
+const GITHUB_TOKEN = process.env["SCARN_LOCAL_DEV_GITHUB_TOKEN"];
+
 /**
  * Project secrets seed saves. `LOCAL_DEV_API_KEY` is a placeholder, not a real
  * credential; the `local-secrets` environment maps it into `ld-secrets`.
+ * `GITHUB_TOKEN` is `ld-github-import`'s token, saved only when
+ * `SCARN_LOCAL_DEV_GITHUB_TOKEN` is set.
  */
 export const PROJECT_SECRETS = [
   {
     name: "LOCAL_DEV_API_KEY",
     value:
-      process.env["SCARN_LOCAL_DEV_API_KEY"] ?? "ld-sandbox-not-a-real-key-7f3a",
+      process.env["SCARN_LOCAL_DEV_API_KEY"] ??
+      "ld-sandbox-not-a-real-key-7f3a",
   },
+  ...(GITHUB_TOKEN ? [{ name: "GITHUB_TOKEN", value: GITHUB_TOKEN }] : []),
 ];
 
 /** Dev-login identity, only used when there is no saved profile for `BASE_URL`. */

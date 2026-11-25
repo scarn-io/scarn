@@ -4,8 +4,8 @@
  * for a managed runtime the worker-supplied one). No agent exists
  * for such a step, so there is no agent session to attach or report.
  *
- * A step that declares MCP servers gets an MCP bridge session for the run
- * (ADR 0016): its URL and token reach only the runner's env and the log
+ * A step that declares MCP servers or holds a `project` work-item grant gets
+ * a step bridge session for the run (ADR 0016, ADR 0018): its URL and token reach only the runner's env and the log
  * masker, and the session stops when the step ends or the run aborts. The
  * caller opens it with {@link openCodeStepMcpBridge} before the launch gates,
  * so the step's health checks warm the pool `fn` then calls through, hands it
@@ -17,7 +17,9 @@ import {
   openMcpBridgeSession,
   type McpBridgeSession,
 } from "../../../runtime/mcp-bridge/infra";
+import { hasProjectWorkItemGrant } from "./code-step-work-item-grants";
 import { executeCodeStep } from "./execute-code-step";
+import type { McpToolCallPlacement } from "./mcp-tool-caller";
 import type { RunHandle } from "./run-registry";
 import type {
   ProcessProjectWorkDeps,
@@ -28,33 +30,60 @@ import type {
 } from "../contracts/process-project-work-types";
 
 /**
- * Opens the run's MCP bridge session when the step declares MCP servers
- * (`environment.mcpCalls`, set only for a code step), registering its token
- * with the log masker; `null` otherwise. The caller must stop the session on
- * every path.
+ * Opens the run's step bridge session when the code step declares MCP
+ * servers (`environment.mcpCalls`, set only for a code step) or holds a
+ * `project` work-item grant (ADR 0018), registering its token with the log
+ * masker; `null` otherwise. Its `/work-items/*` routes send the step's calls
+ * to the API with `claimToken`, which stays on the worker. The caller must
+ * stop the session on every path.
  */
 export async function openCodeStepMcpBridge(input: {
   deps: ProcessProjectWorkDeps;
   logger: ProjectWorkLogger;
   workerContext: TaskRunWorkerContext;
   environment: LaunchedRuntime;
+  claimToken: string;
   registerSecretValues: (values: readonly string[]) => void;
   run?: RunHandle | undefined;
 }): Promise<McpBridgeSession | null> {
-  const mcpCalls = input.environment.mcpCalls;
-  if (!mcpCalls) return null;
+  const { environment, workerContext } = input;
+  const mcpCalls = environment.mcpCalls;
+  const workItemGrants =
+    workerContext.task.kind === "code" &&
+    hasProjectWorkItemGrant(workerContext.task.grants);
+  if (!mcpCalls && !workItemGrants) return null;
+  const workItemsApi = input.deps.workerClient.workItems;
   const bridge = await (
     input.deps.openMcpBridgeSession ?? openMcpBridgeSession
   )({
-    servers: mcpCalls.servers,
-    authoredServers: input.workerContext.runtime.opencodeMcpJson,
-    placement: mcpCalls.placement,
-    env: mcpCalls.env,
+    servers: mcpCalls?.servers ?? {},
+    authoredServers: workerContext.runtime.opencodeMcpJson,
+    placement: mcpCalls?.placement ?? runtimePlacement(environment),
+    env: mcpCalls?.env ?? {},
     logger: input.logger,
     signal: input.run?.signal ?? new AbortController().signal,
+    workItems:
+      workItemGrants && workItemsApi
+        ? {
+            taskRunId: workerContext.task.id,
+            claimToken: input.claimToken,
+            api: workItemsApi,
+          }
+        : undefined,
   });
   input.registerSecretValues([bridge.token]);
   return bridge;
+}
+
+/** Where a step's runner runs: its runtime container, else the host checkout. */
+function runtimePlacement(environment: LaunchedRuntime): McpToolCallPlacement {
+  return environment.runtimeContainerId
+    ? {
+        kind: "container",
+        containerId: environment.runtimeContainerId,
+        workspaceDir: environment.workspaceFolder,
+      }
+    : { kind: "host", workspaceDir: environment.workspacePath };
 }
 
 /** Runs the code step, giving `fn` the env for `mcpBridge` when set. */

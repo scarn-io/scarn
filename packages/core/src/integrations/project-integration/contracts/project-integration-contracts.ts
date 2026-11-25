@@ -51,41 +51,10 @@ export const jiraIntegrationScopeSchema = z
   })
   .strict();
 
-export const autoSyncStateValues = ["off", "on", "paused"] as const;
-
-export const autoSyncPausedReasonValues = [
-  "key_removed",
-  "key_rejected",
-  "key_expired",
-  "owner_left_project",
-  "access_lost",
-] as const;
-
-/** Identifies whose lent key auto-sync uses. Never carries key material. */
-export const autoSyncSyncsAsSchema = z
-  .object({
-    userId: uuidV7Schema,
-    displayName: z.string().nullable(),
-    secretName: z.string(),
-  })
-  .strict();
-
-export const projectIntegrationAutoSyncSchema = z
-  .object({
-    supported: z.boolean(),
-    state: z.enum(autoSyncStateValues),
-    syncsAs: autoSyncSyncsAsSchema.nullable(),
-    pausedReason: z.enum(autoSyncPausedReasonValues).nullable(),
-    pausedDetail: z.string().nullable(),
-    pausedAt: z.iso.datetime().nullable(),
-  })
-  .strict();
-
 const projectIntegrationBaseSchema = z.object({
   id: uuidV7Schema,
   projectId: uuidV7Schema,
   status: z.enum(projectIntegrationStatusValues),
-  autoSync: projectIntegrationAutoSyncSchema,
   lastSyncedAt: z.iso.datetime().nullable(),
   lastError: z.string().nullable(),
   firstSyncHorizonDays: z.number().int().nonnegative().nullable(),
@@ -193,10 +162,6 @@ export type BitbucketIntegrationScopeContract = z.infer<
 export type JiraProjectIntegrationContract = z.infer<
   typeof jiraProjectIntegrationSchema
 >;
-export type ProjectIntegrationAutoSyncContract = z.infer<
-  typeof projectIntegrationAutoSyncSchema
->;
-export type AutoSyncSyncsAsContract = z.infer<typeof autoSyncSyncsAsSchema>;
 export type GitHubIntegrationScopeContract = z.infer<
   typeof githubIntegrationScopeSchema
 >;

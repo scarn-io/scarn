@@ -245,8 +245,14 @@ export function describeGrants(grants: readonly Grant[]): string {
   if (grants.length === 0) return "None";
   return grants
     .map((grant) => {
-      const head = `${grant.action} ${grant.scope}`;
-      return "labels" in grant ? `${head}: ${grant.labels.join(", ")}` : head;
+      const prefix =
+        "keyPrefix" in grant && grant.keyPrefix
+          ? ` (keys ${grant.keyPrefix}*)`
+          : "";
+      const head = `${grant.action} ${grant.scope}${prefix}`;
+      return "labels" in grant && grant.labels
+        ? `${head}: ${grant.labels.join(", ")}`
+        : head;
     })
     .join("; ");
 }

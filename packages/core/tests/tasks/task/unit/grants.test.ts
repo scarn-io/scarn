@@ -61,7 +61,7 @@ describe("grantSchema", () => {
     ).toBe(false);
   });
 
-  test("accepts project only on read and create", () => {
+  test("accepts project only on read, create and update", () => {
     expect(
       grantSchema.safeParse({
         resource: "workItem",
@@ -69,7 +69,14 @@ describe("grantSchema", () => {
         scope: "project",
       }).success,
     ).toBe(true);
-    for (const action of ["update", "comment", "block", "close"]) {
+    expect(
+      grantSchema.safeParse({
+        resource: "workItem",
+        action: "update",
+        scope: "project",
+      }).success,
+    ).toBe(true);
+    for (const action of ["comment", "block", "close"]) {
       expect(
         grantSchema.safeParse({
           resource: "workItem",
@@ -112,6 +119,65 @@ describe("grantSchema", () => {
         labels: [],
       }).success,
     ).toBe(false);
+  });
+
+  test("accepts keyPrefix and labels on update on project, and keyPrefix on create on project", () => {
+    expect(
+      grantSchema.parse({
+        resource: "workItem",
+        action: "update",
+        scope: "project",
+        keyPrefix: "ACME-",
+        labels: [" acme "],
+      }),
+    ).toEqual({
+      resource: "workItem",
+      action: "update",
+      scope: "project",
+      keyPrefix: "ACME-",
+      labels: ["acme"],
+    });
+    expect(
+      grantSchema.parse({
+        resource: "workItem",
+        action: "create",
+        scope: "project",
+        labels: ["acme"],
+        keyPrefix: "owner/repo#",
+      }),
+    ).toEqual({
+      resource: "workItem",
+      action: "create",
+      scope: "project",
+      labels: ["acme"],
+      keyPrefix: "owner/repo#",
+    });
+  });
+
+  test("rejects an empty keyPrefix, and empty or duplicate labels on update", () => {
+    const update = (extra: Record<string, unknown>) =>
+      grantSchema.safeParse({
+        resource: "workItem",
+        action: "update",
+        scope: "project",
+        ...extra,
+      }).success;
+    expect(update({ keyPrefix: "" })).toBe(false);
+    expect(update({ keyPrefix: "x".repeat(201) })).toBe(false);
+    expect(update({ labels: [] })).toBe(false);
+    expect(update({ labels: ["a", "a"] })).toBe(false);
+  });
+
+  test("drops keyPrefix and labels on update outside project", () => {
+    expect(
+      grantSchema.parse({
+        resource: "workItem",
+        action: "update",
+        scope: "self",
+        keyPrefix: "ACME-",
+        labels: ["a"],
+      }),
+    ).toEqual({ resource: "workItem", action: "update", scope: "self" });
   });
 
   test("rejects create on self", () => {
@@ -208,6 +274,22 @@ describe("grantsSchema", () => {
       ]).success,
     ).toBe(false);
   });
+
+  test("accepts one project grant per keyPrefix, and rejects a repeated keyPrefix", () => {
+    const update = (keyPrefix?: string): Grant => ({
+      resource: "workItem",
+      action: "update",
+      scope: "project",
+      ...(keyPrefix === undefined ? {} : { keyPrefix }),
+    });
+    expect(
+      grantsSchema.safeParse([update("A-"), update("B-"), update()]).success,
+    ).toBe(true);
+    expect(grantsSchema.safeParse([update("A-"), update("A-")]).success).toBe(
+      false,
+    );
+    expect(grantsSchema.safeParse([update(), update()]).success).toBe(false);
+  });
 });
 
 describe("taskGrants", () => {
@@ -270,6 +352,20 @@ describe("taskGrants", () => {
       ),
     ).toEqual([READ_PROJECT, CREATE_PROJECT]);
     expect(taskGrants([], SCHEDULED)).toEqual([]);
+  });
+
+  test("keeps update on project and keyPrefixes for a scheduled Task", () => {
+    const createAcme: Grant = { ...CREATE_PROJECT, keyPrefix: "ACME-" };
+    const updateAcme: Grant = {
+      resource: "workItem",
+      action: "update",
+      scope: "project",
+      keyPrefix: "ACME-",
+      labels: ["intake"],
+    };
+    expect(
+      taskGrants([READ_PROJECT, createAcme, updateAcme], SCHEDULED),
+    ).toEqual([READ_PROJECT, createAcme, updateAcme]);
   });
 });
 

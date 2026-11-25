@@ -38,7 +38,6 @@ describe("POST /projects — GitHub token issue tracker", () => {
     credential: Record<string, unknown>,
     gitUrl = GIT_URL,
     firstSyncHorizonDays?: number,
-    autoSync?: boolean,
   ) =>
     apiClient.api.projects.post(
       {
@@ -49,7 +48,6 @@ describe("POST /projects — GitHub token issue tracker", () => {
           type: "github_token",
           credential,
           firstSyncHorizonDays,
-          autoSync,
         } as never,
       },
       { headers },
@@ -111,56 +109,6 @@ describe("POST /projects — GitHub token issue tracker", () => {
       SECRETS_TEST_NOW.toISOString(),
     );
     expect(await countSecretsFor(owner.userId)).toBe(1);
-  });
-
-  test("autoSync with a saved token creates the integration with auto-sync on", async () => {
-    installGitHubFetchStub();
-    const owner = await createSecretsTestUser();
-    const secret = await unwrapAsync(
-      apiClient.api.me.secrets.post(githubTokenInput(), {
-        headers: owner.authHeaders,
-      }),
-    );
-
-    const project = await unwrapAsync(
-      createWithToken(
-        owner.authHeaders,
-        { secretId: secret.id },
-        GIT_URL,
-        undefined,
-        true,
-      ),
-    );
-
-    const integrations = await unwrapAsync(
-      apiClient.api
-        .projects({ projectId: project.id })
-        .integrations.get({ headers: owner.authHeaders }),
-    );
-    expect(integrations[0]?.autoSync).toMatchObject({
-      state: "on",
-      syncsAs: { userId: owner.userId },
-    });
-  });
-
-  test("autoSync with a pasted token is rejected and creates no project", async () => {
-    installGitHubFetchStub();
-    const owner = await createSecretsTestUser();
-
-    const { data, error } = await createWithToken(
-      owner.authHeaders,
-      { token: "ghp_pasted_1234" },
-      GIT_URL,
-      undefined,
-      true,
-    );
-
-    expect(data).toBeNull();
-    expect(error?.status).toBe(422);
-    expect(error?.value).toMatchObject({
-      code: "PROJECT_INTEGRATION_AUTO_SYNC_NEEDS_SAVED_KEY",
-    });
-    expect(await listProjects(owner.authHeaders)).toEqual([]);
   });
 
   test("a shorter first-sync window reaches the integration and GitHub request", async () => {

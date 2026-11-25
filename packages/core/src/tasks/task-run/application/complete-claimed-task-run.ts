@@ -42,12 +42,14 @@ import {
   conversationResult,
   endsAsConversation,
 } from "@scarn/core/tasks/task/application/on-task-ended";
-import type { ApplyWorkItemChangesDeps } from "@scarn/core/tasks/task/application/apply-work-item-changes";
 import {
   resolveTaskArtifacts,
   type ResolveTaskArtifactsDeps,
 } from "./resolve-task-artifacts";
-import { settleWorkItemChanges } from "./settle-work-item-changes";
+import {
+  settleWorkItemChanges,
+  type SettleWorkItemChangesDeps,
+} from "./settle-work-item-changes";
 import {
   assertManagedAuthorityForSeal,
   type AssertManagedAuthorityForSealDeps,
@@ -101,7 +103,7 @@ export const finalizeCompletedStepLog = async (
 export type CompleteClaimedTaskRunDeps = FinalizeLogDeps &
   ResolveTaskArtifactsDeps &
   OnRunEndedDeps &
-  ApplyWorkItemChangesDeps &
+  SettleWorkItemChangesDeps &
   AssertManagedAuthorityForSealDeps & {
     userAuthz: UserAuthorizationService;
     notifications: CreateUserNotificationsDeps;

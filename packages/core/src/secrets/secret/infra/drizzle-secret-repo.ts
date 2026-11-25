@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, isNotNull, type SQL } from "drizzle-orm";
+import { and, desc, eq, type SQL } from "drizzle-orm";
 import { getDb } from "@scarn/core/lib/db";
 import type { DbExecutor } from "@scarn/core/lib/db/db-executor";
 import { secrets } from "@scarn/core/lib/db/schema";
@@ -17,7 +17,6 @@ import { noopLogger, type Logger } from "@scarn/observability/logging";
 import type {
   ListSecretsByOwnerOptions,
   SecretRepo,
-  SecretSummary,
 } from "../application/secret-repo";
 import {
   CURRENT_SECRET_SCHEMA_VERSION,
@@ -162,42 +161,10 @@ const secretNameTakenError = (owner: SecretOwner) =>
 /**
  * Single-row reads throw `SECRET_ROW_UNREADABLE` on a row that doesn't read;
  * `listByOwner` logs it at `error` with the secret id and leaves it out, so
- * one bad row doesn't hide the owner's other keys. `listSummariesByIds`
- * never reads `metadata_json`, so it has nothing to skip.
+ * one bad row doesn't hide the owner's other keys.
  */
 export class DrizzleSecretRepo implements SecretRepo {
   constructor(private readonly logger: Logger = noopLogger) {}
-
-  async listSummariesByIds(
-    ids: readonly UuidV7[],
-    dbExecutor?: DbExecutor,
-  ): Promise<SecretSummary[]> {
-    if (ids.length === 0) {
-      return [];
-    }
-    const db = dbExecutor ?? getDb();
-    const rows = await db
-      .select({
-        id: secrets.id,
-        name: secrets.name,
-        ownerUserId: secrets.ownerUserId,
-      })
-      .from(secrets)
-      .where(
-        and(inArray(secrets.id, [...ids]), isNotNull(secrets.ownerUserId)),
-      );
-    return rows.flatMap((row) =>
-      row.ownerUserId === null
-        ? []
-        : [
-            {
-              id: parseUuidV7(row.id),
-              name: row.name,
-              ownerUserId: parseUuidV7(row.ownerUserId),
-            },
-          ],
-    );
-  }
 
   async save(
     entity: SecretEntity,
@@ -223,19 +190,6 @@ export class DrizzleSecretRepo implements SecretRepo {
       }
       throw error;
     }
-  }
-
-  async findById(
-    id: UuidV7,
-    dbExecutor?: DbExecutor,
-  ): Promise<SecretEntity | null> {
-    const db = dbExecutor ?? getDb();
-    const [row] = await db
-      .select()
-      .from(secrets)
-      .where(eq(secrets.id, id))
-      .limit(1);
-    return row ? secretFromRow(row) : null;
   }
 
   async findByIdForOwner(

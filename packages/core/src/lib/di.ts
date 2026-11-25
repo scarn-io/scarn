@@ -77,7 +77,6 @@ import {
 } from "@scarn/core/artifacts/infra/s3-object-store";
 import { pipelineTaskPipelineRunPort } from "@scarn/core/pipeline-executions/pipeline-run/application/task-pipeline-run-port";
 import type { CreateUserNotificationsDeps } from "@scarn/core/notifications/user-notification/application/create-user-notifications-from-task-result";
-import type { NotifyIntegrationAutoSyncPausedDeps } from "@scarn/core/notifications/user-notification/application/notify-integration-auto-sync-paused";
 import type { ProjectRepo } from "@scarn/core/projects/project/application/project-repo";
 import type { WorkItemRepo } from "@scarn/core/work-items/work-item/application/work-item-repo";
 import type { WorkItemTitleReader } from "@scarn/core/work-items/work-item/application/work-item-title-reader";
@@ -516,15 +515,6 @@ export function createAppContext(overrides?: CreateAppContextOverrides) {
     commentArtifactReader,
   };
 
-  const autoSyncPausedNotifications: NotifyIntegrationAutoSyncPausedDeps = {
-    notificationRepo: userNotificationRepo,
-    deliveryRepo: notificationDeliveryRepo,
-    notificationRuleRepo,
-    adapterRegistry: notificationChannelAdapterRegistry,
-    projectRepo,
-    usernameReader,
-  };
-
   const automationRunner = new AutomationRunner({
     taskRepo,
     taskRunRepo,
@@ -652,7 +642,6 @@ export function createAppContext(overrides?: CreateAppContextOverrides) {
     taskRunStepKeyReader,
     taskArtifactResolutionRepo,
     notifications,
-    autoSyncPausedNotifications,
     taskExecutionConfigRepo,
     agentSessionRepo,
     taskMessageRepo,

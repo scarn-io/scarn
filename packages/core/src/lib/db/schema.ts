@@ -191,7 +191,6 @@ export const userNotificationKindEnum = pgEnum("user_notification_kind", [
   "blocked",
   "result_ready",
   "warning",
-  "integration_auto_sync_paused",
 ]);
 
 export const notificationAudienceEnum = pgEnum("notification_audience", [
@@ -366,6 +365,16 @@ export const workItems = appSchema.table(
     ),
     index("work_items_project_id_idx").on(table.projectId),
     index("work_items_platform_key_idx").on(table.platformKey),
+    // Serves `maxSourceUpdatedAt`, a code step's import cursor: a
+    // `platform_key LIKE 'prefix%'` range scan under one project and
+    // platform, index-only. `text_pattern_ops` lets a prefix `LIKE` use the
+    // index whatever the database collation.
+    index("work_items_project_platform_key_prefix_idx").on(
+      table.projectId,
+      table.platform,
+      table.platformKey.op("text_pattern_ops"),
+      table.sourceUpdatedAt,
+    ),
     index("work_items_parent_work_item_id_idx").on(table.parentWorkItemId),
     index("work_items_project_state_idx").on(table.projectId, table.state),
     index("work_items_spawned_by_task_id_idx").on(table.spawnedByTaskId),
@@ -1785,13 +1794,6 @@ export const projectIntegrations = appSchema.table(
     lastSyncedAt: timestamp("last_synced_at", { withTimezone: true }),
     lastError: text("last_error"),
     firstSyncHorizonDays: integer("first_sync_horizon_days"),
-    syncSecretId: uuid("sync_secret_id").references(() => secrets.id, {
-      onDelete: "set null",
-    }),
-    syncLockedUntil: timestamp("sync_locked_until", { withTimezone: true }),
-    autoSyncPausedReason: text("auto_sync_paused_reason"),
-    autoSyncPausedAt: timestamp("auto_sync_paused_at", { withTimezone: true }),
-    autoSyncPausedDetail: text("auto_sync_paused_detail"),
     createdAt: createdAtColumn(),
     updatedAt: updatedAtColumn(),
   },
@@ -1801,7 +1803,6 @@ export const projectIntegrations = appSchema.table(
       .where(sql`${table.kind} = 'github_app'`),
     index("project_integrations_project_id_idx").on(table.projectId),
     index("project_integrations_installation_id_idx").on(table.installationId),
-    index("project_integrations_sync_secret_id_idx").on(table.syncSecretId),
     check(
       "project_integrations_schema_version_check",
       sql`${table.schemaVersion} >= 1`,
@@ -1809,14 +1810,6 @@ export const projectIntegrations = appSchema.table(
     check(
       "project_integrations_kind_installation_check",
       sql`(${table.kind} = 'github_app') = (${table.installationId} IS NOT NULL)`,
-    ),
-    check(
-      "project_integrations_sync_secret_kind_check",
-      sql`${table.syncSecretId} IS NULL OR ${table.kind} IN ('jira', 'github_token')`,
-    ),
-    check(
-      "project_integrations_auto_sync_paused_reason_check",
-      sql`${table.autoSyncPausedReason} IS NULL OR ${table.autoSyncPausedReason} IN ('key_removed', 'key_rejected', 'key_expired', 'owner_left_project', 'access_lost')`,
     ),
   ],
 );

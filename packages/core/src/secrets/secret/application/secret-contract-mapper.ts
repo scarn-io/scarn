@@ -1,7 +1,4 @@
-import type {
-  SecretContract,
-  SecretUseContract,
-} from "../contracts/secret-contracts";
+import type { SecretContract } from "../contracts/secret-contracts";
 import { InvariantViolationError } from "@scarn/core/lib/errors";
 import type { SecretEntity } from "../domain/secret-entity";
 
@@ -9,7 +6,6 @@ import type { SecretEntity } from "../domain/secret-entity";
 export const secretEntityToContract = (
   entity: SecretEntity,
   now: Date,
-  usedBy: SecretUseContract[],
 ): SecretContract => {
   const shared = {
     id: entity.id,
@@ -19,7 +15,6 @@ export const secretEntityToContract = (
     status: entity.status(now),
     createdAt: entity.createdAt.toISOString(),
     updatedAt: entity.updatedAt.toISOString(),
-    usedBy,
   };
   switch (entity.kind) {
     case "jira_api_key":
