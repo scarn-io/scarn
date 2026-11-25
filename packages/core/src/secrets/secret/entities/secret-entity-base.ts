@@ -121,7 +121,7 @@ export abstract class SecretEntityBase<O extends SecretOwner = SecretOwner> {
     assertOwnerMatchesKind(props.owner, kind);
     this.id = props.id;
     this.owner = props.owner;
-    this.name = this.normalizeName(props.name);
+    this.name = props.name;
     this.encryptedValue = props.encryptedValue;
     this.lastFour = props.lastFour;
     this.lastUsedAt = props.lastUsedAt;
@@ -132,7 +132,7 @@ export abstract class SecretEntityBase<O extends SecretOwner = SecretOwner> {
 
   protected abstract withBaseProps(props: SecretEntityBaseProps<O>): this;
 
-  /** The kind's name rule. Runs in the constructor, so it must not read instance fields. */
+  /** The kind's name rule, applied when the name is written. */
   protected normalizeName(name: string): string {
     return normalizeSecretName(name);
   }

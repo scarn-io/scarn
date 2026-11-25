@@ -3,11 +3,8 @@ import {
   type storedEnvironmentRuntimeSchema,
 } from "@scarn/core/common/contracts/environment";
 import { storedEnvVarsSchema } from "@scarn/core/common/contracts/env-vars";
-import { healthChecksSchema } from "@scarn/core/common/contracts/health-checks";
 import { managedRuntimeIdSchema } from "@scarn/core/common/contracts/managed-runtime";
-import { resolveRepoConfig } from "@scarn/core/common/contracts/repo-config";
 import { storedOpenCodeMcpServersSchema } from "@scarn/core/common/contracts/stored-opencode-mcp";
-import { repoBaseBranchSchema } from "@scarn/sdk/repo-config";
 import { z } from "zod";
 
 /**
@@ -19,6 +16,41 @@ import { z } from "zod";
  * stored schema for it, a `vN → vN+1` converter and a fixture under
  * `tests/tasks/task-execution-config/fixtures/`.
  */
+
+/**
+ * Frozen copy of the SDK's `healthChecksSchema` (`@scarn/sdk/health-checks`)
+ * as it stood when v1–v4 were written, shared by all four. Write rules
+ * (`.trim()`, `.min()`, `.max()`, `.gt()`, `.int()`, strict keys) are not
+ * re-applied. A check without `kind` predates it and reads as `"tool"`.
+ */
+const storedHealthCheckBaseV1Schema = z.object({
+  name: z.string().optional(),
+  severity: z.enum(["required", "warn"]).default("required"),
+  timeoutSeconds: z.number().default(15),
+  serialGroup: z.string().optional(),
+});
+
+const storedHealthCheckV1Schema = z.preprocess(
+  (value) =>
+    typeof value === "object" && value !== null && !("kind" in value)
+      ? { ...value, kind: "tool" }
+      : value,
+  z.discriminatedUnion("kind", [
+    storedHealthCheckBaseV1Schema.extend({
+      kind: z.literal("tool"),
+      tool: z.string(),
+      mcp: z.string().optional(),
+      args: z.record(z.string(), z.unknown()).optional(),
+    }),
+    storedHealthCheckBaseV1Schema.extend({
+      kind: z.literal("cli"),
+      command: z.array(z.string()),
+      expectExitCode: z.number().default(0),
+    }),
+  ]),
+);
+
+const storedHealthChecksV1Schema = z.array(storedHealthCheckV1Schema);
 
 const storedRuntimeV1Schema = z.discriminatedUnion("type", [
   z.object({
@@ -53,7 +85,7 @@ export const storedTaskExecutionConfigV1Schema = z.object({
   env: storedEnvV1Schema.nullable(),
   git: storedGitV1Schema.nullable(),
   mcp: storedOpenCodeMcpServersSchema.nullable(),
-  healthChecks: healthChecksSchema.nullable(),
+  healthChecks: storedHealthChecksV1Schema.nullable(),
 });
 
 export type TaskExecutionConfigContentV1 = z.output<
@@ -89,7 +121,7 @@ export const storedTaskExecutionConfigV2Schema = z.object({
   env: storedEnvVarsSchema.nullable(),
   git: storedGitV2Schema.nullable(),
   mcp: storedOpenCodeMcpServersSchema.nullable(),
-  healthChecks: healthChecksSchema.nullable(),
+  healthChecks: storedHealthChecksV1Schema.nullable(),
 });
 
 export type TaskExecutionConfigContentV2 = z.output<
@@ -108,7 +140,7 @@ export const storedTaskExecutionConfigV3Schema = z.object({
   environment: storedEnvironmentV3Schema.nullable(),
   git: storedGitV2Schema.nullable(),
   mcp: storedOpenCodeMcpServersSchema.nullable(),
-  healthChecks: healthChecksSchema.nullable(),
+  healthChecks: storedHealthChecksV1Schema.nullable(),
 });
 
 export type TaskExecutionConfigContentV3 = z.output<
@@ -179,12 +211,48 @@ export const storedTaskExecutionConfigV4Schema = z.object({
   environment: storedEnvironmentV4Schema.nullable(),
   git: storedGitV4Schema.nullable(),
   mcp: storedOpenCodeMcpServersSchema.nullable(),
-  healthChecks: healthChecksSchema.nullable(),
+  healthChecks: storedHealthChecksV1Schema.nullable(),
 });
 
 export type TaskExecutionConfigContentV4 = z.output<
   typeof storedTaskExecutionConfigV4Schema
 >;
+
+const BASE_BRANCH_TOKEN_PATTERN = /\{\{([^}]+)\}\}/g;
+
+/**
+ * Whether `template` passes the SDK's `repoBaseBranchSchema`
+ * (`@scarn/sdk/repo-config`) as it stood when v3 rows were written. Frozen
+ * here so converting a v3 row can't change when the write rule does: at most
+ * 255 characters, a single line, only `{{input.…}}`, `{{env.NAME}}` and
+ * `{{workItem.platformKey}}` tokens, and a valid branch name by
+ * `git check-ref-format --branch` once each token stands for a plain segment.
+ */
+const isV3BaseBranchTemplate = (template: string): boolean => {
+  if (template.length > 255 || /[\r\n]/.test(template)) return false;
+  for (const match of template.matchAll(BASE_BRANCH_TOKEN_PATTERN)) {
+    const [root = "", ...rest] = (match[1] ?? "").split(".");
+    const allowed =
+      root === "input" ||
+      (root === "env" && rest.length === 1 && rest[0] !== "") ||
+      (root === "workItem" && rest.length === 1 && rest[0] === "platformKey");
+    if (!allowed) return false;
+  }
+  const name = template.replace(BASE_BRANCH_TOKEN_PATTERN, "x");
+  if (name === "" || name === "@") return false;
+  if (name.startsWith("-") || name.startsWith("/")) return false;
+  if (name.endsWith("/") || name.endsWith(".")) return false;
+  if (name.includes("..") || name.includes("//") || name.includes("@{")) {
+    return false;
+  }
+  // eslint-disable-next-line no-control-regex -- git rejects ASCII control characters
+  if (/[\x00-\x20\x7f~^:?*[\\]/.test(name)) return false;
+  return name
+    .split("/")
+    .every(
+      (component) => !component.startsWith(".") && !component.endsWith(".lock"),
+    );
+};
 
 /**
  * Fills the repo branch defaults and moves an inline environment's `branch`
@@ -203,10 +271,7 @@ export const convertTaskExecutionConfigV3ToV4 = (
   if (content.environment?.kind === "inline") {
     const { branch, ...rest } = content.environment;
     environment = rest;
-    if (
-      branch !== undefined &&
-      repoBaseBranchSchema.safeParse(branch).success
-    ) {
+    if (branch !== undefined && isV3BaseBranchTemplate(branch)) {
       movedBranch = branch;
     }
   }
@@ -218,7 +283,14 @@ export const convertTaskExecutionConfigV3ToV4 = (
     convertedGit =
       movedBranch === null
         ? null
-        : resolveRepoConfig({ mode: "readWrite", baseBranch: movedBranch });
+        : {
+            mode: "readWrite",
+            message: null,
+            onPushFailure: "fail",
+            gitCredentials: "auto",
+            baseBranch: movedBranch,
+            workBranch: { kind: "create" },
+          };
   } else if (git.mode === "readOnly") {
     convertedGit = { ...git, ...branchDefaults };
   } else {

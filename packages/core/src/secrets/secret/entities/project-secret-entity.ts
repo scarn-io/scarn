@@ -74,6 +74,7 @@ export class ProjectSecretEntity extends SecretEntityBase<ProjectSecretOwner> {
     const { now, id, ...rest } = props;
     return new ProjectSecretEntity({
       ...rest,
+      name: normalizeProjectSecretName(rest.name),
       id: id ?? createUuidV7(),
       valueKind: "static",
       lastUsedAt: null,

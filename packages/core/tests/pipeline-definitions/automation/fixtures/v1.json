@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "document": {
+    "kind": "automation",
+    "schemaVersion": 1,
+    "key": "triage",
+    "title": "Triage",
+    "scope": "project",
+    "rules": [
+      {
+        "key": "route-new-bugs",
+        "event": "workItem.created",
+        "next": {
+          "match": "first",
+          "routes": [
+            {
+              "when": {
+                "path": "event.workItem.labels",
+                "op": "contains",
+                "value": "bug"
+              },
+              "kind": "pipeline",
+              "to": "bugfix",
+              "on": "workItem"
+            },
+            {
+              "when": {
+                "path": "event.workItem.labels",
+                "op": "contains",
+                "value": "question"
+              },
+              "kind": "step",
+              "to": "research",
+              "args": {
+                "question": "event.workItem.title",
+                "tags": {
+                  "list": ["event.workItem.labels", { "value": "triaged" }]
+                }
+              },
+              "on": "workItem"
+            }
+          ],
+          "otherwise": { "kind": "skip" }
+        }
+      },
+      {
+        "key": "attach-wayfinder",
+        "event": "workItem.label.added",
+        "next": {
+          "routes": [
+            {
+              "when": {
+                "path": "event.label",
+                "op": "equal",
+                "value": "wayfinder"
+              },
+              "kind": "attach",
+              "automation": "wayfinder"
+            }
+          ]
+        }
+      },
+      {
+        "key": "nightly-sweep",
+        "event": "schedule",
+        "cron": "0 3 * * *",
+        "timezone": "America/Chicago",
+        "concurrency": { "max": 1, "waiting": 0 },
+        "next": {
+          "routes": [{ "kind": "step", "to": "plan" }]
+        }
+      }
+    ]
+  }
+}

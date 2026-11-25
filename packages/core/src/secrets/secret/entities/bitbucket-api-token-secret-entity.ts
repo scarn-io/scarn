@@ -3,6 +3,7 @@ import {
   type UuidV7,
 } from "@scarn/core/common/contracts/uuid-v7";
 import {
+  normalizeSecretName,
   SecretEntityBase,
   type SecretEntityBaseProps,
   type SecretRowProps,
@@ -43,9 +44,7 @@ export class BitbucketApiTokenSecretEntity extends SecretEntityBase<UserSecretOw
   private constructor(props: BitbucketApiTokenSecretEntityProps) {
     const { metadata, expiresAt, ...baseProps } = props;
     super(baseProps, "bitbucket_api_token");
-    this.metadata = {
-      email: normalizeSecretEmail(metadata.email, "Bitbucket API token"),
-    };
+    this.metadata = metadata;
     this.expiresAt = expiresAt;
   }
 
@@ -56,6 +55,10 @@ export class BitbucketApiTokenSecretEntity extends SecretEntityBase<UserSecretOw
     assertSecretExpiryInFuture(rest.expiresAt, now, "Bitbucket API token");
     return new BitbucketApiTokenSecretEntity({
       ...rest,
+      name: normalizeSecretName(rest.name),
+      metadata: {
+        email: normalizeSecretEmail(rest.metadata.email, "Bitbucket API token"),
+      },
       id: id ?? createUuidV7(),
       lastUsedAt: null,
       createdAt: now,

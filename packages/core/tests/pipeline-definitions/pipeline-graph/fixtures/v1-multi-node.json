@@ -1,0 +1,158 @@
+{
+  "schemaVersion": 1,
+  "definitionJson": {
+    "$schema": "https://scarn.test/schemas/pipeline-document.json",
+    "schemaVersion": 1,
+    "key": "release-train",
+    "title": "Release train",
+    "workItemFields": {
+      "scan": "scan",
+      "services": "services",
+      "failMode": "failMode"
+    },
+    "start": {
+      "to": "prepare-release",
+      "args": {
+        "title": "workItem.title",
+        "scan": "workItem.fields.scan",
+        "services": "workItem.fields.services",
+        "pinned": { "value": { "channel": "stable" } }
+      }
+    },
+    "nodes": {
+      "prepare-release": {
+        "kind": "step",
+        "title": "Prepare release",
+        "step": "prepare-release",
+        "retry": [{ "on": ["Scarn.StepFailed"], "maxAttempts": 2 }],
+        "catch": [{ "on": ["Scarn.Timeout"], "to": "timed-out" }],
+        "timeoutSeconds": 120,
+        "next": {
+          "match": "all",
+          "routes": [
+            { "to": "run-unit-tests", "args": { "version": "result.version" } },
+            {
+              "when": { "path": "result.scan", "op": "equal", "value": true },
+              "to": "scan-dependencies",
+              "args": { "version": "result.version" }
+            },
+            {
+              "when": { "not": { "path": "result.services", "op": "isEmpty" } },
+              "to": "check-service",
+              "each": {
+                "over": "result.services",
+                "maxConcurrency": 3,
+                "toleratedFailures": { "count": 1 }
+              },
+              "args": { "name": "item.name" }
+            }
+          ]
+        }
+      },
+      "run-unit-tests": {
+        "kind": "step",
+        "title": "Run unit tests",
+        "step": "run-unit-tests",
+        "maxRuns": 3,
+        "next": {
+          "routes": [
+            {
+              "to": "decide-release",
+              "args": { "unit": "result" },
+              "partial": true
+            }
+          ]
+        }
+      },
+      "scan-dependencies": {
+        "kind": "step",
+        "title": "Scan dependencies",
+        "step": "scan-dependencies",
+        "next": {
+          "routes": [
+            {
+              "to": "decide-release",
+              "args": { "advisories": "result.advisories" },
+              "partial": true
+            }
+          ]
+        }
+      },
+      "check-service": {
+        "kind": "step",
+        "title": "Check service health",
+        "step": "check-service",
+        "next": {
+          "routes": [
+            {
+              "when": {
+                "path": "result.healthy",
+                "op": "equal",
+                "value": false
+              },
+              "to": "decide-release",
+              "args": { "unhealthyServices": { "list": ["result"] } },
+              "partial": true
+            }
+          ]
+        }
+      },
+      "decide-release": {
+        "kind": "step",
+        "title": "Decide release",
+        "step": "decide-release",
+        "maxTurns": 2,
+        "next": {
+          "routes": [
+            {
+              "when": {
+                "all": [
+                  { "path": "result.blocked", "op": "equal", "value": true },
+                  {
+                    "count": { "path": "result.advisories" },
+                    "op": "greaterThan",
+                    "value": 0
+                  }
+                ]
+              },
+              "to": "release-blocked",
+              "label": "Blocked",
+              "overridable": true
+            }
+          ],
+          "otherwise": { "to": "sign-off" }
+        }
+      },
+      "sign-off": {
+        "kind": "wait",
+        "title": "Release sign-off",
+        "for": "decision",
+        "actions": [
+          { "key": "approve", "label": "Approve" },
+          { "key": "reject", "label": "Reject", "body": "required" }
+        ],
+        "next": {
+          "routes": [
+            {
+              "when": {
+                "path": "result.action",
+                "op": "equal",
+                "value": "reject"
+              },
+              "to": "release-blocked"
+            }
+          ],
+          "otherwise": { "to": "released" }
+        }
+      },
+      "released": { "kind": "succeed", "title": "Released" },
+      "release-blocked": {
+        "kind": "fail",
+        "title": "Release blocked",
+        "error": "ReleaseBlocked",
+        "cause": "A check or reviewer blocked the release"
+      },
+      "timed-out": { "kind": "fail", "error": "PrepareTimedOut" }
+    }
+  }
+}

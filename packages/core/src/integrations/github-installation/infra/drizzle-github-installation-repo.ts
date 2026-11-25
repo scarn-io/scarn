@@ -1,12 +1,10 @@
 import { eq } from "drizzle-orm";
 import { getDb } from "@scarn/core/lib/db";
 import type { DbExecutor } from "@scarn/core/lib/db/db-executor";
-import {
-  parseUuidV7,
-  type UuidV7,
-} from "@scarn/core/common/contracts/uuid-v7";
+import { parseUuidV7, type UuidV7 } from "@scarn/core/common/contracts/uuid-v7";
 import { githubInstallations } from "@scarn/core/lib/db/schema";
 import type { GitHubInstallationRepo } from "../application/github-installation-repo";
+import { readStoredGitHubInstallationRepositories } from "../contracts/github-installation-repositories-stored";
 import {
   GITHUB_INSTALLATION_ACCOUNT_TYPES,
   GITHUB_INSTALLATION_TARGET_TYPES,
@@ -36,22 +34,13 @@ const parseTargetType = (
     : null;
 };
 
-type StoredRepositoryEntry = {
-  id?: number;
-  fullName?: string;
-};
-
-const parseRepositoryList = (
-  value: StoredRepositoryEntry[] | null,
+const selectedRepositoriesFromRow = (
+  row: typeof githubInstallations.$inferSelect,
 ): GitHubInstallationRepository[] | null => {
-  if (value === null) return null;
-  const repos: GitHubInstallationRepository[] = [];
-  for (const entry of value) {
-    if (typeof entry.id === "number" && typeof entry.fullName === "string") {
-      repos.push({ id: entry.id, fullName: entry.fullName });
-    }
-  }
-  return repos;
+  const read = readStoredGitHubInstallationRepositories(
+    row.selectedRepositoriesJson,
+  );
+  return read.success ? read.value : null;
 };
 
 const toRow = (installation: GitHubInstallationEntity) => ({
@@ -76,11 +65,7 @@ export class DrizzleGitHubInstallationRepo implements GitHubInstallationRepo {
       accountLogin: row.accountLogin,
       accountType: parseAccountType(row.accountType),
       targetType: parseTargetType(row.targetType),
-      selectedRepositories: parseRepositoryList(
-        Array.isArray(row.selectedRepositoriesJson)
-          ? (row.selectedRepositoriesJson as StoredRepositoryEntry[])
-          : null,
-      ),
+      selectedRepositories: selectedRepositoriesFromRow(row),
       installedByUserId: row.installedByUserId
         ? parseUuidV7(row.installedByUserId)
         : null,

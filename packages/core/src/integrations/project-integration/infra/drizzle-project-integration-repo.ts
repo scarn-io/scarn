@@ -13,19 +13,29 @@ import {
 import { getDb } from "@scarn/core/lib/db";
 import type { DbExecutor } from "@scarn/core/lib/db/db-executor";
 import { parseUuidV7, type UuidV7 } from "@scarn/core/common/contracts/uuid-v7";
-import { anyJsonValueSchema } from "@scarn/core/common/contracts/json";
-import { CoreValidationError } from "@scarn/core/lib/errors";
+import {
+  CoreError,
+  CoreValidationError,
+  PersistenceError,
+} from "@scarn/core/lib/errors";
 import { projectIntegrations } from "@scarn/core/lib/db/schema";
+import {
+  readRowsSkippingUnreadable,
+  type StoredReadResult,
+} from "@scarn/core/lib/db/stored-json";
+import { noopLogger, type Logger } from "@scarn/observability/logging";
 import type { ProjectIntegrationRepo } from "../application/project-integration-repo";
 import {
+  CURRENT_PROJECT_INTEGRATION_SCHEMA_VERSION,
+  readStoredProjectIntegrationScope,
+} from "../contracts/project-integration-scope-stored";
+import {
   AUTO_SYNC_PAUSED_REASONS,
-  PROJECT_INTEGRATION_KINDS,
   PROJECT_INTEGRATION_STATUSES,
   ProjectIntegrationEntity,
   isGitHubAppIntegration,
   type AutoSyncPausedReason,
   type GitHubAppProjectIntegration,
-  type ProjectIntegrationKind,
   type ProjectIntegrationStatus,
 } from "../domain/project-integration-entity";
 
@@ -33,16 +43,6 @@ const parseStatus = (value: string): ProjectIntegrationStatus =>
   (PROJECT_INTEGRATION_STATUSES as readonly string[]).includes(value)
     ? (value as ProjectIntegrationStatus)
     : "active";
-
-const parseKind = (value: string): ProjectIntegrationKind => {
-  if (!(PROJECT_INTEGRATION_KINDS as readonly string[]).includes(value)) {
-    throw new CoreValidationError(
-      `Project integration row of kind '${value}' is invalid: unsupported kind`,
-      "PROJECT_INTEGRATION_ROW_INVALID",
-    );
-  }
-  return value as ProjectIntegrationKind;
-};
 
 const parseAutoSyncPausedReason = (
   value: string | null,
@@ -67,6 +67,7 @@ const toRow = (integration: ProjectIntegrationEntity) => {
     kind: row.kind,
     installationId: row.installationId,
     externalScopeJson: row.externalScopeJson,
+    schemaVersion: CURRENT_PROJECT_INTEGRATION_SCHEMA_VERSION,
     status: row.status,
     lastSyncedAt: row.lastSyncedAt,
     lastError: row.lastError,
@@ -87,28 +88,90 @@ const toRow = (integration: ProjectIntegrationEntity) => {
  */
 export const LIST_ACTIVE_DEFAULT_PAGE_SIZE = 500;
 
+type ProjectIntegrationRow = typeof projectIntegrations.$inferSelect;
+
+/**
+ * Reads a row through the stored scope reader. A row whose scope, kind,
+ * installation id or other columns don't fit is unreadable.
+ */
+export const readProjectIntegrationRow = (
+  row: ProjectIntegrationRow,
+): StoredReadResult<ProjectIntegrationEntity> => {
+  const scope = readStoredProjectIntegrationScope(row.schemaVersion, row);
+  if (!scope.success) {
+    return scope;
+  }
+  try {
+    return {
+      success: true,
+      value: ProjectIntegrationEntity.fromStored({
+        ...scope.value,
+        id: parseUuidV7(row.id),
+        projectId: parseUuidV7(row.projectId),
+        installationId: row.installationId,
+        status: parseStatus(row.status),
+        lastSyncedAt: row.lastSyncedAt,
+        lastError: row.lastError,
+        firstSyncHorizonDays: row.firstSyncHorizonDays,
+        syncSecretId:
+          row.syncSecretId === null ? null : parseUuidV7(row.syncSecretId),
+        autoSyncPausedReason: parseAutoSyncPausedReason(
+          row.autoSyncPausedReason,
+        ),
+        autoSyncPausedAt: row.autoSyncPausedAt,
+        autoSyncPausedDetail: row.autoSyncPausedDetail,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
+      }),
+    };
+  } catch (error: unknown) {
+    if (error instanceof CoreError) {
+      return { success: false, reason: error.message };
+    }
+    throw error;
+  }
+};
+
+/** A row that does not read is a persistence fault: this code wrote it. */
+export const projectIntegrationFromRow = (
+  row: ProjectIntegrationRow,
+): ProjectIntegrationEntity => {
+  const read = readProjectIntegrationRow(row);
+  if (!read.success) {
+    throw new PersistenceError(
+      `project integration ${row.id} is unreadable: ${read.reason}`,
+      "PROJECT_INTEGRATION_ROW_UNREADABLE",
+    );
+  }
+  return read.value;
+};
+
+/** The log fields that identify a skipped row. */
+const describeRow = (row: ProjectIntegrationRow) => ({
+  table: "project_integrations",
+  projectIntegrationId: row.id,
+  projectId: row.projectId,
+  kind: row.kind,
+});
+
+/**
+ * Single-row reads throw `PROJECT_INTEGRATION_ROW_UNREADABLE` on a row that
+ * doesn't read; list reads log it at `error` with the integration id and
+ * leave it out, so one bad row doesn't stop the sync tick or the project's
+ * integration list.
+ */
 export class DrizzleProjectIntegrationRepo implements ProjectIntegrationRepo {
-  private toEntity(
-    row: typeof projectIntegrations.$inferSelect,
-  ): ProjectIntegrationEntity {
-    return ProjectIntegrationEntity.rehydrate({
-      id: parseUuidV7(row.id),
-      projectId: parseUuidV7(row.projectId),
-      kind: parseKind(row.kind),
-      installationId: row.installationId,
-      externalScopeJson: anyJsonValueSchema.parse(row.externalScopeJson),
-      status: parseStatus(row.status),
-      lastSyncedAt: row.lastSyncedAt,
-      lastError: row.lastError,
-      firstSyncHorizonDays: row.firstSyncHorizonDays,
-      syncSecretId:
-        row.syncSecretId === null ? null : parseUuidV7(row.syncSecretId),
-      autoSyncPausedReason: parseAutoSyncPausedReason(row.autoSyncPausedReason),
-      autoSyncPausedAt: row.autoSyncPausedAt,
-      autoSyncPausedDetail: row.autoSyncPausedDetail,
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
-    });
+  constructor(private readonly logger: Logger = noopLogger) {}
+
+  private readRows(
+    rows: readonly ProjectIntegrationRow[],
+  ): ProjectIntegrationEntity[] {
+    return readRowsSkippingUnreadable(
+      rows,
+      readProjectIntegrationRow,
+      this.logger,
+      describeRow,
+    );
   }
 
   async create(
@@ -123,7 +186,7 @@ export class DrizzleProjectIntegrationRepo implements ProjectIntegrationRepo {
     if (!row) {
       throw new Error("Failed to create project integration");
     }
-    return this.toEntity(row);
+    return projectIntegrationFromRow(row);
   }
 
   async save(
@@ -136,6 +199,7 @@ export class DrizzleProjectIntegrationRepo implements ProjectIntegrationRepo {
       .update(projectIntegrations)
       .set({
         externalScopeJson: row.externalScopeJson,
+        schemaVersion: row.schemaVersion,
         status: row.status,
         lastSyncedAt: row.lastSyncedAt,
         lastError: row.lastError,
@@ -151,7 +215,7 @@ export class DrizzleProjectIntegrationRepo implements ProjectIntegrationRepo {
     if (!updated) {
       throw new Error("Failed to update project integration");
     }
-    return this.toEntity(updated);
+    return projectIntegrationFromRow(updated);
   }
 
   async findById(
@@ -164,7 +228,7 @@ export class DrizzleProjectIntegrationRepo implements ProjectIntegrationRepo {
       .from(projectIntegrations)
       .where(eq(projectIntegrations.id, id))
       .limit(1);
-    return row ? this.toEntity(row) : null;
+    return row ? projectIntegrationFromRow(row) : null;
   }
 
   async listByProjectId(
@@ -177,7 +241,7 @@ export class DrizzleProjectIntegrationRepo implements ProjectIntegrationRepo {
       .from(projectIntegrations)
       .where(eq(projectIntegrations.projectId, projectId))
       .orderBy(projectIntegrations.createdAt);
-    return rows.map((row) => this.toEntity(row));
+    return this.readRows(rows);
   }
 
   async findByInstallationId(
@@ -195,7 +259,9 @@ export class DrizzleProjectIntegrationRepo implements ProjectIntegrationRepo {
         ),
       )
       .orderBy(projectIntegrations.createdAt);
-    return rows.map((row) => this.toEntity(row)).filter(isGitHubAppIntegration);
+    return rows
+      .map((row) => projectIntegrationFromRow(row))
+      .filter(isGitHubAppIntegration);
   }
 
   /**
@@ -240,7 +306,7 @@ export class DrizzleProjectIntegrationRepo implements ProjectIntegrationRepo {
       .from(projectIntegrations)
       .where(eq(projectIntegrations.syncSecretId, secretId))
       .orderBy(projectIntegrations.id);
-    return rows.map((row) => this.toEntity(row));
+    return rows.map((row) => projectIntegrationFromRow(row));
   }
 
   async listBySyncSecretIds(
@@ -256,7 +322,7 @@ export class DrizzleProjectIntegrationRepo implements ProjectIntegrationRepo {
       .from(projectIntegrations)
       .where(inArray(projectIntegrations.syncSecretId, secretIds))
       .orderBy(projectIntegrations.id);
-    return rows.map((row) => this.toEntity(row));
+    return this.readRows(rows);
   }
 
   async claimForSync(
@@ -309,9 +375,7 @@ export class DrizzleProjectIntegrationRepo implements ProjectIntegrationRepo {
         .orderBy(projectIntegrations.id)
         .limit(pageSize);
 
-      for (const row of rows) {
-        results.push(this.toEntity(row));
-      }
+      results.push(...this.readRows(rows));
 
       if (rows.length < pageSize) break;
       cursor = rows[rows.length - 1]?.id ?? null;

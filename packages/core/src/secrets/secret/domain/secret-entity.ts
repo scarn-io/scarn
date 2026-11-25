@@ -5,12 +5,14 @@
  * owned by a project), so each kind carries exactly the owner, metadata and
  * expiry rules that apply to it. Callers narrow on `.kind`.
  *
- * `SecretEntity` is also a companion value whose `create`/`rehydrate`
- * dispatch on `kind`. See `entities/secret-entity-base.ts` for the shared
- * behaviour.
+ * `SecretEntity` is also a companion value whose `create`/`rehydrate`/
+ * `fromStored` dispatch on `kind`. The stored reader
+ * (`contracts/secret-metadata-stored.ts`) rejects metadata that doesn't fit
+ * its kind; `fromStored` rejects an owner or expiry that doesn't. See
+ * `entities/secret-entity-base.ts` for the shared behaviour.
  */
-import { z } from "zod";
 import { CoreValidationError } from "@scarn/core/lib/errors";
+import { assertNever } from "@scarn/core/lib/assert-never";
 import {
   JiraApiKeySecretEntity,
   type CreateJiraApiKeySecretEntityProps,
@@ -29,8 +31,14 @@ import {
 } from "../entities/project-secret-entity";
 import {
   assertOwnerMatchesKind,
+  secretKindValues,
   type SecretRowProps,
 } from "../entities/secret-entity-base";
+import {
+  CURRENT_SECRET_SCHEMA_VERSION,
+  readStoredSecretMetadata,
+  type StoredSecretMetadata,
+} from "../contracts/secret-metadata-stored";
 import type {
   ProjectSecretOwner,
   SecretOwner,
@@ -93,33 +101,11 @@ export type CreateSecretEntityProps =
     })
   | (CreateProjectSecretEntityProps & { kind: "project_secret" });
 
-const storedEmailMetadataSchema = z.object({ email: z.string() });
-
-const storedGitHubTokenMetadataSchema = z.object({
-  login: z.string().nullable(),
-});
-
 const unsupportedKind = (kind: string) =>
   new CoreValidationError(
     `Secret kind '${kind}' is not supported`,
     "SECRET_KIND_UNSUPPORTED",
   );
-
-const parseMetadata = <T>(
-  schema: z.ZodType<T>,
-  metadataJson: SecretRowProps["metadataJson"],
-  kind: string,
-  shape: string,
-): T => {
-  const parsed = schema.safeParse(metadataJson);
-  if (!parsed.success) {
-    throw new CoreValidationError(
-      `Secret of kind '${kind}' requires metadata: ${shape}`,
-      "SECRET_METADATA_INVALID",
-    );
-  }
-  return parsed.data;
-};
 
 const requireExpiry = (expiresAt: Date | null, kind: string): Date => {
   if (!expiresAt) {
@@ -141,6 +127,16 @@ const projectOwner = (owner: SecretOwner, kind: string): ProjectSecretOwner => {
   return owner as ProjectSecretOwner;
 };
 
+/**
+ * The flat row with its metadata already read through
+ * `readStoredSecretMetadata`, so `kind` and `metadata` agree.
+ */
+export type StoredSecretRowProps = Omit<
+  SecretRowProps,
+  "kind" | "metadataJson"
+> &
+  StoredSecretMetadata;
+
 export const SecretEntity = {
   /** Constructs the variant matching `props.kind`. */
   create(props: CreateSecretEntityProps): SecretEntity {
@@ -159,55 +155,70 @@ export const SecretEntity = {
     }
   },
 
-  /** Rehydrates the variant matching `row.kind` from the flat row shape. */
+  /**
+   * Rehydrates the variant matching `row.kind` from the flat row shape,
+   * reading its metadata as the current stored version.
+   */
   rehydrate(row: SecretRowProps): SecretEntity {
-    const { kind, valueKind, metadataJson, expiresAt, owner, ...base } = row;
+    const { kind, metadataJson, ...rest } = row;
     const untrustedKind: string = kind;
-    switch (untrustedKind) {
-      case "jira_api_key":
+    if (!(secretKindValues as readonly string[]).includes(untrustedKind)) {
+      throw unsupportedKind(untrustedKind);
+    }
+    const read = readStoredSecretMetadata(CURRENT_SECRET_SCHEMA_VERSION, {
+      kind,
+      metadataJson,
+    });
+    if (!read.success) {
+      throw new CoreValidationError(
+        `Secret of kind '${kind}' has metadata that does not fit its kind`,
+        "SECRET_METADATA_INVALID",
+      );
+    }
+    return SecretEntity.fromStored({ ...rest, ...read.value });
+  },
+
+  /**
+   * Rehydrates the variant from a row whose metadata the stored reader
+   * already parsed. Write-time rules (name, email, login) are not re-applied.
+   */
+  fromStored(row: StoredSecretRowProps): SecretEntity {
+    const { valueKind, expiresAt, owner, ...stored } = row;
+    switch (stored.kind) {
+      case "jira_api_key": {
+        const { kind, ...props } = stored;
         return JiraApiKeySecretEntity.rehydrate({
-          ...base,
-          owner: userOwner(owner, untrustedKind),
-          metadata: parseMetadata(
-            storedEmailMetadataSchema,
-            metadataJson,
-            untrustedKind,
-            "{ email }",
-          ),
-          expiresAt: requireExpiry(expiresAt, untrustedKind),
+          ...props,
+          owner: userOwner(owner, kind),
+          expiresAt: requireExpiry(expiresAt, kind),
         });
-      case "github_token":
+      }
+      case "github_token": {
+        const { kind, ...props } = stored;
         return GitHubTokenSecretEntity.rehydrate({
-          ...base,
-          owner: userOwner(owner, untrustedKind),
-          metadata: parseMetadata(
-            storedGitHubTokenMetadataSchema,
-            metadataJson,
-            untrustedKind,
-            "{ login }",
-          ),
+          ...props,
+          owner: userOwner(owner, kind),
           expiresAt,
         });
-      case "bitbucket_api_token":
+      }
+      case "bitbucket_api_token": {
+        const { kind, ...props } = stored;
         return BitbucketApiTokenSecretEntity.rehydrate({
-          ...base,
-          owner: userOwner(owner, untrustedKind),
-          metadata: parseMetadata(
-            storedEmailMetadataSchema,
-            metadataJson,
-            untrustedKind,
-            "{ email }",
-          ),
-          expiresAt: requireExpiry(expiresAt, untrustedKind),
+          ...props,
+          owner: userOwner(owner, kind),
+          expiresAt: requireExpiry(expiresAt, kind),
         });
-      case "project_secret":
+      }
+      case "project_secret": {
+        const { kind, ...props } = stored;
         return ProjectSecretEntity.rehydrate({
-          ...base,
-          owner: projectOwner(owner, untrustedKind),
+          ...props,
+          owner: projectOwner(owner, kind),
           valueKind,
         });
+      }
       default:
-        throw unsupportedKind(untrustedKind);
+        return assertNever(stored);
     }
   },
 };

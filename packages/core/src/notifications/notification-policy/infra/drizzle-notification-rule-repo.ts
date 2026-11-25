@@ -5,7 +5,9 @@ import type { UuidV7 } from "@scarn/core/common/contracts/uuid-v7";
 import { parseUuidV7 } from "@scarn/core/common/contracts/uuid-v7";
 import type { AnyJsonObject } from "@scarn/core/common/contracts/json";
 import { notificationRules } from "@scarn/core/lib/db/schema";
+import { noopLogger, type Logger } from "@scarn/observability/logging";
 import type { NotificationRuleRepo } from "../application/notification-rule-repo";
+import { readStoredNotificationRuleConditions } from "../contracts/notification-rule-conditions-stored";
 import {
   NotificationRuleEntity,
   type NotificationRuleEntityProps,
@@ -23,10 +25,37 @@ const toRow = (entity: NotificationRuleEntity) => ({
   updatedAt: entity.updatedAt,
 });
 
+type NotificationRuleRow = typeof notificationRules.$inferSelect;
+
+/**
+ * A rule's conditions. The column is reserved and nothing reads it yet, so
+ * an unreadable value is logged and read as none rather than failing the
+ * read.
+ */
+const conditionsFromRow = (
+  row: NotificationRuleRow,
+  logger: Logger,
+): AnyJsonObject | null => {
+  const read = readStoredNotificationRuleConditions(row.conditionsJson ?? null);
+  if (!read.success) {
+    logger.error(
+      {
+        table: "notification_rules",
+        projectId: row.projectId,
+        ruleId: row.id,
+        reason: read.reason,
+      },
+      "Stored conditions are unreadable; reading the rule without them",
+    );
+    return null;
+  }
+  return read.value;
+};
+
 export class DrizzleNotificationRuleRepo implements NotificationRuleRepo {
-  private toEntity(
-    row: typeof notificationRules.$inferSelect,
-  ): NotificationRuleEntity {
+  constructor(private readonly logger: Logger = noopLogger) {}
+
+  private toEntity(row: NotificationRuleRow): NotificationRuleEntity {
     return NotificationRuleEntity.rehydrate({
       id: parseUuidV7(row.id),
       projectId: parseUuidV7(row.projectId),
@@ -34,7 +63,7 @@ export class DrizzleNotificationRuleRepo implements NotificationRuleRepo {
       channel: row.channel,
       enabled: row.enabled,
       minPriority: row.minPriority,
-      conditionsJson: (row.conditionsJson as AnyJsonObject | null) ?? null,
+      conditionsJson: conditionsFromRow(row, this.logger),
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     } satisfies NotificationRuleEntityProps);

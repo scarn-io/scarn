@@ -1,0 +1,636 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "8e82c237-2b06-49d3-ba71-e1299497109c",
+  "prevIds": [
+    "80a2ff1b-b828-4852-990e-632baf5bbc41"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "automation_schedules",
+        "concurrency_max"
+      ],
+      "writes": [
+        "s|col|app.automation_schedules.concurrency_max",
+        "n|col|app.automation_schedules.concurrency_max",
+        "e|col|app.automation_schedules.concurrency_max"
+      ],
+      "reads": [
+        "n|tbl|app.automation_schedules",
+        "n|sch|app"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "automation_schedules",
+        "concurrency_waiting"
+      ],
+      "writes": [
+        "s|col|app.automation_schedules.concurrency_waiting",
+        "n|col|app.automation_schedules.concurrency_waiting",
+        "e|col|app.automation_schedules.concurrency_waiting"
+      ],
+      "reads": [
+        "n|tbl|app.automation_schedules",
+        "n|sch|app"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "lane_groups",
+        "tolerated_failures_count"
+      ],
+      "writes": [
+        "s|col|app.lane_groups.tolerated_failures_count",
+        "n|col|app.lane_groups.tolerated_failures_count",
+        "e|col|app.lane_groups.tolerated_failures_count"
+      ],
+      "reads": [
+        "n|tbl|app.lane_groups",
+        "n|sch|app"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "lane_groups",
+        "tolerated_failures_percent"
+      ],
+      "writes": [
+        "s|col|app.lane_groups.tolerated_failures_percent",
+        "n|col|app.lane_groups.tolerated_failures_percent",
+        "e|col|app.lane_groups.tolerated_failures_percent"
+      ],
+      "reads": [
+        "n|tbl|app.lane_groups",
+        "n|sch|app"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "lanes",
+        "schema_version"
+      ],
+      "writes": [
+        "s|col|app.lanes.schema_version",
+        "n|col|app.lanes.schema_version",
+        "e|col|app.lanes.schema_version"
+      ],
+      "reads": [
+        "n|tbl|app.lanes",
+        "n|sch|app"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "node_visits",
+        "schema_version"
+      ],
+      "writes": [
+        "s|col|app.node_visits.schema_version",
+        "n|col|app.node_visits.schema_version",
+        "e|col|app.node_visits.schema_version"
+      ],
+      "reads": [
+        "n|tbl|app.node_visits",
+        "n|sch|app"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "project_integrations",
+        "schema_version"
+      ],
+      "writes": [
+        "s|col|app.project_integrations.schema_version",
+        "n|col|app.project_integrations.schema_version",
+        "e|col|app.project_integrations.schema_version"
+      ],
+      "reads": [
+        "n|tbl|app.project_integrations",
+        "n|sch|app"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "secrets",
+        "schema_version"
+      ],
+      "writes": [
+        "s|col|app.secrets.schema_version",
+        "n|col|app.secrets.schema_version",
+        "e|col|app.secrets.schema_version"
+      ],
+      "reads": [
+        "n|tbl|app.secrets",
+        "n|sch|app"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "step_definitions",
+        "schema_version"
+      ],
+      "writes": [
+        "s|col|app.step_definitions.schema_version",
+        "n|col|app.step_definitions.schema_version",
+        "e|col|app.step_definitions.schema_version"
+      ],
+      "reads": [
+        "n|tbl|app.step_definitions",
+        "n|sch|app"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "tasks",
+        "schema_version"
+      ],
+      "writes": [
+        "s|col|app.tasks.schema_version",
+        "n|col|app.tasks.schema_version",
+        "e|col|app.tasks.schema_version"
+      ],
+      "reads": [
+        "n|tbl|app.tasks",
+        "n|sch|app"
+      ]
+    },
+    {
+      "statementType": "alter_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "lane_groups",
+        "tolerated_failures"
+      ],
+      "writes": [
+        "s|colprop|app.lane_groups.tolerated_failures.notNull"
+      ],
+      "reads": [
+        "n|tbl|app.lane_groups",
+        "n|sch|app",
+        "n|col|app.lane_groups.tolerated_failures"
+      ],
+      "sqlHash": "aab562dd625281b8"
+    },
+    {
+      "statementType": "alter_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "automation_schedules",
+        "concurrency_json"
+      ],
+      "writes": [
+        "s|colprop|app.automation_schedules.concurrency_json.notNull"
+      ],
+      "reads": [
+        "n|tbl|app.automation_schedules",
+        "n|sch|app",
+        "n|col|app.automation_schedules.concurrency_json"
+      ],
+      "sqlHash": "3a757cdcfe786dea"
+    },
+    {
+      "statementType": "add_check",
+      "statementTarget": [
+        "table",
+        "app",
+        "lane_groups"
+      ],
+      "writes": [
+        "s|ck|app.lane_groups.lane_groups_tolerated_failures_check",
+        "n|ck|app.lane_groups.lane_groups_tolerated_failures_check",
+        "e|ck|app.lane_groups.lane_groups_tolerated_failures_check",
+        "n|con|app.lane_groups.lane_groups_tolerated_failures_check"
+      ],
+      "reads": [
+        "n|tbl|app.lane_groups",
+        "n|sch|app",
+        "n|col|app.lane_groups.tolerated_failures_count",
+        "n|col|app.lane_groups.tolerated_failures_percent"
+      ]
+    },
+    {
+      "statementType": "add_check",
+      "statementTarget": [
+        "table",
+        "app",
+        "lanes"
+      ],
+      "writes": [
+        "s|ck|app.lanes.lanes_schema_version_check",
+        "n|ck|app.lanes.lanes_schema_version_check",
+        "e|ck|app.lanes.lanes_schema_version_check",
+        "n|con|app.lanes.lanes_schema_version_check"
+      ],
+      "reads": [
+        "n|tbl|app.lanes",
+        "n|sch|app",
+        "n|col|app.lanes.schema_version"
+      ]
+    },
+    {
+      "statementType": "add_check",
+      "statementTarget": [
+        "table",
+        "app",
+        "node_visits"
+      ],
+      "writes": [
+        "s|ck|app.node_visits.node_visits_schema_version_check",
+        "n|ck|app.node_visits.node_visits_schema_version_check",
+        "e|ck|app.node_visits.node_visits_schema_version_check",
+        "n|con|app.node_visits.node_visits_schema_version_check"
+      ],
+      "reads": [
+        "n|tbl|app.node_visits",
+        "n|sch|app",
+        "n|col|app.node_visits.schema_version"
+      ]
+    },
+    {
+      "statementType": "add_check",
+      "statementTarget": [
+        "table",
+        "app",
+        "pipeline_graph_versions"
+      ],
+      "writes": [
+        "s|ck|app.pipeline_graph_versions.pipeline_graph_versions_schema_version_check",
+        "n|ck|app.pipeline_graph_versions.pipeline_graph_versions_schema_version_check",
+        "e|ck|app.pipeline_graph_versions.pipeline_graph_versions_schema_version_check",
+        "n|con|app.pipeline_graph_versions.pipeline_graph_versions_schema_version_check"
+      ],
+      "reads": [
+        "n|tbl|app.pipeline_graph_versions",
+        "n|sch|app",
+        "n|col|app.pipeline_graph_versions.schema_version"
+      ]
+    },
+    {
+      "statementType": "add_check",
+      "statementTarget": [
+        "table",
+        "app",
+        "project_integrations"
+      ],
+      "writes": [
+        "s|ck|app.project_integrations.project_integrations_schema_version_check",
+        "n|ck|app.project_integrations.project_integrations_schema_version_check",
+        "e|ck|app.project_integrations.project_integrations_schema_version_check",
+        "n|con|app.project_integrations.project_integrations_schema_version_check"
+      ],
+      "reads": [
+        "n|tbl|app.project_integrations",
+        "n|sch|app",
+        "n|col|app.project_integrations.schema_version"
+      ]
+    },
+    {
+      "statementType": "add_check",
+      "statementTarget": [
+        "table",
+        "app",
+        "secrets"
+      ],
+      "writes": [
+        "s|ck|app.secrets.secrets_schema_version_check",
+        "n|ck|app.secrets.secrets_schema_version_check",
+        "e|ck|app.secrets.secrets_schema_version_check",
+        "n|con|app.secrets.secrets_schema_version_check"
+      ],
+      "reads": [
+        "n|tbl|app.secrets",
+        "n|sch|app",
+        "n|col|app.secrets.schema_version"
+      ]
+    },
+    {
+      "statementType": "add_check",
+      "statementTarget": [
+        "table",
+        "app",
+        "step_definitions"
+      ],
+      "writes": [
+        "s|ck|app.step_definitions.step_definitions_schema_version_check",
+        "n|ck|app.step_definitions.step_definitions_schema_version_check",
+        "e|ck|app.step_definitions.step_definitions_schema_version_check",
+        "n|con|app.step_definitions.step_definitions_schema_version_check"
+      ],
+      "reads": [
+        "n|tbl|app.step_definitions",
+        "n|sch|app",
+        "n|col|app.step_definitions.schema_version"
+      ]
+    },
+    {
+      "statementType": "add_check",
+      "statementTarget": [
+        "table",
+        "app",
+        "tasks"
+      ],
+      "writes": [
+        "s|ck|app.tasks.tasks_schema_version_check",
+        "n|ck|app.tasks.tasks_schema_version_check",
+        "e|ck|app.tasks.tasks_schema_version_check",
+        "n|con|app.tasks.tasks_schema_version_check"
+      ],
+      "reads": [
+        "n|tbl|app.tasks",
+        "n|sch|app",
+        "n|col|app.tasks.schema_version"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "automation_schedules",
+        "name": "concurrency_max",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "automation_schedules",
+        "name": "concurrency_waiting",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "lane_groups",
+        "name": "tolerated_failures_count",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "lane_groups",
+        "name": "tolerated_failures_percent",
+        "type": "double precision",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "lanes",
+        "name": "schema_version",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "node_visits",
+        "name": "schema_version",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "project_integrations",
+        "name": "schema_version",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "secrets",
+        "name": "schema_version",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "step_definitions",
+        "name": "schema_version",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "tasks",
+        "name": "schema_version",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "lane_groups",
+        "name": "lane_groups_tolerated_failures_check",
+        "value": "num_nonnulls(\"tolerated_failures_count\", \"tolerated_failures_percent\") = 1",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "lanes",
+        "name": "lanes_schema_version_check",
+        "value": "\"schema_version\" >= 1",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "node_visits",
+        "name": "node_visits_schema_version_check",
+        "value": "\"schema_version\" >= 1",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "pipeline_graph_versions",
+        "name": "pipeline_graph_versions_schema_version_check",
+        "value": "\"schema_version\" >= 1",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "project_integrations",
+        "name": "project_integrations_schema_version_check",
+        "value": "\"schema_version\" >= 1",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "secrets",
+        "name": "secrets_schema_version_check",
+        "value": "\"schema_version\" >= 1",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "step_definitions",
+        "name": "step_definitions_schema_version_check",
+        "value": "\"schema_version\" >= 1",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "tasks",
+        "name": "tasks_schema_version_check",
+        "value": "\"schema_version\" >= 1",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "alter",
+      "key": "columns\u0000[\"app\",\"lane_groups\",\"tolerated_failures\"]",
+      "set": {
+        "notNull": false
+      }
+    },
+    {
+      "op": "alter",
+      "key": "columns\u0000[\"app\",\"automation_schedules\",\"concurrency_json\"]",
+      "set": {
+        "notNull": false
+      }
+    }
+  ]
+}

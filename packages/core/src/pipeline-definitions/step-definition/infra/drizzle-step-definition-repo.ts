@@ -8,10 +8,20 @@ import {
 } from "@scarn/core/lib/db/schema";
 import { isUniqueViolation } from "@scarn/core/lib/db/unique-violation";
 import {
+  CoreError,
   PersistenceError,
   ResourceConflictError,
 } from "@scarn/core/lib/errors";
+import {
+  readRowsSkippingUnreadable,
+  type StoredReadResult,
+} from "@scarn/core/lib/db/stored-json";
+import { noopLogger, type Logger } from "@scarn/observability/logging";
 import type { StepDefinitionRepo } from "../application/step-definition-repo";
+import {
+  CURRENT_STEP_DEFINITION_SCHEMA_VERSION,
+  readStoredStepDefinition,
+} from "../contracts/step-definition-stored";
 import {
   StepDefinitionEntity,
   type StepDefinitionEntityProps,
@@ -35,53 +45,104 @@ const toStepDefinitionRow = (stepDefinition: StepDefinitionEntity) => ({
   grantsJson: [...stepDefinition.grants],
   maxTurns: stepDefinition.maxTurns,
   concurrencyJson: stepDefinition.concurrency,
+  schemaVersion: CURRENT_STEP_DEFINITION_SCHEMA_VERSION,
   taskExecutionConfigId: stepDefinition.taskExecutionConfigId,
   status: stepDefinition.status,
   createdAt: stepDefinition.createdAt ?? new Date(),
   updatedAt: stepDefinition.updatedAt ?? new Date(),
 });
 
-export class DrizzleStepDefinitionRepo implements StepDefinitionRepo {
-  private toEntity(
-    row: typeof stepDefinitions.$inferSelect,
-  ): StepDefinitionEntity {
-    return StepDefinitionEntity.rehydrate({
-      id: row.id as StepDefinitionEntityProps["id"],
-      projectId: row.projectId as StepDefinitionEntityProps["projectId"],
-      key: row.key,
-      name: row.name,
-      description: row.description,
-      prompt: row.prompt,
-      version: row.version,
-      kind: row.kind,
-      entrypointJson:
-        row.entrypointJson as StepDefinitionEntityProps["entrypointJson"],
-      toolCallJson:
-        row.toolCallJson as StepDefinitionEntityProps["toolCallJson"],
-      inputSchemaJson:
-        row.inputSchemaJson as StepDefinitionEntityProps["inputSchemaJson"],
-      resultSchemaJson:
-        row.resultSchemaJson as StepDefinitionEntityProps["resultSchemaJson"],
-      errors: row.errorsJson as string[],
-      retry: row.retryJson as StepDefinitionEntityProps["retry"],
-      grants: row.grantsJson as StepDefinitionEntityProps["grants"],
-      maxTurns: row.maxTurns,
-      concurrency:
-        row.concurrencyJson as StepDefinitionEntityProps["concurrency"],
-      taskExecutionConfigId:
-        row.taskExecutionConfigId === null
-          ? null
-          : parseUuidV7(row.taskExecutionConfigId),
-      status: row.status,
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
-    });
+type StepDefinitionRow = typeof stepDefinitions.$inferSelect;
+
+/**
+ * Reads a row through the stored step-definition reader. A row whose JSON
+ * columns or ids don't fit is unreadable.
+ */
+export const readStepDefinitionRow = (
+  row: StepDefinitionRow,
+): StoredReadResult<StepDefinitionEntity> => {
+  const stored = readStoredStepDefinition(row.schemaVersion, row);
+  if (!stored.success) {
+    return stored;
   }
+  const document = stored.value;
+  try {
+    return {
+      success: true,
+      value: StepDefinitionEntity.rehydrate({
+        id: parseUuidV7(row.id),
+        projectId: parseUuidV7(row.projectId),
+        key: row.key,
+        name: row.name,
+        description: row.description,
+        prompt: row.prompt,
+        version: row.version,
+        kind: row.kind,
+        entrypointJson: document.entrypointJson,
+        toolCallJson: document.toolCallJson,
+        inputSchemaJson: document.inputSchemaJson,
+        resultSchemaJson: document.resultSchemaJson,
+        errors: document.errorsJson,
+        retry: document.retryJson,
+        grants: document.grantsJson,
+        maxTurns: row.maxTurns,
+        concurrency: document.concurrencyJson,
+        taskExecutionConfigId:
+          row.taskExecutionConfigId === null
+            ? null
+            : parseUuidV7(row.taskExecutionConfigId),
+        status: row.status,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
+      }),
+    };
+  } catch (error: unknown) {
+    if (error instanceof CoreError) {
+      return { success: false, reason: error.message };
+    }
+    throw error;
+  }
+};
+
+/** A row that does not read is a persistence fault: this code wrote it. */
+export const stepDefinitionFromRow = (
+  row: StepDefinitionRow,
+): StepDefinitionEntity => {
+  const read = readStepDefinitionRow(row);
+  if (!read.success) {
+    throw new PersistenceError(
+      `step definition ${row.id} is unreadable: ${read.reason}`,
+      "STEP_DEFINITION_ROW_UNREADABLE",
+    );
+  }
+  return read.value;
+};
+
+/** The log fields that identify a skipped row. */
+const describeRow = (row: StepDefinitionRow) => ({
+  table: "step_definitions",
+  stepDefinitionId: row.id,
+  projectId: row.projectId,
+  key: row.key,
+});
+
+/**
+ * Single-row reads throw `STEP_DEFINITION_ROW_UNREADABLE` on a row that
+ * doesn't read; list reads log it at `error` with the step definition id and
+ * leave it out, so one bad row doesn't fail the project's step list.
+ */
+export class DrizzleStepDefinitionRepo implements StepDefinitionRepo {
+  constructor(private readonly logger: Logger = noopLogger) {}
 
   private loadManyFromRows(
-    rows: (typeof stepDefinitions.$inferSelect)[],
+    rows: readonly StepDefinitionRow[],
   ): StepDefinitionEntity[] {
-    return rows.map((row) => this.toEntity(row));
+    return readRowsSkippingUnreadable(
+      rows,
+      readStepDefinitionRow,
+      this.logger,
+      describeRow,
+    );
   }
 
   async load(id: StepDefinitionEntityProps["id"], dbExecutor?: DbExecutor) {
@@ -96,7 +157,7 @@ export class DrizzleStepDefinitionRepo implements StepDefinitionRepo {
       return null;
     }
 
-    return this.toEntity(row);
+    return stepDefinitionFromRow(row);
   }
 
   async findByKey(
@@ -120,7 +181,7 @@ export class DrizzleStepDefinitionRepo implements StepDefinitionRepo {
       return null;
     }
 
-    return this.toEntity(row);
+    return stepDefinitionFromRow(row);
   }
 
   async listByProjectId(
@@ -270,6 +331,7 @@ export class DrizzleStepDefinitionRepo implements StepDefinitionRepo {
             grantsJson: [...stepDefinition.grants],
             maxTurns: stepDefinition.maxTurns,
             concurrencyJson: stepDefinition.concurrency,
+            schemaVersion: CURRENT_STEP_DEFINITION_SCHEMA_VERSION,
             taskExecutionConfigId: stepDefinition.taskExecutionConfigId,
             status: stepDefinition.status,
             updatedAt: stepDefinition.updatedAt ?? new Date(),

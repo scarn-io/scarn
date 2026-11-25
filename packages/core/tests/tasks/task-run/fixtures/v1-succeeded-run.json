@@ -1,0 +1,5 @@
+{
+  "status": "succeeded",
+  "resultJson": { "summary": "Example summary.", "items": [1, 2, 3] },
+  "errorJson": null
+}

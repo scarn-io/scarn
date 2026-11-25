@@ -81,8 +81,7 @@ export const upsertStepDefinition = async (
       return toContract(persisted);
     }
 
-    const updated = StepDefinitionEntity.rehydrate({
-      id: existing.id,
+    const updated = existing.update({
       projectId: parsedInput.projectId,
       key: parsedInput.key,
       name: parsedInput.name,
@@ -101,7 +100,6 @@ export const upsertStepDefinition = async (
       concurrency: parsedInput.concurrency,
       taskExecutionConfigId: config?.id ?? null,
       status: parsedInput.status,
-      createdAt: existing.createdAt,
       updatedAt: now,
     });
     const persisted = await stepDefinitionRepo.save(updated, tx);

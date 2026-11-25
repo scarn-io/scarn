@@ -260,6 +260,7 @@ describe("Schedule concurrency groups", () => {
               startedByScheduleId: null,
               ...agentTaskInstructionColumns,
               status: "queued",
+              schemaVersion: 1,
             }),
         { code: "23514", constraint: "tasks_owner_check" },
       );

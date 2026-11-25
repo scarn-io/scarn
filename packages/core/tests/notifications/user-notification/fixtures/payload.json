@@ -1,0 +1,45 @@
+[
+  {
+    "name": "repo conversation",
+    "payloadJson": {
+      "conversationId": "01900000-0000-7000-8000-000000000001"
+    }
+  },
+  {
+    "name": "waiting for person on a question",
+    "payloadJson": {
+      "questionId": "01900000-0000-7000-8000-000000000002"
+    }
+  },
+  {
+    "name": "integration auto-sync paused",
+    "payloadJson": {
+      "integrationId": "01900000-0000-7000-8000-000000000003",
+      "reason": "credential_rejected",
+      "detail": "Example detail"
+    }
+  },
+  {
+    "name": "task result with a suppressed comment",
+    "payloadJson": {
+      "category": "review",
+      "items": [{ "label": "Example item", "score": 3 }],
+      "commentSuppressed": { "reason": "artifact_unavailable" }
+    }
+  },
+  {
+    "name": "answered feedback request",
+    "payloadJson": {
+      "category": "question",
+      "response": {
+        "answer": "Example answer",
+        "respondedAt": "2026-01-01T00:00:00.000Z",
+        "respondedBy": "01900000-0000-7000-8000-000000000004"
+      }
+    }
+  },
+  {
+    "name": "no payload",
+    "payloadJson": null
+  }
+]

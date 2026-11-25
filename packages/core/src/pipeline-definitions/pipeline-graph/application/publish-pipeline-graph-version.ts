@@ -25,6 +25,7 @@ import {
   type PublishPipelineVersionInput,
   type PublishPipelineVersionResult,
 } from "../contracts/pipeline-graph-contracts";
+import { CURRENT_PIPELINE_GRAPH_VERSION_SCHEMA_VERSION } from "../contracts/pipeline-graph-version-stored";
 import type { PipelineGraphEntity } from "../domain/pipeline-graph-entity";
 import {
   PipelineGraphVersionEntity,
@@ -151,7 +152,7 @@ export const publishPipelineGraphVersion = async (
       pipelineGraphId: handle.id,
       version: (latest?.version ?? 0) + 1,
       definitionJson: validDocument,
-      schemaVersion: validDocument.schemaVersion,
+      schemaVersion: CURRENT_PIPELINE_GRAPH_VERSION_SCHEMA_VERSION,
       contentHash,
       steps,
       createdAt: now,

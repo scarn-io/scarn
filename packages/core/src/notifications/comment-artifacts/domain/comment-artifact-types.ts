@@ -72,6 +72,15 @@ export type ArtifactMarkerOutcome = {
   externalRef: string | null;
 };
 
+/**
+ * An outcome read back from a delivery. Its platform may be one this code
+ * no longer knows; a renderer only reuses outcomes for its own platform.
+ */
+export type StoredArtifactMarkerOutcome = Omit<
+  ArtifactMarkerOutcome,
+  "platform"
+> & { platform: string };
+
 /** Signal refs are required: a missing artifact suppresses the comment. */
 export const isRequiredArtifactMarker = (marker: ArtifactMarker): boolean =>
   marker.ref.type === "signal";

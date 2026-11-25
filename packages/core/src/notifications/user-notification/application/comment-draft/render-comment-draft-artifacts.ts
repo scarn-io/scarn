@@ -8,6 +8,7 @@ import type {
   ArtifactMarkerOutcome,
   ArtifactMarkerWarning,
   ResolvedArtifactMarker,
+  StoredArtifactMarkerOutcome,
 } from "@scarn/core/notifications/comment-artifacts/domain/comment-artifact-types";
 import {
   resolveArtifactMarkers,
@@ -41,7 +42,7 @@ export type ResolvedCommentDraft = {
 export type RenderCommentDraftOptions = {
   /** Replaces the link-only renderer, e.g. to embed on Jira. */
   renderer?: (appBaseUrl: string) => CommentArtifactRenderer;
-  priorOutcomes?: readonly ArtifactMarkerOutcome[];
+  priorOutcomes?: readonly StoredArtifactMarkerOutcome[];
   onOutcome?: (outcome: ArtifactMarkerOutcome) => Promise<void>;
 };
 

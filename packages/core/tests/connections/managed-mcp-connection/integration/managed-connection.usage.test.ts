@@ -63,6 +63,7 @@ const createStep = async (
       status,
       taskExecutionConfigId,
       kind: "user_defined",
+      schemaVersion: 1,
       prompt: "Use MCP",
       inputSchemaJson: { type: "object" },
       resultSchemaJson: { type: "object" },
@@ -122,6 +123,7 @@ const createRun = async (projectId: UuidV7) => {
     kind: "agent",
     prompt: "Use MCP",
     status: "queued",
+    schemaVersion: 1,
   });
   await getDb().insert(taskRuns).values({
     id,

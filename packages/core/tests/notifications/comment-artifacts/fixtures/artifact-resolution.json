@@ -1,0 +1,96 @@
+{
+  "drafted": {
+    "markers": [
+      {
+        "markerIndex": 0,
+        "kind": "embed",
+        "ref": { "type": "signal", "stepKey": "report", "signalKey": "chart" },
+        "caption": "Example chart",
+        "standalone": true,
+        "status": "resolved",
+        "required": true,
+        "reason": null,
+        "artifact": {
+          "artifactId": "01900000-0000-7000-8000-000000000010",
+          "name": "chart.png",
+          "contentType": "image/png",
+          "kind": "file",
+          "sizeBytes": 2048
+        }
+      },
+      {
+        "markerIndex": 1,
+        "kind": "link",
+        "ref": { "type": "path", "pattern": "reports/*.md" },
+        "caption": "Example report",
+        "standalone": false,
+        "status": "unavailable",
+        "required": false,
+        "reason": "no_match",
+        "artifact": null
+      }
+    ],
+    "leftOut": [
+      {
+        "markerIndex": 1,
+        "ref": { "type": "path", "pattern": "reports/*.md" },
+        "caption": "Example report",
+        "reason": "no_match"
+      }
+    ],
+    "warnings": [
+      {
+        "markerIndex": 1,
+        "code": "marker_not_standalone",
+        "message": "Example warning"
+      }
+    ],
+    "outcomes": null
+  },
+  "approved": {
+    "markers": [
+      {
+        "markerIndex": 0,
+        "kind": "embed",
+        "ref": { "type": "signal", "stepKey": "report", "signalKey": "chart" },
+        "caption": "Example chart",
+        "standalone": true,
+        "status": "resolved",
+        "required": true,
+        "reason": null,
+        "artifact": {
+          "artifactId": "01900000-0000-7000-8000-000000000010",
+          "name": "chart.png",
+          "contentType": "image/png",
+          "kind": "file",
+          "sizeBytes": 2048
+        }
+      }
+    ],
+    "leftOut": [],
+    "warnings": [],
+    "outcomes": [
+      {
+        "markerIndex": 0,
+        "artifactId": "01900000-0000-7000-8000-000000000010",
+        "platform": "jira",
+        "outcome": "embedded",
+        "externalRef": "10001:example-media-id"
+      },
+      {
+        "markerIndex": 1,
+        "artifactId": "01900000-0000-7000-8000-000000000011",
+        "platform": "retired-platform",
+        "outcome": "linked",
+        "externalRef": null
+      },
+      {
+        "markerIndex": 2,
+        "artifactId": "01900000-0000-7000-8000-000000000012",
+        "platform": "jira",
+        "outcome": "uploaded",
+        "externalRef": null
+      }
+    ]
+  }
+}

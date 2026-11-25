@@ -48,7 +48,10 @@ export interface SecretRepo {
     owner: SecretOwner,
     dbExecutor?: DbExecutor,
   ): Promise<SecretEntity | null>;
-  /** Newest first. */
+  /**
+   * Newest first. A row whose stored metadata doesn't read is logged and
+   * left out; the single-row reads throw `SECRET_ROW_UNREADABLE` instead.
+   */
   listByOwner(
     owner: SecretOwner,
     options?: ListSecretsByOwnerOptions,

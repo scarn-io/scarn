@@ -3,6 +3,7 @@ import {
   type UuidV7,
 } from "@scarn/core/common/contracts/uuid-v7";
 import {
+  normalizeSecretName,
   SecretEntityBase,
   type SecretEntityBaseProps,
   type SecretRowProps,
@@ -42,9 +43,7 @@ export class JiraApiKeySecretEntity extends SecretEntityBase<UserSecretOwner> {
   private constructor(props: JiraApiKeySecretEntityProps) {
     const { metadata, expiresAt, ...baseProps } = props;
     super(baseProps, "jira_api_key");
-    this.metadata = {
-      email: normalizeSecretEmail(metadata.email, "Jira API key"),
-    };
+    this.metadata = metadata;
     this.expiresAt = expiresAt;
   }
 
@@ -55,6 +54,10 @@ export class JiraApiKeySecretEntity extends SecretEntityBase<UserSecretOwner> {
     assertSecretExpiryInFuture(rest.expiresAt, now, "Jira API key");
     return new JiraApiKeySecretEntity({
       ...rest,
+      name: normalizeSecretName(rest.name),
+      metadata: {
+        email: normalizeSecretEmail(rest.metadata.email, "Jira API key"),
+      },
       id: id ?? createUuidV7(),
       lastUsedAt: null,
       createdAt: now,

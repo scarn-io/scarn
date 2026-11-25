@@ -54,7 +54,7 @@ export class JiraProjectIntegration extends ProjectIntegrationEntityBase {
   private constructor(props: JiraProjectIntegrationProps) {
     const { scope, ...baseProps } = props;
     super(baseProps, "jira");
-    this.scope = normalizeJiraScope(scope);
+    this.scope = scope;
   }
 
   static create(
@@ -62,7 +62,7 @@ export class JiraProjectIntegration extends ProjectIntegrationEntityBase {
   ): JiraProjectIntegration {
     return new JiraProjectIntegration({
       ...createBaseProps({ ...props, id: props.id ?? createUuidV7() }),
-      scope: props.scope,
+      scope: normalizeJiraScope(props.scope),
     });
   }
 
@@ -75,7 +75,10 @@ export class JiraProjectIntegration extends ProjectIntegrationEntityBase {
   }
 
   withJiraScope(scope: JiraProjectIntegrationScope): this {
-    return new JiraProjectIntegration({ ...this.baseJSON(), scope }) as this;
+    return new JiraProjectIntegration({
+      ...this.baseJSON(),
+      scope: normalizeJiraScope(scope),
+    }) as this;
   }
 
   toJSON(): ProjectIntegrationRowProps {

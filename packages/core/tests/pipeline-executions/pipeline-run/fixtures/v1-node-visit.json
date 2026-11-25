@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "nodeKind": "step",
+  "transitionJson": { "kind": "route", "index": 0 },
+  "routingJson": {
+    "checked": [
+      {
+        "when": {
+          "op": "equal",
+          "kind": "compare",
+          "left": { "path": "result.found", "value": true },
+          "right": { "value": true },
+          "result": true
+        },
+        "index": 0,
+        "matched": true
+      }
+    ],
+    "taken": [{ "kind": "route", "index": 0 }],
+    "notes": [
+      { "kind": "branch_ambiguous", "branches": ["fix", null] },
+      { "kind": "questions_dropped", "asked": 3, "dropped": 1 }
+    ],
+    "overrules": [
+      {
+        "from": [{ "kind": "route", "index": 0 }],
+        "to": [{ "kind": "route", "index": 1 }],
+        "byUserId": "019a0000-0000-7000-8000-000000000001",
+        "at": "2026-11-01T00:00:00.000Z",
+        "reason": "Example reason",
+        "missingArgs": [
+          { "arg": "files[0]", "reference": "nodes.example.result" }
+        ]
+      }
+    ]
+  },
+  "inputJson": { "ticket": "EX-1" },
+  "resultJson": { "found": true },
+  "errorJson": {
+    "name": "StepFailed",
+    "message": "Example failure",
+    "cause": { "code": 1 }
+  }
+}

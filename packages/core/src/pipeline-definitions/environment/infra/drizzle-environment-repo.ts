@@ -52,7 +52,7 @@ export const environmentVersionFromRow = (
     id: parseUuidV7(row.id),
     environmentId: parseUuidV7(row.environmentId),
     version: row.version,
-    content: read.content,
+    content: read.value,
     contentHash: row.contentHash,
     createdByUserId: parseUuidV7(row.createdByUserId),
     createdAt: row.createdAt,

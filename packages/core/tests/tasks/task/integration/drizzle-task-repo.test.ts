@@ -103,6 +103,7 @@ describe("DrizzleTaskRepo, a Task without a work item", () => {
               conversationId: null,
               ...agentTaskInstructionColumns,
               status: "queued",
+              schemaVersion: 1,
             }),
         { code: "23514", constraint: "tasks_owner_check" },
       );

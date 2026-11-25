@@ -180,12 +180,12 @@ describe("orchestration schema", () => {
           INSERT INTO "app"."step_definitions"
             ("id", "project_id", "key", "name", "prompt", "version", "kind",
              "input_schema_json", "result_schema_json",
-             "task_execution_config_id", "status")
+             "task_execution_config_id", "status", "schema_version")
           VALUES
             (${newId()}, ${scenario.projectId}, 'triage', 'Triage',
              'Triage the issue', 1, 'user_defined',
              '{"type":"object"}'::jsonb, '{"type":"object"}'::jsonb,
-             ${scenario.taskExecutionConfigId}, 'active')
+             ${scenario.taskExecutionConfigId}, 'active', 1)
         `);
 
         await expectPgError(

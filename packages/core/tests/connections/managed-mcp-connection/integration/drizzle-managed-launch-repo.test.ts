@@ -63,10 +63,11 @@ const insertTaskRun = async (projectId: UuidV7): Promise<UuidV7> => {
   `);
   await getDb().execute(sql`
     INSERT INTO "app"."tasks"
-      ("id", "project_id", "work_item_id", "kind", "prompt", "status")
+      ("id", "project_id", "work_item_id", "kind", "prompt", "status",
+       "schema_version")
     VALUES
       (${taskId}, ${projectId}, ${workItemId}, 'agent', 'Do the thing',
-       'queued')
+       'queued', 1)
   `);
   await getDb().execute(sql`
     INSERT INTO "app"."task_runs"

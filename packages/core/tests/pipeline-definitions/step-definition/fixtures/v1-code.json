@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "kind": "code",
+  "prompt": null,
+  "entrypointJson": { "sourceFile": ".scarn/example/steps.ts" },
+  "toolCallJson": null,
+  "inputSchemaJson": { "type": "object" },
+  "resultSchemaJson": {
+    "type": "object",
+    "properties": { "ok": { "type": "boolean" } }
+  },
+  "errorsJson": ["Order.OutOfStock"],
+  "retryJson": [],
+  "grantsJson": [],
+  "concurrencyJson": null
+}

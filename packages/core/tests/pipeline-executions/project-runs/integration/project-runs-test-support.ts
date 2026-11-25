@@ -40,6 +40,9 @@ import { createTestUserAndSession } from "tests/projects/project/integration/aut
 export const at = (minute: number) =>
   new Date(Date.UTC(2026, 4, 1, 10, 0) + minute * 60_000);
 
+const userIdOrNull = (id: string | null | undefined) =>
+  id ? parseUuidV7(id) : null;
+
 export const appContext = createAppContext();
 export const apiClient = createScarnTreaty(createApp(appContext));
 
@@ -144,12 +147,8 @@ export const seedWorkItem = async (input: {
       platform: "github",
       platformKey: `#${key}`,
       title: input.title ?? `Work item ${key}`,
-      createdByUserId: input.createdByUserId
-        ? parseUuidV7(input.createdByUserId)
-        : null,
-      assigneeUserId: input.assigneeUserId
-        ? parseUuidV7(input.assigneeUserId)
-        : null,
+      createdByUserId: userIdOrNull(input.createdByUserId),
+      assigneeUserId: userIdOrNull(input.assigneeUserId),
       parentWorkItemId: input.parentWorkItemId ?? null,
     });
   return { id, platformKey: `#${key}` };
@@ -190,7 +189,11 @@ const pipelineDocument = {
   },
 };
 
-export const seedPipeline = async (projectId: UuidV7, name = "Review") => {
+export const seedPipeline = async (
+  projectId: UuidV7,
+  name = "Review",
+  definitionJson: object = pipelineDocument,
+) => {
   const id = createUuidV7();
   const versionId = createUuidV7();
   await getDb()
@@ -205,7 +208,7 @@ export const seedPipeline = async (projectId: UuidV7, name = "Review") => {
     id: versionId,
     pipelineGraphId: id,
     version: 1,
-    definitionJson: pipelineDocument,
+    definitionJson,
     schemaVersion: 1,
     contentHash: crypto.randomUUID(),
   });
@@ -237,9 +240,7 @@ export const seedRun = async (input: {
       status: input.status,
       endNodeId: input.endNodeId ?? null,
       errorJson: input.error ?? null,
-      triggeredByUserId: input.triggeredByUserId
-        ? parseUuidV7(input.triggeredByUserId)
-        : null,
+      triggeredByUserId: userIdOrNull(input.triggeredByUserId),
       startedByAutomationId: input.automationId ?? null,
       createdAt: at(input.minute),
       updatedAt: at(input.minute),
@@ -264,7 +265,8 @@ export const seedVisit = async (input: {
       pipelineRunId: input.runId,
       nodeId: input.nodeId,
       nodeKind: input.nodeKind,
-      transitionJson: {},
+      transitionJson: { kind: "start", index: 0 },
+      schemaVersion: 1,
       status: input.status,
       inputJson: {},
       taskId: input.taskId ?? null,
@@ -312,6 +314,7 @@ export const seedStepDefinition = async (projectId: UuidV7, name: string) => {
       name,
       version: 1,
       kind: "user_defined",
+      schemaVersion: 1,
       prompt: "Do the step.",
       inputSchemaJson: {},
       status: "active",
@@ -342,10 +345,9 @@ export const seedTask = async (input: {
       kind: "agent",
       prompt: input.prompt ?? "Do the thing.",
       status: input.status,
+      schemaVersion: 1,
       errorJson: input.errorJson ?? null,
-      startedByUserId: input.startedByUserId
-        ? parseUuidV7(input.startedByUserId)
-        : null,
+      startedByUserId: userIdOrNull(input.startedByUserId),
       startedByAutomationId: input.automationId ?? null,
       conversationId: input.conversationId ?? null,
       createdAt: at(input.minute),

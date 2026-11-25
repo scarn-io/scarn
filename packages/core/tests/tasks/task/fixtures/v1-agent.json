@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "kind": "agent",
+  "owner": "workItem",
+  "status": "succeeded",
+  "prompt": "Summarize the issue and propose a fix.",
+  "entrypointJson": null,
+  "toolCallJson": null,
+  "resultSchemaJson": {
+    "type": "object",
+    "properties": { "summary": { "type": "string" } }
+  },
+  "inputJson": { "issue": "EX-1" },
+  "retryJson": [
+    {
+      "on": ["Scarn.StepFailed"],
+      "maxAttempts": 2,
+      "intervalSeconds": 5,
+      "backoffRate": 2
+    }
+  ],
+  "environmentSelectionJson": {
+    "schemaVersion": 1,
+    "extraConnectors": [
+      {
+        "connectorId": "example-connector",
+        "vars": { "EXAMPLE_TOKEN": { "secret": "EXAMPLE_SECRET" } }
+      }
+    ]
+  },
+  "grantsJson": [
+    { "resource": "workItem", "action": "read", "scope": "self" },
+    {
+      "resource": "workItem",
+      "action": "label",
+      "scope": "self",
+      "labels": ["triaged"]
+    }
+  ],
+  "resultJson": { "summary": "Example summary." },
+  "errorJson": null
+}

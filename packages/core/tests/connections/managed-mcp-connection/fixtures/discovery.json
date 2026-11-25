@@ -1,0 +1,44 @@
+[
+  {
+    "name": "no overrides",
+    "discovery": {},
+    "expected": {}
+  },
+  {
+    "name": "every override",
+    "discovery": {
+      "resourceMetadataUrl": "https://mcp.example.test/.well-known/oauth-protected-resource",
+      "advertisedResource": "https://mcp.example.test/",
+      "endpointOrigins": ["https://auth.example.test"],
+      "tokenErrors": "slack"
+    },
+    "expected": {
+      "resourceMetadataUrl": "https://mcp.example.test/.well-known/oauth-protected-resource",
+      "advertisedResource": "https://mcp.example.test/",
+      "endpointOrigins": ["https://auth.example.test"],
+      "tokenErrors": "slack"
+    }
+  },
+  {
+    "name": "unknown key and unknown token-error dialect",
+    "discovery": {
+      "advertisedResource": "https://mcp.example.test/",
+      "tokenErrors": "acme",
+      "registrationEndpoint": "https://auth.example.test/register"
+    },
+    "expected": {
+      "advertisedResource": "https://mcp.example.test/"
+    }
+  },
+  {
+    "name": "values the write schema rejects",
+    "discovery": {
+      "resourceMetadataUrl": "not a url",
+      "endpointOrigins": []
+    },
+    "expected": {
+      "resourceMetadataUrl": "not a url",
+      "endpointOrigins": []
+    }
+  }
+]

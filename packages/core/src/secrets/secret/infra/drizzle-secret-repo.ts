@@ -3,14 +3,26 @@ import { getDb } from "@scarn/core/lib/db";
 import type { DbExecutor } from "@scarn/core/lib/db/db-executor";
 import { secrets } from "@scarn/core/lib/db/schema";
 import { isUniqueViolation } from "@scarn/core/lib/db/unique-violation";
-import { CoreError, InvariantViolationError } from "@scarn/core/lib/errors";
+import {
+  readRowsSkippingUnreadable,
+  type StoredReadResult,
+} from "@scarn/core/lib/db/stored-json";
+import {
+  CoreError,
+  InvariantViolationError,
+  PersistenceError,
+} from "@scarn/core/lib/errors";
 import { parseUuidV7, type UuidV7 } from "@scarn/core/common/contracts/uuid-v7";
-import { anyJsonValueSchema } from "@scarn/core/common/contracts/json";
+import { noopLogger, type Logger } from "@scarn/observability/logging";
 import type {
   ListSecretsByOwnerOptions,
   SecretRepo,
   SecretSummary,
 } from "../application/secret-repo";
+import {
+  CURRENT_SECRET_SCHEMA_VERSION,
+  readStoredSecretMetadata,
+} from "../contracts/secret-metadata-stored";
 import { SecretEntity } from "../domain/secret-entity";
 import type { SecretOwner } from "../domain/secret-owner";
 
@@ -57,6 +69,7 @@ const toRow = (entity: SecretEntity): typeof secrets.$inferInsert => {
     valueKind: row.valueKind,
     name: row.name,
     metadataJson: row.metadataJson,
+    schemaVersion: CURRENT_SECRET_SCHEMA_VERSION,
     ciphertext: row.encryptedValue.ciphertext,
     iv: row.encryptedValue.iv,
     authTag: row.encryptedValue.authTag,
@@ -70,28 +83,71 @@ const toRow = (entity: SecretEntity): typeof secrets.$inferInsert => {
   };
 };
 
-const toEntity = (row: SecretRow): SecretEntity =>
-  SecretEntity.rehydrate({
-    id: parseUuidV7(row.id),
-    owner: rowOwner(row),
-    kind: row.kind,
-    valueKind: row.valueKind,
-    name: row.name,
-    metadataJson: anyJsonValueSchema.parse(row.metadataJson),
-    encryptedValue: {
-      ciphertext: Buffer.from(row.ciphertext),
-      iv: Buffer.from(row.iv),
-      authTag: Buffer.from(row.authTag),
-      keyVersion: row.keyVersion,
-    },
-    lastFour: row.lastFour,
-    expiresAt: row.expiresAt,
-    lastUsedAt: row.lastUsedAt,
-    updatedByUserId:
-      row.updatedByUserId === null ? null : parseUuidV7(row.updatedByUserId),
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
-  });
+/**
+ * Reads a row through the stored metadata reader. A row whose metadata,
+ * owner, expiry or other columns don't fit its kind is unreadable.
+ */
+export const readSecretRow = (
+  row: SecretRow,
+): StoredReadResult<SecretEntity> => {
+  const metadata = readStoredSecretMetadata(row.schemaVersion, row);
+  if (!metadata.success) {
+    return metadata;
+  }
+  try {
+    return {
+      success: true,
+      value: SecretEntity.fromStored({
+        ...metadata.value,
+        id: parseUuidV7(row.id),
+        owner: rowOwner(row),
+        valueKind: row.valueKind,
+        name: row.name,
+        encryptedValue: {
+          ciphertext: Buffer.from(row.ciphertext),
+          iv: Buffer.from(row.iv),
+          authTag: Buffer.from(row.authTag),
+          keyVersion: row.keyVersion,
+        },
+        lastFour: row.lastFour,
+        expiresAt: row.expiresAt,
+        lastUsedAt: row.lastUsedAt,
+        updatedByUserId:
+          row.updatedByUserId === null
+            ? null
+            : parseUuidV7(row.updatedByUserId),
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
+      }),
+    };
+  } catch (error: unknown) {
+    if (error instanceof CoreError) {
+      return { success: false, reason: error.message };
+    }
+    throw error;
+  }
+};
+
+/** A row that does not read is a persistence fault: this code wrote it. */
+export const secretFromRow = (row: SecretRow): SecretEntity => {
+  const read = readSecretRow(row);
+  if (!read.success) {
+    throw new PersistenceError(
+      `secret ${row.id} is unreadable: ${read.reason}`,
+      "SECRET_ROW_UNREADABLE",
+    );
+  }
+  return read.value;
+};
+
+/** The log fields that identify a skipped row. Never the metadata itself. */
+const describeRow = (row: SecretRow) => ({
+  table: "secrets",
+  secretId: row.id,
+  kind: row.kind,
+  ownerUserId: row.ownerUserId,
+  ownerProjectId: row.ownerProjectId,
+});
 
 const secretNameTakenError = (owner: SecretOwner) =>
   new CoreError({
@@ -103,7 +159,15 @@ const secretNameTakenError = (owner: SecretOwner) =>
     status: 409,
   });
 
+/**
+ * Single-row reads throw `SECRET_ROW_UNREADABLE` on a row that doesn't read;
+ * `listByOwner` logs it at `error` with the secret id and leaves it out, so
+ * one bad row doesn't hide the owner's other keys. `listSummariesByIds`
+ * never reads `metadata_json`, so it has nothing to skip.
+ */
 export class DrizzleSecretRepo implements SecretRepo {
+  constructor(private readonly logger: Logger = noopLogger) {}
+
   async listSummariesByIds(
     ids: readonly UuidV7[],
     dbExecutor?: DbExecutor,
@@ -152,7 +216,7 @@ export class DrizzleSecretRepo implements SecretRepo {
       if (!row) {
         throw new Error("Failed to save secret");
       }
-      return toEntity(row);
+      return secretFromRow(row);
     } catch (error) {
       if (isUniqueViolation(error as Error)) {
         throw secretNameTakenError(entity.owner);
@@ -171,7 +235,7 @@ export class DrizzleSecretRepo implements SecretRepo {
       .from(secrets)
       .where(eq(secrets.id, id))
       .limit(1);
-    return row ? toEntity(row) : null;
+    return row ? secretFromRow(row) : null;
   }
 
   async findByIdForOwner(
@@ -185,7 +249,7 @@ export class DrizzleSecretRepo implements SecretRepo {
       .from(secrets)
       .where(and(eq(secrets.id, id), ownerCondition(owner)))
       .limit(1);
-    return row ? toEntity(row) : null;
+    return row ? secretFromRow(row) : null;
   }
 
   async listByOwner(
@@ -204,7 +268,12 @@ export class DrizzleSecretRepo implements SecretRepo {
         ),
       )
       .orderBy(desc(secrets.createdAt), desc(secrets.id));
-    return rows.map(toEntity);
+    return readRowsSkippingUnreadable(
+      rows,
+      readSecretRow,
+      this.logger,
+      describeRow,
+    );
   }
 
   async delete(

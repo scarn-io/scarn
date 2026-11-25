@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "kind": "user_defined",
+  "prompt": "Triage the work item and label it.",
+  "entrypointJson": null,
+  "toolCallJson": null,
+  "inputSchemaJson": { "type": "object" },
+  "resultSchemaJson": null,
+  "errorsJson": ["Triage.Ambiguous"],
+  "retryJson": [
+    { "on": ["Triage.Ambiguous"], "maxAttempts": 2 },
+    { "on": ["Scarn.Timeout"], "maxAttempts": 3 }
+  ],
+  "grantsJson": [
+    { "resource": "workItem", "action": "read", "scope": "children" },
+    { "resource": "workItem", "action": "comment", "scope": "self" },
+    {
+      "resource": "workItem",
+      "action": "label",
+      "scope": "self",
+      "labels": ["triaged", "needs-info"]
+    },
+    {
+      "resource": "workItem",
+      "action": "create",
+      "scope": "project",
+      "labels": ["example-label"]
+    }
+  ],
+  "concurrencyJson": { "max": 1, "waiting": 2 }
+}

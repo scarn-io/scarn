@@ -1,3 +1,5 @@
+import { storedReaderTypeOnlyImportsRules } from "./stored-reader-type-only-imports.mjs";
+
 function getTypeAnnotation(param) {
   switch (param.type) {
     case "Identifier":
@@ -85,5 +87,6 @@ const noUnknownParameterTypeRule = {
 export const localEslintPlugin = {
   rules: {
     "no-unknown-parameter-type": noUnknownParameterTypeRule,
+    ...storedReaderTypeOnlyImportsRules,
   },
 };

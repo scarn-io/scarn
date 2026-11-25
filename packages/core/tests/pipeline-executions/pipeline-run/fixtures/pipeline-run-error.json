@@ -1,0 +1,7 @@
+{
+  "errorJson": {
+    "name": "ToleratedFailuresExceeded",
+    "message": "Example: 2 of 3 lanes failed",
+    "cause": { "failed": 2 }
+  }
+}

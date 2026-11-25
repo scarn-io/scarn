@@ -52684,14 +52684,7 @@
                             "type": "object",
                             "properties": {
                               "kind": {
-                                "type": "string",
-                                "enum": [
-                                  "start",
-                                  "route",
-                                  "otherwise",
-                                  "catch",
-                                  "merge"
-                                ]
+                                "type": "string"
                               },
                               "index": {
                                 "type": "integer",
@@ -53084,14 +53077,7 @@
                             "type": "object",
                             "properties": {
                               "kind": {
-                                "type": "string",
-                                "enum": [
-                                  "start",
-                                  "route",
-                                  "otherwise",
-                                  "catch",
-                                  "merge"
-                                ]
+                                "type": "string"
                               },
                               "index": {
                                 "type": "integer",
@@ -53152,14 +53138,7 @@
                             ],
                             "properties": {
                               "kind": {
-                                "type": "string",
-                                "enum": [
-                                  "start",
-                                  "route",
-                                  "otherwise",
-                                  "catch",
-                                  "merge"
-                                ]
+                                "type": "string"
                               },
                               "index": {
                                 "type": "integer",
@@ -54725,14 +54704,7 @@
                             "type": "object",
                             "properties": {
                               "kind": {
-                                "type": "string",
-                                "enum": [
-                                  "start",
-                                  "route",
-                                  "otherwise",
-                                  "catch",
-                                  "merge"
-                                ]
+                                "type": "string"
                               },
                               "index": {
                                 "type": "integer",
@@ -55125,14 +55097,7 @@
                             "type": "object",
                             "properties": {
                               "kind": {
-                                "type": "string",
-                                "enum": [
-                                  "start",
-                                  "route",
-                                  "otherwise",
-                                  "catch",
-                                  "merge"
-                                ]
+                                "type": "string"
                               },
                               "index": {
                                 "type": "integer",
@@ -55193,14 +55158,7 @@
                             ],
                             "properties": {
                               "kind": {
-                                "type": "string",
-                                "enum": [
-                                  "start",
-                                  "route",
-                                  "otherwise",
-                                  "catch",
-                                  "merge"
-                                ]
+                                "type": "string"
                               },
                               "index": {
                                 "type": "integer",
@@ -56274,14 +56232,7 @@
                                 "type": "object",
                                 "properties": {
                                   "kind": {
-                                    "type": "string",
-                                    "enum": [
-                                      "start",
-                                      "route",
-                                      "otherwise",
-                                      "catch",
-                                      "merge"
-                                    ]
+                                    "type": "string"
                                   },
                                   "index": {
                                     "type": "integer",
@@ -56674,14 +56625,7 @@
                                 "type": "object",
                                 "properties": {
                                   "kind": {
-                                    "type": "string",
-                                    "enum": [
-                                      "start",
-                                      "route",
-                                      "otherwise",
-                                      "catch",
-                                      "merge"
-                                    ]
+                                    "type": "string"
                                   },
                                   "index": {
                                     "type": "integer",
@@ -56742,14 +56686,7 @@
                                 ],
                                 "properties": {
                                   "kind": {
-                                    "type": "string",
-                                    "enum": [
-                                      "start",
-                                      "route",
-                                      "otherwise",
-                                      "catch",
-                                      "merge"
-                                    ]
+                                    "type": "string"
                                   },
                                   "index": {
                                     "type": "integer",
@@ -56864,14 +56801,7 @@
                                     "type": "object",
                                     "properties": {
                                       "kind": {
-                                        "type": "string",
-                                        "enum": [
-                                          "start",
-                                          "route",
-                                          "otherwise",
-                                          "catch",
-                                          "merge"
-                                        ]
+                                        "type": "string"
                                       },
                                       "index": {
                                         "type": "integer",
@@ -56904,14 +56834,7 @@
                                     "type": "object",
                                     "properties": {
                                       "kind": {
-                                        "type": "string",
-                                        "enum": [
-                                          "start",
-                                          "route",
-                                          "otherwise",
-                                          "catch",
-                                          "merge"
-                                        ]
+                                        "type": "string"
                                       },
                                       "index": {
                                         "type": "integer",
@@ -58353,14 +58276,7 @@
                             "type": "object",
                             "properties": {
                               "kind": {
-                                "type": "string",
-                                "enum": [
-                                  "start",
-                                  "route",
-                                  "otherwise",
-                                  "catch",
-                                  "merge"
-                                ]
+                                "type": "string"
                               },
                               "index": {
                                 "type": "integer",
@@ -58753,14 +58669,7 @@
                             "type": "object",
                             "properties": {
                               "kind": {
-                                "type": "string",
-                                "enum": [
-                                  "start",
-                                  "route",
-                                  "otherwise",
-                                  "catch",
-                                  "merge"
-                                ]
+                                "type": "string"
                               },
                               "index": {
                                 "type": "integer",
@@ -58821,14 +58730,7 @@
                             ],
                             "properties": {
                               "kind": {
-                                "type": "string",
-                                "enum": [
-                                  "start",
-                                  "route",
-                                  "otherwise",
-                                  "catch",
-                                  "merge"
-                                ]
+                                "type": "string"
                               },
                               "index": {
                                 "type": "integer",
@@ -59628,14 +59530,7 @@
                             "type": "object",
                             "properties": {
                               "kind": {
-                                "type": "string",
-                                "enum": [
-                                  "start",
-                                  "route",
-                                  "otherwise",
-                                  "catch",
-                                  "merge"
-                                ]
+                                "type": "string"
                               },
                               "index": {
                                 "type": "integer",
@@ -60028,14 +59923,7 @@
                             "type": "object",
                             "properties": {
                               "kind": {
-                                "type": "string",
-                                "enum": [
-                                  "start",
-                                  "route",
-                                  "otherwise",
-                                  "catch",
-                                  "merge"
-                                ]
+                                "type": "string"
                               },
                               "index": {
                                 "type": "integer",
@@ -60096,14 +59984,7 @@
                             ],
                             "properties": {
                               "kind": {
-                                "type": "string",
-                                "enum": [
-                                  "start",
-                                  "route",
-                                  "otherwise",
-                                  "catch",
-                                  "merge"
-                                ]
+                                "type": "string"
                               },
                               "index": {
                                 "type": "integer",
@@ -65103,14 +64984,7 @@
                                 "type": "object",
                                 "properties": {
                                   "kind": {
-                                    "type": "string",
-                                    "enum": [
-                                      "start",
-                                      "route",
-                                      "otherwise",
-                                      "catch",
-                                      "merge"
-                                    ]
+                                    "type": "string"
                                   },
                                   "index": {
                                     "type": "integer",
@@ -65503,14 +65377,7 @@
                                 "type": "object",
                                 "properties": {
                                   "kind": {
-                                    "type": "string",
-                                    "enum": [
-                                      "start",
-                                      "route",
-                                      "otherwise",
-                                      "catch",
-                                      "merge"
-                                    ]
+                                    "type": "string"
                                   },
                                   "index": {
                                     "type": "integer",
@@ -65571,14 +65438,7 @@
                                 ],
                                 "properties": {
                                   "kind": {
-                                    "type": "string",
-                                    "enum": [
-                                      "start",
-                                      "route",
-                                      "otherwise",
-                                      "catch",
-                                      "merge"
-                                    ]
+                                    "type": "string"
                                   },
                                   "index": {
                                     "type": "integer",
@@ -66465,14 +66325,7 @@
                             "type": "object",
                             "properties": {
                               "kind": {
-                                "type": "string",
-                                "enum": [
-                                  "start",
-                                  "route",
-                                  "otherwise",
-                                  "catch",
-                                  "merge"
-                                ]
+                                "type": "string"
                               },
                               "index": {
                                 "type": "integer",
@@ -66865,14 +66718,7 @@
                             "type": "object",
                             "properties": {
                               "kind": {
-                                "type": "string",
-                                "enum": [
-                                  "start",
-                                  "route",
-                                  "otherwise",
-                                  "catch",
-                                  "merge"
-                                ]
+                                "type": "string"
                               },
                               "index": {
                                 "type": "integer",
@@ -66933,14 +66779,7 @@
                             ],
                             "properties": {
                               "kind": {
-                                "type": "string",
-                                "enum": [
-                                  "start",
-                                  "route",
-                                  "otherwise",
-                                  "catch",
-                                  "merge"
-                                ]
+                                "type": "string"
                               },
                               "index": {
                                 "type": "integer",
@@ -67740,14 +67579,7 @@
                             "type": "object",
                             "properties": {
                               "kind": {
-                                "type": "string",
-                                "enum": [
-                                  "start",
-                                  "route",
-                                  "otherwise",
-                                  "catch",
-                                  "merge"
-                                ]
+                                "type": "string"
                               },
                               "index": {
                                 "type": "integer",
@@ -68140,14 +67972,7 @@
                             "type": "object",
                             "properties": {
                               "kind": {
-                                "type": "string",
-                                "enum": [
-                                  "start",
-                                  "route",
-                                  "otherwise",
-                                  "catch",
-                                  "merge"
-                                ]
+                                "type": "string"
                               },
                               "index": {
                                 "type": "integer",
@@ -68208,14 +68033,7 @@
                             ],
                             "properties": {
                               "kind": {
-                                "type": "string",
-                                "enum": [
-                                  "start",
-                                  "route",
-                                  "otherwise",
-                                  "catch",
-                                  "merge"
-                                ]
+                                "type": "string"
                               },
                               "index": {
                                 "type": "integer",

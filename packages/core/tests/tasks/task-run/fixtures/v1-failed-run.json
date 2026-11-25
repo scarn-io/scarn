@@ -1,0 +1,9 @@
+{
+  "status": "failed",
+  "resultJson": null,
+  "errorJson": {
+    "code": "SCARN_ARGS_ERROR",
+    "name": "Scarn.ArgsError",
+    "message": "Example fixture failure: missing property 'sku'"
+  }
+}

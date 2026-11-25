@@ -15,7 +15,7 @@ describe("environment content stored read", () => {
       v1Fixture,
     );
     if (!read.success) throw new Error(read.reason);
-    expect<object>(read.content).toEqual(v1Fixture.contentJson);
+    expect<object>(read.value).toEqual(v1Fixture.contentJson);
   });
 
   concurrentTest("reads the v1 fixture through the row mapper", () => {
@@ -40,7 +40,7 @@ describe("environment content stored read", () => {
       });
       expect(read).toEqual({
         success: true,
-        content: { connectors: ["retired-connector"] },
+        value: { connectors: ["retired-connector"] },
       });
     },
   );
@@ -53,7 +53,7 @@ describe("environment content stored read", () => {
       });
       expect(read).toEqual({
         success: true,
-        content: { description: "Frontend" },
+        value: { description: "Frontend" },
       });
     },
   );
@@ -65,7 +65,7 @@ describe("environment content stored read", () => {
       },
     });
     if (!read.success) throw new Error(read.reason);
-    expect(read.content.vars?.[0]?.applies).toBe("agent");
+    expect(read.value.vars?.[0]?.applies).toBe("agent");
   });
 
   concurrentTest("rejects an unknown schema version", () => {

@@ -1,6 +1,5 @@
-import { z } from "zod";
-import { artifactPlatforms } from "@scarn/sdk/contracts/artifacts";
 import type { AnyJsonObject } from "@scarn/core/common/contracts/json";
+import { readStoredArtifactMarkerOutcomes } from "../contracts/artifact-resolution-stored";
 import type { LeftOutArtifactMarker } from "./apply-artifact-resolution";
 import {
   isRequiredArtifactMarker,
@@ -8,6 +7,7 @@ import {
   type ArtifactMarkerRef,
   type ArtifactMarkerWarning,
   type ResolvedArtifactMarker,
+  type StoredArtifactMarkerOutcome,
 } from "./comment-artifact-types";
 
 /**
@@ -34,7 +34,7 @@ export type ArtifactResolutionJson = {
     reason: string;
   }>;
   warnings: Array<{ markerIndex: number; code: string; message: string }>;
-  outcomes: ArtifactMarkerOutcome[] | null;
+  outcomes: StoredArtifactMarkerOutcome[] | null;
 };
 
 const refJson = (ref: ArtifactMarkerRef): AnyJsonObject =>
@@ -42,25 +42,8 @@ const refJson = (ref: ArtifactMarkerRef): AnyJsonObject =>
     ? { type: "signal", stepKey: ref.stepKey, signalKey: ref.signalKey }
     : { type: "path", pattern: ref.pattern };
 
-const storedOutcomeSchema = z.object({
-  markerIndex: z.number(),
-  artifactId: z.string(),
-  platform: z.enum(artifactPlatforms),
-  outcome: z.enum(["embedded", "linked"]),
-  externalRef: z.string().nullable(),
-});
-
 /** The per-marker outcomes stored on a delivery, skipping malformed entries. */
-export const readArtifactMarkerOutcomes = (
-  json: AnyJsonObject | null,
-): ArtifactMarkerOutcome[] => {
-  const outcomes = json?.["outcomes"];
-  if (!Array.isArray(outcomes)) return [];
-  return outcomes.flatMap((entry) => {
-    const parsed = storedOutcomeSchema.safeParse(entry);
-    return parsed.success ? [parsed.data] : [];
-  });
-};
+export const readArtifactMarkerOutcomes = readStoredArtifactMarkerOutcomes;
 
 /** Adds an outcome to stored resolution JSON, replacing the marker's old one. */
 export const recordArtifactMarkerOutcome = (

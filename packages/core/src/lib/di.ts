@@ -297,7 +297,8 @@ export function createAppContext(overrides?: CreateAppContextOverrides) {
   const domainEventDispatcher =
     overrides?.domainEventDispatcher ?? new InMemoryDomainEventDispatcher();
   const projectRepo = overrides?.projectRepo ?? new DrizzleProjectRepo();
-  const workItemRepo = overrides?.workItemRepo ?? new DrizzleWorkItemRepo();
+  const workItemRepo =
+    overrides?.workItemRepo ?? new DrizzleWorkItemRepo(logger);
   const workItemTitleReader =
     overrides?.workItemTitleReader ?? new DrizzleWorkItemTitleReader();
   const childWorkItemReader =
@@ -310,32 +311,33 @@ export function createAppContext(overrides?: CreateAppContextOverrides) {
     overrides?.githubRelationshipPendingRefRepo ??
     new DrizzleGithubRelationshipPendingRefRepo();
   const stepDefinitionRepo =
-    overrides?.stepDefinitionRepo ?? new DrizzleStepDefinitionRepo();
+    overrides?.stepDefinitionRepo ?? new DrizzleStepDefinitionRepo(logger);
   const environmentRepo =
     overrides?.environmentRepo ?? new DrizzleEnvironmentRepo();
-  const taskRepo = overrides?.taskRepo ?? new DrizzleTaskRepo();
+  const taskRepo = overrides?.taskRepo ?? new DrizzleTaskRepo(logger);
   const taskSummaryReader =
     overrides?.taskSummaryReader ?? new DrizzleTaskSummaryReader();
   const taskRunRepo =
-    overrides?.taskRunRepo ?? new DrizzleTaskRunRepo(timeProvider);
+    overrides?.taskRunRepo ?? new DrizzleTaskRunRepo(timeProvider, logger);
   const artifactRepo = overrides?.artifactRepo ?? new DrizzleArtifactRepo();
   const artifactFailureRepo =
     overrides?.artifactFailureRepo ?? new DrizzleArtifactFailureRepo();
   const pipelineGraphRepo =
-    overrides?.pipelineGraphRepo ?? new DrizzlePipelineGraphRepo();
+    overrides?.pipelineGraphRepo ?? new DrizzlePipelineGraphRepo(logger);
   const pipelineGraphVersionRepo =
     overrides?.pipelineGraphVersionRepo ??
-    new DrizzlePipelineGraphVersionRepo();
+    new DrizzlePipelineGraphVersionRepo(logger);
   const automationRepo =
-    overrides?.automationRepo ?? new DrizzleAutomationRepo();
+    overrides?.automationRepo ?? new DrizzleAutomationRepo(logger);
   const automationScheduleRepo =
     overrides?.automationScheduleRepo ?? new DrizzleAutomationScheduleRepo();
   const workItemAutomationRepo =
-    overrides?.workItemAutomationRepo ?? new DrizzleWorkItemAutomationRepo();
+    overrides?.workItemAutomationRepo ??
+    new DrizzleWorkItemAutomationRepo(logger);
   const workItemActivityRepo =
     overrides?.workItemActivityRepo ?? new DrizzleWorkItemActivityRepo();
   const pipelineRunRepo =
-    overrides?.pipelineRunRepo ?? new DrizzlePipelineRunRepo();
+    overrides?.pipelineRunRepo ?? new DrizzlePipelineRunRepo(logger);
   const nodeVisitQuestionRepo =
     overrides?.nodeVisitQuestionRepo ?? new DrizzleNodeVisitQuestionRepo();
   const projectInboxWaitReader =
@@ -360,12 +362,12 @@ export function createAppContext(overrides?: CreateAppContextOverrides) {
   const taskRunHistoryReader =
     overrides?.taskRunHistoryReader ?? new DrizzleTaskRunHistoryReader();
   const userNotificationRepo =
-    overrides?.userNotificationRepo ?? new DrizzleUserNotificationRepo();
+    overrides?.userNotificationRepo ?? new DrizzleUserNotificationRepo(logger);
   const notificationDeliveryRepo =
     overrides?.notificationDeliveryRepo ??
-    new DrizzleNotificationDeliveryRepo();
+    new DrizzleNotificationDeliveryRepo(logger);
   const notificationRuleRepo =
-    overrides?.notificationRuleRepo ?? new DrizzleNotificationRuleRepo();
+    overrides?.notificationRuleRepo ?? new DrizzleNotificationRuleRepo(logger);
   const notificationProvenanceReader =
     overrides?.notificationProvenanceReader ??
     new DrizzleNotificationProvenanceReader();
@@ -377,7 +379,8 @@ export function createAppContext(overrides?: CreateAppContextOverrides) {
   const githubInstallationRepo =
     overrides?.githubInstallationRepo ?? new DrizzleGitHubInstallationRepo();
   const projectIntegrationRepo =
-    overrides?.projectIntegrationRepo ?? new DrizzleProjectIntegrationRepo();
+    overrides?.projectIntegrationRepo ??
+    new DrizzleProjectIntegrationRepo(logger);
   const projectInviteRepo =
     overrides?.projectInviteRepo ?? new DrizzleProjectInviteRepo();
   const orgRepo = overrides?.orgRepo ?? new DrizzleOrgRepo();
@@ -407,9 +410,10 @@ export function createAppContext(overrides?: CreateAppContextOverrides) {
       : resolveObjectStorageBucket();
   const secretCipher: SecretCipher =
     overrides?.secretCipher ?? new LazySecretCipher();
-  const secretRepo = overrides?.secretRepo ?? new DrizzleSecretRepo();
+  const secretRepo = overrides?.secretRepo ?? new DrizzleSecretRepo(logger);
   const managedConnectionRepo =
-    overrides?.managedConnectionRepo ?? new DrizzleManagedConnectionRepo();
+    overrides?.managedConnectionRepo ??
+    new DrizzleManagedConnectionRepo(logger);
   const managedLaunchRepo =
     overrides?.managedLaunchRepo ?? new DrizzleManagedLaunchRepo();
   const managedOAuthAttemptRepo =

@@ -59,6 +59,7 @@ export const seedTaskRunParent = async (
     workItemId: input.workItemId,
     ...agentTaskInstructionColumns,
     status: "queued",
+    schemaVersion: 1,
   });
   return { taskId, number: 1, reason: "initial" };
 };

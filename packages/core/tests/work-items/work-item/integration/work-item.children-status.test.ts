@@ -116,6 +116,7 @@ describe("work item children status", () => {
         workItemId,
         ...agentTaskInstructionColumns,
         status,
+        schemaVersion: 1,
         ...values,
       });
     return id;

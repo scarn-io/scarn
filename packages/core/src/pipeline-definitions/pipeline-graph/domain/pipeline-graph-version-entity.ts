@@ -5,10 +5,7 @@ import {
 } from "@scarn/core/common/contracts/uuid-v7";
 import { CoreValidationError } from "@scarn/core/lib/errors";
 import { normalizeDate } from "@scarn/core/work-items/work-item/domain/date-utils";
-import {
-  pipelineDocumentSchema,
-  type PipelineDocument,
-} from "@scarn/sdk/contracts/pipeline-document";
+import type { PipelineDocument } from "@scarn/sdk/contracts/pipeline-document";
 
 /** The step version a pipeline version runs for one step key. */
 export type PinnedStep = {
@@ -33,8 +30,10 @@ export type CreatePipelineGraphVersionEntityProps = Omit<
 > & { id?: UuidV7 | undefined };
 
 /**
- * One published version of a pipeline: a validated JSON document plus the
- * step versions it was pinned to when published. Never changes once stored.
+ * One published version of a pipeline: a JSON document plus the step
+ * versions it was pinned to when published. Never changes once stored. The
+ * document arrives already parsed: publish validates it against the SDK
+ * schema, and the repo reads it through the stored reader.
  */
 export class PipelineGraphVersionEntity {
   public readonly id: UuidV7;
@@ -62,7 +61,7 @@ export class PipelineGraphVersionEntity {
     this.id = parseUuidV7(props.id);
     this.pipelineGraphId = parseUuidV7(props.pipelineGraphId);
     this.version = props.version;
-    this.definitionJson = pipelineDocumentSchema.parse(props.definitionJson);
+    this.definitionJson = props.definitionJson;
     this.schemaVersion = props.schemaVersion;
     this.contentHash = props.contentHash;
     this.steps = props.steps.map((step) => ({

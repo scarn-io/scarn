@@ -62,19 +62,22 @@ const seedFanOut = async (runId: UuidV7, nodeId: string) => {
     spawnedByVisitId: splitVisitId,
     kind: "each",
     laneCount: 2,
-    toleratedFailuresJson: {},
+    toleratedFailuresCount: 0,
     status: "open",
   });
   for (const index of [0, 1]) {
     const laneId = createUuidV7();
-    await getDb().insert(lanes).values({
-      id: laneId,
-      laneGroupId: groupId,
-      index,
-      routeJson: {},
-      origin: "split",
-      status: "active",
-    });
+    await getDb()
+      .insert(lanes)
+      .values({
+        id: laneId,
+        laneGroupId: groupId,
+        index,
+        routeJson: { kind: "route", index: 0 },
+        schemaVersion: 1,
+        origin: "split",
+        status: "active",
+      });
     const visitId = await seedVisit({
       runId,
       nodeId,

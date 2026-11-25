@@ -98,6 +98,7 @@ describe("project Tasks list filters", () => {
         prompt: code ? null : "Do the thing.",
         entrypointJson: code ? { sourceFile: "steps/lint.ts" } : null,
         status: input.status,
+        schemaVersion: 1,
         errorJson: input.errorJson ?? null,
         conversationId,
         startedByUserId: input.startedByUserId

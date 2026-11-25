@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "kind": "bitbucket",
+  "installationId": null,
+  "externalScopeJson": {
+    "repos": [
+      {
+        "workspace": "example-team",
+        "slug": "billing-service",
+        "fullName": "example-team/billing-service"
+      }
+    ]
+  }
+}

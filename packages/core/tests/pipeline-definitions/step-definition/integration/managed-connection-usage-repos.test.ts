@@ -62,6 +62,7 @@ const createStep = async (
       status,
       taskExecutionConfigId,
       kind: "user_defined",
+      schemaVersion: 1,
       prompt: "Use MCP",
       inputSchemaJson: { type: "object" },
       resultSchemaJson: { type: "object" },

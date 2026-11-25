@@ -1,0 +1,151 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "08d9210f-28a6-4acd-9ed8-237c0569abc3",
+  "prevIds": [
+    "8e82c237-2b06-49d3-ba71-e1299497109c"
+  ],
+  "footprints": [
+    {
+      "statementType": "drop_table",
+      "statementTarget": [
+        "table",
+        "app",
+        "work_item_sources"
+      ],
+      "writes": [
+        "s|tbl|app.work_item_sources",
+        "n|tbl|app.work_item_sources",
+        "e|tbl|app.work_item_sources",
+        "n|rel|app.work_item_sources",
+        "n|type|app.work_item_sources"
+      ],
+      "reads": [
+        "n|sch|app"
+      ]
+    },
+    {
+      "statementType": "drop_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "lane_groups",
+        "tolerated_failures"
+      ],
+      "writes": [
+        "s|col|app.lane_groups.tolerated_failures",
+        "n|col|app.lane_groups.tolerated_failures",
+        "e|col|app.lane_groups.tolerated_failures"
+      ],
+      "reads": [
+        "n|tbl|app.lane_groups",
+        "n|sch|app"
+      ]
+    },
+    {
+      "statementType": "drop_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "automation_schedules",
+        "concurrency_json"
+      ],
+      "writes": [
+        "s|col|app.automation_schedules.concurrency_json",
+        "n|col|app.automation_schedules.concurrency_json",
+        "e|col|app.automation_schedules.concurrency_json"
+      ],
+      "reads": [
+        "n|tbl|app.automation_schedules",
+        "n|sch|app"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "drop",
+      "key": "tables\u0000[\"app\",\"work_item_sources\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"app\",\"lane_groups\",\"tolerated_failures\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"app\",\"work_item_sources\",\"id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"app\",\"work_item_sources\",\"project_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"app\",\"work_item_sources\",\"kind\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"app\",\"work_item_sources\",\"name\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"app\",\"work_item_sources\",\"is_active\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"app\",\"work_item_sources\",\"credentials\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"app\",\"work_item_sources\",\"config\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"app\",\"work_item_sources\",\"last_synced_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"app\",\"work_item_sources\",\"last_cursor\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"app\",\"work_item_sources\",\"last_sync_status\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"app\",\"work_item_sources\",\"last_sync_error\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"app\",\"work_item_sources\",\"created_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"app\",\"work_item_sources\",\"updated_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"app\",\"automation_schedules\",\"concurrency_json\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"app\",\"work_item_sources_project_id_idx\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"app\",\"work_item_sources_kind_idx\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"app\",\"work_item_sources_is_active_idx\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"app\",\"work_item_sources\",\"work_item_sources_project_id_projects_id_fk\"]"
+    },
+    {
+      "op": "drop",
+      "key": "pks\u0000[\"app\",\"work_item_sources\",\"work_item_sources_pkey\"]"
+    }
+  ]
+}

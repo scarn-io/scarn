@@ -4,6 +4,8 @@ import type { DbExecutor } from "@scarn/core/lib/db/db-executor";
 import { PersistenceError } from "@scarn/core/lib/errors";
 import type { UuidV7 } from "@scarn/core/common/contracts/uuid-v7";
 import { workItems } from "@scarn/core/lib/db/schema";
+import { noopLogger, type Logger } from "@scarn/observability/logging";
+import { readStoredWorkItemFields } from "../contracts/work-item-fields-stored";
 import type {
   WorkItemFieldOption,
   WorkItemListPage,
@@ -29,8 +31,34 @@ import type { WorkItemFields } from "../domain/work-item-field-value";
 import { parseWorkItemId, type WorkItemId } from "../domain/work-item-id";
 import type { WorkItemPlatform } from "../domain/work-item-platform";
 
+type WorkItemRow = typeof workItems.$inferSelect;
+
+/**
+ * A work item's `fields`. They mirror the source system's form, so an
+ * unreadable value is logged and read as no fields rather than failing the
+ * read; the next sync writes them again.
+ */
+const fieldsFromRow = (row: WorkItemRow, logger: Logger): WorkItemFields => {
+  const read = readStoredWorkItemFields(row.fields);
+  if (!read.success) {
+    logger.error(
+      {
+        table: "work_items",
+        projectId: row.projectId,
+        workItemId: row.id,
+        reason: read.reason,
+      },
+      "Stored fields are unreadable; reading the work item without them",
+    );
+    return {};
+  }
+  return read.value;
+};
+
 export class DrizzleWorkItemRepo implements WorkItemRepo {
-  private toEntity(row: typeof workItems.$inferSelect): WorkItemEntity {
+  constructor(private readonly logger: Logger = noopLogger) {}
+
+  private toEntity(row: WorkItemRow): WorkItemEntity {
     return WorkItemEntity.rehydrate({
       id: parseWorkItemId(row.id),
       projectId: row.projectId as UuidV7,
@@ -43,7 +71,7 @@ export class DrizzleWorkItemRepo implements WorkItemRepo {
       descriptionVersion: row.descriptionVersion,
       sourceCreatedAt: row.sourceCreatedAt,
       sourceUpdatedAt: row.sourceUpdatedAt,
-      fields: (row.fields ?? {}) as WorkItemFields,
+      fields: fieldsFromRow(row, this.logger),
       labels: row.labels,
       createdByUserId: row.createdByUserId as UuidV7 | null,
       assigneeUserId: row.assigneeUserId as UuidV7 | null,

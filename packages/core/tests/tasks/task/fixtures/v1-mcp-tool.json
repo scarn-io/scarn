@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "kind": "mcp_tool",
+  "owner": "workItem",
+  "status": "succeeded",
+  "prompt": null,
+  "entrypointJson": null,
+  "toolCallJson": {
+    "server": "inventory",
+    "tool": "lookup_sku",
+    "argsTemplate": "{{input}}",
+    "toolSchemas": {
+      "input": {
+        "type": "object",
+        "required": ["sku"],
+        "properties": { "sku": { "type": "string" } }
+      },
+      "output": {
+        "type": "object",
+        "properties": { "found": { "type": "boolean" } }
+      }
+    }
+  },
+  "resultSchemaJson": {
+    "type": "object",
+    "properties": { "found": { "type": "boolean" } }
+  },
+  "inputJson": { "sku": "EXAMPLE-01" },
+  "retryJson": null,
+  "environmentSelectionJson": null,
+  "grantsJson": [{ "resource": "workItem", "action": "read", "scope": "self" }],
+  "resultJson": { "found": true },
+  "errorJson": null
+}

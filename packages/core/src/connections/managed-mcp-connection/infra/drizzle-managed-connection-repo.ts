@@ -8,7 +8,9 @@ import {
 } from "@scarn/core/lib/db/schema";
 import { isUniqueViolation } from "@scarn/core/lib/db/unique-violation";
 import { CoreError, InvariantViolationError } from "@scarn/core/lib/errors";
+import { noopLogger, type Logger } from "@scarn/observability/logging";
 import type { ManagedConnectionRepo } from "../application/managed-connection-repo";
+import { readStoredManagedConnectionDiscovery } from "../contracts/managed-connection-discovery-stored";
 import {
   isManagedConnectionReasonCode,
   ManagedConnectionEntity,
@@ -19,7 +21,7 @@ import {
   type ManagedConnectionServer,
 } from "../domain/managed-connection-server";
 import {
-  managedConnectionDiscoverySchema,
+  managedDiscoveryOverridesOf,
   type ManagedConnectionDiscovery,
 } from "../domain/managed-connection-discovery";
 
@@ -42,25 +44,41 @@ const reasonCodeFromRow = (
   return row.reasonCode;
 };
 
+/**
+ * The connection's discovery overrides. `discovery` is a cache of what the
+ * probe found, so an unreadable one is logged and left unset rather than
+ * failing the read; the connection is re-discovered on its next start.
+ */
 const discoveryFromRow = (
   row: ManagedConnectionRow,
+  logger: Logger,
 ): { discovery?: ManagedConnectionDiscovery } => {
-  const parsed = managedConnectionDiscoverySchema.safeParse(row.discovery);
-  if (!parsed.success) {
-    throw new InvariantViolationError(
-      `Managed connection ${row.id} has invalid discovery overrides`,
+  const read = readStoredManagedConnectionDiscovery(row.discovery);
+  if (!read.success) {
+    logger.error(
+      {
+        table: "managed_mcp_connections",
+        projectId: row.projectId,
+        connectionId: row.id,
+        reason: read.reason,
+      },
+      "Stored discovery is unreadable; reading the connection without it",
     );
+    return {};
   }
-  return Object.keys(parsed.data).length === 0
+  return managedDiscoveryOverridesOf(read.value).length === 0
     ? {}
-    : { discovery: parsed.data };
+    : { discovery: read.value };
 };
 
-const serverFromRow = (row: ManagedConnectionRow): ManagedConnectionServer => {
+const serverFromRow = (
+  row: ManagedConnectionRow,
+  logger: Logger,
+): ManagedConnectionServer => {
   const base = {
     resource: row.resource,
     issuerOrigin: row.issuerOrigin,
-    ...discoveryFromRow(row),
+    ...discoveryFromRow(row, logger),
     ...(row.scopes === null ? {} : { scopes: row.scopes }),
   };
   const clientRegistration = managedConnectionClientRegistrationSchema.parse(
@@ -107,14 +125,17 @@ const serverToRow = (
       : null,
 });
 
-const toEntity = (row: ManagedConnectionRow): ManagedConnectionEntity =>
+const toEntity = (
+  row: ManagedConnectionRow,
+  logger: Logger,
+): ManagedConnectionEntity =>
   ManagedConnectionEntity.rehydrate({
     id: parseUuidV7(row.id),
     projectId: parseUuidV7(row.projectId),
     name: row.name,
     label: row.label,
     preset: row.preset,
-    server: serverFromRow(row),
+    server: serverFromRow(row, logger),
     state: row.state,
     reasonCode: reasonCodeFromRow(row),
     generation: row.generation,
@@ -141,6 +162,12 @@ const connectionExists = () =>
   });
 
 export class DrizzleManagedConnectionRepo implements ManagedConnectionRepo {
+  constructor(private readonly logger: Logger = noopLogger) {}
+
+  private toEntity(row: ManagedConnectionRow): ManagedConnectionEntity {
+    return toEntity(row, this.logger);
+  }
+
   async findById(
     projectId: UuidV7,
     connectionId: UuidV7,
@@ -157,7 +184,7 @@ export class DrizzleManagedConnectionRepo implements ManagedConnectionRepo {
         ),
       )
       .limit(1);
-    return row ? toEntity(row) : null;
+    return row ? this.toEntity(row) : null;
   }
 
   async listByProject(
@@ -170,7 +197,7 @@ export class DrizzleManagedConnectionRepo implements ManagedConnectionRepo {
       .from(managedMcpConnections)
       .where(eq(managedMcpConnections.projectId, projectId))
       .orderBy(asc(managedMcpConnections.createdAt));
-    return rows.map(toEntity);
+    return rows.map((row) => this.toEntity(row));
   }
 
   async loadForUpdate(
@@ -189,7 +216,7 @@ export class DrizzleManagedConnectionRepo implements ManagedConnectionRepo {
       )
       .limit(1)
       .for("update");
-    return row ? toEntity(row) : null;
+    return row ? this.toEntity(row) : null;
   }
 
   async loadForShare(
@@ -208,7 +235,7 @@ export class DrizzleManagedConnectionRepo implements ManagedConnectionRepo {
       )
       .limit(1)
       .for("share");
-    return row ? toEntity(row) : null;
+    return row ? this.toEntity(row) : null;
   }
 
   async loadByName(
@@ -239,7 +266,7 @@ export class DrizzleManagedConnectionRepo implements ManagedConnectionRepo {
       )
       .limit(1)
       .for("update");
-    return row ? toEntity(row) : null;
+    return row ? this.toEntity(row) : null;
   }
 
   async loadByResource(
@@ -346,6 +373,6 @@ export class DrizzleManagedConnectionRepo implements ManagedConnectionRepo {
       .from(managedMcpConnections)
       .where(and(eq(managedMcpConnections.projectId, projectId), condition))
       .limit(1);
-    return row ? toEntity(row) : null;
+    return row ? this.toEntity(row) : null;
   }
 }

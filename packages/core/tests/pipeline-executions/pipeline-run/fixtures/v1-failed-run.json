@@ -1,0 +1,34 @@
+{
+  "run": {
+    "status": "failed",
+    "endNodeId": null,
+    "errorJson": {
+      "name": "StepFailed",
+      "message": "Example: planner ran out of disk space",
+      "cause": { "exitCode": 137 }
+    }
+  },
+  "visits": [
+    {
+      "key": "plan",
+      "schemaVersion": 1,
+      "nodeId": "plan",
+      "nodeKind": "step",
+      "from": null,
+      "lane": null,
+      "fromLaneGroup": null,
+      "transitionJson": { "kind": "start", "index": 0 },
+      "routingJson": null,
+      "status": "failed",
+      "inputJson": { "title": "Example release" },
+      "resultJson": null,
+      "errorJson": {
+        "name": "StepFailed",
+        "message": "Example: the planner container was killed"
+      },
+      "minute": 1
+    }
+  ],
+  "laneGroups": [],
+  "lanes": []
+}

@@ -21,7 +21,10 @@ import { parseUuidV7, type UuidV7 } from "@scarn/core/common/contracts/uuid-v7";
 import { PersistenceError } from "@scarn/core/lib/errors";
 import type { TaskStatus } from "@scarn/core/tasks/task/domain/task-entity";
 import { effectiveTaskStatusSql } from "@scarn/core/tasks/task/infra/task-effective-status-sql";
-import { scheduleConcurrencySchema } from "@scarn/sdk/contracts/automation-document";
+import {
+  type ScheduleConcurrency,
+  scheduleConcurrencySchema,
+} from "@scarn/sdk/contracts/automation-document";
 import type {
   AutomationScheduleRepo,
   AutomationScheduleSummaryRecord,
@@ -37,7 +40,7 @@ const rowToEntity = (row: ScheduleRow): AutomationScheduleEntity =>
     key: row.key,
     cron: row.cron,
     timezone: row.timezone,
-    concurrency: scheduleConcurrencySchema.parse(row.concurrencyJson),
+    concurrency: { max: row.concurrencyMax, waiting: row.concurrencyWaiting },
     nextRunAt: row.nextRunAt,
     lastFiredAt: row.lastFiredAt,
     lastSkippedAt: row.lastSkippedAt,
@@ -46,6 +49,12 @@ const rowToEntity = (row: ScheduleRow): AutomationScheduleEntity =>
     lastErrorAt: row.lastErrorAt,
     removedAt: row.removedAt,
   });
+
+/** The concurrency columns for a write, after the write schema's checks. */
+const concurrencyColumns = (concurrency: ScheduleConcurrency) => {
+  const { max, waiting } = scheduleConcurrencySchema.parse(concurrency);
+  return { concurrencyMax: max, concurrencyWaiting: waiting };
+};
 
 const dueAt = (now: Date) =>
   and(
@@ -221,7 +230,7 @@ export class DrizzleAutomationScheduleRepo implements AutomationScheduleRepo {
         key: schedule.key,
         cron: schedule.cron,
         timezone: schedule.timezone,
-        concurrencyJson: schedule.concurrency,
+        ...concurrencyColumns(schedule.concurrency),
         nextRunAt: schedule.nextRunAt,
         removedAt: schedule.removedAt,
       })
@@ -244,7 +253,7 @@ export class DrizzleAutomationScheduleRepo implements AutomationScheduleRepo {
       .set({
         cron: schedule.cron,
         timezone: schedule.timezone,
-        concurrencyJson: schedule.concurrency,
+        ...concurrencyColumns(schedule.concurrency),
         nextRunAt: schedule.nextRunAt,
         removedAt: schedule.removedAt,
         updatedAt: new Date(),

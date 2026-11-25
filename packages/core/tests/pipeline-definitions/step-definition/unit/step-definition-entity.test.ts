@@ -102,6 +102,49 @@ describe("step definition entity concurrency", () => {
   });
 });
 
+describe("step definition entity write rules", () => {
+  concurrentTest("rehydrate trusts stored props the write rules refuse", () => {
+    const stored = {
+      ...StepDefinitionEntity.create(baseProps()).toJSON(),
+      errors: ["Dup", "Dup"],
+      retry: [{ on: ["Never.Declared"], maxAttempts: 0 }],
+      concurrency: { max: 0, waiting: -1 },
+    };
+
+    const entity = StepDefinitionEntity.rehydrate(stored);
+
+    expect(entity.errors).toEqual(["Dup", "Dup"]);
+    expect(entity.retry).toEqual([{ on: ["Never.Declared"], maxAttempts: 0 }]);
+    expect(entity.concurrency).toEqual({ max: 0, waiting: -1 });
+  });
+
+  concurrentTest(
+    "update applies the write rules and keeps id and createdAt",
+    () => {
+      const createdAt = new Date("2026-04-26T12:00:00.000Z");
+      const entity = StepDefinitionEntity.create({ ...baseProps(), createdAt });
+      const props = {
+        ...entity.toJSON(),
+        id: createUuidV7(),
+        createdAt: new Date("2030-01-01T00:00:00.000Z"),
+      };
+
+      const updated = entity.update({ ...props, name: "  Renamed  " });
+
+      expect(updated.id).toBe(entity.id);
+      expect(updated.createdAt).toEqual(createdAt);
+      expect(updated.name).toBe("Renamed");
+      expect(() =>
+        entity.update({ ...props, concurrency: { max: 0, waiting: 0 } }),
+      ).toThrow(
+        expect.objectContaining({
+          code: "STEP_DEFINITION_CONCURRENCY_MAX_INVALID",
+        }),
+      );
+    },
+  );
+});
+
 describe("step definition contract mapper", () => {
   concurrentTest("a null config reads back as the defaults", () => {
     const contract = contractFor();

@@ -367,11 +367,10 @@ export function failedRunOverrule(
   if (!end || end.fromVisitId === null) return null;
   const from = execution.visits.find((visit) => visit.id === end.fromVisitId);
   if (from?.nodeKind !== "step" || from.status !== "succeeded") return null;
-  if (end.transition.kind !== "route" && end.transition.kind !== "otherwise") {
-    return null;
-  }
+  const { kind, index } = end.transition;
+  if (!(kind === "route" || kind === "otherwise")) return null;
   const next = nodeNext(version, from.nodeId);
-  const reached = { kind: end.transition.kind, index: end.transition.index };
+  const reached: RouteRef = { kind, index };
   if (!isRouteOverridable(next, reached)) return null;
   const others = routeEntries(next).filter(
     (entry) => !sameRoute(entry, reached) && isRouteOverridable(next, entry),

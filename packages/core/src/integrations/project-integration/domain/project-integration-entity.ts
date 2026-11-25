@@ -6,11 +6,11 @@
  * cannot be built. Callers narrow on `.kind`.
  *
  * `ProjectIntegrationEntity` is also a companion value whose
- * `create`/`rehydrate` dispatch on `kind`. `rehydrate` is the one place that
- * rejects a stored row whose installation id or scope doesn't fit its kind.
+ * `create`/`rehydrate`/`fromStored` dispatch on `kind`. The stored reader
+ * (`contracts/project-integration-scope-stored.ts`) rejects a scope that
+ * doesn't fit its kind; `fromStored` rejects an installation id that doesn't.
  * See `entities/project-integration-entity-base.ts` for the shared lifecycle.
  */
-import { z } from "zod";
 import { CoreValidationError } from "@scarn/core/lib/errors";
 import { assertNever } from "@scarn/core/lib/assert-never";
 import {
@@ -30,6 +30,11 @@ import {
   type CreateBitbucketProjectIntegrationProps,
 } from "../entities/bitbucket-project-integration-entity";
 import type { ProjectIntegrationRowProps } from "../entities/project-integration-entity-base";
+import {
+  CURRENT_PROJECT_INTEGRATION_SCHEMA_VERSION,
+  readStoredProjectIntegrationScope,
+  type StoredProjectIntegrationScope,
+} from "../contracts/project-integration-scope-stored";
 
 export {
   PROJECT_INTEGRATION_STATUSES,
@@ -122,52 +127,21 @@ export const isBitbucketIntegration = (
 ): integration is BitbucketProjectIntegration =>
   integration.kind === "bitbucket";
 
-const storedGitHubScopeSchema = z
-  .object({
-    repos: z.array(
-      z.object({ id: z.number().int(), fullName: z.string() }).strict(),
-    ),
-  })
-  .strict();
-
-const storedBitbucketScopeSchema = z
-  .object({
-    repos: z.array(
-      z
-        .object({
-          workspace: z.string(),
-          slug: z.string(),
-          fullName: z.string(),
-        })
-        .strict(),
-    ),
-  })
-  .strict();
-
-const storedJiraScopeSchema = z
-  .object({
-    baseUrl: z.string(),
-    projectKeys: z.array(z.string()),
-  })
-  .strict();
-
 const rowInvalid = (kind: string, reason: string) =>
   new CoreValidationError(
     `Project integration row of kind '${kind}' is invalid: ${reason}`,
     "PROJECT_INTEGRATION_ROW_INVALID",
   );
 
-const parseStoredScope = <T>(
-  schema: z.ZodType<T>,
-  kind: string,
-  externalScopeJson: ProjectIntegrationRowProps["externalScopeJson"],
-): T => {
-  const parsed = schema.safeParse(externalScopeJson);
-  if (!parsed.success) {
-    throw rowInvalid(kind, "scope does not fit the kind");
-  }
-  return parsed.data;
-};
+/**
+ * The flat row with its scope already read through
+ * `readStoredProjectIntegrationScope`, so `kind` and `scope` agree.
+ */
+export type StoredProjectIntegrationRowProps = Omit<
+  ProjectIntegrationRowProps,
+  "kind" | "externalScopeJson"
+> &
+  StoredProjectIntegrationScope;
 
 export const ProjectIntegrationEntity = {
   /** Constructs the variant matching `props.kind`. */
@@ -186,61 +160,62 @@ export const ProjectIntegrationEntity = {
     }
   },
 
-  /** Rehydrates the variant matching `row.kind` from the flat row shape. */
+  /**
+   * Rehydrates the variant matching `row.kind` from the flat row shape,
+   * reading its scope as the current stored version.
+   */
   rehydrate(row: ProjectIntegrationRowProps): ProjectIntegrationEntity {
-    const { kind, installationId, externalScopeJson, ...base } = row;
-    switch (kind) {
-      case "github_app":
+    const { kind, externalScopeJson, ...rest } = row;
+    const read = readStoredProjectIntegrationScope(
+      CURRENT_PROJECT_INTEGRATION_SCHEMA_VERSION,
+      { kind, externalScopeJson },
+    );
+    if (!read.success) {
+      throw rowInvalid(kind, "scope does not fit the kind");
+    }
+    return ProjectIntegrationEntity.fromStored({ ...rest, ...read.value });
+  },
+
+  /**
+   * Rehydrates the variant from a row whose scope the stored reader already
+   * parsed. Write-time scope rules are not re-applied.
+   */
+  fromStored(row: StoredProjectIntegrationRowProps): ProjectIntegrationEntity {
+    const { installationId, ...base } = row;
+    switch (base.kind) {
+      case "github_app": {
+        const { kind, ...props } = base;
         if (installationId === null) {
           throw rowInvalid(kind, "installationId is required");
         }
         return GitHubAppProjectIntegration.rehydrate({
-          ...base,
+          ...props,
           installationId,
-          scope: parseStoredScope(
-            storedGitHubScopeSchema,
-            kind,
-            externalScopeJson,
-          ),
         });
-      case "github_token":
+      }
+      case "github_token": {
+        const { kind, ...props } = base;
         if (installationId !== null) {
           throw rowInvalid(kind, "installationId is not allowed");
         }
-        return GitHubTokenProjectIntegration.rehydrate({
-          ...base,
-          scope: parseStoredScope(
-            storedGitHubScopeSchema,
-            kind,
-            externalScopeJson,
-          ),
-        });
-      case "bitbucket":
+        return GitHubTokenProjectIntegration.rehydrate(props);
+      }
+      case "bitbucket": {
+        const { kind, ...props } = base;
         if (installationId !== null) {
           throw rowInvalid(kind, "installationId is not allowed");
         }
-        return BitbucketProjectIntegration.rehydrate({
-          ...base,
-          scope: parseStoredScope(
-            storedBitbucketScopeSchema,
-            kind,
-            externalScopeJson,
-          ),
-        });
-      case "jira":
+        return BitbucketProjectIntegration.rehydrate(props);
+      }
+      case "jira": {
+        const { kind, ...props } = base;
         if (installationId !== null) {
           throw rowInvalid(kind, "installationId is not allowed");
         }
-        return JiraProjectIntegration.rehydrate({
-          ...base,
-          scope: parseStoredScope(
-            storedJiraScopeSchema,
-            kind,
-            externalScopeJson,
-          ),
-        });
+        return JiraProjectIntegration.rehydrate(props);
+      }
       default:
-        throw rowInvalid(String(kind), "unsupported kind");
+        return assertNever(base);
     }
   },
 };

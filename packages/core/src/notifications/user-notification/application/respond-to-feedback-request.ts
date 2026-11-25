@@ -4,8 +4,8 @@ import {
   ResourceNotFoundError,
 } from "@scarn/core/lib/errors";
 import type { UserAuthorizationService } from "@scarn/core/access/authorization/application/user-authorization-service";
-import type { AnyJsonObject } from "@scarn/core/common/contracts/json";
 import type { UserNotificationContract } from "../contracts/user-notification-contracts";
+import { withStoredUserNotificationPayloadKeys } from "../contracts/user-notification-payload-stored";
 import type { UserNotificationRepo } from "./user-notification-repo";
 import { userNotificationToContract } from "./user-notification-contract-mapper";
 
@@ -54,14 +54,16 @@ export const respondToFeedbackRequest = async (
   }
 
   const now = new Date();
-  const payload: AnyJsonObject = {
-    ...(notification.payloadJson ?? {}),
-    response: {
-      answer: input.answer,
-      respondedAt: now.toISOString(),
-      respondedBy: deps.userAuthz.actorId,
+  const payload = withStoredUserNotificationPayloadKeys(
+    notification.payloadJson,
+    {
+      response: {
+        answer: input.answer,
+        respondedAt: now.toISOString(),
+        respondedBy: deps.userAuthz.actorId,
+      },
     },
-  };
+  );
 
   const updated = notification.withPayload(payload, now);
   await deps.userNotificationRepo.save(updated);

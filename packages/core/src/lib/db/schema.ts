@@ -6,6 +6,7 @@ import {
   boolean,
   check,
   customType,
+  doublePrecision,
   index,
   integer,
   jsonb,
@@ -564,32 +565,6 @@ export const workItemComments = appSchema.table(
   ],
 );
 
-export const workItemSources = appSchema.table(
-  "work_item_sources",
-  {
-    id: uuid("id").primaryKey(),
-    projectId: uuid("project_id")
-      .references(() => projects.id, { onDelete: "cascade" })
-      .notNull(),
-    kind: text("kind").notNull(),
-    name: text("name").notNull(),
-    isActive: boolean("is_active").notNull().default(true),
-    credentials: jsonb("credentials").notNull(),
-    config: jsonb("config").notNull(),
-    lastSyncedAt: timestamp("last_synced_at", { withTimezone: true }),
-    lastCursor: text("last_cursor"),
-    lastSyncStatus: text("last_sync_status"),
-    lastSyncError: text("last_sync_error"),
-    createdAt: createdAtColumn(),
-    updatedAt: updatedAtColumn(),
-  },
-  (table) => [
-    index("work_item_sources_project_id_idx").on(table.projectId),
-    index("work_item_sources_kind_idx").on(table.kind),
-    index("work_item_sources_is_active_idx").on(table.isActive),
-  ],
-);
-
 export const workItemProjectionFingerprints = appSchema.table(
   "work_item_projection_fingerprints",
   {
@@ -683,6 +658,8 @@ export const stepDefinitions = appSchema.table(
     // item, up to `waiting` more in `waiting_for_concurrency_slot`; null for
     // no limit.
     concurrencyJson: jsonb("concurrency_json"),
+    // Version of the row's JSON columns; see `step-definition-stored.ts`.
+    schemaVersion: integer("schema_version").notNull(),
     taskExecutionConfigId: uuid("task_execution_config_id").references(
       () => taskExecutionConfigs.id,
       { onDelete: "restrict" },
@@ -701,6 +678,10 @@ export const stepDefinitions = appSchema.table(
     index("step_definitions_project_key_idx").on(table.projectId, table.key),
     index("step_definitions_task_execution_config_id_idx").on(
       table.taskExecutionConfigId,
+    ),
+    check(
+      "step_definitions_schema_version_check",
+      sql`${table.schemaVersion} >= 1`,
     ),
   ],
 );
@@ -809,6 +790,10 @@ export const pipelineGraphVersions = appSchema.table(
       table.version,
     ),
     index("pipeline_graph_versions_graph_id_idx").on(table.pipelineGraphId),
+    check(
+      "pipeline_graph_versions_schema_version_check",
+      sql`${table.schemaVersion} >= 1`,
+    ),
   ],
 );
 
@@ -899,9 +884,8 @@ export const automationSchedules = appSchema.table(
     key: text("key").notNull(),
     cron: text("cron").notNull(),
     timezone: text("timezone").notNull(),
-    concurrencyJson: jsonb("concurrency_json")
-      .$type<{ max: number; waiting: number }>()
-      .notNull(),
+    concurrencyMax: integer("concurrency_max").notNull(),
+    concurrencyWaiting: integer("concurrency_waiting").notNull(),
     nextRunAt: timestamp("next_run_at", { withTimezone: true }).notNull(),
     lastFiredAt: timestamp("last_fired_at", { withTimezone: true }),
     lastSkippedAt: timestamp("last_skipped_at", { withTimezone: true }),
@@ -991,6 +975,8 @@ export const tasks = appSchema.table(
     status: taskLifecycleStatusEnum("status").notNull(),
     resultJson: jsonb("result_json"),
     errorJson: jsonb("error_json"),
+    // Version of the row's JSON columns; see `task-stored.ts`.
+    schemaVersion: integer("schema_version").notNull(),
     // References identity.user.id by value.
     startedByUserId: uuid("started_by_user_id"),
     // The automation that started the Task (or its pipeline run); null once
@@ -1045,6 +1031,7 @@ export const tasks = appSchema.table(
       "tasks_owner_check",
       sql`${table.workItemId} IS NOT NULL OR ${table.conversationId} IS NOT NULL OR ${table.startedByScheduleId} IS NOT NULL`,
     ),
+    check("tasks_schema_version_check", sql`${table.schemaVersion} >= 1`),
   ],
 );
 
@@ -1613,7 +1600,9 @@ export const laneGroups = appSchema.table(
     kind: laneGroupKindEnum("kind").notNull(),
     laneCount: integer("lane_count").notNull(),
     maxConcurrency: integer("max_concurrency"),
-    toleratedFailuresJson: jsonb("tolerated_failures").notNull(),
+    // `{ count }` or `{ percent }`: exactly one of the two is set.
+    toleratedFailuresCount: integer("tolerated_failures_count"),
+    toleratedFailuresPercent: doublePrecision("tolerated_failures_percent"),
     status: laneGroupStatusEnum("status").notNull(),
     createdAt: createdAtColumn(),
   },
@@ -1621,6 +1610,10 @@ export const laneGroups = appSchema.table(
     index("lane_groups_pipeline_run_id_idx").on(table.pipelineRunId),
     index("lane_groups_spawned_by_visit_id_idx").on(table.spawnedByVisitId),
     index("lane_groups_parent_lane_id_idx").on(table.parentLaneId),
+    check(
+      "lane_groups_tolerated_failures_check",
+      sql`num_nonnulls(${table.toleratedFailuresCount}, ${table.toleratedFailuresPercent}) = 1`,
+    ),
   ],
 );
 
@@ -1648,10 +1641,12 @@ export const lanes = appSchema.table(
       (): AnyPgColumn => nodeVisits.id,
       { onDelete: "set null" },
     ),
+    schemaVersion: integer("schema_version").notNull(),
     createdAt: createdAtColumn(),
   },
   (table) => [
     uniqueIndex("lanes_group_index_unique").on(table.laneGroupId, table.index),
+    check("lanes_schema_version_check", sql`${table.schemaVersion} >= 1`),
   ],
 );
 
@@ -1694,8 +1689,10 @@ export const nodeVisits = appSchema.table(
     resolvedAt: timestamp("resolved_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
     completedAt: timestamp("completed_at", { withTimezone: true }),
+    schemaVersion: integer("schema_version").notNull(),
   },
   (table) => [
+    check("node_visits_schema_version_check", sql`${table.schemaVersion} >= 1`),
     index("node_visits_pipeline_run_id_idx").on(table.pipelineRunId),
     index("node_visits_pipeline_run_node_id_idx").on(
       table.pipelineRunId,
@@ -1783,6 +1780,7 @@ export const projectIntegrations = appSchema.table(
     kind: projectIntegrationKindEnum("kind").notNull(),
     installationId: text("installation_id"),
     externalScopeJson: jsonb("external_scope_json").notNull(),
+    schemaVersion: integer("schema_version").notNull(),
     status: projectIntegrationStatusEnum("status").notNull().default("active"),
     lastSyncedAt: timestamp("last_synced_at", { withTimezone: true }),
     lastError: text("last_error"),
@@ -1804,6 +1802,10 @@ export const projectIntegrations = appSchema.table(
     index("project_integrations_project_id_idx").on(table.projectId),
     index("project_integrations_installation_id_idx").on(table.installationId),
     index("project_integrations_sync_secret_id_idx").on(table.syncSecretId),
+    check(
+      "project_integrations_schema_version_check",
+      sql`${table.schemaVersion} >= 1`,
+    ),
     check(
       "project_integrations_kind_installation_check",
       sql`(${table.kind} = 'github_app') = (${table.installationId} IS NOT NULL)`,
@@ -1911,6 +1913,7 @@ export const secrets = appSchema.table(
     valueKind: secretValueKindEnum("value_kind").notNull().default("static"),
     name: text("name").notNull(),
     metadataJson: jsonb("metadata_json").notNull(),
+    schemaVersion: integer("schema_version").notNull(),
     ciphertext: bytea("ciphertext").notNull(),
     iv: bytea("iv").notNull(),
     authTag: bytea("auth_tag").notNull(),
@@ -1937,6 +1940,7 @@ export const secrets = appSchema.table(
       "secrets_exactly_one_owner_check",
       sql`num_nonnulls(${table.ownerUserId}, ${table.ownerProjectId}) = 1`,
     ),
+    check("secrets_schema_version_check", sql`${table.schemaVersion} >= 1`),
   ],
 );
 

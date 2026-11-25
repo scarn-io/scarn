@@ -1,0 +1,269 @@
+{
+  "definitionJson": {
+    "schemaVersion": 1,
+    "key": "fixture-release",
+    "title": "Fixture release",
+    "start": { "to": "plan" },
+    "nodes": {
+      "plan": {
+        "kind": "step",
+        "title": "Plan release",
+        "step": "plan-release",
+        "next": {
+          "routes": [
+            {
+              "to": "check",
+              "each": {
+                "over": "result.services",
+                "toleratedFailures": { "count": 1 }
+              },
+              "args": { "name": "item.name" }
+            }
+          ]
+        }
+      },
+      "check": {
+        "kind": "step",
+        "title": "Check service",
+        "step": "check-service",
+        "next": {
+          "routes": [
+            {
+              "to": "review",
+              "args": { "checks": { "list": ["result"] } },
+              "partial": true
+            }
+          ]
+        }
+      },
+      "review": {
+        "kind": "step",
+        "title": "Review release",
+        "step": "review-release",
+        "next": {
+          "routes": [
+            {
+              "when": {
+                "path": "result.blocked",
+                "op": "equal",
+                "value": true
+              },
+              "to": "blocked",
+              "label": "Blocked",
+              "overridable": true
+            }
+          ],
+          "otherwise": { "to": "shipped" }
+        }
+      },
+      "shipped": { "kind": "succeed", "title": "Shipped" },
+      "blocked": {
+        "kind": "fail",
+        "title": "Blocked",
+        "error": "ReleaseBlocked"
+      }
+    }
+  },
+  "run": {
+    "status": "succeeded",
+    "endNodeId": "shipped",
+    "errorJson": null
+  },
+  "visits": [
+    {
+      "key": "plan-first",
+      "schemaVersion": 1,
+      "nodeId": "plan",
+      "nodeKind": "step",
+      "from": null,
+      "lane": null,
+      "fromLaneGroup": null,
+      "transitionJson": { "kind": "start", "index": 0 },
+      "routingJson": null,
+      "status": "superseded",
+      "inputJson": { "title": "Example release" },
+      "resultJson": null,
+      "errorJson": {
+        "name": "StepFailed",
+        "message": "Planner lost its lease mid-run"
+      },
+      "minute": 1
+    },
+    {
+      "key": "plan-rerun",
+      "schemaVersion": 1,
+      "nodeId": "plan",
+      "nodeKind": "step",
+      "from": null,
+      "lane": null,
+      "fromLaneGroup": null,
+      "transitionJson": { "kind": "start", "index": 0 },
+      "routingJson": {
+        "checked": [{ "index": 0, "when": null, "matched": true }],
+        "taken": [{ "kind": "route", "index": 0 }]
+      },
+      "status": "succeeded",
+      "inputJson": { "title": "Example release" },
+      "resultJson": { "services": [{ "name": "api" }, { "name": "web" }] },
+      "errorJson": null,
+      "minute": 2
+    },
+    {
+      "key": "check-api",
+      "schemaVersion": 1,
+      "nodeId": "check",
+      "nodeKind": "step",
+      "from": "plan-rerun",
+      "lane": "lane-api",
+      "fromLaneGroup": null,
+      "transitionJson": { "kind": "route", "index": 0 },
+      "routingJson": {
+        "checked": [{ "index": 0, "when": null, "matched": true }],
+        "taken": [{ "kind": "route", "index": 0 }]
+      },
+      "status": "succeeded",
+      "inputJson": { "name": "api" },
+      "resultJson": { "healthy": true },
+      "errorJson": null,
+      "minute": 3
+    },
+    {
+      "key": "check-web",
+      "schemaVersion": 1,
+      "nodeId": "check",
+      "nodeKind": "step",
+      "from": "plan-rerun",
+      "lane": "lane-web",
+      "fromLaneGroup": null,
+      "transitionJson": { "kind": "route", "index": 0 },
+      "routingJson": null,
+      "status": "failed",
+      "inputJson": { "name": "web" },
+      "resultJson": null,
+      "errorJson": {
+        "name": "StepFailed",
+        "message": "Health probe timed out for web",
+        "cause": { "attempts": 3 }
+      },
+      "minute": 3
+    },
+    {
+      "key": "review",
+      "schemaVersion": 1,
+      "nodeId": "review",
+      "nodeKind": "step",
+      "from": null,
+      "lane": null,
+      "fromLaneGroup": "services",
+      "transitionJson": { "kind": "merge", "index": 0 },
+      "routingJson": {
+        "checked": [
+          {
+            "index": 0,
+            "when": {
+              "kind": "compare",
+              "op": "equal",
+              "left": { "path": "result.blocked", "value": true },
+              "right": { "value": true },
+              "result": true
+            },
+            "matched": true
+          }
+        ],
+        "taken": [{ "kind": "otherwise", "index": 0 }],
+        "overrules": [
+          {
+            "from": [{ "kind": "route", "index": 0 }],
+            "to": [{ "kind": "otherwise", "index": 0 }],
+            "byUserId": "019a0000-0000-7000-8000-000000000001",
+            "at": "2026-11-01T00:05:00.000Z",
+            "reason": "Example: the advisory is a false positive",
+            "missingArgs": []
+          }
+        ]
+      },
+      "status": "succeeded",
+      "inputJson": { "checks": [{ "healthy": true }] },
+      "resultJson": { "blocked": true },
+      "errorJson": null,
+      "minute": 4
+    },
+    {
+      "key": "blocked",
+      "schemaVersion": 1,
+      "nodeId": "blocked",
+      "nodeKind": "fail",
+      "from": "review",
+      "lane": null,
+      "fromLaneGroup": null,
+      "transitionJson": { "kind": "route", "index": 0 },
+      "routingJson": null,
+      "status": "superseded",
+      "inputJson": {},
+      "resultJson": null,
+      "errorJson": null,
+      "minute": 5
+    },
+    {
+      "key": "shipped",
+      "schemaVersion": 1,
+      "nodeId": "shipped",
+      "nodeKind": "succeed",
+      "from": "review",
+      "lane": null,
+      "fromLaneGroup": null,
+      "transitionJson": { "kind": "otherwise", "index": 0 },
+      "routingJson": null,
+      "status": "succeeded",
+      "inputJson": {},
+      "resultJson": null,
+      "errorJson": null,
+      "minute": 6
+    }
+  ],
+  "laneGroups": [
+    {
+      "key": "services",
+      "spawnedBy": "plan-rerun",
+      "parentLane": null,
+      "kind": "each",
+      "laneCount": 2,
+      "maxConcurrency": null,
+      "toleratedFailuresCount": 1,
+      "toleratedFailuresPercent": null,
+      "status": "merged"
+    }
+  ],
+  "lanes": [
+    {
+      "key": "lane-api",
+      "group": "services",
+      "schemaVersion": 1,
+      "index": 0,
+      "itemJson": { "name": "api" },
+      "routeJson": { "kind": "route", "index": 0 },
+      "origin": "split",
+      "status": "arrived",
+      "arrivedAtNodeId": "review",
+      "arrivalArgsJson": { "checks": [{ "healthy": true }] },
+      "arrivedFrom": "check-api",
+      "arrivalTransitionJson": { "kind": "route", "index": 0 },
+      "mergedInto": "review"
+    },
+    {
+      "key": "lane-web",
+      "group": "services",
+      "schemaVersion": 1,
+      "index": 1,
+      "itemJson": { "name": "web" },
+      "routeJson": { "kind": "route", "index": 0 },
+      "origin": "split",
+      "status": "failed",
+      "arrivedAtNodeId": null,
+      "arrivalArgsJson": null,
+      "arrivedFrom": null,
+      "arrivalTransitionJson": null,
+      "mergedInto": null
+    }
+  ]
+}

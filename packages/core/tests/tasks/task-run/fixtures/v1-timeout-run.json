@@ -1,0 +1,9 @@
+{
+  "status": "timeout",
+  "resultJson": null,
+  "errorJson": {
+    "code": "TASK_TIMED_OUT",
+    "message": "Example task exceeded its execution timeout",
+    "executionDeadlineAt": "2026-01-01T00:00:00.000Z"
+  }
+}

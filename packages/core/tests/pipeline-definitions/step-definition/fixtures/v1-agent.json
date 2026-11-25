@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "kind": "user_defined",
+  "prompt": "Summarize the work item.",
+  "entrypointJson": null,
+  "toolCallJson": null,
+  "inputSchemaJson": {
+    "type": "object",
+    "properties": { "title": { "type": "string" } }
+  },
+  "resultSchemaJson": {
+    "type": "object",
+    "required": ["summary"],
+    "properties": { "summary": { "type": "string" } }
+  },
+  "errorsJson": [],
+  "retryJson": [],
+  "grantsJson": [],
+  "concurrencyJson": null
+}

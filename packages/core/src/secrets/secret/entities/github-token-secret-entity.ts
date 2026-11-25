@@ -3,6 +3,7 @@ import {
   type UuidV7,
 } from "@scarn/core/common/contracts/uuid-v7";
 import {
+  normalizeSecretName,
   SecretEntityBase,
   type SecretEntityBaseProps,
   type SecretRowProps,
@@ -44,7 +45,7 @@ export class GitHubTokenSecretEntity extends SecretEntityBase<UserSecretOwner> {
   private constructor(props: GitHubTokenSecretEntityProps) {
     const { metadata, expiresAt, ...baseProps } = props;
     super(baseProps, "github_token");
-    this.metadata = { login: normalizeLogin(metadata.login) };
+    this.metadata = metadata;
     this.expiresAt = expiresAt;
   }
 
@@ -57,6 +58,8 @@ export class GitHubTokenSecretEntity extends SecretEntityBase<UserSecretOwner> {
     }
     return new GitHubTokenSecretEntity({
       ...rest,
+      name: normalizeSecretName(rest.name),
+      metadata: { login: normalizeLogin(rest.metadata.login) },
       id: id ?? createUuidV7(),
       lastUsedAt: null,
       createdAt: now,

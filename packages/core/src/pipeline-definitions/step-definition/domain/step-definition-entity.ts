@@ -256,6 +256,41 @@ export class StepDefinitionEntity {
   public readonly updatedAt: Date | null | undefined;
 
   private constructor(props: StepDefinitionEntityProps) {
+    this.id = parseUuidV7(props.id);
+    this.projectId = parseUuidV7(props.projectId);
+    this.key = props.key;
+    this.name = props.name;
+    this.description = props.description ?? null;
+    this.prompt = props.prompt ?? null;
+    this.version = props.version;
+    this.kind = props.kind;
+    this.entrypointJson = props.entrypointJson ?? null;
+    this.toolCallJson = props.toolCallJson ?? null;
+    this.inputSchemaJson = props.inputSchemaJson;
+    this.resultSchemaJson = props.resultSchemaJson;
+    this.errors = props.errors ?? [];
+    this.retry = props.retry ?? [];
+    this.grants = props.grants ?? [];
+    this.maxTurns = props.maxTurns ?? null;
+    this.concurrency = props.concurrency ?? null;
+    this.taskExecutionConfigId =
+      props.taskExecutionConfigId === null
+        ? null
+        : parseUuidV7(props.taskExecutionConfigId);
+    this.status = props.status;
+    this.createdAt = normalizeDate(props.createdAt);
+    this.updatedAt = normalizeDate(props.updatedAt);
+  }
+
+  /**
+   * Applies the write rules to new or changed props and returns them
+   * normalized (trimmed names, copied lists, parsed grants). `rehydrate`
+   * skips this: a stored step definition is trusted as written, so
+   * tightening a rule never makes one unreadable.
+   */
+  private static validated(
+    props: StepDefinitionEntityProps,
+  ): StepDefinitionEntityProps {
     const key = props.key.trim();
     const name = props.name.trim();
 
@@ -376,41 +411,50 @@ export class StepDefinitionEntity {
       }
     }
 
-    this.id = parseUuidV7(props.id);
-    this.projectId = parseUuidV7(props.projectId);
-    this.key = key;
-    this.name = name;
-    this.description = props.description?.trim() || null;
-    this.prompt = props.prompt?.trim() || null;
-    this.version = props.version;
-    this.kind = props.kind;
-    this.entrypointJson = props.entrypointJson ?? null;
-    this.toolCallJson = props.toolCallJson ?? null;
-    this.inputSchemaJson = props.inputSchemaJson;
-    this.resultSchemaJson = props.resultSchemaJson;
-    this.errors = errors;
-    this.retry = retry;
-    this.grants = parsedGrants.data;
-    this.maxTurns = maxTurns;
-    this.concurrency = concurrency;
-    this.taskExecutionConfigId =
-      props.taskExecutionConfigId === null
-        ? null
-        : parseUuidV7(props.taskExecutionConfigId);
-    this.status = props.status;
-    this.createdAt = normalizeDate(props.createdAt);
-    this.updatedAt = normalizeDate(props.updatedAt);
+    return {
+      ...props,
+      key,
+      name,
+      description: props.description?.trim() || null,
+      prompt: props.prompt?.trim() || null,
+      entrypointJson: props.entrypointJson ?? null,
+      toolCallJson: props.toolCallJson ?? null,
+      errors,
+      retry,
+      grants: parsedGrants.data,
+      maxTurns,
+      concurrency,
+    };
   }
 
   static create(props: CreateStepDefinitionEntityProps): StepDefinitionEntity {
-    return new StepDefinitionEntity({
-      ...props,
-      id: props.id ?? createUuidV7(),
-    });
+    return new StepDefinitionEntity(
+      StepDefinitionEntity.validated({
+        ...props,
+        id: props.id ?? createUuidV7(),
+      }),
+    );
   }
 
+  /** Trusts `props` as stored; see {@link StepDefinitionEntity.validated}. */
   static rehydrate(props: StepDefinitionEntityProps): StepDefinitionEntity {
     return new StepDefinitionEntity(props);
+  }
+
+  /**
+   * Replaces this step definition's fields, applying the write rules. The id
+   * and `createdAt` are kept.
+   */
+  update(
+    props: Omit<StepDefinitionEntityProps, "id" | "createdAt">,
+  ): StepDefinitionEntity {
+    return new StepDefinitionEntity(
+      StepDefinitionEntity.validated({
+        ...props,
+        id: this.id,
+        createdAt: this.createdAt,
+      }),
+    );
   }
 
   archive(now: Date): StepDefinitionEntity {

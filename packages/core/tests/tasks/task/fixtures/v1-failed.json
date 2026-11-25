@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "kind": "agent",
+  "owner": "workItem",
+  "status": "failed",
+  "prompt": "Fix the failing build.",
+  "entrypointJson": null,
+  "toolCallJson": null,
+  "resultSchemaJson": null,
+  "inputJson": null,
+  "retryJson": null,
+  "environmentSelectionJson": null,
+  "grantsJson": [{ "resource": "workItem", "action": "read", "scope": "self" }],
+  "resultJson": null,
+  "errorJson": {
+    "code": "SCARN_WORKER_EXECUTION_FAILED",
+    "name": "Scarn.StepFailed",
+    "message": "Example fixture failure: the build broke",
+    "cause": { "exitCode": 1 }
+  }
+}

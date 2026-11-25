@@ -1,4 +1,5 @@
 import { and, asc, eq } from "drizzle-orm";
+import { noopLogger, type Logger } from "@scarn/observability/logging";
 import { getDb } from "@scarn/core/lib/db";
 import type { DbExecutor } from "@scarn/core/lib/db/db-executor";
 import { automations, workItemAutomations } from "@scarn/core/lib/db/schema";
@@ -31,6 +32,8 @@ const byIds = (workItemId: WorkItemId, automationId: UuidV7) =>
   );
 
 export class DrizzleWorkItemAutomationRepo implements WorkItemAutomationRepo {
+  constructor(private readonly logger: Logger = noopLogger) {}
+
   async load(
     workItemId: WorkItemId,
     automationId: UuidV7,
@@ -62,6 +65,7 @@ export class DrizzleWorkItemAutomationRepo implements WorkItemAutomationRepo {
     const resolved = await resolveAutomations(
       rows.map((row) => row.automation),
       db,
+      this.logger,
     );
     return rows.flatMap((row, index) => {
       const entry = resolved[index];

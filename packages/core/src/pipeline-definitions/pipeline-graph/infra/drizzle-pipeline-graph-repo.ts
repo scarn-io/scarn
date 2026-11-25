@@ -8,6 +8,7 @@ import {
 } from "@scarn/core/lib/db/schema";
 import type { UuidV7 } from "@scarn/core/common/contracts/uuid-v7";
 import { PersistenceError } from "@scarn/core/lib/errors";
+import { noopLogger, type Logger } from "@scarn/observability/logging";
 import type {
   PipelineGraphRepo,
   PipelineStepUse,
@@ -32,6 +33,8 @@ const handleRowToEntity = (row: HandleRow): PipelineGraphEntity =>
   });
 
 export class DrizzlePipelineGraphRepo implements PipelineGraphRepo {
+  constructor(private readonly logger: Logger = noopLogger) {}
+
   private async resolve(
     rows: readonly HandleRow[],
     db: DbExecutor,
@@ -46,7 +49,11 @@ export class DrizzlePipelineGraphRepo implements PipelineGraphRepo {
             .select()
             .from(pipelineGraphVersions)
             .where(inArray(pipelineGraphVersions.id, currentVersionIds));
-    const versions = await loadPipelineGraphVersions(versionRows, db);
+    const versions = await loadPipelineGraphVersions(
+      versionRows,
+      db,
+      this.logger,
+    );
     const versionsById = new Map<string, PipelineGraphVersionEntity>(
       versions.map((version) => [version.id, version]),
     );

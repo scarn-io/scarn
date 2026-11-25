@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 1,
+  "itemJson": { "path": "src/example.ts" },
+  "routeJson": { "kind": "route", "index": 0 },
+  "arrivalArgsJson": { "summary": "Example summary" },
+  "arrivalTransitionJson": { "kind": "route", "index": 1 }
+}

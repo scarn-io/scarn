@@ -22,11 +22,18 @@ import {
 import { projectMemberships, taskRuns, tasks } from "@scarn/core/lib/db/schema";
 import { parseUuidV7, type UuidV7 } from "@scarn/core/common/contracts/uuid-v7";
 import { PersistenceError } from "@scarn/core/lib/errors";
+import {
+  readRowsSkippingUnreadable,
+  type StoredReadResult,
+} from "@scarn/core/lib/db/stored-json";
+import { noopLogger, type Logger } from "@scarn/observability/logging";
+import { readStoredTaskInstructions } from "@scarn/core/tasks/task/contracts/task-stored";
 import type { ProjectPermission } from "@scarn/core/projects/project/domain/project-permission";
 import { rolesGrantingPermission } from "@scarn/core/projects/project/domain/project-role";
 import type { TaskRunRepo } from "../application/task-run-repo";
 import { TaskRunEntity, type TaskRunRowProps } from "../domain/task-run-entity";
 import { previousTaskRunIdSql } from "./previous-task-run-id-sql";
+import { readStoredTaskRun } from "../contracts/task-run-stored";
 
 /**
  * A `task_runs` row with the instructions it runs, read from its Task. The
@@ -43,6 +50,7 @@ const taskInstructionColumns = {
   inputJson: tasks.inputJson,
   heartbeatSeconds: tasks.heartbeatSeconds,
   executionTimeoutSeconds: tasks.executionTimeoutSeconds,
+  schemaVersion: tasks.schemaVersion,
 };
 
 const taskRunSelection = {
@@ -65,8 +73,91 @@ type TaskRunSelectRow = {
     inputJson: unknown;
     heartbeatSeconds: number | null;
     executionTimeoutSeconds: number | null;
+    schemaVersion: number;
   };
 };
+
+/**
+ * Reads a run row and its Task's instructions through their stored readers
+ * (`readStoredTaskRun`, `readStoredTaskInstructions`), or explains why the
+ * row is unreadable.
+ */
+const readTaskRunRow = (
+  { run: row, task, previousTaskRunId }: TaskRunSelectRow,
+  evaluatedAt: Date,
+): StoredReadResult<TaskRunEntity> => {
+  const instructions = readStoredTaskInstructions(task.schemaVersion, task);
+  if (!instructions.success) {
+    return {
+      success: false,
+      reason: `task ${row.taskId}: ${instructions.reason}`,
+    };
+  }
+  const stored = readStoredTaskRun(row);
+  if (!stored.success) {
+    return stored;
+  }
+  return {
+    success: true,
+    value: TaskRunEntity.rehydrate({
+      id: row.id as TaskRunRowProps["id"],
+      taskId: parseUuidV7(row.taskId),
+      number: row.number,
+      reason: row.reason,
+      projectId: row.projectId as TaskRunRowProps["projectId"],
+      workItemId: row.workItemId as TaskRunRowProps["workItemId"],
+      taskExecutionConfigId:
+        task.taskExecutionConfigId === null
+          ? null
+          : parseUuidV7(task.taskExecutionConfigId),
+      name: task.name,
+      kind: task.kind,
+      prompt: task.prompt,
+      resultSchemaJson: instructions.value.resultSchemaJson,
+      entrypointJson: instructions.value.entrypointJson,
+      toolCallJson: instructions.value.toolCallJson,
+      previousTaskRunId:
+        previousTaskRunId === null ? null : parseUuidV7(previousTaskRunId),
+      baseBranch: row.baseBranch,
+      baseCommit: row.baseCommit,
+      environmentVersionId:
+        row.environmentVersionId === null
+          ? null
+          : parseUuidV7(row.environmentVersionId),
+      heartbeatSeconds: task.heartbeatSeconds,
+      status: row.status,
+      evaluatedAt,
+      inputJson: instructions.value.inputJson,
+      claimedBy: row.claimedBy,
+      claimedByUserId: row.claimedByUserId,
+      claimToken: row.claimToken,
+      claimedAt: row.claimedAt,
+      lastHeartbeatAt: row.lastHeartbeatAt,
+      leaseExpiresAt: row.leaseExpiresAt,
+      executionTimeoutSeconds: task.executionTimeoutSeconds,
+      executionDeadlineAt: row.executionDeadlineAt,
+      startedAt: row.startedAt,
+      completedAt: row.completedAt,
+      resultJson: stored.value.resultJson,
+      errorJson: stored.value.errorJson,
+      workBranch: row.workBranch,
+      createdFromBranch: row.createdFromBranch,
+      sessionObjectKey: row.sessionObjectKey,
+      sessionSizeBytes: row.sessionSizeBytes,
+      sessionRestored: row.sessionRestored,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    }),
+  };
+};
+
+/** The log fields that identify a skipped run row. */
+const describeTaskRunRow = ({ run }: TaskRunSelectRow) => ({
+  table: "task_runs",
+  taskRunId: run.id,
+  taskId: run.taskId,
+  projectId: run.projectId,
+});
 
 // The repo persists `persistedStatus`, the raw column value — NEVER the derived
 // `status` getter. `status` applies the read-time liveness overlay
@@ -111,69 +202,37 @@ export class DrizzleTaskRunRepo implements TaskRunRepo {
   // any caller having to know that clocks exist.
   private readonly timeProvider: TimeProvider;
 
-  constructor(timeProvider: TimeProvider = systemTimeProvider) {
+  private readonly logger: Logger;
+
+  constructor(
+    timeProvider: TimeProvider = systemTimeProvider,
+    logger: Logger = noopLogger,
+  ) {
     this.timeProvider = timeProvider;
+    this.logger = logger;
   }
 
-  private toEntity({
-    run: row,
-    task,
-    previousTaskRunId,
-  }: TaskRunSelectRow): TaskRunEntity {
-    return TaskRunEntity.rehydrate({
-      id: row.id as TaskRunRowProps["id"],
-      taskId: parseUuidV7(row.taskId),
-      number: row.number,
-      reason: row.reason,
-      projectId: row.projectId as TaskRunRowProps["projectId"],
-      workItemId: row.workItemId as TaskRunRowProps["workItemId"],
-      taskExecutionConfigId:
-        task.taskExecutionConfigId === null
-          ? null
-          : parseUuidV7(task.taskExecutionConfigId),
-      name: task.name,
-      kind: task.kind,
-      prompt: task.prompt,
-      resultSchemaJson:
-        task.resultSchemaJson as TaskRunRowProps["resultSchemaJson"],
-      entrypointJson: task.entrypointJson as TaskRunRowProps["entrypointJson"],
-      toolCallJson: task.toolCallJson as TaskRunRowProps["toolCallJson"],
-      previousTaskRunId:
-        previousTaskRunId === null ? null : parseUuidV7(previousTaskRunId),
-      baseBranch: row.baseBranch,
-      baseCommit: row.baseCommit,
-      environmentVersionId:
-        row.environmentVersionId === null
-          ? null
-          : parseUuidV7(row.environmentVersionId),
-      heartbeatSeconds: task.heartbeatSeconds,
-      status: row.status,
-      evaluatedAt: this.timeProvider.now(),
-      inputJson: task.inputJson as TaskRunRowProps["inputJson"],
-      claimedBy: row.claimedBy,
-      claimedByUserId: row.claimedByUserId,
-      claimToken: row.claimToken,
-      claimedAt: row.claimedAt,
-      lastHeartbeatAt: row.lastHeartbeatAt,
-      leaseExpiresAt: row.leaseExpiresAt,
-      executionTimeoutSeconds: task.executionTimeoutSeconds,
-      executionDeadlineAt: row.executionDeadlineAt,
-      startedAt: row.startedAt,
-      completedAt: row.completedAt,
-      resultJson: row.resultJson as TaskRunRowProps["resultJson"],
-      errorJson: row.errorJson as TaskRunRowProps["errorJson"],
-      workBranch: row.workBranch,
-      createdFromBranch: row.createdFromBranch,
-      sessionObjectKey: row.sessionObjectKey,
-      sessionSizeBytes: row.sessionSizeBytes,
-      sessionRestored: row.sessionRestored,
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
-    });
+  /** A single read: an unreadable row throws `TASK_RUN_ROW_UNREADABLE`. */
+  private toEntity(row: TaskRunSelectRow): TaskRunEntity {
+    const read = readTaskRunRow(row, this.timeProvider.now());
+    if (!read.success) {
+      throw new PersistenceError(
+        `Task run ${row.run.id} is unreadable: ${read.reason}`,
+        "TASK_RUN_ROW_UNREADABLE",
+      );
+    }
+    return read.value;
   }
 
+  /** A bulk read: an unreadable row is logged and left out. */
   private loadManyFromRows(rows: TaskRunSelectRow[]): TaskRunEntity[] {
-    return rows.map((row) => this.toEntity(row));
+    const evaluatedAt = this.timeProvider.now();
+    return readRowsSkippingUnreadable(
+      rows,
+      (row) => readTaskRunRow(row, evaluatedAt),
+      this.logger,
+      describeTaskRunRow,
+    );
   }
 
   private selectRuns(db: DbExecutor) {
@@ -191,9 +250,7 @@ export class DrizzleTaskRunRepo implements TaskRunRepo {
       return null;
     }
 
-    const [task] = this.loadManyFromRows([row]);
-
-    return task ?? null;
+    return this.toEntity(row);
   }
 
   async listByProjectId(
@@ -557,7 +614,7 @@ export class DrizzleTaskRunRepo implements TaskRunRepo {
       )
       .returning(taskRunSelection);
 
-    return row ? this.toEntity(row as TaskRunSelectRow) : null;
+    return row ? this.toEntity(row) : null;
   }
 
   async save(task: TaskRunEntity, dbExecutor?: DbExecutor, reload = true) {

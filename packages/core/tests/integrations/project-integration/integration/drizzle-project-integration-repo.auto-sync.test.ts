@@ -41,6 +41,7 @@ const seedSecret = async (
       kind,
       name: `auto-sync repo test ${id}`,
       metadataJson: {},
+      schemaVersion: 1,
       ciphertext: Buffer.from("ciphertext"),
       iv: Buffer.from("iv"),
       authTag: Buffer.from("tag"),

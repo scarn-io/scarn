@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "kind": "github_app",
+  "installationId": "10000001",
+  "externalScopeJson": {
+    "repos": [
+      { "id": 900001, "fullName": "example-org/widgets-api" },
+      { "id": 900002, "fullName": "example-org/widgets-web" }
+    ]
+  }
+}

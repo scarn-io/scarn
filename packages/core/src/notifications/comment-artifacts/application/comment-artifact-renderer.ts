@@ -4,6 +4,7 @@ import type {
   ArtifactMarkerOutcome,
   ResolvedArtifactMarker,
   ResolvedCommentArtifact,
+  StoredArtifactMarkerOutcome,
 } from "../domain/comment-artifact-types";
 
 export type RenderCommentArtifactsInput = {
@@ -15,7 +16,7 @@ export type RenderCommentArtifactsInput = {
    * Outcomes stored by an earlier, failed attempt. A renderer that uploads
    * reuses any of these with an `externalRef` instead of uploading again.
    */
-  priorOutcomes?: readonly ArtifactMarkerOutcome[];
+  priorOutcomes?: readonly StoredArtifactMarkerOutcome[];
   /** Called after each upload, before the comment is posted. */
   onOutcome?: (outcome: ArtifactMarkerOutcome) => Promise<void>;
 };

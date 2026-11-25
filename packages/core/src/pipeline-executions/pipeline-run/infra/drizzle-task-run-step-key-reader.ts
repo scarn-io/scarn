@@ -8,7 +8,8 @@ import {
 } from "@scarn/core/lib/db/schema";
 import type { UuidV7 } from "@scarn/core/common/contracts/uuid-v7";
 import type { TaskRunStepKeyReader } from "@scarn/core/tasks/task-run/application/task-run-step-key-reader";
-import type { PipelineDocument } from "@scarn/sdk/contracts/pipeline-document";
+import { readStoredPipelineDocument } from "@scarn/core/pipeline-definitions/pipeline-graph/contracts/pipeline-graph-version-stored";
+import { PersistenceError } from "@scarn/core/lib/errors";
 
 /**
  * A pipeline Task's step key: the `step` of the node its visit is at, read
@@ -19,7 +20,9 @@ export class DrizzleTaskRunStepKeyReader implements TaskRunStepKeyReader {
     const [row] = await getDb()
       .select({
         nodeId: nodeVisits.nodeId,
+        pipelineGraphVersionId: pipelineGraphVersions.id,
         definitionJson: pipelineGraphVersions.definitionJson,
+        schemaVersion: pipelineGraphVersions.schemaVersion,
       })
       .from(taskRuns)
       .innerJoin(nodeVisits, eq(nodeVisits.taskId, taskRuns.taskId))
@@ -33,7 +36,14 @@ export class DrizzleTaskRunStepKeyReader implements TaskRunStepKeyReader {
     if (!row) {
       return null;
     }
-    const node = (row.definitionJson as PipelineDocument).nodes[row.nodeId];
+    const read = readStoredPipelineDocument(row.schemaVersion, row);
+    if (!read.success) {
+      throw new PersistenceError(
+        `pipeline graph version ${row.pipelineGraphVersionId} is unreadable: ${read.reason}`,
+        "PIPELINE_GRAPH_VERSION_ROW_UNREADABLE",
+      );
+    }
+    const node = read.value.nodes[row.nodeId];
     return node?.kind === "step" ? node.step : null;
   }
 }

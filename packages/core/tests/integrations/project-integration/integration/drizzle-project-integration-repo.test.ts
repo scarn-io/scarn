@@ -183,7 +183,7 @@ describe("DrizzleProjectIntegrationRepo", () => {
   });
 
   concurrentTest(
-    "a row whose scope does not fit its kind fails to load with PROJECT_INTEGRATION_ROW_INVALID",
+    "a row whose scope does not fit its kind fails to load with PROJECT_INTEGRATION_ROW_UNREADABLE",
     async () => {
       const projectId = await seedProject("row-invalid");
       try {
@@ -196,6 +196,7 @@ describe("DrizzleProjectIntegrationRepo", () => {
             kind: "jira",
             installationId: null,
             externalScopeJson: { repos: [{ id: 1, fullName: "acme/repo" }] },
+            schemaVersion: 1,
             status: "paused",
           });
 
@@ -207,7 +208,7 @@ describe("DrizzleProjectIntegrationRepo", () => {
         }
 
         expect(caught).toMatchObject({
-          code: "PROJECT_INTEGRATION_ROW_INVALID",
+          code: "PROJECT_INTEGRATION_ROW_UNREADABLE",
         });
       } finally {
         await deleteProject(projectId);
@@ -256,6 +257,7 @@ describe("DrizzleProjectIntegrationRepo", () => {
                   baseUrl: "https://acme.atlassian.net",
                   projectKeys: ["ACME"],
                 },
+                schemaVersion: 1,
                 status: "active",
               }),
           {

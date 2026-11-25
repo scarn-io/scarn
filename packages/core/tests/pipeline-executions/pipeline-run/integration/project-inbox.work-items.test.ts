@@ -123,6 +123,7 @@ describe("project inbox work items", () => {
       kind: "agent",
       prompt: "Do the thing.",
       status,
+      schemaVersion: 1,
       conversationId,
     });
   };

@@ -11460,7 +11460,7 @@ export type PostApiPipelineExecutionsResponses = {
             fromVisitId: string | null;
             fromLaneGroupId: string | null;
             transition: {
-                kind: 'start' | 'route' | 'otherwise' | 'catch' | 'merge';
+                kind: string;
                 index: number;
             };
             routing: {
@@ -11523,7 +11523,7 @@ export type PostApiPipelineExecutionsResponses = {
             index: number;
             item: unknown | null;
             route: {
-                kind: 'start' | 'route' | 'otherwise' | 'catch' | 'merge';
+                kind: string;
                 index: number;
             };
             origin: 'split' | 'merge';
@@ -11534,7 +11534,7 @@ export type PostApiPipelineExecutionsResponses = {
             } | null;
             arrivedFromVisitId: string | null;
             arrivalTransition: {
-                kind: 'start' | 'route' | 'otherwise' | 'catch' | 'merge';
+                kind: string;
                 index: number;
             } | null;
             mergedIntoVisitId: string | null;
@@ -11733,7 +11733,7 @@ export type PostApiPipelineExecutionsByPipelineExecutionIdVisitsByVisitIdRerunRe
             fromVisitId: string | null;
             fromLaneGroupId: string | null;
             transition: {
-                kind: 'start' | 'route' | 'otherwise' | 'catch' | 'merge';
+                kind: string;
                 index: number;
             };
             routing: {
@@ -11796,7 +11796,7 @@ export type PostApiPipelineExecutionsByPipelineExecutionIdVisitsByVisitIdRerunRe
             index: number;
             item: unknown | null;
             route: {
-                kind: 'start' | 'route' | 'otherwise' | 'catch' | 'merge';
+                kind: string;
                 index: number;
             };
             origin: 'split' | 'merge';
@@ -11807,7 +11807,7 @@ export type PostApiPipelineExecutionsByPipelineExecutionIdVisitsByVisitIdRerunRe
             } | null;
             arrivedFromVisitId: string | null;
             arrivalTransition: {
-                kind: 'start' | 'route' | 'otherwise' | 'catch' | 'merge';
+                kind: string;
                 index: number;
             } | null;
             mergedIntoVisitId: string | null;
@@ -12020,7 +12020,7 @@ export type PostApiPipelineExecutionsByPipelineExecutionIdVisitsByVisitIdRouteRe
             fromVisitId: string | null;
             fromLaneGroupId: string | null;
             transition: {
-                kind: 'start' | 'route' | 'otherwise' | 'catch' | 'merge';
+                kind: string;
                 index: number;
             };
             routing: {
@@ -12083,7 +12083,7 @@ export type PostApiPipelineExecutionsByPipelineExecutionIdVisitsByVisitIdRouteRe
             index: number;
             item: unknown | null;
             route: {
-                kind: 'start' | 'route' | 'otherwise' | 'catch' | 'merge';
+                kind: string;
                 index: number;
             };
             origin: 'split' | 'merge';
@@ -12094,7 +12094,7 @@ export type PostApiPipelineExecutionsByPipelineExecutionIdVisitsByVisitIdRouteRe
             } | null;
             arrivedFromVisitId: string | null;
             arrivalTransition: {
-                kind: 'start' | 'route' | 'otherwise' | 'catch' | 'merge';
+                kind: string;
                 index: number;
             } | null;
             mergedIntoVisitId: string | null;
@@ -12109,14 +12109,14 @@ export type PostApiPipelineExecutionsByPipelineExecutionIdVisitsByVisitIdRouteRe
             cancelledTasks: number;
             lanesAdded: Array<{
                 route: {
-                    kind: 'start' | 'route' | 'otherwise' | 'catch' | 'merge';
+                    kind: string;
                     index: number;
                 };
                 label?: string;
             }>;
             lanesRemoved: Array<{
                 route: {
-                    kind: 'start' | 'route' | 'otherwise' | 'catch' | 'merge';
+                    kind: string;
                     index: number;
                 };
                 label?: string;
@@ -12482,7 +12482,7 @@ export type PostApiPipelineExecutionsByPipelineExecutionIdQuestionsByQuestionIdC
             fromVisitId: string | null;
             fromLaneGroupId: string | null;
             transition: {
-                kind: 'start' | 'route' | 'otherwise' | 'catch' | 'merge';
+                kind: string;
                 index: number;
             };
             routing: {
@@ -12545,7 +12545,7 @@ export type PostApiPipelineExecutionsByPipelineExecutionIdQuestionsByQuestionIdC
             index: number;
             item: unknown | null;
             route: {
-                kind: 'start' | 'route' | 'otherwise' | 'catch' | 'merge';
+                kind: string;
                 index: number;
             };
             origin: 'split' | 'merge';
@@ -12556,7 +12556,7 @@ export type PostApiPipelineExecutionsByPipelineExecutionIdQuestionsByQuestionIdC
             } | null;
             arrivedFromVisitId: string | null;
             arrivalTransition: {
-                kind: 'start' | 'route' | 'otherwise' | 'catch' | 'merge';
+                kind: string;
                 index: number;
             } | null;
             mergedIntoVisitId: string | null;
@@ -12754,7 +12754,7 @@ export type PutApiPipelineExecutionsByPipelineExecutionIdCancelResponses = {
             fromVisitId: string | null;
             fromLaneGroupId: string | null;
             transition: {
-                kind: 'start' | 'route' | 'otherwise' | 'catch' | 'merge';
+                kind: string;
                 index: number;
             };
             routing: {
@@ -12817,7 +12817,7 @@ export type PutApiPipelineExecutionsByPipelineExecutionIdCancelResponses = {
             index: number;
             item: unknown | null;
             route: {
-                kind: 'start' | 'route' | 'otherwise' | 'catch' | 'merge';
+                kind: string;
                 index: number;
             };
             origin: 'split' | 'merge';
@@ -12828,7 +12828,7 @@ export type PutApiPipelineExecutionsByPipelineExecutionIdCancelResponses = {
             } | null;
             arrivedFromVisitId: string | null;
             arrivalTransition: {
-                kind: 'start' | 'route' | 'otherwise' | 'catch' | 'merge';
+                kind: string;
                 index: number;
             } | null;
             mergedIntoVisitId: string | null;
@@ -14111,7 +14111,7 @@ export type PostApiPipelineExecutionsByPipelineExecutionIdVisitsByVisitIdMessage
                 fromVisitId: string | null;
                 fromLaneGroupId: string | null;
                 transition: {
-                    kind: 'start' | 'route' | 'otherwise' | 'catch' | 'merge';
+                    kind: string;
                     index: number;
                 };
                 routing: {
@@ -14174,7 +14174,7 @@ export type PostApiPipelineExecutionsByPipelineExecutionIdVisitsByVisitIdMessage
                 index: number;
                 item: unknown | null;
                 route: {
-                    kind: 'start' | 'route' | 'otherwise' | 'catch' | 'merge';
+                    kind: string;
                     index: number;
                 };
                 origin: 'split' | 'merge';
@@ -14185,7 +14185,7 @@ export type PostApiPipelineExecutionsByPipelineExecutionIdVisitsByVisitIdMessage
                 } | null;
                 arrivedFromVisitId: string | null;
                 arrivalTransition: {
-                    kind: 'start' | 'route' | 'otherwise' | 'catch' | 'merge';
+                    kind: string;
                     index: number;
                 } | null;
                 mergedIntoVisitId: string | null;
@@ -14388,7 +14388,7 @@ export type PostApiPipelineExecutionsByPipelineExecutionIdVisitsByVisitIdDecisio
             fromVisitId: string | null;
             fromLaneGroupId: string | null;
             transition: {
-                kind: 'start' | 'route' | 'otherwise' | 'catch' | 'merge';
+                kind: string;
                 index: number;
             };
             routing: {
@@ -14451,7 +14451,7 @@ export type PostApiPipelineExecutionsByPipelineExecutionIdVisitsByVisitIdDecisio
             index: number;
             item: unknown | null;
             route: {
-                kind: 'start' | 'route' | 'otherwise' | 'catch' | 'merge';
+                kind: string;
                 index: number;
             };
             origin: 'split' | 'merge';
@@ -14462,7 +14462,7 @@ export type PostApiPipelineExecutionsByPipelineExecutionIdVisitsByVisitIdDecisio
             } | null;
             arrivedFromVisitId: string | null;
             arrivalTransition: {
-                kind: 'start' | 'route' | 'otherwise' | 'catch' | 'merge';
+                kind: string;
                 index: number;
             } | null;
             mergedIntoVisitId: string | null;
@@ -14641,7 +14641,7 @@ export type GetApiPipelineExecutionsByPipelineExecutionIdResponses = {
             fromVisitId: string | null;
             fromLaneGroupId: string | null;
             transition: {
-                kind: 'start' | 'route' | 'otherwise' | 'catch' | 'merge';
+                kind: string;
                 index: number;
             };
             routing: {
@@ -14704,7 +14704,7 @@ export type GetApiPipelineExecutionsByPipelineExecutionIdResponses = {
             index: number;
             item: unknown | null;
             route: {
-                kind: 'start' | 'route' | 'otherwise' | 'catch' | 'merge';
+                kind: string;
                 index: number;
             };
             origin: 'split' | 'merge';
@@ -14715,7 +14715,7 @@ export type GetApiPipelineExecutionsByPipelineExecutionIdResponses = {
             } | null;
             arrivedFromVisitId: string | null;
             arrivalTransition: {
-                kind: 'start' | 'route' | 'otherwise' | 'catch' | 'merge';
+                kind: string;
                 index: number;
             } | null;
             mergedIntoVisitId: string | null;

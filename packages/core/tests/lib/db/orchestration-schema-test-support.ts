@@ -90,12 +90,12 @@ export const insertTask = async (
   await getDb().execute(sql`
     INSERT INTO "app"."tasks"
       ("id", "project_id", "work_item_id", "task_execution_config_id", "kind",
-       "prompt", "entrypoint_json", "tool_call_json", "status")
+       "prompt", "entrypoint_json", "tool_call_json", "status", "schema_version")
     VALUES
       (${id}, ${scenario.projectId}, ${scenario.workItemId},
        ${scenario.taskExecutionConfigId}, ${values.kind}, ${values.prompt},
        ${jsonOrNull(values.entrypointJson)}::jsonb,
-       ${jsonOrNull(values.toolCallJson)}::jsonb, 'queued')
+       ${jsonOrNull(values.toolCallJson)}::jsonb, 'queued', 1)
   `);
   return id;
 };

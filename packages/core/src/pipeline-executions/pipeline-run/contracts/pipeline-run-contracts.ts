@@ -111,9 +111,14 @@ export const visitTaskSchema = z.object({
   workBranch: z.string().nullable(),
 });
 
-/** How a visit was entered; `merge`: a merge node entered once its lanes arrived. */
+/**
+ * How a visit was entered; `merge`: a merge node entered once its lanes arrived.
+ * `kind` is one of `start`, `route`, `otherwise`, `catch` or `merge` today, but
+ * stays an open string: run history is read back from stored rows, so a kind a
+ * later engine retires must still serialize.
+ */
 export const visitTransitionSchema = z.object({
-  kind: z.enum(["start", "route", "otherwise", "catch", "merge"]),
+  kind: z.string(),
   index: z.number().int().nonnegative(),
 });
 

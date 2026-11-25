@@ -135,11 +135,18 @@ describe("syncing automation schedules", () => {
       const rows = await schedulesOf(fixture, key);
       expect(
         rows.map(
-          ({ key: ruleKey, cron, timezone, concurrencyJson, nextRunAt }) => ({
+          ({
+            key: ruleKey,
+            cron,
+            timezone,
+            concurrencyMax,
+            concurrencyWaiting,
+            nextRunAt,
+          }) => ({
             ruleKey,
             cron,
             timezone,
-            concurrencyJson,
+            concurrency: { max: concurrencyMax, waiting: concurrencyWaiting },
             nextRunAt: nextRunAt.toISOString(),
           }),
         ),
@@ -148,14 +155,14 @@ describe("syncing automation schedules", () => {
           ruleKey: "hourly",
           cron: "0 * * * *",
           timezone: "UTC",
-          concurrencyJson: { max: 1, waiting: 0 },
+          concurrency: { max: 1, waiting: 0 },
           nextRunAt: "2026-11-01T10:00:00.000Z",
         },
         {
           ruleKey: "nightly",
           cron: "@daily",
           timezone: "America/New_York",
-          concurrencyJson: { max: 2, waiting: 1 },
+          concurrency: { max: 2, waiting: 1 },
           nextRunAt: "2026-11-02T05:00:00.000Z",
         },
       ]);
@@ -187,7 +194,7 @@ describe("syncing automation schedules", () => {
       const after = await liveSchedule(fixture, key, "hourly");
       expect(after.id).toBe(before.id);
       expect(after.nextRunAt.toISOString()).toBe(SENTINEL.toISOString());
-      expect(after.concurrencyJson).toEqual({ max: 3, waiting: 2 });
+      expect([after.concurrencyMax, after.concurrencyWaiting]).toEqual([3, 2]);
     },
   );
 

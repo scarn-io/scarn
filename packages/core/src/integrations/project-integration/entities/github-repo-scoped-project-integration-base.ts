@@ -43,6 +43,14 @@ const normalizeRepos = (
 };
 
 /**
+ * The write-time scope rules shared by the GitHub variants, applied on
+ * create and on scope changes but not on rehydrate.
+ */
+export const normalizeGitHubScope = (
+  scope: GitHubProjectIntegrationScope,
+): GitHubProjectIntegrationScope => ({ repos: normalizeRepos(scope.repos) });
+
+/**
  * Shared base for the GitHub variants, which all scope to a set of
  * repositories: the "at least one repo / no duplicate repo / id + fullName"
  * checks and `withRepos`. The variants differ only in how they authenticate.
@@ -59,13 +67,13 @@ export abstract class GitHubRepoScopedProjectIntegrationBase extends ProjectInte
   ) {
     const { scope, ...baseProps } = props;
     super(baseProps, kind);
-    this.scope = { repos: normalizeRepos(scope.repos) };
+    this.scope = scope;
   }
 
   /** Rebuilds this variant with a new scope, keeping everything else. */
   protected abstract withScopeProps(scope: GitHubProjectIntegrationScope): this;
 
   withRepos(repos: readonly ProjectIntegrationRepoRef[]): this {
-    return this.withScopeProps({ repos: [...repos] });
+    return this.withScopeProps({ repos: normalizeRepos(repos) });
   }
 }

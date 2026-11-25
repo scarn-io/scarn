@@ -118,6 +118,7 @@ describe("project work items agent and assignee filters", () => {
       kind: "agent",
       prompt: "Do the thing.",
       status: input.status,
+      schemaVersion: 1,
       conversationId,
     });
   };

@@ -75,7 +75,7 @@ export class BitbucketProjectIntegration extends ProjectIntegrationEntityBase {
   private constructor(props: BitbucketProjectIntegrationProps) {
     const { scope, ...baseProps } = props;
     super(baseProps, "bitbucket");
-    this.scope = { repos: normalizeRepos(scope.repos) };
+    this.scope = scope;
   }
 
   static create(
@@ -83,7 +83,7 @@ export class BitbucketProjectIntegration extends ProjectIntegrationEntityBase {
   ): BitbucketProjectIntegration {
     return new BitbucketProjectIntegration({
       ...createBaseProps({ ...props, id: props.id ?? createUuidV7() }),
-      scope: props.scope,
+      scope: { repos: normalizeRepos(props.scope.repos) },
     });
   }
 
@@ -103,7 +103,7 @@ export class BitbucketProjectIntegration extends ProjectIntegrationEntityBase {
   withRepos(repos: readonly BitbucketRepoRef[]): this {
     return new BitbucketProjectIntegration({
       ...this.baseJSON(),
-      scope: { repos: [...repos] },
+      scope: { repos: normalizeRepos(repos) },
     }) as this;
   }
 

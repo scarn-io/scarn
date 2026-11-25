@@ -232,18 +232,6 @@ describe("ProjectIntegrationEntity companion", () => {
       }),
     ],
     ["jira with a GitHub scope", row({ kind: "jira", installationId: null })],
-    [
-      "jira with an extra scope key",
-      row({
-        kind: "jira",
-        installationId: null,
-        externalScopeJson: {
-          baseUrl: "https://acme.atlassian.net",
-          email: "bot@acme.test",
-          projectKeys: ["A"],
-        },
-      }),
-    ],
   ])("rehydrate rejects %s", (_label, invalidRow) => {
     expect(
       errorCode(() => ProjectIntegrationEntity.rehydrate(invalidRow)),

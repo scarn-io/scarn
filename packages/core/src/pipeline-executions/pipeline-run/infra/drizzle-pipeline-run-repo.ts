@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, type SQL } from "drizzle-orm";
+import { and, desc, eq, inArray, type SQL } from "drizzle-orm";
 import { getDb } from "@scarn/core/lib/db";
 import type { DbExecutor } from "@scarn/core/lib/db/db-executor";
 import {
@@ -7,10 +7,11 @@ import {
   nodeVisits,
   pipelineRuns,
   taskRuns,
-  tasks,
 } from "@scarn/core/lib/db/schema";
 import type { UuidV7 } from "@scarn/core/common/contracts/uuid-v7";
 import { PersistenceError } from "@scarn/core/lib/errors";
+import { readRowsSkippingUnreadable } from "@scarn/core/lib/db/stored-json";
+import { noopLogger, type Logger } from "@scarn/observability/logging";
 import type { WorkItemId } from "@scarn/core/work-items/work-item/domain/work-item-id";
 import type {
   Lane,
@@ -22,6 +23,7 @@ import type {
   PipelineRunHistory,
   PipelineRunRepo,
 } from "../application/pipeline-run-repo";
+import { emptyHistory, readHistories } from "./pipeline-run-history-reader";
 import {
   findRunStarterByTaskId,
   findVisitByConversationId,
@@ -29,27 +31,39 @@ import {
 import type { PipelineRunEntity } from "../domain/pipeline-run-entity";
 import type { NodeVisitEntity } from "../domain/node-visit-entity";
 import {
+  describeRunRow,
   laneEngineToRow,
-  laneGroupRowToEngine,
+  laneGroupEngineToRow,
   lanePatchToUpdate,
-  laneRowToEngine,
-  resultTaskIdOf,
+  readRunRow,
   runEntityToRow,
   runEntityToUpdate,
   runRowToEntity,
   visitEntityToRow,
   visitEntityToUpdate,
-  visitRowToEntity,
 } from "./pipeline-run-row-mappers";
 
-const emptyHistory = (): PipelineRunHistory => ({
-  visits: [],
-  laneGroups: [],
-  lanes: [],
-  visitTasks: [],
-});
-
+/**
+ * Single-row reads throw a `<TABLE>_ROW_UNREADABLE` `PersistenceError` on a
+ * row whose JSON doesn't read. Run lists log an unreadable run at `error`
+ * and leave it out; `loadHistories` leaves out the history of a run with an
+ * unreadable lane or visit, and `loadHistory` (which rerun, overrule and
+ * advance act on) throws `PIPELINE_RUN_HISTORY_UNREADABLE` for it.
+ */
 export class DrizzlePipelineRunRepo implements PipelineRunRepo {
+  constructor(private readonly logger: Logger = noopLogger) {}
+
+  private readRuns(
+    rows: readonly (typeof pipelineRuns.$inferSelect)[],
+  ): PipelineRunEntity[] {
+    return readRowsSkippingUnreadable(
+      rows,
+      readRunRow,
+      this.logger,
+      describeRunRow,
+    );
+  }
+
   async load(
     id: UuidV7,
     dbExecutor?: DbExecutor,
@@ -74,7 +88,7 @@ export class DrizzlePipelineRunRepo implements PipelineRunRepo {
       .select()
       .from(pipelineRuns)
       .where(inArray(pipelineRuns.id, [...ids]));
-    return rows.map(runRowToEntity);
+    return this.readRuns(rows);
   }
 
   async lock(
@@ -133,7 +147,7 @@ export class DrizzlePipelineRunRepo implements PipelineRunRepo {
       .from(pipelineRuns)
       .where(eq(pipelineRuns.projectId, projectId))
       .orderBy(desc(pipelineRuns.createdAt), desc(pipelineRuns.id));
-    return rows.map(runRowToEntity);
+    return this.readRuns(rows);
   }
 
   async listByWorkItemAndPipelineGraphId(
@@ -152,7 +166,7 @@ export class DrizzlePipelineRunRepo implements PipelineRunRepo {
         ),
       )
       .orderBy(desc(pipelineRuns.createdAt), desc(pipelineRuns.id));
-    return rows.map(runRowToEntity);
+    return this.readRuns(rows);
   }
 
   async deleteByWorkItemAndPipelineGraphId(
@@ -238,7 +252,18 @@ export class DrizzlePipelineRunRepo implements PipelineRunRepo {
     pipelineRunId: UuidV7,
     dbExecutor?: DbExecutor,
   ): Promise<PipelineRunHistory> {
-    const histories = await this.loadHistories([pipelineRunId], dbExecutor);
+    const { histories, unreadable } = await readHistories(
+      [pipelineRunId],
+      dbExecutor ?? getDb(),
+      this.logger,
+    );
+    const reason = unreadable.get(pipelineRunId);
+    if (reason !== undefined) {
+      throw new PersistenceError(
+        `pipeline run ${pipelineRunId}'s history is unreadable: ${reason}`,
+        "PIPELINE_RUN_HISTORY_UNREADABLE",
+      );
+    }
     return histories.get(pipelineRunId) ?? emptyHistory();
   }
 
@@ -246,95 +271,17 @@ export class DrizzlePipelineRunRepo implements PipelineRunRepo {
     pipelineRunIds: readonly UuidV7[],
     dbExecutor?: DbExecutor,
   ): Promise<Map<UuidV7, PipelineRunHistory>> {
-    const histories = new Map<UuidV7, PipelineRunHistory>(
-      pipelineRunIds.map((id) => [id, emptyHistory()]),
+    const { histories, unreadable } = await readHistories(
+      pipelineRunIds,
+      dbExecutor ?? getDb(),
+      this.logger,
     );
-    if (pipelineRunIds.length === 0) {
-      return histories;
-    }
-    const db = dbExecutor ?? getDb();
-    const runIds = [...pipelineRunIds];
-    const [visitRows, groupRows] = await Promise.all([
-      db
-        .select({
-          visit: nodeVisits,
-          conversationId: tasks.conversationId,
-        })
-        .from(nodeVisits)
-        .leftJoin(tasks, eq(tasks.id, nodeVisits.taskId))
-        .where(inArray(nodeVisits.pipelineRunId, runIds))
-        .orderBy(asc(nodeVisits.createdAt), asc(nodeVisits.id)),
-      db
-        .select()
-        .from(laneGroups)
-        .where(inArray(laneGroups.pipelineRunId, runIds))
-        .orderBy(asc(laneGroups.createdAt), asc(laneGroups.id)),
-    ]);
-    const groupIds = groupRows.map((row) => row.id);
-    const visitIds = visitRows.map((row) => row.visit.id);
-    const [laneRows, runRows] = await Promise.all([
-      groupIds.length === 0
-        ? Promise.resolve([] as (typeof lanes.$inferSelect)[])
-        : db
-            .select()
-            .from(lanes)
-            .where(inArray(lanes.laneGroupId, groupIds))
-            .orderBy(asc(lanes.laneGroupId), asc(lanes.index)),
-      visitIds.length === 0
-        ? Promise.resolve([])
-        : db
-            .select({
-              visitId: nodeVisits.id,
-              number: taskRuns.number,
-              taskRunId: taskRuns.id,
-              status: taskRuns.status,
-            })
-            .from(taskRuns)
-            .innerJoin(nodeVisits, eq(nodeVisits.taskId, taskRuns.taskId))
-            .where(inArray(nodeVisits.id, visitIds))
-            .orderBy(asc(nodeVisits.id), asc(taskRuns.number)),
-    ]);
-    const latestRunByVisitId = new Map(
-      runRows.map((row) => [row.visitId, row]),
-    );
-
-    const runIdByVisitId = new Map(
-      visitRows.map(({ visit }) => [visit.id, visit.pipelineRunId as UuidV7]),
-    );
-    const runIdByGroupId = new Map(
-      groupRows.map((row) => [row.id, row.pipelineRunId as UuidV7]),
-    );
-    for (const { visit, conversationId } of visitRows) {
-      histories
-        .get(visit.pipelineRunId as UuidV7)
-        ?.visits.push(
-          visitRowToEntity(
-            visit,
-            resultTaskIdOf(visit, latestRunByVisitId.get(visit.id)),
-            conversationId as UuidV7 | null,
-          ),
-        );
-    }
-    for (const row of groupRows) {
-      histories
-        .get(row.pipelineRunId as UuidV7)
-        ?.laneGroups.push(laneGroupRowToEngine(row));
-    }
-    for (const row of laneRows) {
-      const runId = runIdByGroupId.get(row.laneGroupId);
-      if (runId) {
-        histories.get(runId)?.lanes.push(laneRowToEngine(row));
-      }
-    }
-    for (const row of runRows) {
-      const runId = runIdByVisitId.get(row.visitId);
-      if (runId) {
-        histories.get(runId)?.visitTasks.push({
-          visitId: row.visitId,
-          attemptNumber: row.number,
-          taskId: row.taskRunId,
-        });
-      }
+    for (const [pipelineRunId, reason] of unreadable) {
+      this.logger.error(
+        { table: "pipeline_runs", pipelineRunId, reason },
+        "Pipeline run history is unreadable; skipping it",
+      );
+      histories.delete(pipelineRunId);
     }
     return histories;
   }
@@ -365,17 +312,9 @@ export class DrizzlePipelineRunRepo implements PipelineRunRepo {
     dbExecutor?: DbExecutor,
   ): Promise<void> {
     const db = dbExecutor ?? getDb();
-    await db.insert(laneGroups).values({
-      id: group.id,
-      pipelineRunId,
-      parentLaneId: group.parentLaneId,
-      spawnedByVisitId: group.spawnedByVisitId,
-      kind: group.kind,
-      laneCount: group.laneCount,
-      maxConcurrency: group.maxConcurrency,
-      toleratedFailuresJson: group.toleratedFailures,
-      status: group.status,
-    });
+    await db
+      .insert(laneGroups)
+      .values(laneGroupEngineToRow(pipelineRunId, group));
     if (groupLanes.length > 0) {
       await db.insert(lanes).values(groupLanes.map(laneEngineToRow));
     }

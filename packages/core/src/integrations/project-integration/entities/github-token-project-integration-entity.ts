@@ -1,6 +1,7 @@
 import { createUuidV7 } from "@scarn/core/common/contracts/uuid-v7";
 import {
   GitHubRepoScopedProjectIntegrationBase,
+  normalizeGitHubScope,
   type GitHubProjectIntegrationScope,
 } from "./github-repo-scoped-project-integration-base";
 import {
@@ -39,7 +40,7 @@ export class GitHubTokenProjectIntegration extends GitHubRepoScopedProjectIntegr
   ): GitHubTokenProjectIntegration {
     return new GitHubTokenProjectIntegration({
       ...createBaseProps({ ...props, id: props.id ?? createUuidV7() }),
-      scope: props.scope,
+      scope: normalizeGitHubScope(props.scope),
     });
   }
 

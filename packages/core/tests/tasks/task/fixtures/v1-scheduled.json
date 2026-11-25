@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "kind": "agent",
+  "owner": "schedule",
+  "status": "succeeded",
+  "prompt": "Poll the example API.",
+  "entrypointJson": null,
+  "toolCallJson": null,
+  "resultSchemaJson": null,
+  "inputJson": null,
+  "retryJson": null,
+  "environmentSelectionJson": null,
+  "grantsJson": [
+    {
+      "resource": "workItem",
+      "action": "create",
+      "scope": "project",
+      "labels": ["from-schedule"]
+    }
+  ],
+  "resultJson": "done",
+  "errorJson": null
+}

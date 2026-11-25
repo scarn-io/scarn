@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "kind": "mcp_tool",
+  "prompt": null,
+  "entrypointJson": null,
+  "toolCallJson": {
+    "server": "inventory",
+    "tool": "lookup_sku",
+    "argsTemplate": "{{input}}",
+    "toolSchemas": {
+      "input": {
+        "type": "object",
+        "required": ["sku"],
+        "properties": { "sku": { "type": "string" } }
+      },
+      "output": {
+        "type": "object",
+        "required": ["sku", "found"],
+        "properties": {
+          "sku": { "type": "string" },
+          "found": { "type": "boolean" }
+        }
+      }
+    }
+  },
+  "inputSchemaJson": {
+    "type": "object",
+    "required": ["sku"],
+    "properties": { "sku": { "type": "string" } }
+  },
+  "resultSchemaJson": {
+    "type": "object",
+    "required": ["sku", "found"],
+    "properties": {
+      "sku": { "type": "string" },
+      "found": { "type": "boolean" }
+    }
+  },
+  "errorsJson": [],
+  "retryJson": [],
+  "grantsJson": [],
+  "concurrencyJson": null
+}

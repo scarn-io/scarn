@@ -59,6 +59,7 @@ describe("project work item statuses", () => {
         workItemId,
         ...agentTaskInstructionColumns,
         status,
+        schemaVersion: 1,
       });
   };
 

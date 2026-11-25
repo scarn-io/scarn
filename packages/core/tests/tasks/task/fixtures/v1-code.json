@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "kind": "code",
+  "owner": "workItem",
+  "status": "queued",
+  "prompt": null,
+  "entrypointJson": { "sourceFile": ".scarn/example/steps.ts" },
+  "toolCallJson": null,
+  "resultSchemaJson": {
+    "type": "object",
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "properties": { "ok": { "type": "boolean" } }
+  },
+  "inputJson": { "quantity": 2 },
+  "retryJson": [{ "on": ["Scarn.StepFailed"], "maxAttempts": 2 }],
+  "environmentSelectionJson": null,
+  "grantsJson": [{ "resource": "workItem", "action": "read", "scope": "self" }],
+  "resultJson": null,
+  "errorJson": null
+}

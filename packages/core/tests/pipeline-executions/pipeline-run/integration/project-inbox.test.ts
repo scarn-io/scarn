@@ -149,7 +149,8 @@ describe("project inbox", () => {
         pipelineRunId: runId,
         nodeId,
         nodeKind: "wait",
-        transitionJson: {},
+        transitionJson: { kind: "start", index: 0 },
+        schemaVersion: 1,
         status: "waiting",
         inputJson: {},
         createdAt: at(minute),
@@ -213,6 +214,7 @@ describe("project inbox", () => {
         kind: "agent",
         prompt: "Do the thing.",
         status: input.status,
+        schemaVersion: 1,
         conversationId,
         startedByUserId: input.startedByUserId
           ? parseUuidV7(input.startedByUserId)

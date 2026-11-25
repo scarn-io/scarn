@@ -171,6 +171,13 @@ export default defineConfig(
     },
   },
   {
+    // Stored readers freeze the shapes they read (docs/persistence/json-columns.md).
+    files: ["**/contracts/*-stored.ts"],
+    rules: {
+      "local/stored-reader-type-only-imports": "error",
+    },
+  },
+  {
     files: ["**/tests/**/*.{ts,tsx,mts,cts}"],
     rules: {
       "no-console": "off",

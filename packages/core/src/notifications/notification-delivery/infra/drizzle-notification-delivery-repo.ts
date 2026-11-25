@@ -8,10 +8,9 @@ import {
   notificationDeliveries,
   userNotifications,
 } from "@scarn/core/lib/db/schema";
-import {
-  UserNotificationEntity,
-  type UserNotificationEntityProps,
-} from "@scarn/core/notifications/user-notification/domain/user-notification-entity";
+import { noopLogger, type Logger } from "@scarn/observability/logging";
+import { readStoredArtifactResolutionJson } from "@scarn/core/notifications/comment-artifacts/contracts/artifact-resolution-stored";
+import { userNotificationFromRow } from "@scarn/core/notifications/user-notification/infra/user-notification-row";
 import { WORK_ITEM_PLATFORM_COMMENT_CHANNEL } from "../contracts/notification-delivery-contracts";
 import type {
   NotificationDeliveryRepo,
@@ -35,10 +34,39 @@ const toRow = (entity: NotificationDeliveryEntity) => ({
   sentAt: entity.sentAt,
 });
 
+type NotificationDeliveryRow = typeof notificationDeliveries.$inferSelect;
+
+/**
+ * A delivery's artifact resolution. It is a delivery record, read for
+ * display and retry only, so an unreadable one is logged and read as none
+ * rather than failing the read.
+ */
+const artifactResolutionFromRow = (
+  row: NotificationDeliveryRow,
+  logger: Logger,
+): AnyJsonObject | null => {
+  const read = readStoredArtifactResolutionJson(
+    row.artifactResolutionJson ?? null,
+  );
+  if (!read.success) {
+    logger.error(
+      {
+        table: "notification_deliveries",
+        notificationId: row.notificationId,
+        deliveryId: row.id,
+        reason: read.reason,
+      },
+      "Stored artifact resolution is unreadable; reading the delivery without it",
+    );
+    return null;
+  }
+  return read.value;
+};
+
 export class DrizzleNotificationDeliveryRepo implements NotificationDeliveryRepo {
-  private toEntity(
-    row: typeof notificationDeliveries.$inferSelect,
-  ): NotificationDeliveryEntity {
+  constructor(private readonly logger: Logger = noopLogger) {}
+
+  private toEntity(row: NotificationDeliveryRow): NotificationDeliveryEntity {
     return NotificationDeliveryEntity.rehydrate({
       id: parseUuidV7(row.id),
       notificationId: parseUuidV7(row.notificationId),
@@ -47,41 +75,10 @@ export class DrizzleNotificationDeliveryRepo implements NotificationDeliveryRepo
       suppressionReason: row.suppressionReason,
       externalUrl: row.externalUrl,
       externalId: row.externalId,
-      artifactResolutionJson:
-        (row.artifactResolutionJson as AnyJsonObject | null) ?? null,
+      artifactResolutionJson: artifactResolutionFromRow(row, this.logger),
       createdAt: row.createdAt,
       sentAt: row.sentAt,
     } satisfies NotificationDeliveryEntityProps);
-  }
-
-  private toNotificationEntity(
-    row: typeof userNotifications.$inferSelect,
-  ): UserNotificationEntity {
-    return UserNotificationEntity.rehydrate({
-      id: parseUuidV7(row.id),
-      projectId: parseUuidV7(row.projectId),
-      workItemId: row.workItemId ? parseUuidV7(row.workItemId) : null,
-      pipelineExecutionId: row.pipelineExecutionId
-        ? parseUuidV7(row.pipelineExecutionId)
-        : null,
-      taskId: row.taskId ? parseUuidV7(row.taskId) : null,
-      agentSessionId: row.agentSessionId
-        ? parseUuidV7(row.agentSessionId)
-        : null,
-      recipientUserId: row.recipientUserId
-        ? parseUuidV7(row.recipientUserId)
-        : null,
-      kind: row.kind,
-      audience: row.audience,
-      title: row.title,
-      body: row.body,
-      priority: row.priority,
-      source: row.source,
-      status: row.status,
-      payloadJson: (row.payloadJson as AnyJsonObject | null) ?? null,
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
-    } satisfies UserNotificationEntityProps);
   }
 
   async create(
@@ -160,7 +157,7 @@ export class DrizzleNotificationDeliveryRepo implements NotificationDeliveryRepo
 
     return rows.map((row) => ({
       delivery: this.toEntity(row.delivery),
-      notification: this.toNotificationEntity(row.notification),
+      notification: userNotificationFromRow(row.notification, this.logger),
     }));
   }
 }

@@ -1,0 +1,51 @@
+[
+  {
+    "name": "github issue",
+    "title": "fixture github issue",
+    "fields": {
+      "repository": "example-org/example-repo",
+      "number": 42,
+      "state": "open",
+      "stateReason": null,
+      "author": "example-author",
+      "assignees": ["example-assignee"],
+      "commentsCount": 3,
+      "closedAt": null
+    }
+  },
+  {
+    "name": "bitbucket issue",
+    "title": "fixture bitbucket issue",
+    "fields": {
+      "repository": "example-workspace/example-repo",
+      "number": 7,
+      "state": "new",
+      "kind": "bug",
+      "priority": "major",
+      "reporter": "Example Reporter",
+      "assignee": null,
+      "votes": 0
+    }
+  },
+  {
+    "name": "jira issue with custom fields",
+    "title": "fixture jira issue",
+    "fields": {
+      "status": "In Progress",
+      "priority": "High",
+      "issueType": "Bug",
+      "assignee": "Example Assignee",
+      "reporter": "Example Reporter",
+      "commentsCount": 0,
+      "customfield_10010": { "value": "Example option" },
+      "customfield_10020": ["one", "two"],
+      "customfield_10030": 1.5,
+      "customfield_10040": true
+    }
+  },
+  {
+    "name": "empty",
+    "title": "fixture empty fields",
+    "fields": {}
+  }
+]

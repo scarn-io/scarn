@@ -3,11 +3,14 @@ import { getDb } from "@scarn/core/lib/db";
 import type { DbExecutor } from "@scarn/core/lib/db/db-executor";
 import { automations, automationVersions } from "@scarn/core/lib/db/schema";
 import { parseUuidV7, type UuidV7 } from "@scarn/core/common/contracts/uuid-v7";
-import { PersistenceError } from "@scarn/core/lib/errors";
 import {
-  automationDocumentSchema,
-  type AutomationScope,
-} from "@scarn/sdk/contracts/automation-document";
+  readRowsSkippingUnreadable,
+  type StoredReadResult,
+} from "@scarn/core/lib/db/stored-json";
+import { PersistenceError } from "@scarn/core/lib/errors";
+import { noopLogger, type Logger } from "@scarn/observability/logging";
+import type { AutomationScope } from "@scarn/sdk/contracts/automation-document";
+import { readStoredAutomationDocument } from "../contracts/automation-document-stored";
 import type {
   AutomationRepo,
   ResolvedAutomation,
@@ -30,21 +33,51 @@ export const automationRowToEntity = (row: AutomationRow): AutomationEntity =>
     updatedAt: row.updatedAt,
   });
 
-const versionRowToEntity = (row: VersionRow): AutomationVersionEntity =>
-  AutomationVersionEntity.rehydrate({
-    id: parseUuidV7(row.id),
-    automationId: parseUuidV7(row.automationId),
-    version: row.version,
-    document: automationDocumentSchema.parse(row.document),
-    schemaVersion: row.schemaVersion,
-    contentHash: row.contentHash,
-    publishedAt: row.publishedAt,
-  });
+/** Reads the version's `document` through its version's stored schema. */
+const readVersionRow = (
+  row: VersionRow,
+): StoredReadResult<AutomationVersionEntity> => {
+  const read = readStoredAutomationDocument(row.schemaVersion, row);
+  if (!read.success) {
+    return read;
+  }
+  return {
+    success: true,
+    value: AutomationVersionEntity.rehydrate({
+      id: parseUuidV7(row.id),
+      automationId: parseUuidV7(row.automationId),
+      version: row.version,
+      document: read.value,
+      schemaVersion: row.schemaVersion,
+      contentHash: row.contentHash,
+      publishedAt: row.publishedAt,
+    }),
+  };
+};
 
-/** The latest version of each of `automationIds`, by automation id. */
+/** A row that does not parse is a persistence fault: this code wrote it. */
+export const automationVersionFromRow = (
+  row: VersionRow,
+): AutomationVersionEntity => {
+  const read = readVersionRow(row);
+  if (!read.success) {
+    throw new PersistenceError(
+      `automation version ${row.id} is unreadable: ${read.reason}`,
+      "AUTOMATION_VERSION_ROW_UNREADABLE",
+    );
+  }
+  return read.value;
+};
+
+/**
+ * The latest version of each of `automationIds`, by automation id. An
+ * unreadable version is logged and left out, so one bad row doesn't stop
+ * every other automation from loading.
+ */
 export const loadLatestAutomationVersions = async (
   automationIds: readonly string[],
   db: DbExecutor,
+  logger: Logger,
 ): Promise<Map<string, AutomationVersionEntity>> => {
   if (automationIds.length === 0) {
     return new Map();
@@ -54,19 +87,31 @@ export const loadLatestAutomationVersions = async (
     .from(automationVersions)
     .where(inArray(automationVersions.automationId, [...automationIds]))
     .orderBy(automationVersions.automationId, desc(automationVersions.version));
+  const versions = readRowsSkippingUnreadable(
+    rows,
+    readVersionRow,
+    logger,
+    (row) => ({
+      table: "automation_versions",
+      automationId: row.automationId,
+      automationVersionId: row.id,
+    }),
+  );
   return new Map(
-    rows.map((row) => [row.automationId, versionRowToEntity(row)]),
+    versions.map((version) => [version.automationId, version] as const),
   );
 };
 
-/** Pairs each automation row with its latest version, keeping row order. */
+/** Pairs each automation row with its latest readable version, keeping row order. */
 export const resolveAutomations = async (
   rows: readonly AutomationRow[],
   db: DbExecutor,
+  logger: Logger,
 ): Promise<ResolvedAutomation[]> => {
   const latest = await loadLatestAutomationVersions(
     rows.map((row) => row.id),
     db,
+    logger,
   );
   return rows.map((row) => ({
     automation: automationRowToEntity(row),
@@ -75,6 +120,8 @@ export const resolveAutomations = async (
 };
 
 export class DrizzleAutomationRepo implements AutomationRepo {
+  constructor(private readonly logger: Logger = noopLogger) {}
+
   async findByKey(
     projectId: UuidV7,
     key: string,
@@ -133,7 +180,7 @@ export class DrizzleAutomationRepo implements AutomationRepo {
       .from(automations)
       .where(eq(automations.projectId, projectId))
       .orderBy(asc(automations.key));
-    return await resolveAutomations(rows, db);
+    return await resolveAutomations(rows, db, this.logger);
   }
 
   async listEnabledProjectAutomations(
@@ -152,7 +199,7 @@ export class DrizzleAutomationRepo implements AutomationRepo {
         ),
       )
       .orderBy(asc(automations.key));
-    return await resolveAutomations(rows, db);
+    return await resolveAutomations(rows, db, this.logger);
   }
 
   async scopesByKey(
@@ -218,7 +265,7 @@ export class DrizzleAutomationRepo implements AutomationRepo {
       .where(eq(automationVersions.automationId, automationId))
       .orderBy(desc(automationVersions.version))
       .limit(1);
-    return row ? versionRowToEntity(row) : null;
+    return row ? automationVersionFromRow(row) : null;
   }
 
   async insertVersion(
@@ -243,6 +290,6 @@ export class DrizzleAutomationRepo implements AutomationRepo {
         `Automation version ${version.id} was not inserted`,
       );
     }
-    return versionRowToEntity(row);
+    return automationVersionFromRow(row);
   }
 }

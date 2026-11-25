@@ -7,6 +7,7 @@ import type { WorkItemRepo } from "@scarn/core/work-items/work-item/application/
 import { parseWorkItemId } from "@scarn/core/work-items/work-item/domain/work-item-id";
 import { parseUuidV7 } from "@scarn/core/common/contracts/uuid-v7";
 import type { NotificationDeliveryRepo } from "@scarn/core/notifications/notification-delivery/application/notification-delivery-repo";
+import { readStoredArtifactResolution } from "@scarn/core/notifications/comment-artifacts/contracts/artifact-resolution-stored";
 import {
   commentDraftArtifactResolutionSchema,
   type CommentDraftArtifactResolutionContract,
@@ -31,13 +32,22 @@ export type PendingCommentDraft = {
   artifactResolution: CommentDraftArtifactResolutionContract | null;
 };
 
+/**
+ * The draft's stored artifact resolution, as the review UI reads it. A
+ * resolution that the stored reader can't read, or that doesn't fit the
+ * response contract, is shown as none.
+ */
 const toArtifactResolution = (
   json: AnyJsonObject | null,
 ): CommentDraftArtifactResolutionContract | null => {
   if (json === null) {
     return null;
   }
-  const parsed = commentDraftArtifactResolutionSchema.safeParse(json);
+  const read = readStoredArtifactResolution(json);
+  if (!read.success) {
+    return null;
+  }
+  const parsed = commentDraftArtifactResolutionSchema.safeParse(read.value);
   return parsed.success ? parsed.data : null;
 };
 

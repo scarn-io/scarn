@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "kind": "jira",
+  "installationId": null,
+  "externalScopeJson": {
+    "baseUrl": "https://example-site.atlassian.net",
+    "projectKeys": ["EXA", "OPS"]
+  }
+}

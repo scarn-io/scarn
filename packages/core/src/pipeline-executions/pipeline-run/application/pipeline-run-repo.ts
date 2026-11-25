@@ -98,11 +98,20 @@ export type PipelineRunRepo = {
     conversationId: UuidV7,
     dbExecutor?: DbExecutor,
   ): Promise<ConversationVisitRef | null>;
+  /**
+   * Throws `PIPELINE_RUN_HISTORY_UNREADABLE` when one of the run's lanes or
+   * visits doesn't read, so advancing, rerunning or overruling it fails
+   * clearly instead of acting on a partial history.
+   */
   loadHistory(
     pipelineRunId: UuidV7,
     dbExecutor?: DbExecutor,
   ): Promise<PipelineRunHistory>;
-  /** Batched `loadHistory`; runs with no rows map to an empty history. */
+  /**
+   * Batched `loadHistory`; runs with no rows map to an empty history. A run
+   * whose history doesn't read is logged and left out of the map rather than
+   * failing the batch.
+   */
   loadHistories(
     pipelineRunIds: readonly UuidV7[],
     dbExecutor?: DbExecutor,

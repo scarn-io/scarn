@@ -1,0 +1,43 @@
+[
+  {
+    "name": "all repositories",
+    "selectedRepositoriesJson": null,
+    "expected": null
+  },
+  {
+    "name": "selected repositories",
+    "selectedRepositoriesJson": [
+      { "id": 1001, "fullName": "example-org/example-one" },
+      { "id": 1002, "fullName": "example-org/example-two" }
+    ],
+    "expected": [
+      { "id": 1001, "fullName": "example-org/example-one" },
+      { "id": 1002, "fullName": "example-org/example-two" }
+    ]
+  },
+  {
+    "name": "entries missing or mistyping id or fullName",
+    "selectedRepositoriesJson": [
+      { "id": 1001, "fullName": "example-org/example-one", "private": true },
+      { "id": "1002", "fullName": "example-org/example-two" },
+      { "id": 1003 },
+      { "fullName": "example-org/example-four" },
+      null,
+      "example-org/example-five"
+    ],
+    "expected": [{ "id": 1001, "fullName": "example-org/example-one" }]
+  },
+  {
+    "name": "an object instead of a list",
+    "selectedRepositoriesJson": {
+      "id": 1001,
+      "fullName": "example-org/example-one"
+    },
+    "expected": null
+  },
+  {
+    "name": "an empty list",
+    "selectedRepositoriesJson": [],
+    "expected": []
+  }
+]
