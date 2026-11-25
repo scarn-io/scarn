@@ -297,9 +297,9 @@ describe("jiraIssueImport", () => {
           searchJiraIssuesUsingJql: () => ({
             content: [],
             structuredContent: {
-              issues: {
-                nodes: [issue("ABC-7", "2026-11-24T11:00:00.000+0000")],
-                pageInfo: { hasNextPage: false },
+              data: {
+                issues: [issue("ABC-7", "2026-11-24T11:00:00.000+0000")],
+                isLast: true,
               },
             },
           }),

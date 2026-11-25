@@ -109,18 +109,19 @@ export function atlassianServerFor(auth: JiraAuth): AtlassianServer {
   };
 }
 
+/**
+ * `{ data: { issues, isLast?, nextPageToken? } }`, as the live server
+ * returned it in Nov 2026 (it used to be `{ issues: { nodes, pageInfo } }`).
+ */
 const searchOutputSchema = z.object({
-  issues: z.object({
-    nodes: z.array(
+  data: z.object({
+    issues: z.array(
       jiraIssueSchema.extend({
         fields: z.looseObject({ summary: z.string(), updated: z.string() }),
       }),
     ),
-    pageInfo: z.object({
-      hasNextPage: z.boolean(),
-      endCursor: z.string().nullish(),
-    }),
-    remainingCount: z.number().nullish(),
+    isLast: z.boolean().nullish(),
+    nextPageToken: z.string().nullish(),
   }),
 });
 type SearchOutput = z.infer<typeof searchOutputSchema>;
@@ -207,31 +208,29 @@ function newestUpdated(issues: readonly JiraIssue[]): string {
 }
 
 /**
- * The next page's cursor, after checking `pageInfo` is consistent.
+ * The next page's cursor. There is a next page unless `isLast` is true or
+ * the server sent no `nextPageToken`; `isLast: false` without a token is an
+ * error.
  *
- * Atlassian's paging has silently skipped issues (a page of fewer nodes than
- * asked for while the token advanced by the full page). A short page that
- * claims more is therefore not trusted: the next page restarts from the
+ * Atlassian's paging has silently skipped issues (a page of fewer issues
+ * than asked for while the token advanced by the full page). A short page
+ * that claims more is therefore not trusted: the next page restarts from the
  * newest `updated` it saw, which can't skip anything because results are in
  * ascending `updated` order. A restart that makes no progress is an error.
  */
 function nextCursor(output: SearchOutput, restartedFrom: string | null) {
-  const { nodes, pageInfo, remainingCount } = output.issues;
-  if (!pageInfo.hasNextPage) {
-    if ((remainingCount ?? 0) > 0) {
+  const { issues: nodes, isLast, nextPageToken } = output.data;
+  if (isLast === true) return null;
+  if (!nextPageToken) {
+    if (isLast === false) {
       throw new McpOutputInvalidError(
-        `${label}: pageInfo.hasNextPage is false but remainingCount is ${String(remainingCount)}; the page may have dropped issues.`,
+        `${label}: isLast is false but there is no nextPageToken.`,
       );
     }
     return null;
   }
-  if (!pageInfo.endCursor) {
-    throw new McpOutputInvalidError(
-      `${label}: pageInfo.hasNextPage is true but there is no endCursor.`,
-    );
-  }
   if (nodes.length >= JIRA_PAGE_SIZE) {
-    return JSON.stringify({ token: pageInfo.endCursor });
+    return JSON.stringify({ token: nextPageToken });
   }
   if (nodes.length === 0) {
     throw new McpOutputInvalidError(
@@ -283,8 +282,9 @@ export function createJiraMcpSourceClient(options: {
         jql: buildJiraSearchJql(projectKey, restartedFrom ?? since, now()),
         fields: JIRA_SEARCH_FIELDS,
         maxResults: JIRA_PAGE_SIZE,
-        responseContentFormat: "adf" as const,
+        responseContentFormat: "markdown" as const,
         searchResultMode: "issues" as const,
+        view: "full" as const,
         ...(state !== null && "token" in state
           ? { nextPageToken: state.token }
           : {}),
@@ -297,7 +297,7 @@ export function createJiraMcpSourceClient(options: {
         });
       const output = parseOutput(rawOutput(result));
       const page: JiraSearchPage = {
-        issues: output.issues.nodes,
+        issues: output.data.issues,
         next: nextCursor(output, restartedFrom),
       };
       return page;

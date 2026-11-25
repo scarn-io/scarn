@@ -18,8 +18,9 @@ export const atlassianTools = mcpToolCatalog({
         fields: z.optional(z.array(z.string())),
         maxResults: z.optional(z.number()),
         nextPageToken: z.optional(z.string()),
-        responseContentFormat: z.optional(z.enum(["markdown", "adf"])),
+        responseContentFormat: z.optional(z.enum(["markdown", "html"])),
         searchResultMode: z.optional(z.enum(["issues", "count", "all"])),
+        view: z.optional(z.enum(["compact", "evidence", "full"])),
       }),
       inputJsonSchema: {
         type: "object",
@@ -34,11 +35,15 @@ export const atlassianTools = mcpToolCatalog({
           nextPageToken: { type: "string" },
           responseContentFormat: {
             type: "string",
-            enum: ["markdown", "adf"],
+            enum: ["markdown", "html"],
           },
           searchResultMode: {
             type: "string",
             enum: ["issues", "count", "all"],
+          },
+          view: {
+            type: "string",
+            enum: ["compact", "evidence", "full"],
           },
         },
         required: ["cloudId", "jql"],

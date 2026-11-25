@@ -68,6 +68,15 @@ function adfToPlainText(adf: unknown): string {
   return "";
 }
 
+/**
+ * REST returns ADF; the Atlassian MCP server returns markdown or HTML text.
+ */
+// eslint-disable-next-line local/no-unknown-parameter-type
+function descriptionText(description: unknown): string {
+  if (typeof description === "string") return description.trim();
+  return adfToPlainText(description);
+}
+
 // eslint-disable-next-line local/no-unknown-parameter-type
 function extractCustomFieldValue(value: unknown): unknown {
   if (value === null || value === undefined) return null;
@@ -132,9 +141,7 @@ export function mapJiraIssue(
     platformKey: issue.key,
     url: `${base}/browse/${issue.key}`,
     title: f["summary"] as string,
-    description: f["description"]
-      ? adfToPlainText(f["description"]) || NO_DESCRIPTION
-      : NO_DESCRIPTION,
+    description: descriptionText(f["description"]) || NO_DESCRIPTION,
     sourceCreatedAt: normalizeJiraDatetime(f["created"] as string | undefined),
     sourceUpdatedAt: normalizeJiraDatetime(f["updated"] as string | undefined),
     state: jiraStatusToState(f["status"]),

@@ -94,6 +94,27 @@ describe("mapJiraIssue", () => {
     expect(result.description).toContain("Repro");
   });
 
+  test("keeps a markdown description from the Atlassian MCP server as is", () => {
+    const issue = {
+      ...baseIssue,
+      fields: {
+        ...baseIssue.fields,
+        description: "**Repro:** open Safari → boom.\n",
+      },
+    } as unknown as JiraIssue;
+    const result = mapJiraIssueToWorkItem(baseUrl, issue, emptyFieldNameMap);
+    expect(result.description).toBe("**Repro:** open Safari → boom.");
+  });
+
+  test("falls back to placeholder when a markdown description is blank", () => {
+    const issue = {
+      ...baseIssue,
+      fields: { ...baseIssue.fields, description: "  \n" },
+    } as unknown as JiraIssue;
+    const result = mapJiraIssueToWorkItem(baseUrl, issue, emptyFieldNameMap);
+    expect(result.description).toBe("(No description provided.)");
+  });
+
   test("maps core fields correctly", () => {
     const result = mapJiraIssueToWorkItem(
       baseUrl,

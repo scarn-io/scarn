@@ -10,6 +10,7 @@ import {
   createJiraMcpSourceClient,
   JIRA_PAGE_SIZE,
 } from "../src/library/jira/mcp-adapter";
+import { mapJiraIssue } from "../src/library/jira/map-jira-issue";
 
 async function rejection(promise: Promise<object>): Promise<Error> {
   try {
@@ -35,11 +36,10 @@ function issue(n: number, updated = "2026-11-24T11:00:00.000+0000") {
 }
 
 function page(
-  nodes: unknown[],
-  pageInfo: { hasNextPage: boolean; endCursor?: string },
-  extra: Record<string, unknown> = {},
+  issues: unknown[],
+  paging: { isLast?: boolean; nextPageToken?: string } = {},
 ) {
-  return { issues: { nodes, pageInfo, ...extra } };
+  return { data: { issues, ...paging } };
 }
 
 function clientWith(respond: (args: Args) => unknown) {
@@ -73,9 +73,9 @@ const request = {
 };
 
 describe("Jira MCP adapter", () => {
-  test("builds the search arguments: site as cloudId, relative JQL, adf, page size", async () => {
+  test("builds the search arguments: site as cloudId, relative JQL, markdown, full view, page size", async () => {
     const { source, calls } = clientWith(() =>
-      page([issue(1)], { hasNextPage: false }),
+      page([issue(1)], { isLast: true }),
     );
     const result = await source.searchIssuesUpdatedSince(request);
     expect(result).toEqual({ issues: [issue(1)], next: null });
@@ -85,10 +85,61 @@ describe("Jira MCP adapter", () => {
         jql: 'project = "ABC" AND updated >= "-90m" ORDER BY updated ASC, key ASC',
         fields: expect.arrayContaining(["summary", "description", "updated"]),
         maxResults: JIRA_PAGE_SIZE,
-        responseContentFormat: "adf",
+        responseContentFormat: "markdown",
         searchResultMode: "issues",
+        view: "full",
       },
     ]);
+  });
+
+  test("a page without isLast or nextPageToken is the last", async () => {
+    const { source } = clientWith(() => page([issue(1)]));
+    expect(await source.searchIssuesUpdatedSince(request)).toEqual({
+      issues: [issue(1)],
+      next: null,
+    });
+  });
+
+  test("an issue in the live server's shape maps to a work item", async () => {
+    const live = {
+      id: "10001",
+      key: "ABC-1",
+      fields: {
+        summary: "Checkout fails",
+        issuetype: { id: "10007", name: "Story", hierarchyLevel: 0 },
+        created: "2026-10-30T15:21:51.602-0500",
+        description: "**SUMMARY:** checkout fails.\n\n",
+        reporter: { accountId: "a-1", displayName: "Reporter One" },
+        assignee: { accountId: "a-2", displayName: "Assignee Two" },
+        priority: { name: "Medium", id: "3" },
+        updated: "2026-11-23T17:28:12.596-0600",
+        status: {
+          name: "Done",
+          id: "5",
+          statusCategory: { key: "done", name: "Done" },
+        },
+        labels: ["Ephemeral"],
+      },
+    };
+    const { source } = clientWith(() => page([live], { isLast: true }));
+    const [found] = (await source.searchIssuesUpdatedSince(request)).issues;
+    if (!found) throw new Error("expected an issue");
+    expect(
+      mapJiraIssue(found, { site: "https://acme.atlassian.net" }),
+    ).toMatchObject({
+      platformKey: "ABC-1",
+      description: "**SUMMARY:** checkout fails.",
+      sourceCreatedAt: "2026-10-30T20:21:51.602Z",
+      sourceUpdatedAt: "2026-11-23T23:28:12.596Z",
+      state: "closed",
+      fields: {
+        status: "Done",
+        priority: "Medium",
+        issueType: "Story",
+        assignee: "Assignee Two",
+        reporter: "Reporter One",
+      },
+    });
   });
 
   test("relative minutes round up, so the window never starts late", () => {
@@ -104,8 +155,8 @@ describe("Jira MCP adapter", () => {
     const full = Array.from({ length: JIRA_PAGE_SIZE }, (_, n) => issue(n));
     const { source, calls } = clientWith((args) =>
       args["nextPageToken"] === undefined
-        ? page(full, { hasNextPage: true, endCursor: "tok-2" })
-        : page([issue(200)], { hasNextPage: false }),
+        ? page(full, { isLast: false, nextPageToken: "tok-2" })
+        : page([issue(200)], { isLast: true }),
     );
     const first = await source.searchIssuesUpdatedSince(request);
     expect(first.next).not.toBeNull();
@@ -126,9 +177,9 @@ describe("Jira MCP adapter", () => {
               issue(1, "2026-11-24T11:00:00.000+0000"),
               issue(2, "2026-11-24T11:40:00.000+0000"),
             ],
-            { hasNextPage: true, endCursor: "skips-ahead" },
+            { isLast: false, nextPageToken: "skips-ahead" },
           )
-        : page([], { hasNextPage: false }),
+        : page([], { isLast: true }),
     );
     const first = await source.searchIssuesUpdatedSince(request);
     await source.searchIssuesUpdatedSince({ ...request, cursor: first.next });
@@ -138,8 +189,8 @@ describe("Jira MCP adapter", () => {
 
   test("a restart that makes no progress fails", async () => {
     const stuck = page([issue(1, "2026-11-24T11:40:00.000+0000")], {
-      hasNextPage: true,
-      endCursor: "x",
+      isLast: false,
+      nextPageToken: "x",
     });
     const { source } = clientWith(() => stuck);
     const first = await source.searchIssuesUpdatedSince(request);
@@ -151,22 +202,22 @@ describe("Jira MCP adapter", () => {
   });
 
   test.each([
-    [
-      "no more pages but issues remain",
-      page([issue(1)], { hasNextPage: false }, { remainingCount: 3 }),
-    ],
-    ["more pages but no cursor", page([issue(1)], { hasNextPage: true })],
+    ["isLast false without a token", page([issue(1)], { isLast: false })],
     [
       "an empty page that claims more",
-      page([], { hasNextPage: true, endCursor: "x" }),
+      page([], { isLast: false, nextPageToken: "x" }),
     ],
     [
-      "a node without updated",
+      "an issue without updated",
       page([{ id: "1", key: "ABC-1", fields: { summary: "x" } }], {
-        hasNextPage: false,
+        isLast: true,
       }),
     ],
-    ["no issues object", { results: [] }],
+    ["no data object", { issues: [] }],
+    [
+      "the old issues.nodes shape",
+      { issues: { nodes: [issue(1)], pageInfo: { hasNextPage: false } } },
+    ],
   ])("%s is McpOutputInvalid", async (_name, output) => {
     const { source } = clientWith(() => output);
     expect(
@@ -183,7 +234,7 @@ describe("Jira MCP adapter", () => {
             content: [
               {
                 type: "text",
-                text: JSON.stringify(page([issue(1)], { hasNextPage: false })),
+                text: JSON.stringify(page([issue(1)], { isLast: true })),
               },
             ],
             structuredContent: null,
