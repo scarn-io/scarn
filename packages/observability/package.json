@@ -4,6 +4,11 @@
   "license": "Apache-2.0",
   "type": "module",
   "exports": {
+    "./analytics/api-client": {
+      "types": "./src/analytics/api-client.ts",
+      "bun": "./src/analytics/api-client.ts",
+      "default": "./src/analytics/api-client.ts"
+    },
     "./analytics/browser": {
       "types": "./src/analytics/browser.ts",
       "bun": "./src/analytics/browser.ts",

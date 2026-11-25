@@ -1,5 +1,29 @@
 import { describe, expect, test } from "bun:test";
-import { describeApiError } from "../src/lib/cli-api-client";
+import {
+  CLI_USER_AGENT,
+  createCliLabeledFetch,
+  describeApiError,
+} from "../src/lib/cli-api-client";
+
+describe("createCliLabeledFetch", () => {
+  test("labels every request as the CLI and keeps the caller's headers", async () => {
+    const sent: Request[] = [];
+    const labeledFetch = createCliLabeledFetch(async (input) => {
+      sent.push(input as Request);
+      return new Response(null, { status: 204 });
+    });
+
+    await labeledFetch("https://api.example.test/api/things", {
+      headers: { authorization: "Bearer t" },
+    });
+
+    const headers = sent[0]?.headers;
+    expect(headers?.get("x-scarn-client")).toBe("cli");
+    expect(headers?.get("x-scarn-client-version")).toEqual(expect.any(String));
+    expect(headers?.get("user-agent")).toBe(CLI_USER_AGENT);
+    expect(headers?.get("authorization")).toBe("Bearer t");
+  });
+});
 
 describe("describeApiError", () => {
   test("prefers detail, then title, then a generic fallback", () => {

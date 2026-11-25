@@ -1,3 +1,5 @@
+import type { ApiClientProperties } from "./api-client";
+
 export const AnalyticsEvents = {
   UserSignedUp: "user_signed_up",
   CtaClicked: "cta_clicked",
@@ -68,7 +70,7 @@ export type ApiEndpointTimedProperties = {
   operation_id?: string;
   tags?: string[];
   error_code?: string;
-};
+} & ApiClientProperties;
 
 export type NoProperties = Record<string, never>;
 

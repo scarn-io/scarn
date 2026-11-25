@@ -174,6 +174,7 @@ describe("server analytics wrapper", () => {
       ok: true,
       operation_id: "getProject",
       tags: ["Projects"],
+      client: "cli",
     });
     expect(captureCalls).toEqual([
       {
@@ -188,6 +189,7 @@ describe("server analytics wrapper", () => {
           ok: true,
           operation_id: "getProject",
           tags: ["Projects"],
+          client: "cli",
         },
       },
     ]);

@@ -1,4 +1,5 @@
 import { treaty } from "@elysia/eden";
+import { apiClientHeaders } from "@scarn/observability/analytics/api-client";
 import type { App } from "@scarn/api/app";
 import { stripScarnApiSuffix } from "./scarn-api-url";
 
@@ -8,6 +9,7 @@ export function createScarnTreaty(
   if (typeof baseUrlOrApp === "string") {
     return treaty<App>(stripScarnApiSuffix(baseUrlOrApp), {
       parseDate: false,
+      headers: apiClientHeaders("web"),
       fetch: { credentials: "include" },
     });
   }

@@ -1,3 +1,4 @@
+import { apiClientHeaders } from "@scarn/observability/analytics/api-client";
 import {
   createApiTokenSource,
   createAuthenticatedFetch,
@@ -5,6 +6,7 @@ import {
 } from "@scarn/sdk/auth";
 import { createScarnClient } from "@scarn/sdk/client";
 import { loadAuthenticatedSession } from "@scarn/worker";
+import { version as CLI_VERSION } from "../../package.json";
 
 /**
  * The two things a CLI adapter that talks to the API needs: an authenticated
@@ -34,13 +36,39 @@ export async function connectApi(baseUrl: string): Promise<AuthenticatedApi> {
       `Not signed in to ${baseUrl}. Run \`scarn auth login\` first.`,
     );
   }
+  const labeledFetch = createCliLabeledFetch();
   const fetch = createAuthenticatedFetch(
     createApiTokenSource({
       baseUrl,
       getSessionToken: () => authenticated.profile.accessToken,
+      fetch: labeledFetch,
     }),
+    { fetch: labeledFetch },
   );
   return { client: createScarnClient(baseUrl, { fetch }), fetch };
+}
+
+export const CLI_USER_AGENT = `scarn-cli/${CLI_VERSION} (${process.platform}; ${process.arch})`;
+
+/**
+ * Wraps `fetch` so every request names the CLI as its client (see
+ * `@scarn/observability/analytics/api-client`) and carries a `scarn-cli`
+ * `User-Agent`, which the API attaches to `api_endpoint_timed`.
+ */
+export function createCliLabeledFetch(
+  fetchImpl: FetchLike = (...args) => fetch(...args),
+): FetchLike {
+  const labels = {
+    ...apiClientHeaders("cli", CLI_VERSION),
+    "user-agent": CLI_USER_AGENT,
+  };
+  return (input, init) => {
+    const request = new Request(input, init);
+    for (const [name, value] of Object.entries(labels)) {
+      request.headers.set(name, value);
+    }
+    return fetchImpl(request);
+  };
 }
 
 type ApiFieldIssue = { path?: string; message?: string };

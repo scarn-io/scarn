@@ -107,6 +107,9 @@ describe("cors", () => {
     expect(response.headers.get("access-control-allow-headers")).toContain(
       "Content-Type",
     );
+    expect(response.headers.get("access-control-allow-headers")).toContain(
+      "x-scarn-client",
+    );
     expect(response.headers.get("access-control-max-age")).toBe("600");
   });
 

@@ -1,4 +1,5 @@
 import { ElysiaStatus, StatusMap, type AnyElysia, type Elysia } from "elysia";
+import { readApiClient } from "@scarn/observability/analytics/api-client";
 import { captureApiEndpointTiming } from "@scarn/observability/analytics/server";
 
 const ANONYMOUS_DISTINCT_ID = "anonymous";
@@ -176,6 +177,7 @@ const captureTiming = (
       : {}),
     ...(routeMetadata?.tags?.length ? { tags: routeMetadata.tags } : {}),
     ...(errorCode ? { error_code: errorCode } : {}),
+    ...readApiClient(context.request.headers),
   });
 };
 

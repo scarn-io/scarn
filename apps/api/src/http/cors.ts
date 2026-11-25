@@ -1,8 +1,12 @@
 import { Elysia } from "elysia";
+import {
+  API_CLIENT_HEADER,
+  API_CLIENT_VERSION_HEADER,
+} from "@scarn/observability/analytics/api-client";
 import { getTrustedOrigins, normalizeOrigin } from "./routes/trusted-origin";
 
 const ALLOWED_METHODS = "GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS";
-const ALLOWED_HEADERS = "Content-Type, Authorization";
+const ALLOWED_HEADERS = `Content-Type, Authorization, ${API_CLIENT_HEADER}, ${API_CLIENT_VERSION_HEADER}`;
 const MAX_AGE_SECONDS = "600";
 
 /**

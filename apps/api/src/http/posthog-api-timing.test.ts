@@ -169,6 +169,38 @@ describe("posthog api timing", () => {
     });
   });
 
+  test("attributes the request to the client named in its headers", async () => {
+    const { applyPosthogApiTiming, buildRouteMetadata } = await importHelpers();
+    const routeMetadataRef = { current: buildRouteMetadata([]) };
+    const { app } = applyPosthogApiTiming(
+      new Elysia({ prefix: "/api" }),
+      routeMetadataRef,
+    );
+    const instrumentedApp = app.get("/things", () => ({ ok: true }));
+    routeMetadataRef.current = buildRouteMetadata(instrumentedApp.routes);
+
+    await instrumentedApp.handle(
+      new Request("http://localhost/api/things", {
+        headers: {
+          "x-scarn-client": "cli",
+          "x-scarn-client-version": "1.4.2",
+        },
+      }),
+    );
+    await instrumentedApp.handle(
+      new Request("http://localhost/api/things", {
+        headers: { "x-scarn-client": "web" },
+      }),
+    );
+    await instrumentedApp.handle(new Request("http://localhost/api/things"));
+
+    expect(timingCalls.map((call) => call.properties)).toMatchObject([
+      { client: "cli", client_version: "1.4.2" },
+      { client: "web" },
+      { client: "unknown" },
+    ]);
+  });
+
   test("does not capture openapi routes", async () => {
     const { applyPosthogApiTiming, buildRouteMetadata } = await importHelpers();
     const routeMetadataRef = { current: buildRouteMetadata([]) };
