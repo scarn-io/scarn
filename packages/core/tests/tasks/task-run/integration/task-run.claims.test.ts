@@ -356,13 +356,12 @@ describe("task claims", () => {
         },
       });
       expect(workerContext.task.name).toBe("Claimable step");
-      expect(workerContext.task.key).toBe(task.id);
+      expect(workerContext.task.key).toBe(stepKey);
       expect(workerContext.agentPrompt.sessionTitle).toBe(
         `Claimable step (${task.id})`,
       );
-      expect(workerContext.agentPrompt.promptText).not.toContain("Step key:");
       expect(workerContext.agentPrompt.promptText).toContain(
-        `Task run id: ${task.id}\nWork item id: ${workerContext.task.workItemId ?? ""}\n`,
+        `Task run id: ${task.id}\nWork item id: ${workerContext.task.workItemId ?? ""}\nStep key: ${stepKey}\n`,
       );
       expect(workerContext.agentPrompt.promptText).toContain(
         '"ticketId": "ticket-worker-context"',

@@ -411,6 +411,7 @@ describe("fireSchedule", () => {
           { headers: h.headers },
         ),
       );
+      expect(context.task.key).toBe(poll.key);
       expect(context.task.prompt).toContain("Do the work.");
       expect(context.task.prompt).not.toContain("Work item id");
       await unwrapAsync(

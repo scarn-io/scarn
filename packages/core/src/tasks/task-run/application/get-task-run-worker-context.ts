@@ -222,7 +222,7 @@ export const getTaskRunWorkerContext = async (
 
   const history = await taskRunHistoryReader.loadHistory(task.id, now);
 
-  const [project, stepKey, taskExecutionConfig, workItem, steering] =
+  const [project, pipelineStepKey, taskExecutionConfig, workItem, steering] =
     await Promise.all([
       projectRepo.load(task.projectId),
       taskRunStepKeyReader.loadStepKey(task.id),
@@ -240,7 +240,9 @@ export const getTaskRunWorkerContext = async (
     chatConversationId,
     extraConnectors,
     declaredErrors,
+    stepDefinitionKey,
   } = await loadTaskFacts(task, { taskRepo, taskRunRepo, stepDefinitionRepo });
+  const stepKey = pipelineStepKey ?? stepDefinitionKey;
   const conversationDeps = { conversationRepo, usernameReader, timeProvider };
   const isChat = chatConversationId !== null;
   const inline = inlineConfigFieldsFromTaskExecutionConfig(taskExecutionConfig);

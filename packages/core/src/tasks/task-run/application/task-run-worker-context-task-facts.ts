@@ -14,13 +14,14 @@ export type TaskFacts = {
   chatConversationId: UuidV7 | null;
   extraConnectors: ExtraConnector[];
   declaredErrors: string[];
+  stepDefinitionKey: string | null;
 };
 
 /**
  * What `run`'s Task contributes: how many more times `run` may hand over (its
  * turns left as of `run`), which work items its agent may change, the
  * conversation of a chat (a Task with no work item), the extra connectors it
- * selected, and the error names its step definition declares.
+ * selected, and the key and error names of the step definition it came from.
  */
 export const loadTaskFacts = async (
   run: TaskRunEntity,
@@ -56,5 +57,6 @@ export const loadTaskFacts = async (
     chatConversationId,
     extraConnectors,
     declaredErrors,
+    stepDefinitionKey: stepDefinition?.key ?? null,
   };
 };
