@@ -91,6 +91,9 @@ const buildStepDefinitionsClient = (stepDefinitions: StepDefinitions) => {
         })),
         maxTurns: spec.maxTurns ?? null,
         concurrency: spec.concurrency ?? null,
+        ...(spec.logs !== undefined
+          ? { logs: { archive: spec.logs.archive } }
+          : {}),
         grants: (spec.grants ?? []).map((grant) => ({ ...grant })),
         status: spec.status,
         projectId,

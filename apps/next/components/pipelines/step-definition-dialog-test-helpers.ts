@@ -47,6 +47,7 @@ export function makeStep(
     grants: [],
     maxTurns: null,
     concurrency: null,
+    logs: { archive: "always" },
     opencodeMcpJson: null,
     healthChecksJson: [
       {

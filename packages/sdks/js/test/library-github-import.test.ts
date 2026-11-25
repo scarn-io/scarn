@@ -251,6 +251,19 @@ describe("runGitHubIssueImport", () => {
 });
 
 describe("githubIssueImport", () => {
+  test("keeps only failed and manual runs' logs unless told otherwise", () => {
+    expect(importGitHub.logs).toEqual({ archive: "on-failure" });
+    expect(
+      "logs" in
+        githubIssueImport({
+          key: "import-github",
+          repos: ["acme/web"],
+          auth,
+          logs: { archive: "always" },
+        }),
+    ).toBe(false);
+  });
+
   test("grants read, and create and update per repo, under its label", () => {
     expect(toStepSpec(importGitHub)).toMatchObject({
       key: "import-github",

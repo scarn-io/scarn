@@ -49,6 +49,9 @@ export const projectVisibilityEnum = pgEnum("project_visibility", [
   "public",
 ]);
 
+// When a run's log is archived; see `tasks/task/domain/log-archive.ts`.
+export const logArchiveEnum = pgEnum("log_archive", ["always", "on-failure"]);
+
 export const stepDefinitionStatusEnum = pgEnum("step_definition_status", [
   "draft",
   "active",
@@ -667,6 +670,9 @@ export const stepDefinitions = appSchema.table(
     // item, up to `waiting` more in `waiting_for_concurrency_slot`; null for
     // no limit.
     concurrencyJson: jsonb("concurrency_json"),
+    // `on-failure` (code steps only): a succeeded run no person started
+    // keeps no log. Copied onto `tasks.log_archive`.
+    logArchive: logArchiveEnum("log_archive").notNull().default("always"),
     // Version of the row's JSON columns; see `step-definition-stored.ts`.
     schemaVersion: integer("schema_version").notNull(),
     taskExecutionConfigId: uuid("task_execution_config_id").references(
@@ -978,6 +984,8 @@ export const tasks = appSchema.table(
     // when the Task started, plus `read` on `self`.
     grants: jsonb("grants_json").notNull().default([]),
     maxTurns: integer("max_turns"),
+    // Its step definition's `log_archive` when the Task started.
+    logArchive: logArchiveEnum("log_archive").notNull().default("always"),
     // When set, the lease a claim or heartbeat grants is this long.
     heartbeatSeconds: integer("heartbeat_seconds"),
     executionTimeoutSeconds: integer("execution_timeout_seconds"),

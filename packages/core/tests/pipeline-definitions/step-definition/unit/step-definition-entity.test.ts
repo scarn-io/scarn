@@ -102,6 +102,38 @@ describe("step definition entity concurrency", () => {
   });
 });
 
+describe("step definition entity logArchive", () => {
+  const codeProps = (): CreateStepDefinitionEntityProps => ({
+    ...baseProps(),
+    kind: "code",
+    prompt: null,
+    entrypointJson: { sourceFile: ".scarn/steps.ts" },
+  });
+
+  concurrentTest("defaults to always and round-trips through toJSON", () => {
+    expect(StepDefinitionEntity.create(baseProps()).logArchive).toBe("always");
+    expect(contractFor().logs).toEqual({ archive: "always" });
+
+    const entity = StepDefinitionEntity.create({
+      ...codeProps(),
+      logArchive: "on-failure",
+    });
+    expect(StepDefinitionEntity.rehydrate(entity.toJSON()).logArchive).toBe(
+      "on-failure",
+    );
+  });
+
+  concurrentTest("refuses on-failure on a step that isn't code", () => {
+    expect(() =>
+      StepDefinitionEntity.create({ ...baseProps(), logArchive: "on-failure" }),
+    ).toThrow(
+      expect.objectContaining({
+        code: "STEP_DEFINITION_LOG_ARCHIVE_NOT_ALLOWED",
+      }),
+    );
+  });
+});
+
 describe("step definition entity write rules", () => {
   concurrentTest("rehydrate trusts stored props the write rules refuse", () => {
     const stored = {

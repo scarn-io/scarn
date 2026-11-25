@@ -6588,6 +6588,22 @@
                     ],
                     "additionalProperties": false
                   },
+                  "logs": {
+                    "type": "object",
+                    "properties": {
+                      "archive": {
+                        "type": "string",
+                        "enum": [
+                          "always",
+                          "on-failure"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "archive"
+                    ],
+                    "additionalProperties": false
+                  },
                   "opencodeMcpJson": {
                     "type": [
                       "object",
@@ -8160,6 +8176,22 @@
                     ],
                     "additionalProperties": false
                   },
+                  "logs": {
+                    "type": "object",
+                    "properties": {
+                      "archive": {
+                        "type": "string",
+                        "enum": [
+                          "always",
+                          "on-failure"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "archive"
+                    ],
+                    "additionalProperties": false
+                  },
                   "opencodeMcpJson": {
                     "type": [
                       "object",
@@ -9729,6 +9761,22 @@
                     "required": [
                       "max",
                       "waiting"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "logs": {
+                    "type": "object",
+                    "properties": {
+                      "archive": {
+                        "type": "string",
+                        "enum": [
+                          "always",
+                          "on-failure"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "archive"
                     ],
                     "additionalProperties": false
                   },
@@ -11312,6 +11360,22 @@
                       ],
                       "additionalProperties": false
                     },
+                    "logs": {
+                      "type": "object",
+                      "properties": {
+                        "archive": {
+                          "type": "string",
+                          "enum": [
+                            "always",
+                            "on-failure"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "archive"
+                      ],
+                      "additionalProperties": false
+                    },
                     "opencodeMcpJson": {
                       "type": [
                         "object",
@@ -12184,6 +12248,7 @@
                     "grants",
                     "maxTurns",
                     "concurrency",
+                    "logs",
                     "opencodeMcpJson",
                     "healthChecksJson",
                     "repo",
@@ -13426,6 +13491,22 @@
                         ],
                         "additionalProperties": false
                       },
+                      "logs": {
+                        "type": "object",
+                        "properties": {
+                          "archive": {
+                            "type": "string",
+                            "enum": [
+                              "always",
+                              "on-failure"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "archive"
+                        ],
+                        "additionalProperties": false
+                      },
                       "opencodeMcpJson": {
                         "type": [
                           "object",
@@ -14298,6 +14379,7 @@
                       "grants",
                       "maxTurns",
                       "concurrency",
+                      "logs",
                       "opencodeMcpJson",
                       "healthChecksJson",
                       "repo",
@@ -15319,6 +15401,22 @@
                     "required": [
                       "max",
                       "waiting"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "logs": {
+                    "type": "object",
+                    "properties": {
+                      "archive": {
+                        "type": "string",
+                        "enum": [
+                          "always",
+                          "on-failure"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "archive"
                     ],
                     "additionalProperties": false
                   },
@@ -16894,6 +16992,22 @@
                     ],
                     "additionalProperties": false
                   },
+                  "logs": {
+                    "type": "object",
+                    "properties": {
+                      "archive": {
+                        "type": "string",
+                        "enum": [
+                          "always",
+                          "on-failure"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "archive"
+                    ],
+                    "additionalProperties": false
+                  },
                   "opencodeMcpJson": {
                     "type": [
                       "object",
@@ -18463,6 +18577,22 @@
                     "required": [
                       "max",
                       "waiting"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "logs": {
+                    "type": "object",
+                    "properties": {
+                      "archive": {
+                        "type": "string",
+                        "enum": [
+                          "always",
+                          "on-failure"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "archive"
                     ],
                     "additionalProperties": false
                   },
@@ -20046,6 +20176,22 @@
                       ],
                       "additionalProperties": false
                     },
+                    "logs": {
+                      "type": "object",
+                      "properties": {
+                        "archive": {
+                          "type": "string",
+                          "enum": [
+                            "always",
+                            "on-failure"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "archive"
+                      ],
+                      "additionalProperties": false
+                    },
                     "opencodeMcpJson": {
                       "type": [
                         "object",
@@ -20918,6 +21064,7 @@
                     "grants",
                     "maxTurns",
                     "concurrency",
+                    "logs",
                     "opencodeMcpJson",
                     "healthChecksJson",
                     "repo",
@@ -22024,6 +22171,22 @@
                       ],
                       "additionalProperties": false
                     },
+                    "logs": {
+                      "type": "object",
+                      "properties": {
+                        "archive": {
+                          "type": "string",
+                          "enum": [
+                            "always",
+                            "on-failure"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "archive"
+                      ],
+                      "additionalProperties": false
+                    },
                     "opencodeMcpJson": {
                       "type": [
                         "object",
@@ -22896,6 +23059,7 @@
                     "grants",
                     "maxTurns",
                     "concurrency",
+                    "logs",
                     "opencodeMcpJson",
                     "healthChecksJson",
                     "repo",
@@ -24002,6 +24166,22 @@
                       ],
                       "additionalProperties": false
                     },
+                    "logs": {
+                      "type": "object",
+                      "properties": {
+                        "archive": {
+                          "type": "string",
+                          "enum": [
+                            "always",
+                            "on-failure"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "archive"
+                      ],
+                      "additionalProperties": false
+                    },
                     "opencodeMcpJson": {
                       "type": [
                         "object",
@@ -24874,6 +25054,7 @@
                     "grants",
                     "maxTurns",
                     "concurrency",
+                    "logs",
                     "opencodeMcpJson",
                     "healthChecksJson",
                     "repo",

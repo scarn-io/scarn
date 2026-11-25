@@ -160,7 +160,7 @@ export const finalizeTaskLog = async (
  * Best-effort purge of a feed whose log won't be kept. A failure is logged and
  * swallowed: the DO feed's expiry alarm still deletes it eventually.
  */
-const discardFeed = async (
+export const discardFeed = async (
   taskRunId: UuidV7,
   {
     logFeedStore,

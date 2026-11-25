@@ -30,6 +30,7 @@ const step = {
   grants: [],
   maxTurns: null,
   concurrency: null,
+  logs: { archive: "always" },
   opencodeMcpJson: null,
   healthChecksJson: null,
   repo: { mode: "readOnly", gitCredentials: "none", baseBranch: null },

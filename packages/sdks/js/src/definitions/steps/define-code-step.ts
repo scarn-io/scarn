@@ -5,12 +5,14 @@ import type {
   EffectiveResult,
   StepConcurrency,
   StepDefinitionSpec,
+  StepLogs,
   StepRetryEntry,
 } from "./define-step";
 import type { BuiltInError } from "../../pipelines/types";
 import {
   compileStepConcurrency,
   compileStepErrors,
+  compileStepLogs,
   compileStepRetry,
   toStepHandle,
   type StepHandle,
@@ -200,6 +202,13 @@ export type DefineCodeStepInput<
   retry?: readonly StepRetryEntry[];
   /** As `defineStep()`'s `concurrency`: the per-work-item concurrency limit. */
   concurrency?: StepConcurrency;
+  /**
+   * When the step's run logs are archived. `{ archive: "on-failure" }` skips
+   * the log of a succeeded run that no person started, such as a scheduled
+   * sync, so it doesn't count toward log storage. Failed runs and Run now
+   * always keep theirs. Omitted means `{ archive: "always" }`.
+   */
+  logs?: StepLogs;
 };
 
 type EntrypointFn = NonNullable<StepDefinitionSpec["entrypoint"]>["fn"];
@@ -343,6 +352,7 @@ export function codeStep<
           concurrency: compileStepConcurrency(config.key, config.concurrency),
         }
       : {}),
+    ...compileStepLogs(config.key, config.logs),
     ...(grants.length > 0 ? { grants } : {}),
     entrypoint: { fn: entrypointFn(config.fn, config.mcps, grants) },
   };

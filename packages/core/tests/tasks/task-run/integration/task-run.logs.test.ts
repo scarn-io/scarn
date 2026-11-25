@@ -2,7 +2,10 @@ import { beforeAll, describe, expect } from "bun:test";
 import { createApp } from "@scarn/api/app";
 import { parseUuidV7, type UuidV7 } from "@scarn/core/common/contracts/uuid-v7";
 import { createScarnTreaty } from "tests/treaty";
+import { eq } from "drizzle-orm";
 import { createAppContext } from "@/lib/di";
+import { getDb } from "@/lib/db";
+import { taskRuns, tasks } from "@/lib/db/schema";
 import type { TimeProvider } from "@/lib/time-provider";
 import type { ProjectContract } from "@/projects/project/contracts/project-contracts";
 import { InMemoryObjectStore } from "@/artifacts/infra/in-memory-object-store";
@@ -353,4 +356,132 @@ describe("task logs", () => {
       expect(archiveMeta.sizeBytes).toBeGreaterThan(0);
     },
   );
+
+  describe("a code step with logs.archive on-failure", () => {
+    let onFailureStepId: UuidV7 | undefined;
+
+    beforeAll(async () => {
+      if (!project || !authHeaders) {
+        throw new Error("Expected setup to complete");
+      }
+      const step = await unwrapAsync(
+        apiClient.api["step-definitions"].post(
+          {
+            ...buildStepDefinitionPayload(
+              parseUuidV7(project.id),
+              `log_on_failure_${crypto.randomUUID()}`,
+            ),
+            kind: "code",
+            prompt: null,
+            entrypointJson: { sourceFile: ".scarn/steps.ts" },
+            logs: { archive: "on-failure" },
+          },
+          { headers: { ...authHeaders } },
+        ),
+      );
+      expect(step.logs).toEqual({ archive: "on-failure" });
+      onFailureStepId = step.id;
+    });
+
+    const runToEnd = async (
+      workerId: string,
+      status: "succeeded" | "failed",
+      { startedByPerson }: { startedByPerson: boolean },
+    ) => {
+      if (!project || !authHeaders || !onFailureStepId) {
+        throw new Error("Expected setup to complete");
+      }
+      const { taskRunId, claimToken } = await claimStep(
+        apiClient,
+        authHeaders,
+        parseUuidV7(project.id),
+        onFailureStepId,
+        workerId,
+      );
+      if (!startedByPerson) {
+        const [run] = await getDb()
+          .select({ taskId: taskRuns.taskId })
+          .from(taskRuns)
+          .where(eq(taskRuns.id, taskRunId));
+        await getDb()
+          .update(tasks)
+          .set({ startedByUserId: null })
+          .where(eq(tasks.id, run?.taskId ?? taskRunId));
+      }
+      await unwrapAsync(
+        apiClient.api["task-runs"]({ taskRunId }).logs.post(
+          {
+            claimToken,
+            lines: [
+              {
+                seq: 1,
+                stream: "worker",
+                ts: currentTime.toISOString(),
+                content: "synced 0 issues",
+                level: "info",
+              },
+            ],
+          },
+          { headers: { ...authHeaders } },
+        ),
+      );
+      await unwrapAsync(
+        apiClient.api["task-runs"]({ taskRunId }).completions.post(
+          {
+            claimToken,
+            status,
+            resultJson: status === "succeeded" ? {} : null,
+            errorJson:
+              status === "failed"
+                ? { name: "Scarn.StepFailed", message: "boom" }
+                : null,
+          },
+          { headers: { ...authHeaders } },
+        ),
+      );
+      const page = await unwrapAsync(
+        apiClient.api["task-runs"]({ taskRunId }).logs.get({
+          query: { from: 0, limit: 1000 },
+          headers: { ...authHeaders },
+        }),
+      );
+      return {
+        archived: await objectStore.getObject(taskLogArchiveKey(taskRunId)),
+        liveLines: page.lines,
+      };
+    };
+
+    serialTest(
+      "skips the log of a succeeded run no person started",
+      async () => {
+        currentTime = new Date("2026-05-01T12:40:00.000Z");
+        const { archived, liveLines } = await runToEnd(
+          "worker-skip",
+          "succeeded",
+          { startedByPerson: false },
+        );
+        expect(archived).toBeNull();
+        expect(liveLines).toEqual([]);
+      },
+    );
+
+    serialTest("keeps the log of a failed run", async () => {
+      currentTime = new Date("2026-05-01T12:50:00.000Z");
+      const { archived } = await runToEnd("worker-fail", "failed", {
+        startedByPerson: false,
+      });
+      expect(archived).not.toBeNull();
+    });
+
+    serialTest(
+      "keeps the log of a succeeded run a person started",
+      async () => {
+        currentTime = new Date("2026-05-01T13:00:00.000Z");
+        const { archived } = await runToEnd("worker-manual", "succeeded", {
+          startedByPerson: true,
+        });
+        expect(archived).not.toBeNull();
+      },
+    );
+  });
 });

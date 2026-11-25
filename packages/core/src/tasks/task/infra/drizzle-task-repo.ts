@@ -82,6 +82,7 @@ export const readTaskRow = (row: TaskRow): StoredReadResult<TaskEntity> => {
       retryJson: stored.retryJson,
       grants: stored.grants,
       maxTurns: row.maxTurns,
+      logArchive: row.logArchive,
       heartbeatSeconds: row.heartbeatSeconds,
       executionTimeoutSeconds: row.executionTimeoutSeconds,
       status: row.status,

@@ -1674,6 +1674,9 @@ export type GetApiStepDefinitionsResponses = {
             max: number;
             waiting: number;
         } | null;
+        logs: {
+            archive: 'always' | 'on-failure';
+        };
         opencodeMcpJson: {
             [key: string]: {
                 type: 'local';
@@ -1959,6 +1962,9 @@ export type PostApiStepDefinitionsData = {
             max: number;
             waiting: number;
         } | null;
+        logs?: {
+            archive: 'always' | 'on-failure';
+        };
         opencodeMcpJson?: {
             [key: string]: {
                 type: 'local';
@@ -2385,6 +2391,9 @@ export type PostApiStepDefinitionsResponses = {
             max: number;
             waiting: number;
         } | null;
+        logs: {
+            archive: 'always' | 'on-failure';
+        };
         opencodeMcpJson: {
             [key: string]: {
                 type: 'local';
@@ -2670,6 +2679,9 @@ export type PutApiStepDefinitionsData = {
             max: number;
             waiting: number;
         } | null;
+        logs?: {
+            archive: 'always' | 'on-failure';
+        };
         opencodeMcpJson?: {
             [key: string]: {
                 type: 'local';
@@ -3058,6 +3070,9 @@ export type PutApiStepDefinitionsResponses = {
             max: number;
             waiting: number;
         } | null;
+        logs: {
+            archive: 'always' | 'on-failure';
+        };
         opencodeMcpJson: {
             [key: string]: {
                 type: 'local';
@@ -3456,6 +3471,9 @@ export type GetApiStepDefinitionsByStepDefinitionIdResponses = {
             max: number;
             waiting: number;
         } | null;
+        logs: {
+            archive: 'always' | 'on-failure';
+        };
         opencodeMcpJson: {
             [key: string]: {
                 type: 'local';
@@ -3854,6 +3872,9 @@ export type PutApiStepDefinitionsByStepDefinitionIdArchiveResponses = {
             max: number;
             waiting: number;
         } | null;
+        logs: {
+            archive: 'always' | 'on-failure';
+        };
         opencodeMcpJson: {
             [key: string]: {
                 type: 'local';

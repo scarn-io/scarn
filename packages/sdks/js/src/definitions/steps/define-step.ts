@@ -138,6 +138,20 @@ export type StepConcurrency = {
   waiting: number;
 };
 
+/**
+ * When a code step's run log is archived. `always` (the default) keeps every
+ * run's log. `on-failure` keeps the logs of failed, cancelled and timed-out
+ * runs and of runs a person started, such as Run now; a succeeded run
+ * started by a schedule, an automation or a pipeline is not kept and doesn't
+ * count toward log storage.
+ */
+export type StepLogArchive = "always" | "on-failure";
+
+/** A code step's `logs` setting. */
+export type StepLogs = {
+  archive: StepLogArchive;
+};
+
 /** One `retry` entry: the same shape as a pipeline node's `retry`. */
 export type StepRetryEntry = {
   on: readonly string[];
@@ -197,6 +211,8 @@ export type StepDefinitionSpec = {
   maxTurns?: number;
   /** The step's per-work-item concurrency limit; omitted means no limit. */
   concurrency?: StepConcurrency;
+  /** `kind === "code"` only: when run logs are archived; omitted means `always`. */
+  logs?: StepLogs;
   /**
    * What the step's Tasks may do to work items, from its
    * `Features.workItems.*` features. Every Task may also read its own.

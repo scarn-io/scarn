@@ -248,6 +248,19 @@ describe("runJiraIssueImport", () => {
 });
 
 describe("jiraIssueImport", () => {
+  test("keeps only failed and manual runs' logs unless told otherwise", () => {
+    expect(importJira.logs).toEqual({ archive: "on-failure" });
+    expect(
+      "logs" in
+        jiraIssueImport({
+          key: "import-jira",
+          site,
+          projectKeys: ["ABC"],
+          logs: { archive: "always" },
+        }),
+    ).toBe(false);
+  });
+
   test("grants read, and create and update per project key, under its label", () => {
     expect(toStepSpec(importJira)).toMatchObject({
       key: "import-jira",

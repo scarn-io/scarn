@@ -11,6 +11,7 @@
 import { onEvent } from "../../automations/define-automation";
 import type { Rule } from "../../automations/types";
 import { codeStep } from "../../definitions/steps/define-code-step";
+import type { StepLogs } from "../../definitions/steps/define-step";
 import { workItems as workItemFeatures } from "../../definitions/steps/work-item-features";
 import { z } from "zod";
 import { parseJiraAuth, type JiraAuth } from "./auth";
@@ -53,6 +54,12 @@ export type JiraIssueImportOptions = {
   /** How far back the first run reaches. Defaults to 30 days. */
   readonly firstSyncHorizonDays?: number;
   readonly status?: "draft" | "active";
+  /**
+   * When run logs are archived. Defaults to `{ archive: "on-failure" }`: a
+   * scheduled run that succeeds keeps no log, so a frequent sync doesn't use
+   * up log storage. Failed runs and Run now keep theirs.
+   */
+  readonly logs?: StepLogs;
 };
 
 const resultSchema = z.object({
@@ -150,6 +157,7 @@ function buildStep(options: JiraIssueImportOptions) {
     name:
       options.name ?? `Import Jira issues (${options.projectKeys.join(", ")})`,
     status: options.status ?? "active",
+    logs: options.logs ?? { archive: "on-failure" },
     mcps: { [ATLASSIAN_MCP_KEY]: server.handle },
     features,
     resultSchema,

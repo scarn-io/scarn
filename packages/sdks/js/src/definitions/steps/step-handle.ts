@@ -17,6 +17,7 @@ import { BUILT_IN_ERRORS } from "../../contracts/pipeline-document/built-ins";
 import type {
   StepConcurrency,
   StepDefinitionSpec,
+  StepLogs,
   StepRetryEntry,
 } from "./define-step";
 import type { EnvironmentHandle } from "../environments/define-environment";
@@ -109,6 +110,24 @@ export function compileStepConcurrency(
     );
   }
   return { max: concurrency.max, waiting: concurrency.waiting };
+}
+
+/**
+ * Checks a code step's `logs` and returns the spec field for it, or nothing
+ * for the default `always`, so a step that doesn't change it pushes the same
+ * spec as before.
+ */
+export function compileStepLogs(
+  stepKey: string,
+  logs: StepLogs | undefined,
+): { logs: StepLogs } | Record<never, never> {
+  if (logs === undefined) return {};
+  if (logs.archive !== "always" && logs.archive !== "on-failure") {
+    throw new Error(
+      `Step "${stepKey}": logs.archive must be "always" or "on-failure".`,
+    );
+  }
+  return logs.archive === "always" ? {} : { logs: { archive: logs.archive } };
 }
 
 /**

@@ -100,6 +100,7 @@ function makeStep(
     grants: [],
     maxTurns: null,
     concurrency: null,
+    logs: { archive: "always" },
     opencodeMcpJson: {
       postgres: { type: "ref", name: "postgres-readonly" },
       playwright: {

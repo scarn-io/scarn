@@ -16,6 +16,11 @@ import {
   type Grant,
 } from "@scarn/core/tasks/task/domain/grants";
 import { BUILT_IN_ERRORS } from "@scarn/sdk/contracts/pipeline-document";
+import {
+  DEFAULT_LOG_ARCHIVE,
+  isLogArchive,
+  type LogArchive,
+} from "@scarn/core/tasks/task/domain/log-archive";
 import { normalizeDate } from "@scarn/core/work-items/work-item/domain/date-utils";
 
 // `code` steps are plain functions instead of LLM prompts — the worker
@@ -105,6 +110,11 @@ export type StepDefinitionEntityProps = {
    * `waiting` more wait for a slot; null for no limit.
    */
   concurrency?: StepConcurrency | null | undefined;
+  /**
+   * When run logs are archived; omitted means `always`. `on-failure` is for
+   * `code` steps only.
+   */
+  logArchive?: LogArchive | undefined;
   /** `null` runs on the repo's own config (D3). */
   taskExecutionConfigId: UuidV7 | null;
   status: StepDefinitionStatus;
@@ -254,6 +264,7 @@ export class StepDefinitionEntity {
   public readonly grants: readonly Grant[];
   public readonly maxTurns: number | null;
   public readonly concurrency: StepConcurrency | null;
+  public readonly logArchive: LogArchive;
   public readonly taskExecutionConfigId: UuidV7 | null;
   public readonly status: StepDefinitionStatus;
   public readonly createdAt: Date | null | undefined;
@@ -277,6 +288,7 @@ export class StepDefinitionEntity {
     this.grants = props.grants ?? [];
     this.maxTurns = props.maxTurns ?? null;
     this.concurrency = props.concurrency ?? null;
+    this.logArchive = props.logArchive ?? DEFAULT_LOG_ARCHIVE;
     this.taskExecutionConfigId =
       props.taskExecutionConfigId === null
         ? null
@@ -422,6 +434,20 @@ export class StepDefinitionEntity {
       }
     }
 
+    const logArchive = props.logArchive ?? DEFAULT_LOG_ARCHIVE;
+    if (!isLogArchive(logArchive)) {
+      throw new CoreValidationError(
+        'Step definition logs.archive must be "always" or "on-failure"',
+        "STEP_DEFINITION_LOG_ARCHIVE_INVALID",
+      );
+    }
+    if (logArchive !== "always" && props.kind !== "code") {
+      throw new CoreValidationError(
+        `Step definition of kind '${props.kind}' can't skip run logs: logs.archive "on-failure" is for code steps only`,
+        "STEP_DEFINITION_LOG_ARCHIVE_NOT_ALLOWED",
+      );
+    }
+
     return {
       ...props,
       key,
@@ -435,6 +461,7 @@ export class StepDefinitionEntity {
       grants: parsedGrants.data,
       maxTurns,
       concurrency,
+      logArchive,
     };
   }
 
@@ -495,6 +522,7 @@ export class StepDefinitionEntity {
       grants: this.grants,
       maxTurns: this.maxTurns,
       concurrency: this.concurrency,
+      logArchive: this.logArchive,
       taskExecutionConfigId: this.taskExecutionConfigId,
       status: this.status,
       createdAt: this.createdAt,

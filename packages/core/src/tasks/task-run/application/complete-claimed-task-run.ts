@@ -19,7 +19,11 @@ import type { AnyJsonValue } from "@scarn/core/common/contracts/json";
 import type { UuidV7 } from "@scarn/core/common/contracts/uuid-v7";
 import type { ObjectStore } from "@scarn/core/artifacts/object-store";
 import type { LogFeedStore } from "@scarn/core/tasks/task-log/application/log-feed-store";
-import { finalizeTaskLog } from "@scarn/core/tasks/task-log/application/finalize-task-log";
+import {
+  discardFeed,
+  finalizeTaskLog,
+} from "@scarn/core/tasks/task-log/application/finalize-task-log";
+import { shouldArchiveRunLog } from "@scarn/core/tasks/task/domain/log-archive";
 import {
   onRunEnded,
   type OnRunEndedDeps,
@@ -73,14 +77,27 @@ export type FinalizeLogDeps = {
  * (or yield) transaction. Returns whether the log is kept (see
  * `finalizeTaskLog`); with no live feed store wired there is nothing to
  * archive, which counts as kept.
+ *
+ * With `archive: false` (`shouldArchiveRunLog` said no) the feed is purged
+ * instead: nothing is written or metered, and it returns true, since
+ * skipping the log was intended.
  */
 export const finalizeCompletedStepLog = async (
   taskRunId: UuidV7,
   projectId: UuidV7,
   deps: FinalizeLogDeps,
   tx: DbExecutor,
+  { archive = true }: { archive?: boolean } = {},
 ): Promise<boolean> => {
   if (!deps.logFeedStore) {
+    return true;
+  }
+  if (!archive) {
+    await discardFeed(taskRunId, {
+      logFeedStore: deps.logFeedStore,
+      logger: deps.logger,
+      dbExecutor: tx,
+    });
     return true;
   }
   return await finalizeTaskLog(taskRunId, projectId, {
@@ -174,12 +191,20 @@ export const completeClaimedTaskRun = async (
         authorityLoss === null &&
         parsedInput.status === "succeeded" &&
         changes.length > 0;
+      const archivesLog = await runLogArchiveRule(task, deps, tx);
+      const archivesBeforeSettle = settlesChanges && archivesLog("succeeded");
       const refusal = settlesChanges
         ? await settleWorkItemChanges(
             task,
             changes,
             async () =>
-              await finalizeCompletedStepLog(task.id, task.projectId, deps, tx),
+              !archivesBeforeSettle ||
+              (await finalizeCompletedStepLog(
+                task.id,
+                task.projectId,
+                deps,
+                tx,
+              )),
             deps,
             tx,
           )
@@ -211,8 +236,10 @@ export const completeClaimedTaskRun = async (
         deps.notifications,
         tx,
       );
-      if (!settlesChanges) {
-        await finalizeCompletedStepLog(saved.id, saved.projectId, deps, tx);
+      if (!archivesBeforeSettle) {
+        await finalizeCompletedStepLog(saved.id, saved.projectId, deps, tx, {
+          archive: archivesLog(saved.status),
+        });
       }
       await onRunEnded(saved, { ...deps, endedTaskSessions }, tx);
 
@@ -229,6 +256,27 @@ export const completeClaimedTaskRun = async (
     );
   }
   return outcome;
+};
+
+/**
+ * Whether `run` keeps its log once it ends with a given status, from its
+ * Task's `logArchive` and who started it (`shouldArchiveRunLog`). The Task is
+ * loaded only when its log setting could skip the log.
+ */
+const runLogArchiveRule = async (
+  run: TaskRunEntity,
+  deps: CompleteClaimedTaskRunDeps,
+  tx: DbExecutor,
+): Promise<(status: string) => boolean> => {
+  if (!deps.logFeedStore || run.kind !== "code") return () => true;
+  const task = await deps.taskRepo.load(run.taskId, tx);
+  if (!task) return () => true;
+  return (runStatus) =>
+    shouldArchiveRunLog({
+      logArchive: task.logArchive,
+      runStatus,
+      startedByUserId: task.startedByUserId,
+    });
 };
 
 /** The result `run` stores: the reported one, or `conversationResult` for a Task with no result schema. */

@@ -1,0 +1,112 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "520b959e-705a-48ce-ae07-9340222d622f",
+  "prevIds": [
+    "eeccf751-d0c9-4c12-88e1-7ff5fe1fcbf7"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "log_archive"
+      ],
+      "writes": [
+        "s|enum|public.log_archive",
+        "n|enum|public.log_archive",
+        "e|enum|public.log_archive",
+        "n|type|public.log_archive"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "step_definitions",
+        "log_archive"
+      ],
+      "writes": [
+        "s|col|app.step_definitions.log_archive",
+        "n|col|app.step_definitions.log_archive",
+        "e|col|app.step_definitions.log_archive"
+      ],
+      "reads": [
+        "n|tbl|app.step_definitions",
+        "n|sch|app",
+        "n|enum|public.log_archive"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "tasks",
+        "log_archive"
+      ],
+      "writes": [
+        "s|col|app.tasks.log_archive",
+        "n|col|app.tasks.log_archive",
+        "e|col|app.tasks.log_archive"
+      ],
+      "reads": [
+        "n|tbl|app.tasks",
+        "n|sch|app",
+        "n|enum|public.log_archive"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "log_archive",
+        "values": [
+          "always",
+          "on-failure"
+        ],
+        "entityType": "enums"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "step_definitions",
+        "name": "log_archive",
+        "type": "log_archive",
+        "typeSchema": "public",
+        "notNull": true,
+        "dimensions": 0,
+        "default": "'always'",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "tasks",
+        "name": "log_archive",
+        "type": "log_archive",
+        "typeSchema": "public",
+        "notNull": true,
+        "dimensions": 0,
+        "default": "'always'",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    }
+  ]
+}

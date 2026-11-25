@@ -37,6 +37,7 @@ import {
 import { validTaskSubject } from "./task-subject";
 import { maxTurnsExceeded, turnsLeft, validMaxTurns } from "./task-turns";
 import { taskGrants, type Grant } from "./grants";
+import { DEFAULT_LOG_ARCHIVE, type LogArchive } from "./log-archive";
 import {
   taskEnvironmentSelection,
   type TaskEnvironmentSelection,
@@ -93,6 +94,11 @@ export type TaskEntityProps = {
    * `grantTurn` when a person replies with none left.
    */
   maxTurns: number | null;
+  /**
+   * Its step definition's log setting when the Task was created; omitted
+   * means `always`. See `shouldArchiveRunLog`.
+   */
+  logArchive?: LogArchive | undefined;
   /** When set, the lease a claim or heartbeat grants is this long. */
   heartbeatSeconds: number | null;
   executionTimeoutSeconds: number | null;
@@ -175,6 +181,7 @@ export class TaskEntity {
   public readonly retryJson: AnyJsonValue | null;
   public readonly grants: readonly Grant[];
   public readonly maxTurns: number | null;
+  public readonly logArchive: LogArchive;
   public readonly heartbeatSeconds: number | null;
   public readonly executionTimeoutSeconds: number | null;
   public readonly status: TaskStatus;
@@ -218,6 +225,7 @@ export class TaskEntity {
     this.retryJson = props.retryJson;
     this.grants = props.grants.map((grant) => ({ ...grant }));
     this.maxTurns = validMaxTurns(props.maxTurns);
+    this.logArchive = props.logArchive ?? DEFAULT_LOG_ARCHIVE;
     this.heartbeatSeconds = positiveIntegerOrNull(
       props.heartbeatSeconds,
       "heartbeatSeconds",
@@ -275,6 +283,7 @@ export class TaskEntity {
         startedByScheduleId: props.startedByScheduleId ?? null,
       }),
       maxTurns: props.maxTurns ?? null,
+      logArchive: props.logArchive,
       heartbeatSeconds: props.heartbeatSeconds ?? null,
       executionTimeoutSeconds: props.executionTimeoutSeconds ?? null,
       status: props.status,
@@ -452,6 +461,7 @@ export class TaskEntity {
       retryJson: this.retryJson,
       grants: this.grants,
       maxTurns: this.maxTurns,
+      logArchive: this.logArchive,
       heartbeatSeconds: this.heartbeatSeconds,
       executionTimeoutSeconds: this.executionTimeoutSeconds,
       status: this.status,

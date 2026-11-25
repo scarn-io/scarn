@@ -26,6 +26,7 @@ import {
   grantKindRefusals,
   grantsSchema,
 } from "@scarn/core/tasks/task/domain/grants";
+import { logArchiveValues } from "@scarn/core/tasks/task/domain/log-archive";
 import {
   stepDefinitionKindValues,
   stepDefinitionStatusValues,
@@ -76,6 +77,14 @@ export const stepConcurrencySchema = z.strictObject({
   waiting: z.number().int().min(0),
 });
 
+/**
+ * When the step's run logs are archived. `on-failure` (code steps only) skips
+ * the log of a succeeded run no person started.
+ */
+export const stepLogsSchema = z.strictObject({
+  archive: z.enum(logArchiveValues),
+});
+
 export const stepDefinitionSchema = z.object({
   id: uuidV7Schema,
   projectId: uuidV7Schema,
@@ -101,6 +110,7 @@ export const stepDefinitionSchema = z.object({
   maxTurns: z.number().int().positive().nullable(),
   /** The per-work-item concurrency limit; null for no limit. */
   concurrency: stepConcurrencySchema.nullable(),
+  logs: stepLogsSchema,
   opencodeMcpJson: openCodeMcpServersSchema.nullable(),
   healthChecksJson: healthChecksSchema.nullable(),
   repo: repoConfigSchema,
@@ -230,6 +240,8 @@ export const createStepDefinitionInputSchema = z
     maxTurns: z.number().int().positive().nullable().optional(),
     /** The per-work-item concurrency limit; null for no limit. */
     concurrency: stepConcurrencySchema.nullable().optional(),
+    /** Omitted means `{ archive: "always" }`. */
+    logs: stepLogsSchema.optional(),
     opencodeMcpJson: taskExecutionConfigMcpServersSchema.nullable().optional(),
     healthChecksJson: healthChecksSchema.nullable().optional(),
     repo: repoConfigInputSchema.optional(),
@@ -269,6 +281,13 @@ export const createStepDefinitionInputSchema = z
     }
     refineMcpToolStep(value, context);
     refineCodeStepHealthChecks(value, context);
+    if (value.kind !== "code" && value.logs?.archive === "on-failure") {
+      context.addIssue({
+        code: "custom",
+        message: `Step definition of kind '${value.kind}' can't skip run logs: logs.archive "on-failure" is for code steps only`,
+        path: ["logs", "archive"],
+      });
+    }
     for (const message of grantKindRefusals(value.kind, value.grants ?? [])) {
       context.addIssue({ code: "custom", message, path: ["grants"] });
     }

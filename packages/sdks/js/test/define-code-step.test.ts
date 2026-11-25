@@ -29,6 +29,28 @@ describe("codeStep", () => {
     },
   );
 
+  test.concurrent("leaves logs out unless it skips succeeded runs", () => {
+    const base = { key: "noop", name: "Noop", fn: () => ({}) };
+    expect("logs" in codeStep(base)).toBe(false);
+    expect("logs" in codeStep({ ...base, logs: { archive: "always" } })).toBe(
+      false,
+    );
+    expect(codeStep({ ...base, logs: { archive: "on-failure" } }).logs).toEqual(
+      { archive: "on-failure" },
+    );
+  });
+
+  test.concurrent("refuses an unknown logs.archive", () => {
+    expect(() =>
+      codeStep({
+        key: "noop",
+        name: "Noop",
+        fn: () => ({}),
+        logs: { archive: "never" as "always" },
+      }),
+    ).toThrow('logs.archive must be "always" or "on-failure"');
+  });
+
   test.concurrent("defaults version to 1 and status to active", () => {
     const spec = codeStep({
       key: "noop",

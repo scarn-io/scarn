@@ -12,6 +12,7 @@ import type {
   StepDefinitionEntity,
 } from "@scarn/core/pipeline-definitions/step-definition/domain/step-definition-entity";
 import { TaskExecutionConfigEntity } from "@scarn/core/tasks/task-execution-config/domain/task-execution-config-entity";
+import type { LogArchive } from "@scarn/core/tasks/task/domain/log-archive";
 import type { TaskRunRepo } from "@scarn/core/tasks/task-run/application/task-run-repo";
 import type { WorkNotifier } from "@scarn/core/tasks/task-run/application/work-notifier";
 import type { TaskRunEntity } from "@scarn/core/tasks/task-run/domain/task-run-entity";
@@ -46,6 +47,8 @@ export type StandaloneTaskSpec = TaskInstructions & {
   retryJson: AnyJsonValue | null;
   grants: readonly Grant[];
   maxTurns: number;
+  /** Omitted means `always`; see `shouldArchiveRunLog`. */
+  logArchive?: LogArchive | undefined;
   /** null for a prompt Task, which skips concurrency groups. */
   concurrencyGroup: TaskConcurrencyGroup | null;
   /** The extra connectors a person added (`applyEnvironmentSelection`). */
@@ -204,9 +207,8 @@ export const promptTaskSpec = (
 
 /**
  * A step-definition version's instructions, name, execution config, `retry`
- * policy, grants, `maxTurns` (else
- * `DEFAULT_STANDALONE_MAX_TURNS`) and concurrency group, as a standalone
- * Task copies them.
+ * policy, grants, `maxTurns` (else `DEFAULT_STANDALONE_MAX_TURNS`), log
+ * setting and concurrency group, as a standalone Task copies them.
  */
 export const stepDefinitionTaskSpec = (
   stepDefinition: StepDefinitionEntity,
@@ -222,6 +224,7 @@ export const stepDefinitionTaskSpec = (
         })),
   grants: stepDefinition.grants,
   maxTurns: stepDefinition.maxTurns ?? DEFAULT_STANDALONE_MAX_TURNS,
+  logArchive: stepDefinition.logArchive,
   concurrencyGroup: {
     stepKey: stepDefinition.key,
     concurrency: stepDefinition.concurrency,

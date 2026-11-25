@@ -68,6 +68,20 @@ describe("startTask notifying workers", () => {
     expect(enqueued).toEqual([projectId]);
   });
 
+  test("the Task copies the spec's log setting, else always", async () => {
+    const { deps } = setup([]);
+
+    const { task: plain } = Result.unwrap(
+      await startTask(spec, start(), deps, tx),
+    );
+    const { task: skipping } = Result.unwrap(
+      await startTask({ ...spec, logArchive: "on-failure" }, start(), deps, tx),
+    );
+
+    expect(plain.logArchive).toBe("always");
+    expect(skipping.logArchive).toBe("on-failure");
+  });
+
   test("a blocked work item queues no run and tells the notifier nothing", async () => {
     const { deps, enqueued } = setup([createUuidV7()]);
 
