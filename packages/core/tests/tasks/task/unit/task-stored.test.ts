@@ -13,6 +13,7 @@ import {
 const columnsOf = (fixture: StoredTaskFixture) => ({
   ...fixture,
   grants: fixture.grantsJson,
+  heldWorkItemChangesJson: fixture.heldWorkItemChangesJson ?? [],
 });
 
 describe("tasks stored reader", () => {
@@ -39,6 +40,8 @@ describe("tasks stored reader", () => {
                   ).extraConnectors,
                 },
           grants: fixture.grantsJson,
+          heldWorkItemChanges:
+            (fixture as StoredTaskFixture).heldWorkItemChangesJson ?? [],
           resultJson: fixture.resultJson,
           errorJson: fixture.errorJson,
         },
@@ -112,6 +115,35 @@ describe("tasks stored reader", () => {
       grants: grantsJson,
     });
     expect(read.success && (read.value.grants as unknown)).toEqual(grantsJson);
+  });
+
+  concurrentTest(
+    "reads held work item changes today's write rules would refuse",
+    () => {
+      const heldWorkItemChangesJson = [
+        {
+          kind: "close",
+          workItemId: "not-a-uuid",
+          reason: "retired_reason",
+        },
+        { kind: "comment", workItemId: "not-a-uuid", body: "" },
+      ];
+      const read = readStoredTask(1, {
+        ...columnsOf(storedTaskFixtures["held-changes"]),
+        heldWorkItemChangesJson,
+      });
+      expect(
+        read.success && (read.value.heldWorkItemChanges as unknown),
+      ).toEqual(heldWorkItemChangesJson);
+    },
+  );
+
+  concurrentTest("a held change of an unknown kind is unreadable", () => {
+    const read = readStoredTask(1, {
+      ...columnsOf(storedTaskFixtures["held-changes"]),
+      heldWorkItemChangesJson: [{ kind: "rename", workItemId: "x" }],
+    });
+    expect(read.success).toBe(false);
   });
 
   concurrentTest("an error without a message is unreadable", () => {

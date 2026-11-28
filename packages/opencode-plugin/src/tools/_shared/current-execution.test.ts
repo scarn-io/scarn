@@ -67,3 +67,20 @@ describe("loadCurrentExecutionInfo grants", () => {
     expect((await loadCurrentExecutionInfo(workspacePath)).grants).toEqual([]);
   });
 });
+
+describe("loadCurrentExecutionInfo grantRequests", () => {
+  test.concurrent("reads grantRequests and turnsRemaining", async () => {
+    const info = await loadCurrentExecutionInfo(
+      await workItemTestWorkspace({ grantRequests: true }),
+    );
+
+    expect(info.grantRequests).toBe(true);
+    expect(info.turnsRemaining).toBe(3);
+  });
+
+  test.concurrent("treats a missing grantRequests as false", async () => {
+    const info = await loadCurrentExecutionInfo(await workItemTestWorkspace());
+
+    expect(info.grantRequests).toBe(false);
+  });
+});

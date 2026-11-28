@@ -23,7 +23,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
 import type { TaskRunContract } from "@scarn/api/frontend-contracts";
-import { assertNever } from "@scarn/core/lib/assert-never";
 import { useProjectPath } from "@/components/project-route-context";
 import { StepThread } from "@/components/executions/step-thread";
 import { StepLogsView } from "@/components/executions/step-logs-view";
@@ -41,8 +40,10 @@ import {
   TaskKindIcon,
   pipelineRunLabel,
   taskDisplayName,
+  taskKindHasTranscript,
   taskKindLabel,
 } from "./task-display";
+import { TaskAccessSection } from "./task-access-section";
 
 export { useTask } from "./use-task";
 
@@ -102,18 +103,6 @@ export function taskRunsDuration(
   return formatElapsedMs(end - new Date(startedAt).getTime());
 }
 
-function taskKindHasTranscript(kind: TaskDetail["kind"]): boolean {
-  switch (kind) {
-    case "agent":
-      return true;
-    case "code":
-    case "mcp_tool":
-      return false;
-    default:
-      return assertNever(kind);
-  }
-}
-
 function TaskViewBody({
   projectId,
   task,
@@ -156,6 +145,7 @@ function TaskViewBody({
               setLogsRunNumber(null);
             }}
           />
+          <TaskAccessSection task={task} />
           <Tabs
             value={view}
             onChange={(_event, next: View) => {

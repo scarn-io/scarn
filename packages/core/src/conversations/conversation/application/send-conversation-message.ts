@@ -74,13 +74,14 @@ export const sendConversationMessage = async (
 
 /**
  * Records an action a person took without writing, while the conversation
- * waits for them: a `system` message, with the conversation's next status.
+ * waits for them: a `system` message (linked to the grant request it
+ * decided, if any), with the conversation's next status.
  * Locks the row, so it must run in a transaction. The caller checks
  * permissions.
  */
 export const postConversationSystemMessage = async (
   conversation: ConversationEntity,
-  body: string,
+  message: string | { body: string; grantRequestId: UuidV7 },
   next: (conversation: ConversationEntity, now: Date) => ConversationEntity,
   deps: Omit<ConversationWriteDeps, "userAuthz"> & { actorId: UuidV7 },
   tx: DbExecutor,
@@ -92,7 +93,7 @@ export const postConversationSystemMessage = async (
     ConversationMessageEntity.system({
       conversationId: conversation.id,
       authorUserId: deps.actorId,
-      body,
+      ...(typeof message === "string" ? { body: message } : message),
       createdAt: now,
     }),
     tx,

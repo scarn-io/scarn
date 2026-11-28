@@ -186,6 +186,10 @@ export default defineConfig({
               slug: "how-to/connect-a-tool-to-a-step",
             },
             {
+              label: "Let an agent ask for access",
+              slug: "how-to/let-an-agent-ask-for-access",
+            },
+            {
               label: "Run a pipeline on any work item",
               slug: "how-to/run-on-a-work-item",
             },

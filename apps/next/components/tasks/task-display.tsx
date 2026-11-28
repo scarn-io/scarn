@@ -60,6 +60,19 @@ export const isTaskActive = (status: TaskStatus): boolean =>
   status === "queued" ||
   status === "waiting_for_person";
 
+/** Whether a Task of `kind` has an agent transcript (code Tasks only log). */
+export function taskKindHasTranscript(kind: TaskSummary["kind"]): boolean {
+  switch (kind) {
+    case "agent":
+      return true;
+    case "code":
+    case "mcp_tool":
+      return false;
+    default:
+      return assertNever(kind);
+  }
+}
+
 export function TaskKindIcon({ kind }: { kind: TaskSummary["kind"] }) {
   switch (kind) {
     case "code":

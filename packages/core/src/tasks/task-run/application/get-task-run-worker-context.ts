@@ -52,6 +52,12 @@ import type { TaskRepo } from "@scarn/core/tasks/task/application/task-repo";
 import type { TaskRunStepKeyReader } from "./task-run-step-key-reader";
 import { loadTaskFacts } from "./task-run-worker-context-task-facts";
 import type { StepDefinitionRepo } from "@scarn/core/pipeline-definitions/step-definition/application/step-definition-repo";
+import type { GrantRequestRepo } from "@scarn/core/tasks/grant-request/application/grant-request-repo";
+import {
+  buildGrantsAddedPromptLines,
+  buildRequestAccessPromptLines,
+  loadGrantRequestDecisions,
+} from "./task-run-worker-context-grant-requests";
 import {
   buildSteeringPromptLines,
   loadStepSteering,
@@ -79,6 +85,8 @@ function buildPromptText(input: {
   stepBaseBranch: string | null;
   turnsRemaining: number | null;
   isConversationStep: boolean;
+  grantsAdded: string[];
+  grantRequests: boolean;
 }): string {
   if (input.chat && input.continuation) {
     return [
@@ -110,7 +118,9 @@ function buildPromptText(input: {
       stepBaseBranch: input.stepBaseBranch,
     }),
     ...buildConversationPromptLines(input.continuation),
+    ...buildGrantsAddedPromptLines(input.grantsAdded),
     ...(input.workItemId === null ? [] : [WORK_ITEM_PROMPT_LINE]),
+    ...buildRequestAccessPromptLines(input.grantRequests),
     "",
     "Step input JSON:",
     "```json",
@@ -178,6 +188,7 @@ export const getTaskRunWorkerContext = async (
     conversationRepo,
     usernameReader,
     orgRepo,
+    grantRequestRepo,
   }: {
     userAuthz: UserAuthorizationService;
     projectRepo: ProjectRepo;
@@ -197,6 +208,7 @@ export const getTaskRunWorkerContext = async (
     conversationRepo: ConversationRepo;
     usernameReader: UsernameReader;
     orgRepo: OrgRepo;
+    grantRequestRepo: Pick<GrantRequestRepo, "listByTaskId">;
   },
 ): Promise<
   Result<
@@ -237,11 +249,16 @@ export const getTaskRunWorkerContext = async (
   const {
     turnsRemaining,
     grants,
+    grantRequests,
     chatConversationId,
     extraConnectors,
     declaredErrors,
     stepDefinitionKey,
   } = await loadTaskFacts(task, { taskRepo, taskRunRepo, stepDefinitionRepo });
+  const grantDecisions = await loadGrantRequestDecisions(task, {
+    grantRequestRepo,
+    usernameReader,
+  });
   const stepKey = pipelineStepKey ?? stepDefinitionKey;
   const conversationDeps = { conversationRepo, usernameReader, timeProvider };
   const isChat = chatConversationId !== null;
@@ -269,7 +286,10 @@ export const getTaskRunWorkerContext = async (
   const restoreMessage = continuation
     ? chat
       ? buildChatTurnPreamble(chat) + buildChatRestoredMessage(continuation)
-      : buildRestoredSessionMessage(continuation.delivered)
+      : buildRestoredSessionMessage(
+          continuation.delivered,
+          grantDecisions.latest,
+        )
     : null;
   const restoreSession =
     task.kind === "agent"
@@ -336,6 +356,7 @@ export const getTaskRunWorkerContext = async (
       resultSchemaJson: task.resultSchemaJson,
       declaredErrors,
       turnsRemaining,
+      grantRequests,
       workItemId,
       conversationId: chatConversationId,
       grants,
@@ -363,6 +384,8 @@ export const getTaskRunWorkerContext = async (
         stepBaseBranch,
         turnsRemaining,
         isConversationStep: task.resultSchemaJson === null,
+        grantsAdded: grantDecisions.decided,
+        grantRequests,
       }),
       instructionsPlaceholder: STEP_INSTRUCTIONS_PLACEHOLDER,
     },

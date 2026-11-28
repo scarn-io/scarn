@@ -8,7 +8,10 @@ import { TaskEntity } from "@/tasks/task/domain/task-entity";
 import { DrizzleTaskRepo } from "@/tasks/task/infra/drizzle-task-repo";
 import { DrizzleTaskRunRepo } from "@/tasks/task-run/infra/drizzle-task-run-repo";
 import { expectPgError } from "tests/lib/db/orchestration-schema-test-support";
-import { agentTaskInstructionColumns } from "tests/lib/db/seed-task-prerequisites";
+import {
+  agentTaskInstructionColumns,
+  seedWorkItem,
+} from "tests/lib/db/seed-task-prerequisites";
 import { concurrentTest, fixedTimeProvider } from "tests/utils";
 
 const NOW = new Date("2026-11-10T12:00:00.000Z");
@@ -106,6 +109,69 @@ describe("DrizzleTaskRepo, a Task without a work item", () => {
               schemaVersion: 1,
             }),
         { code: "23514", constraint: "tasks_owner_check" },
+      );
+    },
+  );
+});
+
+describe("DrizzleTaskRepo, a Task's grants and held changes", () => {
+  concurrentTest(
+    "saved grants and held work item changes round-trip",
+    async () => {
+      const projectId = await seedProject();
+      const workItemId = await seedWorkItem(projectId);
+      const created = await taskRepo.create(
+        TaskEntity.create({
+          projectId,
+          workItemId,
+          ...agentTaskInstructionColumns,
+          status: "queued",
+          startedByUserId: createUuidV7(),
+          createdAt: NOW,
+        }),
+      );
+      const later = new Date(NOW.getTime() + 60_000);
+
+      const saved = await taskRepo.save(
+        created
+          .withGrants(
+            [
+              {
+                resource: "workItem",
+                action: "label",
+                scope: "self",
+                labels: ["triaged"],
+              },
+            ],
+            later,
+          )
+          .holdWorkItemChanges(
+            [{ kind: "comment", workItemId, body: "On it." }],
+            later,
+          ),
+      );
+      const reloaded = await taskRepo.load(created.id);
+
+      expect(created.grantRequests).toBe(true);
+      for (const task of [saved, reloaded]) {
+        expect(task?.grantRequests).toBe(true);
+        expect(task?.grants).toEqual([
+          { resource: "workItem", action: "read", scope: "self" },
+          {
+            resource: "workItem",
+            action: "label",
+            scope: "self",
+            labels: ["triaged"],
+          },
+        ]);
+        expect(task?.heldWorkItemChanges).toEqual([
+          { kind: "comment", workItemId, body: "On it." },
+        ]);
+      }
+
+      await taskRepo.save(saved.clearHeldWorkItemChanges(later));
+      expect((await taskRepo.load(created.id))?.heldWorkItemChanges).toEqual(
+        [],
       );
     },
   );

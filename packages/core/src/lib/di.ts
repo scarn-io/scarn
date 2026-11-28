@@ -18,6 +18,7 @@ import { DrizzleAutomationScheduleRepo } from "@scarn/core/pipeline-definitions/
 import { DrizzleWorkItemAutomationRepo } from "@scarn/core/pipeline-definitions/automation/infra/drizzle-work-item-automation-repo";
 import { DrizzleTaskRunRepo } from "@scarn/core/tasks/task-run/infra/drizzle-task-run-repo";
 import { DrizzleTaskRepo } from "@scarn/core/tasks/task/infra/drizzle-task-repo";
+import { DrizzleGrantRequestRepo } from "@scarn/core/tasks/grant-request/infra/drizzle-grant-request-repo";
 import { DrizzleTaskSummaryReader } from "@scarn/core/tasks/task/infra/drizzle-task-summary-reader";
 import type { TaskSummaryReader } from "@scarn/core/tasks/task/application/task-summary-reader";
 import type { UserNotificationRepo } from "@scarn/core/notifications/user-notification/application/user-notification-repo";
@@ -91,6 +92,7 @@ import type { StepDefinitionRepo } from "@scarn/core/pipeline-definitions/step-d
 import type { EnvironmentRepo } from "@scarn/core/pipeline-definitions/environment/application/environment-repo";
 import type { TaskRunRepo } from "@scarn/core/tasks/task-run/application/task-run-repo";
 import type { TaskRepo } from "@scarn/core/tasks/task/application/task-repo";
+import type { GrantRequestRepo } from "@scarn/core/tasks/grant-request/application/grant-request-repo";
 import type { ArtifactRepo } from "@scarn/core/tasks/task-artifact/application/artifact-repo";
 import { DrizzleArtifactRepo } from "@scarn/core/tasks/task-artifact/infra/drizzle-artifact-repo";
 import type { ArtifactFailureRepo } from "@scarn/core/tasks/task-artifact/application/artifact-failure-repo";
@@ -193,6 +195,7 @@ export type CreateAppContextOverrides = {
   stepDefinitionRepo?: StepDefinitionRepo;
   environmentRepo?: EnvironmentRepo;
   taskRepo?: TaskRepo;
+  grantRequestRepo?: GrantRequestRepo;
   taskSummaryReader?: TaskSummaryReader;
   taskRunRepo?: TaskRunRepo;
   artifactRepo?: ArtifactRepo;
@@ -314,6 +317,8 @@ export function createAppContext(overrides?: CreateAppContextOverrides) {
   const environmentRepo =
     overrides?.environmentRepo ?? new DrizzleEnvironmentRepo();
   const taskRepo = overrides?.taskRepo ?? new DrizzleTaskRepo(logger);
+  const grantRequestRepo =
+    overrides?.grantRequestRepo ?? new DrizzleGrantRequestRepo();
   const taskSummaryReader =
     overrides?.taskSummaryReader ?? new DrizzleTaskSummaryReader();
   const taskRunRepo =
@@ -535,6 +540,7 @@ export function createAppContext(overrides?: CreateAppContextOverrides) {
       pipelineGraphVersionRepo,
       stepDefinitionRepo,
       taskRepo,
+      grantRequestRepo,
       taskRunRepo,
       taskMessageRepo,
       conversationRepo,
@@ -622,6 +628,7 @@ export function createAppContext(overrides?: CreateAppContextOverrides) {
     stepDefinitionRepo,
     environmentRepo,
     taskRepo,
+    grantRequestRepo,
     taskGroup,
     taskSummaryReader,
     taskRunRepo,

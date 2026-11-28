@@ -186,6 +186,7 @@ const createTaskRunWriteRoutes = (appContext: AppContext) => {
               conversationRepo: appContext.conversationRepo,
               usernameReader: appContext.usernameReader,
               orgRepo: appContext.orgRepo,
+              grantRequestRepo: appContext.grantRequestRepo,
             },
           ),
         ),

@@ -64,6 +64,7 @@ export const createStepDefinition = async (
       maxTurns: parsedInput.maxTurns,
       concurrency: parsedInput.concurrency,
       logArchive: parsedInput.logs?.archive,
+      grantRequests: parsedInput.grantRequests,
       taskExecutionConfigId: config?.id ?? null,
       status: parsedInput.status,
       createdAt: now,

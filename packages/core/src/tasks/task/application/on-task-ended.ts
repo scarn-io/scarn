@@ -31,12 +31,15 @@ import {
   type TaskRunSessionsDeps,
 } from "@scarn/core/tasks/task-run/application/task-run-sessions";
 import type { TaskRunEntity } from "@scarn/core/tasks/task-run/domain/task-run-entity";
+import type { GrantRequestRepo } from "@scarn/core/tasks/grant-request/application/grant-request-repo";
+import { withdrawGrantRequest } from "@scarn/core/tasks/grant-request/domain/grant-request";
 import type { TaskEntity, TaskStatus } from "../domain/task-entity";
 import type { TaskGroup } from "./task-group";
 import type { TaskRepo } from "./task-repo";
 
 export type OnTaskEndedDeps = Omit<TaskRunSessionsDeps, "taskRunRepo"> & {
   taskRepo: TaskRepo;
+  grantRequestRepo: Pick<GrantRequestRepo, "findPendingByTaskId" | "save">;
   taskRunRepo: Pick<TaskRunRepo, "listByTaskId" | "clearSessions">;
   conversationRepo: ConversationRepo;
   workItemCommentRepo: Pick<WorkItemCommentRepo, "create">;
@@ -180,6 +183,31 @@ const postSummaryComment = async (
   );
 };
 
+/** `task` holding no work item changes, saved, when it failed or was cancelled. */
+const dropHeldWorkItemChanges = async (
+  task: TaskEntity,
+  deps: OnTaskEndedDeps,
+  tx: DbExecutor,
+): Promise<TaskEntity> =>
+  task.status === "succeeded" || task.heldWorkItemChanges.length === 0
+    ? task
+    : await deps.taskRepo.save(
+        task.clearHeldWorkItemChanges(deps.timeProvider.now()),
+        tx,
+      );
+
+/** Closes the ended Task's `pending` grant request, if any, as `withdrawn`. */
+const withdrawPendingRequest = async (
+  task: TaskEntity,
+  deps: OnTaskEndedDeps,
+  tx: DbExecutor,
+): Promise<void> => {
+  const pending = await deps.grantRequestRepo.findPendingByTaskId(task.id, tx);
+  if (pending) {
+    await deps.grantRequestRepo.save(withdrawGrantRequest(pending), tx);
+  }
+};
+
 /** A failed chat (no work item or schedule) keeps its conversation open so it can be retried. */
 const staysOpen = (task: TaskEntity): boolean =>
   task.workItemId === null &&
@@ -190,14 +218,18 @@ const staysOpen = (task: TaskEntity): boolean =>
  * `task` just ended because `run` ended (or a person ended it, or it was
  * cancelled): closes its conversation (posting its summary comment, see
  * `postSummaryComment`), releases its runs' sessions and frees its place in
- * its concurrency group (`TaskGroup.ended`). Returns the Task as saved.
+ * its concurrency group (`TaskGroup.ended`). A Task that failed or was
+ * cancelled drops the work item changes it held from hand-overs, and a
+ * grant request still pending is withdrawn. Returns the Task as saved.
  */
 export const onTaskEnded = async (
-  task: TaskEntity,
+  endedTask: TaskEntity,
   run: TaskRunEntity | null,
   deps: OnTaskEndedDeps,
   tx: DbExecutor,
 ): Promise<TaskEntity> => {
+  const task = await dropHeldWorkItemChanges(endedTask, deps, tx);
+  await withdrawPendingRequest(task, deps, tx);
   const ended =
     run &&
     task.status === "succeeded" &&

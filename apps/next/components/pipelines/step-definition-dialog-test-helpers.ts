@@ -35,6 +35,7 @@ export function makeStep(
     name: "Browser Repro",
     description: null,
     prompt: "Open the app.",
+    grantRequests: false,
     version: 1,
     kind: "user_defined",
     entrypointJson: null,

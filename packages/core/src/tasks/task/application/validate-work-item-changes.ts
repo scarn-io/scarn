@@ -196,7 +196,7 @@ const checkChange = (
 export const validateWorkItemChanges = async (
   task: TaskEntity,
   changes: WorkItemChange[],
-  deps: { workItemRepo: WorkItemRepo },
+  deps: { workItemRepo: Pick<WorkItemRepo, "loadMany"> },
   tx: DbExecutor,
 ): Promise<void> => {
   const existingIds: string[] = [

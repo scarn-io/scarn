@@ -27,6 +27,7 @@ import {
 import { readStepDefinitionRow } from "@scarn/core/pipeline-definitions/step-definition/infra/drizzle-step-definition-repo";
 import { readSecretRow } from "@scarn/core/secrets/secret/infra/drizzle-secret-repo";
 import { readStoredTaskExecutionConfig } from "@scarn/core/tasks/task-execution-config/contracts/task-execution-config-stored";
+import { readGrantRequestRow } from "@scarn/core/tasks/grant-request/infra/drizzle-grant-request-repo";
 import { readTaskRow } from "@scarn/core/tasks/task/infra/drizzle-task-repo";
 import { readStoredTaskRun } from "@scarn/core/tasks/task-run/contracts/task-run-stored";
 import { readStoredWorkItemFields } from "@scarn/core/work-items/work-item/contracts/work-item-fields-stored";
@@ -141,6 +142,11 @@ const auditors: Record<string, TableAuditor> = {
     schema.tasks,
     "readTaskRow (readStoredTask, then rehydrate)",
     (row) => readTaskRow(row),
+  ),
+  task_grant_requests: auditTable(
+    schema.taskGrantRequests,
+    "readGrantRequestRow (readStoredGrantRequest)",
+    (row) => readGrantRequestRow(row),
   ),
   lanes: auditTable(schema.lanes, "readLaneRow (readStoredLane)", (row) =>
     readLaneRow(row),

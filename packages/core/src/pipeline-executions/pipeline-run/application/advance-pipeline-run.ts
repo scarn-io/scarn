@@ -20,6 +20,7 @@ import type { StepDefinitionRepo } from "@scarn/core/pipeline-definitions/step-d
 import type { StepDefinitionEntity } from "@scarn/core/pipeline-definitions/step-definition/domain/step-definition-entity";
 import { buildTaskInstructionsFromStepDefinition } from "@scarn/core/pipeline-definitions/step-definition/domain/build-task-instructions-from-step-definition";
 import type { TaskRepo } from "@scarn/core/tasks/task/application/task-repo";
+import type { GrantRequestRepo } from "@scarn/core/tasks/grant-request/application/grant-request-repo";
 import {
   onRunEnded,
   syncTaskWithRun,
@@ -80,6 +81,7 @@ export type AdvancePipelineRunDeps = {
   pipelineGraphVersionRepo: PipelineGraphVersionRepo;
   stepDefinitionRepo: StepDefinitionRepo;
   taskRepo: TaskRepo;
+  grantRequestRepo: GrantRequestRepo;
   taskRunRepo: TaskRunRepo;
   taskMessageRepo: TaskMessageRepo;
   conversationRepo: ConversationRepo;
@@ -452,6 +454,7 @@ class CommandWriter {
         projectId: this.run.projectId,
         workItemId: this.run.workItemId,
         stepDefinitionId: stepDefinition.id,
+        stepGrantRequests: stepDefinition.grantRequests,
         ...instructions,
         inputJson: queued.input,
         retryJson: node?.kind === "step" ? (node.retry ?? null) : null,

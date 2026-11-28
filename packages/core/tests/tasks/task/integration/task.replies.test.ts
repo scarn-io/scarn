@@ -6,9 +6,11 @@ import type { UuidV7 } from "@scarn/core/common/contracts/uuid-v7";
 import {
   continueTask,
   replyToTask,
-  type ActedOnTask,
-  type ActOnTaskDeps,
 } from "@/tasks/task/application/reply-to-task";
+import type {
+  ActedOnTask,
+  ActOnTaskDeps,
+} from "@/tasks/task/application/resume-task";
 import type { DbExecutor } from "@/lib/db/db-executor";
 import type { ResourceNotFoundError } from "@/lib/errors";
 import type { Result } from "@/lib/result";

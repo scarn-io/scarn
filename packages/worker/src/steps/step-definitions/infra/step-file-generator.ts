@@ -273,7 +273,7 @@ function grantToFeature(grant: Grant): {
 }
 
 /**
- * The `features: [...]` sources for a step's grants, and its prompt with the
+ * The `features: [...]` sources for a step's grants and `grantRequests`, and its prompt with the
  * sections those features append taken back off, so a pulled file compiles
  * back to the same prompt.
  */
@@ -283,12 +283,17 @@ function buildGrantFeatures(step: StepDefContract): {
 } {
   const prompt = step.prompt ?? "";
   const grants = step.grants ?? [];
-  if (grants.length === 0) return { prompt, sources: [] };
+  const grantRequestsSources =
+    step.grantRequests === true ? ["Features.grantRequests()"] : [];
+  if (grants.length === 0) return { prompt, sources: grantRequestsSources };
 
   const features = grants.map(grantToFeature);
   const additions = features.map(({ feature }) => feature._promptAddition);
   const suffix = additions.map((addition) => `\n\n${addition}`).join("");
-  const sources = features.map(({ source }) => source);
+  const sources = [
+    ...features.map(({ source }) => source),
+    ...grantRequestsSources,
+  ];
   if (prompt.endsWith(suffix)) {
     return { prompt: prompt.slice(0, -suffix.length), sources };
   }

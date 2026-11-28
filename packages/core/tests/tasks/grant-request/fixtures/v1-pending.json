@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "status": "pending",
+  "reason": "I need to label the child items I created.",
+  "requestedJson": [
+    {
+      "resource": "workItem",
+      "action": "label",
+      "scope": "children",
+      "labels": ["frontend", "backend"]
+    },
+    { "resource": "workItem", "action": "comment", "scope": "self" }
+  ],
+  "approvedJson": null
+}

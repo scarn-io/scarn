@@ -162,4 +162,60 @@ describe("generateStepsFileContent task settings", () => {
       await rm(dir, { recursive: true, force: true });
     }
   });
+
+  test("emits Features.grantRequests() when the step has it", () => {
+    const content = generateStepsFileContent([
+      makeStep({ grantRequests: true }),
+    ]);
+
+    expect(content).toMatchInlineSnapshot(`
+      "import { z } from "zod";
+      import { defineStep, Features } from "@scarn/sdk/definitions/steps";
+
+      export const wayfinder = defineStep({
+        key: "wayfinder",
+        name: "Wayfinder",
+        version: 1,
+        status: "active" as const,
+        agentPrompt: "Find the way.",
+        input: z.unknown(),
+        result: z.unknown(),
+        features: [
+          Features.grantRequests(),
+        ],
+      });
+      "
+    `);
+  });
+
+  test("omits Features.grantRequests() when grantRequests is false", () => {
+    const content = generateStepsFileContent([
+      makeStep({ grantRequests: false }),
+    ]);
+
+    expect(content).not.toContain("grantRequests");
+  });
+
+  test("a pulled file compiles back to the same grants, grantRequests and prompt", async () => {
+    const content = generateStepsFileContent([
+      makeStep({ ...GRANTED, grantRequests: true }),
+    ]);
+
+    const dir = await mkdtemp(path.join(import.meta.dir, ".roundtrip-"));
+    try {
+      const file = path.join(dir, "steps.ts");
+      await writeFile(file, content, "utf-8");
+      const loaded = (await import(file)) as {
+        wayfinder: StepDefinitionSpec;
+      };
+
+      expect({
+        prompt: loaded.wayfinder.prompt,
+        grants: loaded.wayfinder.grants,
+        grantRequests: loaded.wayfinder.grantRequests,
+      }).toEqual({ ...GRANTED, grantRequests: true });
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
 });

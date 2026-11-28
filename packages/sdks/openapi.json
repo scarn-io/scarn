@@ -6604,6 +6604,9 @@
                     ],
                     "additionalProperties": false
                   },
+                  "grantRequests": {
+                    "type": "boolean"
+                  },
                   "opencodeMcpJson": {
                     "type": [
                       "object",
@@ -8192,6 +8195,9 @@
                     ],
                     "additionalProperties": false
                   },
+                  "grantRequests": {
+                    "type": "boolean"
+                  },
                   "opencodeMcpJson": {
                     "type": [
                       "object",
@@ -9779,6 +9785,9 @@
                       "archive"
                     ],
                     "additionalProperties": false
+                  },
+                  "grantRequests": {
+                    "type": "boolean"
                   },
                   "opencodeMcpJson": {
                     "type": [
@@ -11376,6 +11385,9 @@
                       ],
                       "additionalProperties": false
                     },
+                    "grantRequests": {
+                      "type": "boolean"
+                    },
                     "opencodeMcpJson": {
                       "type": [
                         "object",
@@ -12249,6 +12261,7 @@
                     "maxTurns",
                     "concurrency",
                     "logs",
+                    "grantRequests",
                     "opencodeMcpJson",
                     "healthChecksJson",
                     "repo",
@@ -13507,6 +13520,9 @@
                         ],
                         "additionalProperties": false
                       },
+                      "grantRequests": {
+                        "type": "boolean"
+                      },
                       "opencodeMcpJson": {
                         "type": [
                           "object",
@@ -14380,6 +14396,7 @@
                       "maxTurns",
                       "concurrency",
                       "logs",
+                      "grantRequests",
                       "opencodeMcpJson",
                       "healthChecksJson",
                       "repo",
@@ -15419,6 +15436,9 @@
                       "archive"
                     ],
                     "additionalProperties": false
+                  },
+                  "grantRequests": {
+                    "type": "boolean"
                   },
                   "opencodeMcpJson": {
                     "type": [
@@ -17008,6 +17028,9 @@
                     ],
                     "additionalProperties": false
                   },
+                  "grantRequests": {
+                    "type": "boolean"
+                  },
                   "opencodeMcpJson": {
                     "type": [
                       "object",
@@ -18595,6 +18618,9 @@
                       "archive"
                     ],
                     "additionalProperties": false
+                  },
+                  "grantRequests": {
+                    "type": "boolean"
                   },
                   "opencodeMcpJson": {
                     "type": [
@@ -20192,6 +20218,9 @@
                       ],
                       "additionalProperties": false
                     },
+                    "grantRequests": {
+                      "type": "boolean"
+                    },
                     "opencodeMcpJson": {
                       "type": [
                         "object",
@@ -21065,6 +21094,7 @@
                     "maxTurns",
                     "concurrency",
                     "logs",
+                    "grantRequests",
                     "opencodeMcpJson",
                     "healthChecksJson",
                     "repo",
@@ -22187,6 +22217,9 @@
                       ],
                       "additionalProperties": false
                     },
+                    "grantRequests": {
+                      "type": "boolean"
+                    },
                     "opencodeMcpJson": {
                       "type": [
                         "object",
@@ -23060,6 +23093,7 @@
                     "maxTurns",
                     "concurrency",
                     "logs",
+                    "grantRequests",
                     "opencodeMcpJson",
                     "healthChecksJson",
                     "repo",
@@ -24182,6 +24216,9 @@
                       ],
                       "additionalProperties": false
                     },
+                    "grantRequests": {
+                      "type": "boolean"
+                    },
                     "opencodeMcpJson": {
                       "type": [
                         "object",
@@ -25055,6 +25092,7 @@
                     "maxTurns",
                     "concurrency",
                     "logs",
+                    "grantRequests",
                     "opencodeMcpJson",
                     "healthChecksJson",
                     "repo",
@@ -33477,6 +33515,9 @@
                           "minimum": 0,
                           "maximum": 9007199254740991
                         },
+                        "grantRequests": {
+                          "type": "boolean"
+                        },
                         "workItemId": {
                           "type": [
                             "string",
@@ -33798,6 +33839,7 @@
                         "resultSchemaJson",
                         "declaredErrors",
                         "turnsRemaining",
+                        "grantRequests",
                         "workItemId",
                         "conversationId",
                         "grants"
@@ -36974,8 +37016,7 @@
                     "minLength": 1
                   },
                   "message": {
-                    "type": "string",
-                    "minLength": 1
+                    "type": "string"
                   },
                   "workBranch": {
                     "type": [
@@ -37011,6 +37052,454 @@
                       "boolean",
                       "null"
                     ]
+                  },
+                  "grantRequest": {
+                    "type": "object",
+                    "properties": {
+                      "reason": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 2000
+                      },
+                      "grants": {
+                        "minItems": 1,
+                        "maxItems": 20,
+                        "type": "array",
+                        "items": {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "resource": {
+                                  "type": "string",
+                                  "const": "workItem"
+                                },
+                                "action": {
+                                  "type": "string",
+                                  "const": "read"
+                                },
+                                "scope": {
+                                  "type": "string",
+                                  "enum": [
+                                    "self",
+                                    "children",
+                                    "project"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "resource",
+                                "action",
+                                "scope"
+                              ]
+                            },
+                            {
+                              "oneOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "resource": {
+                                      "type": "string",
+                                      "const": "workItem"
+                                    },
+                                    "action": {
+                                      "type": "string",
+                                      "const": "update"
+                                    },
+                                    "scope": {
+                                      "type": "string",
+                                      "enum": [
+                                        "self",
+                                        "children"
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "resource",
+                                    "action",
+                                    "scope"
+                                  ]
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "resource": {
+                                      "type": "string",
+                                      "const": "workItem"
+                                    },
+                                    "action": {
+                                      "type": "string",
+                                      "const": "update"
+                                    },
+                                    "scope": {
+                                      "type": "string",
+                                      "const": "project"
+                                    },
+                                    "keyPrefix": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 200
+                                    },
+                                    "labels": {
+                                      "minItems": 1,
+                                      "maxItems": 50,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 200
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "resource",
+                                    "action",
+                                    "scope"
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "resource": {
+                                  "type": "string",
+                                  "const": "workItem"
+                                },
+                                "action": {
+                                  "type": "string",
+                                  "const": "comment"
+                                },
+                                "scope": {
+                                  "type": "string",
+                                  "enum": [
+                                    "self",
+                                    "children"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "resource",
+                                "action",
+                                "scope"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "resource": {
+                                  "type": "string",
+                                  "const": "workItem"
+                                },
+                                "action": {
+                                  "type": "string",
+                                  "const": "label"
+                                },
+                                "scope": {
+                                  "type": "string",
+                                  "enum": [
+                                    "self",
+                                    "children"
+                                  ]
+                                },
+                                "labels": {
+                                  "minItems": 1,
+                                  "maxItems": 50,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 200
+                                  }
+                                }
+                              },
+                              "required": [
+                                "resource",
+                                "action",
+                                "scope",
+                                "labels"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "resource": {
+                                  "type": "string",
+                                  "const": "workItem"
+                                },
+                                "action": {
+                                  "type": "string",
+                                  "const": "block"
+                                },
+                                "scope": {
+                                  "type": "string",
+                                  "enum": [
+                                    "self",
+                                    "children"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "resource",
+                                "action",
+                                "scope"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "resource": {
+                                  "type": "string",
+                                  "const": "workItem"
+                                },
+                                "action": {
+                                  "type": "string",
+                                  "const": "close"
+                                },
+                                "scope": {
+                                  "type": "string",
+                                  "enum": [
+                                    "self",
+                                    "children"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "resource",
+                                "action",
+                                "scope"
+                              ]
+                            },
+                            {
+                              "oneOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "resource": {
+                                      "type": "string",
+                                      "const": "workItem"
+                                    },
+                                    "action": {
+                                      "type": "string",
+                                      "const": "create"
+                                    },
+                                    "scope": {
+                                      "type": "string",
+                                      "const": "children"
+                                    },
+                                    "labels": {
+                                      "minItems": 1,
+                                      "maxItems": 50,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 200
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "resource",
+                                    "action",
+                                    "scope",
+                                    "labels"
+                                  ]
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "resource": {
+                                      "type": "string",
+                                      "const": "workItem"
+                                    },
+                                    "action": {
+                                      "type": "string",
+                                      "const": "create"
+                                    },
+                                    "scope": {
+                                      "type": "string",
+                                      "const": "project"
+                                    },
+                                    "labels": {
+                                      "minItems": 1,
+                                      "maxItems": 50,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 200
+                                      }
+                                    },
+                                    "keyPrefix": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 200
+                                    }
+                                  },
+                                  "required": [
+                                    "resource",
+                                    "action",
+                                    "scope",
+                                    "labels"
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    "required": [
+                      "reason",
+                      "grants"
+                    ]
+                  },
+                  "workItemChanges": {
+                    "maxItems": 200,
+                    "type": "array",
+                    "items": {
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "label"
+                            },
+                            "workItemId": {
+                              "type": "string"
+                            },
+                            "add": {
+                              "maxItems": 50,
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 200
+                              }
+                            },
+                            "remove": {
+                              "maxItems": 50,
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 200
+                              }
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "workItemId"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "block"
+                            },
+                            "blockedWorkItemId": {
+                              "type": "string"
+                            },
+                            "blockingWorkItemId": {
+                              "type": "string"
+                            },
+                            "remove": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "blockedWorkItemId",
+                            "blockingWorkItemId"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "describe"
+                            },
+                            "workItemId": {
+                              "type": "string"
+                            },
+                            "description": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 50000
+                            },
+                            "descriptionVersion": {
+                              "type": "integer",
+                              "exclusiveMinimum": 0,
+                              "maximum": 9007199254740991
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "workItemId",
+                            "description",
+                            "descriptionVersion"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "comment"
+                            },
+                            "workItemId": {
+                              "type": "string"
+                            },
+                            "body": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 50000
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "workItemId",
+                            "body"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "close"
+                            },
+                            "workItemId": {
+                              "type": "string"
+                            },
+                            "reason": {
+                              "type": "string",
+                              "enum": [
+                                "completed",
+                                "out_of_scope",
+                                "superseded"
+                              ]
+                            },
+                            "resolution": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "maxLength": 10000
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "workItemId",
+                            "reason"
+                          ]
+                        }
+                      ]
+                    }
                   }
                 },
                 "required": [
@@ -37029,8 +37518,7 @@
                     "minLength": 1
                   },
                   "message": {
-                    "type": "string",
-                    "minLength": 1
+                    "type": "string"
                   },
                   "workBranch": {
                     "type": [
@@ -37066,6 +37554,454 @@
                       "boolean",
                       "null"
                     ]
+                  },
+                  "grantRequest": {
+                    "type": "object",
+                    "properties": {
+                      "reason": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 2000
+                      },
+                      "grants": {
+                        "minItems": 1,
+                        "maxItems": 20,
+                        "type": "array",
+                        "items": {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "resource": {
+                                  "type": "string",
+                                  "const": "workItem"
+                                },
+                                "action": {
+                                  "type": "string",
+                                  "const": "read"
+                                },
+                                "scope": {
+                                  "type": "string",
+                                  "enum": [
+                                    "self",
+                                    "children",
+                                    "project"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "resource",
+                                "action",
+                                "scope"
+                              ]
+                            },
+                            {
+                              "oneOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "resource": {
+                                      "type": "string",
+                                      "const": "workItem"
+                                    },
+                                    "action": {
+                                      "type": "string",
+                                      "const": "update"
+                                    },
+                                    "scope": {
+                                      "type": "string",
+                                      "enum": [
+                                        "self",
+                                        "children"
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "resource",
+                                    "action",
+                                    "scope"
+                                  ]
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "resource": {
+                                      "type": "string",
+                                      "const": "workItem"
+                                    },
+                                    "action": {
+                                      "type": "string",
+                                      "const": "update"
+                                    },
+                                    "scope": {
+                                      "type": "string",
+                                      "const": "project"
+                                    },
+                                    "keyPrefix": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 200
+                                    },
+                                    "labels": {
+                                      "minItems": 1,
+                                      "maxItems": 50,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 200
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "resource",
+                                    "action",
+                                    "scope"
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "resource": {
+                                  "type": "string",
+                                  "const": "workItem"
+                                },
+                                "action": {
+                                  "type": "string",
+                                  "const": "comment"
+                                },
+                                "scope": {
+                                  "type": "string",
+                                  "enum": [
+                                    "self",
+                                    "children"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "resource",
+                                "action",
+                                "scope"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "resource": {
+                                  "type": "string",
+                                  "const": "workItem"
+                                },
+                                "action": {
+                                  "type": "string",
+                                  "const": "label"
+                                },
+                                "scope": {
+                                  "type": "string",
+                                  "enum": [
+                                    "self",
+                                    "children"
+                                  ]
+                                },
+                                "labels": {
+                                  "minItems": 1,
+                                  "maxItems": 50,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 200
+                                  }
+                                }
+                              },
+                              "required": [
+                                "resource",
+                                "action",
+                                "scope",
+                                "labels"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "resource": {
+                                  "type": "string",
+                                  "const": "workItem"
+                                },
+                                "action": {
+                                  "type": "string",
+                                  "const": "block"
+                                },
+                                "scope": {
+                                  "type": "string",
+                                  "enum": [
+                                    "self",
+                                    "children"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "resource",
+                                "action",
+                                "scope"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "resource": {
+                                  "type": "string",
+                                  "const": "workItem"
+                                },
+                                "action": {
+                                  "type": "string",
+                                  "const": "close"
+                                },
+                                "scope": {
+                                  "type": "string",
+                                  "enum": [
+                                    "self",
+                                    "children"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "resource",
+                                "action",
+                                "scope"
+                              ]
+                            },
+                            {
+                              "oneOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "resource": {
+                                      "type": "string",
+                                      "const": "workItem"
+                                    },
+                                    "action": {
+                                      "type": "string",
+                                      "const": "create"
+                                    },
+                                    "scope": {
+                                      "type": "string",
+                                      "const": "children"
+                                    },
+                                    "labels": {
+                                      "minItems": 1,
+                                      "maxItems": 50,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 200
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "resource",
+                                    "action",
+                                    "scope",
+                                    "labels"
+                                  ]
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "resource": {
+                                      "type": "string",
+                                      "const": "workItem"
+                                    },
+                                    "action": {
+                                      "type": "string",
+                                      "const": "create"
+                                    },
+                                    "scope": {
+                                      "type": "string",
+                                      "const": "project"
+                                    },
+                                    "labels": {
+                                      "minItems": 1,
+                                      "maxItems": 50,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 200
+                                      }
+                                    },
+                                    "keyPrefix": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 200
+                                    }
+                                  },
+                                  "required": [
+                                    "resource",
+                                    "action",
+                                    "scope",
+                                    "labels"
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    "required": [
+                      "reason",
+                      "grants"
+                    ]
+                  },
+                  "workItemChanges": {
+                    "maxItems": 200,
+                    "type": "array",
+                    "items": {
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "label"
+                            },
+                            "workItemId": {
+                              "type": "string"
+                            },
+                            "add": {
+                              "maxItems": 50,
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 200
+                              }
+                            },
+                            "remove": {
+                              "maxItems": 50,
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 200
+                              }
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "workItemId"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "block"
+                            },
+                            "blockedWorkItemId": {
+                              "type": "string"
+                            },
+                            "blockingWorkItemId": {
+                              "type": "string"
+                            },
+                            "remove": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "blockedWorkItemId",
+                            "blockingWorkItemId"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "describe"
+                            },
+                            "workItemId": {
+                              "type": "string"
+                            },
+                            "description": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 50000
+                            },
+                            "descriptionVersion": {
+                              "type": "integer",
+                              "exclusiveMinimum": 0,
+                              "maximum": 9007199254740991
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "workItemId",
+                            "description",
+                            "descriptionVersion"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "comment"
+                            },
+                            "workItemId": {
+                              "type": "string"
+                            },
+                            "body": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 50000
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "workItemId",
+                            "body"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "close"
+                            },
+                            "workItemId": {
+                              "type": "string"
+                            },
+                            "reason": {
+                              "type": "string",
+                              "enum": [
+                                "completed",
+                                "out_of_scope",
+                                "superseded"
+                              ]
+                            },
+                            "resolution": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "maxLength": 10000
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "workItemId",
+                            "reason"
+                          ]
+                        }
+                      ]
+                    }
                   }
                 },
                 "required": [
@@ -37084,8 +38020,7 @@
                     "minLength": 1
                   },
                   "message": {
-                    "type": "string",
-                    "minLength": 1
+                    "type": "string"
                   },
                   "workBranch": {
                     "type": [
@@ -37121,6 +38056,454 @@
                       "boolean",
                       "null"
                     ]
+                  },
+                  "grantRequest": {
+                    "type": "object",
+                    "properties": {
+                      "reason": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 2000
+                      },
+                      "grants": {
+                        "minItems": 1,
+                        "maxItems": 20,
+                        "type": "array",
+                        "items": {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "resource": {
+                                  "type": "string",
+                                  "const": "workItem"
+                                },
+                                "action": {
+                                  "type": "string",
+                                  "const": "read"
+                                },
+                                "scope": {
+                                  "type": "string",
+                                  "enum": [
+                                    "self",
+                                    "children",
+                                    "project"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "resource",
+                                "action",
+                                "scope"
+                              ]
+                            },
+                            {
+                              "oneOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "resource": {
+                                      "type": "string",
+                                      "const": "workItem"
+                                    },
+                                    "action": {
+                                      "type": "string",
+                                      "const": "update"
+                                    },
+                                    "scope": {
+                                      "type": "string",
+                                      "enum": [
+                                        "self",
+                                        "children"
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "resource",
+                                    "action",
+                                    "scope"
+                                  ]
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "resource": {
+                                      "type": "string",
+                                      "const": "workItem"
+                                    },
+                                    "action": {
+                                      "type": "string",
+                                      "const": "update"
+                                    },
+                                    "scope": {
+                                      "type": "string",
+                                      "const": "project"
+                                    },
+                                    "keyPrefix": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 200
+                                    },
+                                    "labels": {
+                                      "minItems": 1,
+                                      "maxItems": 50,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 200
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "resource",
+                                    "action",
+                                    "scope"
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "resource": {
+                                  "type": "string",
+                                  "const": "workItem"
+                                },
+                                "action": {
+                                  "type": "string",
+                                  "const": "comment"
+                                },
+                                "scope": {
+                                  "type": "string",
+                                  "enum": [
+                                    "self",
+                                    "children"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "resource",
+                                "action",
+                                "scope"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "resource": {
+                                  "type": "string",
+                                  "const": "workItem"
+                                },
+                                "action": {
+                                  "type": "string",
+                                  "const": "label"
+                                },
+                                "scope": {
+                                  "type": "string",
+                                  "enum": [
+                                    "self",
+                                    "children"
+                                  ]
+                                },
+                                "labels": {
+                                  "minItems": 1,
+                                  "maxItems": 50,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 200
+                                  }
+                                }
+                              },
+                              "required": [
+                                "resource",
+                                "action",
+                                "scope",
+                                "labels"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "resource": {
+                                  "type": "string",
+                                  "const": "workItem"
+                                },
+                                "action": {
+                                  "type": "string",
+                                  "const": "block"
+                                },
+                                "scope": {
+                                  "type": "string",
+                                  "enum": [
+                                    "self",
+                                    "children"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "resource",
+                                "action",
+                                "scope"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "resource": {
+                                  "type": "string",
+                                  "const": "workItem"
+                                },
+                                "action": {
+                                  "type": "string",
+                                  "const": "close"
+                                },
+                                "scope": {
+                                  "type": "string",
+                                  "enum": [
+                                    "self",
+                                    "children"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "resource",
+                                "action",
+                                "scope"
+                              ]
+                            },
+                            {
+                              "oneOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "resource": {
+                                      "type": "string",
+                                      "const": "workItem"
+                                    },
+                                    "action": {
+                                      "type": "string",
+                                      "const": "create"
+                                    },
+                                    "scope": {
+                                      "type": "string",
+                                      "const": "children"
+                                    },
+                                    "labels": {
+                                      "minItems": 1,
+                                      "maxItems": 50,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 200
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "resource",
+                                    "action",
+                                    "scope",
+                                    "labels"
+                                  ]
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "resource": {
+                                      "type": "string",
+                                      "const": "workItem"
+                                    },
+                                    "action": {
+                                      "type": "string",
+                                      "const": "create"
+                                    },
+                                    "scope": {
+                                      "type": "string",
+                                      "const": "project"
+                                    },
+                                    "labels": {
+                                      "minItems": 1,
+                                      "maxItems": 50,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 200
+                                      }
+                                    },
+                                    "keyPrefix": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 200
+                                    }
+                                  },
+                                  "required": [
+                                    "resource",
+                                    "action",
+                                    "scope",
+                                    "labels"
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    "required": [
+                      "reason",
+                      "grants"
+                    ]
+                  },
+                  "workItemChanges": {
+                    "maxItems": 200,
+                    "type": "array",
+                    "items": {
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "label"
+                            },
+                            "workItemId": {
+                              "type": "string"
+                            },
+                            "add": {
+                              "maxItems": 50,
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 200
+                              }
+                            },
+                            "remove": {
+                              "maxItems": 50,
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 200
+                              }
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "workItemId"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "block"
+                            },
+                            "blockedWorkItemId": {
+                              "type": "string"
+                            },
+                            "blockingWorkItemId": {
+                              "type": "string"
+                            },
+                            "remove": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "blockedWorkItemId",
+                            "blockingWorkItemId"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "describe"
+                            },
+                            "workItemId": {
+                              "type": "string"
+                            },
+                            "description": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 50000
+                            },
+                            "descriptionVersion": {
+                              "type": "integer",
+                              "exclusiveMinimum": 0,
+                              "maximum": 9007199254740991
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "workItemId",
+                            "description",
+                            "descriptionVersion"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "comment"
+                            },
+                            "workItemId": {
+                              "type": "string"
+                            },
+                            "body": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 50000
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "workItemId",
+                            "body"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "close"
+                            },
+                            "workItemId": {
+                              "type": "string"
+                            },
+                            "reason": {
+                              "type": "string",
+                              "enum": [
+                                "completed",
+                                "out_of_scope",
+                                "superseded"
+                              ]
+                            },
+                            "resolution": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "maxLength": 10000
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "workItemId",
+                            "reason"
+                          ]
+                        }
+                      ]
+                    }
                   }
                 },
                 "required": [
@@ -74396,6 +75779,12 @@
                               "null"
                             ]
                           },
+                          "grantRequestId": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
                           "body": {
                             "type": "string"
                           },
@@ -75581,6 +76970,12 @@
                                 "null"
                               ]
                             },
+                            "grantRequestId": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
                             "body": {
                               "type": "string"
                             },
@@ -76718,6 +78113,12 @@
                               "null"
                             ]
                           },
+                          "grantRequestId": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
                           "body": {
                             "type": "string"
                           },
@@ -77507,6 +78908,12 @@
                               "null"
                             ]
                           },
+                          "grantRequestId": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
                           "body": {
                             "type": "string"
                           },
@@ -78243,6 +79650,12 @@
                               "null"
                             ]
                           },
+                          "grantRequestId": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
                           "body": {
                             "type": "string"
                           },
@@ -78974,6 +80387,12 @@
                             ]
                           },
                           "taskRunId": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "grantRequestId": {
                             "type": [
                               "string",
                               "null"
@@ -79774,6 +81193,12 @@
                               "null"
                             ]
                           },
+                          "grantRequestId": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
                           "body": {
                             "type": "string"
                           },
@@ -80505,6 +81930,12 @@
                             ]
                           },
                           "taskRunId": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "grantRequestId": {
                             "type": [
                               "string",
                               "null"
@@ -96905,6 +98336,2687 @@
                     "status"
                   ],
                   "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Response for status 401",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "path": {
+                            "type": "string"
+                          },
+                          "message": {
+                            "type": "string"
+                          },
+                          "summary": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "path",
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "title",
+                    "status"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Response for status 403",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "path": {
+                            "type": "string"
+                          },
+                          "message": {
+                            "type": "string"
+                          },
+                          "summary": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "path",
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "title",
+                    "status"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Response for status 404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "path": {
+                            "type": "string"
+                          },
+                          "message": {
+                            "type": "string"
+                          },
+                          "summary": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "path",
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "title",
+                    "status"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Response for status 422",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "path": {
+                            "type": "string"
+                          },
+                          "message": {
+                            "type": "string"
+                          },
+                          "summary": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "path",
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "title",
+                    "status"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Response for status 500",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "path": {
+                            "type": "string"
+                          },
+                          "message": {
+                            "type": "string"
+                          },
+                          "summary": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "path",
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "title",
+                    "status"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/task-grant-requests/{grantRequestId}/decision": {
+      "post": {
+        "operationId": "decideTaskGrantRequest",
+        "description": "Decides a Task's pending grant request: `approved` lists the grants to add to the Task (each covered by a requested one, labels may be a subset; `[]` denies), with an optional `note` for the agent. Posts a `system` message and resumes the Task. Requires `executions:write`, plus `work-items:write` when an approved grant isn't `read`. 409 `GRANT_REQUEST_NOT_PENDING` when it was already closed or the Task no longer waits; 422 `GRANT_REQUEST_APPROVAL_INVALID` for an approval not covered by the request.",
+        "tags": [
+          "Tasks"
+        ],
+        "parameters": [
+          {
+            "name": "grantRequestId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "approved": {
+                    "maxItems": 20,
+                    "type": "array",
+                    "items": {
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "resource": {
+                              "type": "string",
+                              "const": "workItem"
+                            },
+                            "action": {
+                              "type": "string",
+                              "const": "read"
+                            },
+                            "scope": {
+                              "type": "string",
+                              "enum": [
+                                "self",
+                                "children",
+                                "project"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "resource",
+                            "action",
+                            "scope"
+                          ]
+                        },
+                        {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "resource": {
+                                  "type": "string",
+                                  "const": "workItem"
+                                },
+                                "action": {
+                                  "type": "string",
+                                  "const": "update"
+                                },
+                                "scope": {
+                                  "type": "string",
+                                  "enum": [
+                                    "self",
+                                    "children"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "resource",
+                                "action",
+                                "scope"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "resource": {
+                                  "type": "string",
+                                  "const": "workItem"
+                                },
+                                "action": {
+                                  "type": "string",
+                                  "const": "update"
+                                },
+                                "scope": {
+                                  "type": "string",
+                                  "const": "project"
+                                },
+                                "keyPrefix": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 200
+                                },
+                                "labels": {
+                                  "minItems": 1,
+                                  "maxItems": 50,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 200
+                                  }
+                                }
+                              },
+                              "required": [
+                                "resource",
+                                "action",
+                                "scope"
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "resource": {
+                              "type": "string",
+                              "const": "workItem"
+                            },
+                            "action": {
+                              "type": "string",
+                              "const": "comment"
+                            },
+                            "scope": {
+                              "type": "string",
+                              "enum": [
+                                "self",
+                                "children"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "resource",
+                            "action",
+                            "scope"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "resource": {
+                              "type": "string",
+                              "const": "workItem"
+                            },
+                            "action": {
+                              "type": "string",
+                              "const": "label"
+                            },
+                            "scope": {
+                              "type": "string",
+                              "enum": [
+                                "self",
+                                "children"
+                              ]
+                            },
+                            "labels": {
+                              "minItems": 1,
+                              "maxItems": 50,
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 200
+                              }
+                            }
+                          },
+                          "required": [
+                            "resource",
+                            "action",
+                            "scope",
+                            "labels"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "resource": {
+                              "type": "string",
+                              "const": "workItem"
+                            },
+                            "action": {
+                              "type": "string",
+                              "const": "block"
+                            },
+                            "scope": {
+                              "type": "string",
+                              "enum": [
+                                "self",
+                                "children"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "resource",
+                            "action",
+                            "scope"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "resource": {
+                              "type": "string",
+                              "const": "workItem"
+                            },
+                            "action": {
+                              "type": "string",
+                              "const": "close"
+                            },
+                            "scope": {
+                              "type": "string",
+                              "enum": [
+                                "self",
+                                "children"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "resource",
+                            "action",
+                            "scope"
+                          ]
+                        },
+                        {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "resource": {
+                                  "type": "string",
+                                  "const": "workItem"
+                                },
+                                "action": {
+                                  "type": "string",
+                                  "const": "create"
+                                },
+                                "scope": {
+                                  "type": "string",
+                                  "const": "children"
+                                },
+                                "labels": {
+                                  "minItems": 1,
+                                  "maxItems": 50,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 200
+                                  }
+                                }
+                              },
+                              "required": [
+                                "resource",
+                                "action",
+                                "scope",
+                                "labels"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "resource": {
+                                  "type": "string",
+                                  "const": "workItem"
+                                },
+                                "action": {
+                                  "type": "string",
+                                  "const": "create"
+                                },
+                                "scope": {
+                                  "type": "string",
+                                  "const": "project"
+                                },
+                                "labels": {
+                                  "minItems": 1,
+                                  "maxItems": 50,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 200
+                                  }
+                                },
+                                "keyPrefix": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 200
+                                }
+                              },
+                              "required": [
+                                "resource",
+                                "action",
+                                "scope",
+                                "labels"
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  },
+                  "note": {
+                    "type": "string",
+                    "maxLength": 2000
+                  }
+                },
+                "required": [
+                  "approved"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "approved": {
+                    "maxItems": 20,
+                    "type": "array",
+                    "items": {
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "resource": {
+                              "type": "string",
+                              "const": "workItem"
+                            },
+                            "action": {
+                              "type": "string",
+                              "const": "read"
+                            },
+                            "scope": {
+                              "type": "string",
+                              "enum": [
+                                "self",
+                                "children",
+                                "project"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "resource",
+                            "action",
+                            "scope"
+                          ]
+                        },
+                        {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "resource": {
+                                  "type": "string",
+                                  "const": "workItem"
+                                },
+                                "action": {
+                                  "type": "string",
+                                  "const": "update"
+                                },
+                                "scope": {
+                                  "type": "string",
+                                  "enum": [
+                                    "self",
+                                    "children"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "resource",
+                                "action",
+                                "scope"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "resource": {
+                                  "type": "string",
+                                  "const": "workItem"
+                                },
+                                "action": {
+                                  "type": "string",
+                                  "const": "update"
+                                },
+                                "scope": {
+                                  "type": "string",
+                                  "const": "project"
+                                },
+                                "keyPrefix": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 200
+                                },
+                                "labels": {
+                                  "minItems": 1,
+                                  "maxItems": 50,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 200
+                                  }
+                                }
+                              },
+                              "required": [
+                                "resource",
+                                "action",
+                                "scope"
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "resource": {
+                              "type": "string",
+                              "const": "workItem"
+                            },
+                            "action": {
+                              "type": "string",
+                              "const": "comment"
+                            },
+                            "scope": {
+                              "type": "string",
+                              "enum": [
+                                "self",
+                                "children"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "resource",
+                            "action",
+                            "scope"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "resource": {
+                              "type": "string",
+                              "const": "workItem"
+                            },
+                            "action": {
+                              "type": "string",
+                              "const": "label"
+                            },
+                            "scope": {
+                              "type": "string",
+                              "enum": [
+                                "self",
+                                "children"
+                              ]
+                            },
+                            "labels": {
+                              "minItems": 1,
+                              "maxItems": 50,
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 200
+                              }
+                            }
+                          },
+                          "required": [
+                            "resource",
+                            "action",
+                            "scope",
+                            "labels"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "resource": {
+                              "type": "string",
+                              "const": "workItem"
+                            },
+                            "action": {
+                              "type": "string",
+                              "const": "block"
+                            },
+                            "scope": {
+                              "type": "string",
+                              "enum": [
+                                "self",
+                                "children"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "resource",
+                            "action",
+                            "scope"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "resource": {
+                              "type": "string",
+                              "const": "workItem"
+                            },
+                            "action": {
+                              "type": "string",
+                              "const": "close"
+                            },
+                            "scope": {
+                              "type": "string",
+                              "enum": [
+                                "self",
+                                "children"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "resource",
+                            "action",
+                            "scope"
+                          ]
+                        },
+                        {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "resource": {
+                                  "type": "string",
+                                  "const": "workItem"
+                                },
+                                "action": {
+                                  "type": "string",
+                                  "const": "create"
+                                },
+                                "scope": {
+                                  "type": "string",
+                                  "const": "children"
+                                },
+                                "labels": {
+                                  "minItems": 1,
+                                  "maxItems": 50,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 200
+                                  }
+                                }
+                              },
+                              "required": [
+                                "resource",
+                                "action",
+                                "scope",
+                                "labels"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "resource": {
+                                  "type": "string",
+                                  "const": "workItem"
+                                },
+                                "action": {
+                                  "type": "string",
+                                  "const": "create"
+                                },
+                                "scope": {
+                                  "type": "string",
+                                  "const": "project"
+                                },
+                                "labels": {
+                                  "minItems": 1,
+                                  "maxItems": 50,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 200
+                                  }
+                                },
+                                "keyPrefix": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 200
+                                }
+                              },
+                              "required": [
+                                "resource",
+                                "action",
+                                "scope",
+                                "labels"
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  },
+                  "note": {
+                    "type": "string",
+                    "maxLength": 2000
+                  }
+                },
+                "required": [
+                  "approved"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "approved": {
+                    "maxItems": 20,
+                    "type": "array",
+                    "items": {
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "resource": {
+                              "type": "string",
+                              "const": "workItem"
+                            },
+                            "action": {
+                              "type": "string",
+                              "const": "read"
+                            },
+                            "scope": {
+                              "type": "string",
+                              "enum": [
+                                "self",
+                                "children",
+                                "project"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "resource",
+                            "action",
+                            "scope"
+                          ]
+                        },
+                        {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "resource": {
+                                  "type": "string",
+                                  "const": "workItem"
+                                },
+                                "action": {
+                                  "type": "string",
+                                  "const": "update"
+                                },
+                                "scope": {
+                                  "type": "string",
+                                  "enum": [
+                                    "self",
+                                    "children"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "resource",
+                                "action",
+                                "scope"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "resource": {
+                                  "type": "string",
+                                  "const": "workItem"
+                                },
+                                "action": {
+                                  "type": "string",
+                                  "const": "update"
+                                },
+                                "scope": {
+                                  "type": "string",
+                                  "const": "project"
+                                },
+                                "keyPrefix": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 200
+                                },
+                                "labels": {
+                                  "minItems": 1,
+                                  "maxItems": 50,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 200
+                                  }
+                                }
+                              },
+                              "required": [
+                                "resource",
+                                "action",
+                                "scope"
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "resource": {
+                              "type": "string",
+                              "const": "workItem"
+                            },
+                            "action": {
+                              "type": "string",
+                              "const": "comment"
+                            },
+                            "scope": {
+                              "type": "string",
+                              "enum": [
+                                "self",
+                                "children"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "resource",
+                            "action",
+                            "scope"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "resource": {
+                              "type": "string",
+                              "const": "workItem"
+                            },
+                            "action": {
+                              "type": "string",
+                              "const": "label"
+                            },
+                            "scope": {
+                              "type": "string",
+                              "enum": [
+                                "self",
+                                "children"
+                              ]
+                            },
+                            "labels": {
+                              "minItems": 1,
+                              "maxItems": 50,
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 200
+                              }
+                            }
+                          },
+                          "required": [
+                            "resource",
+                            "action",
+                            "scope",
+                            "labels"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "resource": {
+                              "type": "string",
+                              "const": "workItem"
+                            },
+                            "action": {
+                              "type": "string",
+                              "const": "block"
+                            },
+                            "scope": {
+                              "type": "string",
+                              "enum": [
+                                "self",
+                                "children"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "resource",
+                            "action",
+                            "scope"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "resource": {
+                              "type": "string",
+                              "const": "workItem"
+                            },
+                            "action": {
+                              "type": "string",
+                              "const": "close"
+                            },
+                            "scope": {
+                              "type": "string",
+                              "enum": [
+                                "self",
+                                "children"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "resource",
+                            "action",
+                            "scope"
+                          ]
+                        },
+                        {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "resource": {
+                                  "type": "string",
+                                  "const": "workItem"
+                                },
+                                "action": {
+                                  "type": "string",
+                                  "const": "create"
+                                },
+                                "scope": {
+                                  "type": "string",
+                                  "const": "children"
+                                },
+                                "labels": {
+                                  "minItems": 1,
+                                  "maxItems": 50,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 200
+                                  }
+                                }
+                              },
+                              "required": [
+                                "resource",
+                                "action",
+                                "scope",
+                                "labels"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "resource": {
+                                  "type": "string",
+                                  "const": "workItem"
+                                },
+                                "action": {
+                                  "type": "string",
+                                  "const": "create"
+                                },
+                                "scope": {
+                                  "type": "string",
+                                  "const": "project"
+                                },
+                                "labels": {
+                                  "minItems": 1,
+                                  "maxItems": 50,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 200
+                                  }
+                                },
+                                "keyPrefix": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 200
+                                }
+                              },
+                              "required": [
+                                "resource",
+                                "action",
+                                "scope",
+                                "labels"
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  },
+                  "note": {
+                    "type": "string",
+                    "maxLength": 2000
+                  }
+                },
+                "required": [
+                  "approved"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response for status 200",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "projectId": {
+                      "type": "string"
+                    },
+                    "workItemId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "agent_turn",
+                        "waiting_for_person",
+                        "reply_pending",
+                        "closed"
+                      ]
+                    },
+                    "messages": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "authorKind": {
+                            "type": "string",
+                            "enum": [
+                              "agent",
+                              "person",
+                              "system"
+                            ]
+                          },
+                          "authorName": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "taskRunId": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "grantRequestId": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "body": {
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "authorKind",
+                          "authorName",
+                          "taskRunId",
+                          "body",
+                          "createdAt"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "visit": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "pipelineExecutionId": {
+                          "type": "string"
+                        },
+                        "visitId": {
+                          "type": "string"
+                        },
+                        "nodeId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "pipelineExecutionId",
+                        "visitId",
+                        "nodeId"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "endsWith": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "enum": [
+                        "findings",
+                        "conversation",
+                        null
+                      ]
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                    },
+                    "closedAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                    },
+                    "taskId": {
+                      "type": "string"
+                    },
+                    "creator": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "userId": {
+                          "type": "string"
+                        },
+                        "username": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "image": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "userId",
+                        "username",
+                        "image"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "context": {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "const": "project_repo"
+                        },
+                        "repository": {
+                          "type": "string"
+                        },
+                        "branch": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "commit": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "pinnedAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "repository",
+                        "branch",
+                        "commit",
+                        "pinnedAt"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "state": {
+                      "type": "string",
+                      "enum": [
+                        "queued",
+                        "running",
+                        "retry_queued",
+                        "waiting",
+                        "failed",
+                        "ended"
+                      ]
+                    },
+                    "latestRun": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "pending",
+                            "queued",
+                            "running",
+                            "succeeded",
+                            "failed",
+                            "timeout",
+                            "abandoned",
+                            "cancelled",
+                            "skipped",
+                            "yielded"
+                          ]
+                        },
+                        "reason": {
+                          "type": "string",
+                          "enum": [
+                            "initial",
+                            "retry",
+                            "continuation"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "status",
+                        "reason"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "error": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "capabilities": {
+                      "type": "object",
+                      "properties": {
+                        "canReply": {
+                          "type": "boolean"
+                        },
+                        "canRetry": {
+                          "type": "boolean"
+                        },
+                        "canEnd": {
+                          "type": "boolean"
+                        },
+                        "canDelete": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "canReply",
+                        "canRetry",
+                        "canEnd",
+                        "canDelete"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "projectId",
+                    "workItemId",
+                    "status",
+                    "messages",
+                    "visit",
+                    "endsWith",
+                    "createdAt",
+                    "closedAt"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Response for status 401",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "path": {
+                            "type": "string"
+                          },
+                          "message": {
+                            "type": "string"
+                          },
+                          "summary": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "path",
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "title",
+                    "status"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Response for status 403",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "path": {
+                            "type": "string"
+                          },
+                          "message": {
+                            "type": "string"
+                          },
+                          "summary": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "path",
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "title",
+                    "status"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Response for status 404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "path": {
+                            "type": "string"
+                          },
+                          "message": {
+                            "type": "string"
+                          },
+                          "summary": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "path",
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "title",
+                    "status"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Response for status 409",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "path": {
+                            "type": "string"
+                          },
+                          "message": {
+                            "type": "string"
+                          },
+                          "summary": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "path",
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "title",
+                    "status"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Response for status 422",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "path": {
+                            "type": "string"
+                          },
+                          "message": {
+                            "type": "string"
+                          },
+                          "summary": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "path",
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "title",
+                    "status"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Response for status 500",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "path": {
+                            "type": "string"
+                          },
+                          "message": {
+                            "type": "string"
+                          },
+                          "summary": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "path",
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "title",
+                    "status"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tasks/{taskId}/grant-requests": {
+      "get": {
+        "operationId": "listTaskGrantRequests",
+        "description": "A Task's grant requests, oldest first. Requires `executions:read`.",
+        "tags": [
+          "Tasks"
+        ],
+        "parameters": [
+          {
+            "name": "taskId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Response for status 200",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "taskId": {
+                        "type": "string"
+                      },
+                      "taskRunId": {
+                        "type": "string"
+                      },
+                      "reason": {
+                        "type": "string"
+                      },
+                      "requested": {
+                        "type": "array",
+                        "items": {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "resource": {
+                                  "type": "string",
+                                  "const": "workItem"
+                                },
+                                "action": {
+                                  "type": "string",
+                                  "const": "read"
+                                },
+                                "scope": {
+                                  "type": "string",
+                                  "enum": [
+                                    "self",
+                                    "children",
+                                    "project"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "resource",
+                                "action",
+                                "scope"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "oneOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "resource": {
+                                      "type": "string",
+                                      "const": "workItem"
+                                    },
+                                    "action": {
+                                      "type": "string",
+                                      "const": "update"
+                                    },
+                                    "scope": {
+                                      "type": "string",
+                                      "enum": [
+                                        "self",
+                                        "children"
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "resource",
+                                    "action",
+                                    "scope"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "resource": {
+                                      "type": "string",
+                                      "const": "workItem"
+                                    },
+                                    "action": {
+                                      "type": "string",
+                                      "const": "update"
+                                    },
+                                    "scope": {
+                                      "type": "string",
+                                      "const": "project"
+                                    },
+                                    "keyPrefix": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 200
+                                    },
+                                    "labels": {
+                                      "minItems": 1,
+                                      "maxItems": 50,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 200
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "resource",
+                                    "action",
+                                    "scope"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "resource": {
+                                  "type": "string",
+                                  "const": "workItem"
+                                },
+                                "action": {
+                                  "type": "string",
+                                  "const": "comment"
+                                },
+                                "scope": {
+                                  "type": "string",
+                                  "enum": [
+                                    "self",
+                                    "children"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "resource",
+                                "action",
+                                "scope"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "resource": {
+                                  "type": "string",
+                                  "const": "workItem"
+                                },
+                                "action": {
+                                  "type": "string",
+                                  "const": "label"
+                                },
+                                "scope": {
+                                  "type": "string",
+                                  "enum": [
+                                    "self",
+                                    "children"
+                                  ]
+                                },
+                                "labels": {
+                                  "minItems": 1,
+                                  "maxItems": 50,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 200
+                                  }
+                                }
+                              },
+                              "required": [
+                                "resource",
+                                "action",
+                                "scope",
+                                "labels"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "resource": {
+                                  "type": "string",
+                                  "const": "workItem"
+                                },
+                                "action": {
+                                  "type": "string",
+                                  "const": "block"
+                                },
+                                "scope": {
+                                  "type": "string",
+                                  "enum": [
+                                    "self",
+                                    "children"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "resource",
+                                "action",
+                                "scope"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "resource": {
+                                  "type": "string",
+                                  "const": "workItem"
+                                },
+                                "action": {
+                                  "type": "string",
+                                  "const": "close"
+                                },
+                                "scope": {
+                                  "type": "string",
+                                  "enum": [
+                                    "self",
+                                    "children"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "resource",
+                                "action",
+                                "scope"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "oneOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "resource": {
+                                      "type": "string",
+                                      "const": "workItem"
+                                    },
+                                    "action": {
+                                      "type": "string",
+                                      "const": "create"
+                                    },
+                                    "scope": {
+                                      "type": "string",
+                                      "const": "children"
+                                    },
+                                    "labels": {
+                                      "minItems": 1,
+                                      "maxItems": 50,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 200
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "resource",
+                                    "action",
+                                    "scope",
+                                    "labels"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "resource": {
+                                      "type": "string",
+                                      "const": "workItem"
+                                    },
+                                    "action": {
+                                      "type": "string",
+                                      "const": "create"
+                                    },
+                                    "scope": {
+                                      "type": "string",
+                                      "const": "project"
+                                    },
+                                    "labels": {
+                                      "minItems": 1,
+                                      "maxItems": 50,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 200
+                                      }
+                                    },
+                                    "keyPrefix": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 200
+                                    }
+                                  },
+                                  "required": [
+                                    "resource",
+                                    "action",
+                                    "scope",
+                                    "labels"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "pending",
+                          "decided",
+                          "unanswered",
+                          "withdrawn"
+                        ]
+                      },
+                      "approved": {
+                        "type": [
+                          "array",
+                          "null"
+                        ],
+                        "items": {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "resource": {
+                                  "type": "string",
+                                  "const": "workItem"
+                                },
+                                "action": {
+                                  "type": "string",
+                                  "const": "read"
+                                },
+                                "scope": {
+                                  "type": "string",
+                                  "enum": [
+                                    "self",
+                                    "children",
+                                    "project"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "resource",
+                                "action",
+                                "scope"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "oneOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "resource": {
+                                      "type": "string",
+                                      "const": "workItem"
+                                    },
+                                    "action": {
+                                      "type": "string",
+                                      "const": "update"
+                                    },
+                                    "scope": {
+                                      "type": "string",
+                                      "enum": [
+                                        "self",
+                                        "children"
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "resource",
+                                    "action",
+                                    "scope"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "resource": {
+                                      "type": "string",
+                                      "const": "workItem"
+                                    },
+                                    "action": {
+                                      "type": "string",
+                                      "const": "update"
+                                    },
+                                    "scope": {
+                                      "type": "string",
+                                      "const": "project"
+                                    },
+                                    "keyPrefix": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 200
+                                    },
+                                    "labels": {
+                                      "minItems": 1,
+                                      "maxItems": 50,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 200
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "resource",
+                                    "action",
+                                    "scope"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "resource": {
+                                  "type": "string",
+                                  "const": "workItem"
+                                },
+                                "action": {
+                                  "type": "string",
+                                  "const": "comment"
+                                },
+                                "scope": {
+                                  "type": "string",
+                                  "enum": [
+                                    "self",
+                                    "children"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "resource",
+                                "action",
+                                "scope"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "resource": {
+                                  "type": "string",
+                                  "const": "workItem"
+                                },
+                                "action": {
+                                  "type": "string",
+                                  "const": "label"
+                                },
+                                "scope": {
+                                  "type": "string",
+                                  "enum": [
+                                    "self",
+                                    "children"
+                                  ]
+                                },
+                                "labels": {
+                                  "minItems": 1,
+                                  "maxItems": 50,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 200
+                                  }
+                                }
+                              },
+                              "required": [
+                                "resource",
+                                "action",
+                                "scope",
+                                "labels"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "resource": {
+                                  "type": "string",
+                                  "const": "workItem"
+                                },
+                                "action": {
+                                  "type": "string",
+                                  "const": "block"
+                                },
+                                "scope": {
+                                  "type": "string",
+                                  "enum": [
+                                    "self",
+                                    "children"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "resource",
+                                "action",
+                                "scope"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "resource": {
+                                  "type": "string",
+                                  "const": "workItem"
+                                },
+                                "action": {
+                                  "type": "string",
+                                  "const": "close"
+                                },
+                                "scope": {
+                                  "type": "string",
+                                  "enum": [
+                                    "self",
+                                    "children"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "resource",
+                                "action",
+                                "scope"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "oneOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "resource": {
+                                      "type": "string",
+                                      "const": "workItem"
+                                    },
+                                    "action": {
+                                      "type": "string",
+                                      "const": "create"
+                                    },
+                                    "scope": {
+                                      "type": "string",
+                                      "const": "children"
+                                    },
+                                    "labels": {
+                                      "minItems": 1,
+                                      "maxItems": 50,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 200
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "resource",
+                                    "action",
+                                    "scope",
+                                    "labels"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "resource": {
+                                      "type": "string",
+                                      "const": "workItem"
+                                    },
+                                    "action": {
+                                      "type": "string",
+                                      "const": "create"
+                                    },
+                                    "scope": {
+                                      "type": "string",
+                                      "const": "project"
+                                    },
+                                    "labels": {
+                                      "minItems": 1,
+                                      "maxItems": 50,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 200
+                                      }
+                                    },
+                                    "keyPrefix": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 200
+                                    }
+                                  },
+                                  "required": [
+                                    "resource",
+                                    "action",
+                                    "scope",
+                                    "labels"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      "note": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "decidedByUserId": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "decidedAt": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "format": "date-time",
+                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                      },
+                      "createdAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "taskId",
+                      "taskRunId",
+                      "reason",
+                      "requested",
+                      "status",
+                      "approved",
+                      "note",
+                      "decidedByUserId",
+                      "decidedAt",
+                      "createdAt"
+                    ],
+                    "additionalProperties": false
+                  }
                 }
               }
             }

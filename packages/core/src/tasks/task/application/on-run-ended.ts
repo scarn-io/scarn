@@ -15,7 +15,11 @@ import { namedRunError } from "../domain/run-error";
 import { latestBaseCommit } from "../domain/base-commit";
 import { latestEnvironmentVersion } from "../domain/environment-version";
 import type { TaskEntity } from "../domain/task-entity";
-import { handOver, type HandOverDeps } from "./hand-over";
+import {
+  handOver,
+  type AgentGrantRequest,
+  type HandOverDeps,
+} from "./hand-over";
 import {
   isTaskEnded,
   onTaskEnded,
@@ -193,8 +197,15 @@ const notifyChatFailed = async (
   );
 };
 
-/** The final message of a run that yielded, and what handing it over needs. */
-export type RunHandOver = { message: string; deps: HandOverDeps };
+/**
+ * The final message of a run that yielded, the grant request it carried, and
+ * what handing it over needs.
+ */
+export type RunHandOver = {
+  message: string;
+  grantRequest?: AgentGrantRequest | undefined;
+  deps: HandOverDeps;
+};
 
 /**
  * Records how `run` ended on its Task. First it closes the run's open
@@ -237,7 +248,13 @@ export const onRunEnded = async (
         "TASK_HAND_OVER_MESSAGE_MISSING",
       );
     }
-    after = await handOver(synced, run, yielded.message, yielded.deps, tx);
+    after = await handOver(
+      synced,
+      run,
+      { message: yielded.message, grantRequest: yielded.grantRequest },
+      yielded.deps,
+      tx,
+    );
   }
   if (after.status !== before.status && isTaskEnded(after)) {
     after = await onTaskEnded(after, run, deps, tx);

@@ -112,8 +112,10 @@ function fakeDependencies(calls: Calls): TaskReadDependencies {
           scheduledFor: null,
           waitingOn: [],
           conversationId: null,
+          grants: [{ resource: "workItem", action: "read", scope: "self" }],
         }),
       getTaskRuns: () => ok([taskRun]),
+      listTaskGrantRequests: () => ok([]),
     },
     taskRuns: {
       getTaskRun: () => ok(taskRun),

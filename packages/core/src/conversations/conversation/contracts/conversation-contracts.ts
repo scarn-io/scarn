@@ -22,6 +22,11 @@ export const conversationMessageSchema = z.object({
   authorName: z.string().nullable(),
   /** The attempt that wrote an agent message. */
   taskRunId: uuidV7Schema.nullable(),
+  /**
+   * The grant request this message carries (an agent message) or records the
+   * decision of (a system message); absent or null otherwise.
+   */
+  grantRequestId: uuidV7Schema.nullable().optional(),
   body: z.string(),
   createdAt: z.iso.datetime(),
 });

@@ -31,6 +31,10 @@ const setup = (onWorkItem: boolean, status: TaskStatus) => {
   const save = vi.fn((next: ConversationEntity) => Promise.resolve(next));
   const deps: OnTaskEndedDeps = {
     taskRepo: {} as TaskRepo,
+    grantRequestRepo: {
+      findPendingByTaskId: () => Promise.resolve(null),
+      save: vi.fn(),
+    },
     taskRunRepo: {
       listByTaskId: () => Promise.resolve([]),
       clearSessions: () => Promise.resolve(),

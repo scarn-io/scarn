@@ -118,7 +118,8 @@ export type ProjectUpdateGrant = Extract<
   { action: "update"; scope: "project" }
 >;
 
-const grantKey = (grant: Grant) =>
+/** A grant's `(resource, action, scope, keyPrefix)`. */
+export const grantKey = (grant: Grant) =>
   `${grant.resource}:${grant.action}:${grant.scope}:${"keyPrefix" in grant ? (grant.keyPrefix ?? "") : ""}`;
 
 /** At most one grant per `(resource, action, scope, keyPrefix)`. */
@@ -128,6 +129,79 @@ export const grantsSchema = z
     message:
       "Grants must have at most one grant per resource, action, scope and key prefix",
   });
+
+const unionLabels = (
+  held: readonly string[] | undefined,
+  added: readonly string[] | undefined,
+): string[] | undefined =>
+  held === undefined || added === undefined
+    ? undefined
+    : [...new Set([...held, ...added])];
+
+/**
+ * `held` with `added` joined in, at most one grant per `(resource, action,
+ * scope, keyPrefix)`. When a grant for the same key is already held, their
+ * labels are merged; an `update` grant naming no labels covers any, so it
+ * stays unlimited. Never removes a grant.
+ */
+export const mergeGrants = (
+  held: readonly Grant[],
+  added: readonly Grant[],
+): Grant[] => {
+  const merged = new Map<string, Grant>(
+    held.map((grant) => [grantKey(grant), { ...grant }]),
+  );
+  for (const grant of added) {
+    const key = grantKey(grant);
+    const existing = merged.get(key);
+    if (existing === undefined) {
+      merged.set(key, { ...grant });
+    } else if ("labels" in existing && existing.labels !== undefined) {
+      const labels = unionLabels(
+        existing.labels,
+        "labels" in grant ? grant.labels : undefined,
+      );
+      const next: Grant & { labels?: string[] } = { ...existing };
+      if (labels === undefined) {
+        delete next.labels;
+      } else {
+        next.labels = labels;
+      }
+      merged.set(key, next);
+    }
+  }
+  return [...merged.values()];
+};
+
+/**
+ * The part of `requested` that `held` doesn't already cover. A grant with no
+ * held grant of its key stays as asked. One whose key is held is dropped
+ * when the held grant names no labels (it covers any) or names every label
+ * asked for. A labelled grant only partly covered stays, narrowed to the
+ * labels not held yet; an unlimited `update` asked over a labelled one stays.
+ */
+export const grantsNotHeld = (
+  held: readonly Grant[],
+  requested: readonly Grant[],
+): Grant[] => {
+  const heldByKey = new Map(held.map((grant) => [grantKey(grant), grant]));
+  return requested.flatMap((grant): Grant[] => {
+    const existing = heldByKey.get(grantKey(grant));
+    if (existing === undefined) {
+      return [{ ...grant }];
+    }
+    const heldLabels = "labels" in existing ? existing.labels : undefined;
+    const asked = "labels" in grant ? grant.labels : undefined;
+    if (heldLabels === undefined) {
+      return [];
+    }
+    if (asked === undefined) {
+      return [{ ...grant }];
+    }
+    const added = asked.filter((label) => !heldLabels.includes(label));
+    return added.length === 0 ? [] : [{ ...grant, labels: added } as Grant];
+  });
+};
 
 /**
  * Why `grants` don't fit a step of `kind`, one message per grant; empty when

@@ -129,6 +129,8 @@ export type TaskRunWorkerContextContract = {
     declaredErrors: string[];
     /** How many more turns the agent may hand to a person; null outside a pipeline run. */
     turnsRemaining?: number | null;
+    /** Whether the agent may ask a person for more grants when it hands over. */
+    grantRequests?: boolean;
     workItemId?: string;
     /** A chat's (repo conversation's) conversation; null for any other Task. */
     conversationId?: string | null;

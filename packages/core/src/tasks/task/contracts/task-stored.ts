@@ -15,15 +15,16 @@ import type {
   TaskToolCall,
 } from "@scarn/core/tasks/task-run/domain/task-run-entity";
 import type { Grant } from "../domain/grants";
+import type { WorkItemChange } from "./work-item-change-contracts";
 import type { TaskEnvironmentSelection } from "../domain/task-environment-selection";
 import { readStoredTaskEnvironmentSelection } from "./task-environment-selection-contracts";
 
 /**
  * Read-side schemas for the JSON columns of `tasks`, one per
- * `schema_version`. The version covers all nine columns together:
+ * `schema_version`. The version covers all ten columns together:
  * `entrypoint_json`, `tool_call_json`, `result_schema_json`, `input_json`,
- * `retry_json`, `environment_selection_json`, `grants_json`, `result_json`
- * and `error_json`.
+ * `retry_json`, `environment_selection_json`, `grants_json`,
+ * `held_work_item_changes_json`, `result_json` and `error_json`.
  *
  * A Task's instructions are a snapshot copied from its step definition (or
  * pipeline node) when it is created, and the worker executes from them for
@@ -38,6 +39,8 @@ import { readStoredTaskEnvironmentSelection } from "./task-environment-selection
  *   are kept.
  * - `environment_selection_json` versions itself inside the JSON; v1 reads
  *   it with `readStoredTaskEnvironmentSelection`.
+ * - `held_work_item_changes_json` is a list of `WorkItemChange`s; rows
+ *   written before the column existed read its default `[]`.
  * - `result_schema_json`, `input_json` and `result_json` are opaque JSON.
  * - `error_json` is a loose `{ name, message, cause? }` (as
  *   `taskStateForRun` and `maxTurnsExceeded` write it) with `name` and
@@ -74,6 +77,44 @@ const storedTaskEnvironmentSelectionV1 = z
     return read.selection;
   });
 
+/**
+ * `held_work_item_changes_json`: the frozen v1 shape of a
+ * `WorkItemChange` (`work-item-change-contracts.ts`), structural only.
+ */
+const storedWorkItemChangeV1 = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("label"),
+    workItemId: z.string(),
+    add: z.array(z.string()).optional(),
+    remove: z.array(z.string()).optional(),
+  }),
+  z.object({
+    kind: z.literal("block"),
+    blockedWorkItemId: z.string(),
+    blockingWorkItemId: z.string(),
+    remove: z.boolean().optional(),
+  }),
+  z.object({
+    kind: z.literal("describe"),
+    workItemId: z.string(),
+    description: z.string(),
+    descriptionVersion: z.number(),
+  }),
+  z.object({
+    kind: z.literal("comment"),
+    workItemId: z.string(),
+    body: z.string(),
+  }),
+  z.object({
+    kind: z.literal("close"),
+    workItemId: z.string(),
+    reason: z.string(),
+    resolution: z.string().nullable().optional(),
+  }),
+]);
+
+export const storedWorkItemChangesV1 = z.array(storedWorkItemChangeV1);
+
 const storedTaskInstructionsV1Shape = {
   entrypointJson: storedStepEntrypointV1.nullable(),
   toolCallJson: storedToolCallV1.nullable(),
@@ -88,6 +129,7 @@ const storedTaskV1Schema = z.object({
   retryJson: storedTaskRetryV1.nullable(),
   environmentSelectionJson: storedTaskEnvironmentSelectionV1,
   grantsJson: storedGrantsV1,
+  heldWorkItemChangesJson: storedWorkItemChangesV1,
   resultJson: z.json().nullable(),
   errorJson: storedTaskErrorV1.nullable(),
 });
@@ -105,6 +147,7 @@ export type StoredTaskDocument = StoredTaskInstructions & {
   retryJson: AnyJsonValue | null;
   environmentSelection: TaskEnvironmentSelection | null;
   grants: Grant[];
+  heldWorkItemChanges: WorkItemChange[];
   resultJson: AnyJsonValue | null;
   errorJson: AnyJsonValue | null;
 };
@@ -124,6 +167,7 @@ export type StoredTaskColumns = StoredTaskInstructionColumns & {
   retryJson: unknown;
   environmentSelectionJson: unknown;
   grants: unknown;
+  heldWorkItemChangesJson: unknown;
   resultJson: unknown;
   errorJson: unknown;
 };
@@ -141,11 +185,19 @@ export const readStoredTask = createStoredReader<
   byVersion: {
     1: (columns) =>
       storedTaskV1Schema
-        .transform(({ environmentSelectionJson, grantsJson, ...rest }) => ({
-          ...rest,
-          environmentSelection: environmentSelectionJson,
-          grants: grantsJson,
-        }))
+        .transform(
+          ({
+            environmentSelectionJson,
+            grantsJson,
+            heldWorkItemChangesJson,
+            ...rest
+          }) => ({
+            ...rest,
+            environmentSelection: environmentSelectionJson,
+            grants: grantsJson,
+            heldWorkItemChanges: heldWorkItemChangesJson,
+          }),
+        )
         .safeParse({
           ...columns,
           grantsJson: columns.grants,

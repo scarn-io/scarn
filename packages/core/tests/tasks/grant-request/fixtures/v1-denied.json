@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "status": "decided",
+  "reason": "I need to close the work item.",
+  "requestedJson": [
+    { "resource": "workItem", "action": "close", "scope": "self" }
+  ],
+  "approvedJson": []
+}

@@ -78,6 +78,7 @@ export function makeTaskDetail(
     scheduledFor: null,
     waitingOn: [],
     conversationId: null,
+    grants: [{ resource: "workItem", action: "read", scope: "self" }],
     ...overrides,
   };
 }

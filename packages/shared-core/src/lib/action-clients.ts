@@ -2,7 +2,12 @@ import type { ApiResult } from "./api-result";
 import type { PipelineVersion } from "./pipeline-api-types";
 import type { OverrulePreview, OverruleRequest } from "./route-api-types";
 import type { RunWithVisits } from "./run-api-types";
-import type { TaskDetail, TaskRunDetail } from "./task-api-types";
+import type { Grant } from "@scarn/sdk/definitions/steps";
+import type {
+  TaskDetail,
+  TaskGrantRequest,
+  TaskRunDetail,
+} from "./task-api-types";
 import type { WorkItemComment, WorkItemQuestion } from "./work-item-api-types";
 
 /**
@@ -66,6 +71,19 @@ export type TaskActionClient = {
     cancelTask: (options: {
       path: { taskId: string };
     }) => Promise<ApiResult<{ taskId: string }>>;
+  };
+};
+
+/** `scarn tasks access`: read a Task's grant requests and decide one. */
+export type TaskAccessClient = {
+  tasks: {
+    listTaskGrantRequests: (options: {
+      path: { taskId: string };
+    }) => Promise<ApiResult<TaskGrantRequest[]>>;
+    decideTaskGrantRequest: (options: {
+      path: { grantRequestId: string };
+      body: { approved: Grant[]; note?: string };
+    }) => Promise<ApiResult<unknown>>;
   };
 };
 

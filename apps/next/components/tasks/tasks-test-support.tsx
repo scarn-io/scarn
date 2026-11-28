@@ -42,6 +42,8 @@ export const api = {
   pushes: [] as string[],
   taskDetail: null as unknown,
   taskDetailRequests: 0,
+  grantRequests: [] as unknown[],
+  members: [] as unknown[],
   taskRuns: [] as unknown[],
   taskRunsRequests: 0,
   retryBodies: [] as { expectedLatestRunId: string | null }[],
@@ -101,6 +103,9 @@ void mock.module("@/app/_lib/scarn-browser-api-client", () => ({
               }),
           },
         ),
+        members: {
+          get: () => Promise.resolve({ data: api.members, error: null }),
+        },
         secrets: {
           get: () =>
             Promise.resolve({
@@ -142,7 +147,17 @@ void mock.module("@/app/_lib/scarn-browser-api-client", () => ({
         () => ({
           get: () => {
             api.taskDetailRequests += 1;
-            return Promise.resolve({ data: api.taskDetail, error: null });
+            return Promise.resolve({
+              data:
+                api.taskDetail === null
+                  ? null
+                  : { grants: [], ...(api.taskDetail as object) },
+              error: null,
+            });
+          },
+          "grant-requests": {
+            get: () =>
+              Promise.resolve({ data: api.grantRequests, error: null }),
           },
           runs: {
             get: () => {
@@ -200,6 +215,8 @@ export function resetApi() {
   api.pushes.length = 0;
   api.taskDetail = null;
   api.taskDetailRequests = 0;
+  api.grantRequests = [];
+  api.members = [];
   api.taskRuns = [];
   api.taskRunsRequests = 0;
   api.retryBodies = [];

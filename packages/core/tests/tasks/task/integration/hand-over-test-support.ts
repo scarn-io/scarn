@@ -10,9 +10,11 @@ import {
 import { createScarnTreaty } from "tests/treaty";
 import type { ObjectStore } from "@/artifacts/object-store";
 import type { TimeProvider } from "@/lib/time-provider";
+import type { Grant } from "@/tasks/task/domain/grants";
 import { createAppContext } from "@/lib/di";
 import { getDb } from "@/lib/db";
 import { conversationMessages, tasks, workItems } from "@/lib/db/schema";
+import type { WorkItemChange } from "@/tasks/task/contracts/work-item-change-contracts";
 import type { ProjectContract } from "@/projects/project/contracts/project-contracts";
 import { fixedTimeProvider, unwrapAsync } from "tests/utils";
 import { createTestUserAndSession } from "tests/projects/project/integration/auth-test-utils";
@@ -49,11 +51,16 @@ export const createHandOverHarness = (
   options: {
     objectStore?: ObjectStore | null;
     timeProvider?: TimeProvider;
+    /** The work item grants every step definition gives its Tasks. */
+    grants?: Grant[];
+    /** Whether every step definition's Tasks may ask for more grants. */
+    grantRequests?: boolean;
   } = {},
 ) => {
+  const { grants = [], grantRequests = false, ...overrides } = options;
   const appContext = createAppContext({
     timeProvider: fixedTimeProvider(new Date("2026-01-01T12:00:00.000Z")),
-    ...options,
+    ...overrides,
   });
   const apiClient = createScarnTreaty(createApp(appContext));
   let project: ProjectContract | undefined;
@@ -84,6 +91,8 @@ export const createHandOverHarness = (
           maxTurns,
           status: "active",
           repo: { mode: "readOnly" },
+          grants,
+          grantRequests,
         },
         { headers: { ...authHeaders } },
       ),
@@ -175,7 +184,12 @@ export const createHandOverHarness = (
   const yieldRun = async (
     workItemId: UuidV7,
     taskRunId: string,
-    yielded: { message: string; workBranch?: string },
+    yielded: {
+      message: string;
+      workBranch?: string;
+      workItemChanges?: WorkItemChange[];
+      grantRequest?: { reason: string; grants: Grant[] };
+    },
   ) => {
     const claimToken = await claim(workItemId, taskRunId);
     return await unwrapAsync(
@@ -213,9 +227,10 @@ export const createHandOverHarness = (
   const completeRun = async (
     taskRunId: string,
     claimToken: string,
-    outcome:
+    outcome: (
       | { status: "succeeded"; resultJson: AnyJsonValue }
-      | { status: "failed"; errorJson: AnyJsonValue },
+      | { status: "failed"; errorJson: AnyJsonValue }
+    ) & { workItemChanges?: WorkItemChange[] },
   ) =>
     await unwrapAsync(
       apiClient.api["task-runs"]({ taskRunId }).completions.post(

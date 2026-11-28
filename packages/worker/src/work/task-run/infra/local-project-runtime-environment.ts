@@ -5,6 +5,7 @@ import {
 } from "../../../runtime/runtime-service/infra/opencode-agent-home";
 import { startHostAgent } from "./local-host-agent-launch";
 import { removeWorkItemChanges } from "@scarn/sdk/contracts/work-item-changes";
+import { removeGrantRequest } from "@scarn/sdk/contracts/grant-request";
 import {
   removeFindingsSubmissionFile,
   writeCurrentExecutionInfoFile,
@@ -170,6 +171,7 @@ export class DefaultLocalProjectRuntimeEnvironmentOrchestrator implements LocalP
       // the agent starts.
       await removeFindingsSubmissionFile(workspacePath);
       await removeWorkItemChanges(workspacePath);
+      await removeGrantRequest(workspacePath);
 
       let devcontainerConfigPath = "";
       let agentWorkspaceFolder = workspacePath;

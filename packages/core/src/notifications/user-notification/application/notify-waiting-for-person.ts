@@ -27,6 +27,8 @@ export type NotifyWaitingForPersonInput = {
   taskId: UuidV7 | null;
   body: string;
   subject: WaitingSubject;
+  /** The agent's pending grant request, when it asks for more access. */
+  grantRequestId?: UuidV7 | null | undefined;
   /**
    * Deduplicated; one notification each. Empty when nobody is known, which
    * files one notification for the whole project instead.
@@ -79,7 +81,9 @@ export const notifyWaitingForPerson = async (
         body: input.body,
         priority: "normal",
         source,
-        payloadJson: subjectIds,
+        payloadJson: input.grantRequestId
+          ? { ...subjectIds, grantRequestId: input.grantRequestId }
+          : subjectIds,
         createdAt: input.now,
         updatedAt: input.now,
       }),

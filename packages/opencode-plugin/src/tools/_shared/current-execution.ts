@@ -10,6 +10,8 @@ export type CurrentExecutionInfo = {
   resultSchemaJson: Record<string, unknown> | null;
   /** How many more turns this step allows; `null` outside a run. */
   turnsRemaining: number | null;
+  /** Whether the agent may ask for more grants when it hands over; absent before Phase 3. */
+  grantRequests?: boolean;
   /** The work item the run's Task is on; `null` outside a run on one. */
   workItemId: string | null;
   /** What the run's Task may do to work items; `[]` when none were given. */
@@ -193,6 +195,7 @@ export async function loadCurrentExecutionInfo(
   }
 
   const turnsRemaining = parsedRecord["turnsRemaining"];
+  const grantRequests = parsedRecord["grantRequests"];
   const workItemId = parsedRecord["workItemId"];
 
   return {
@@ -202,6 +205,7 @@ export async function loadCurrentExecutionInfo(
       typeof turnsRemaining === "number" && Number.isInteger(turnsRemaining)
         ? turnsRemaining
         : null,
+    grantRequests: grantRequests === true,
     workItemId:
       typeof workItemId === "string" && workItemId.length > 0
         ? workItemId

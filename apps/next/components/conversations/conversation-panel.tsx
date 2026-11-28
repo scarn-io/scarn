@@ -39,6 +39,10 @@ import {
   ConversationMessage,
   LocalMessage,
 } from "./conversation-messages";
+import {
+  grantRequestCardContext,
+  pendingGrantRequestId,
+} from "./grant-request-api";
 import type {
   ConversationActionOutcome,
   ConversationData,
@@ -103,6 +107,11 @@ export function ConversationPanel({
           message={message}
           agentName={agentName}
           onShowWork={onShowWork}
+          grantRequest={grantRequestCardContext(
+            conversation,
+            message.grantRequestId,
+            data.refetch,
+          )}
         />
       ))}
       {data.localMessages.map((message) => (
@@ -319,8 +328,9 @@ export function ConversationMessageBox({
     void send();
   };
 
-  const hint =
-    data.conversation?.status === "reply_pending"
+  const hint = pendingGrantRequestId(data.conversation)
+    ? `${agentName} is asking for more access — a reply leaves that request unanswered`
+    : data.conversation?.status === "reply_pending"
       ? `${agentName} is thinking — anything you send joins its next turn`
       : coarsePointer
         ? null

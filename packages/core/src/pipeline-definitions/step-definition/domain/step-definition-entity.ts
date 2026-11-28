@@ -115,6 +115,11 @@ export type StepDefinitionEntityProps = {
    * `code` steps only.
    */
   logArchive?: LogArchive | undefined;
+  /**
+   * Whether a Task of this step may ask a person for more grants; omitted
+   * means `false`.
+   */
+  grantRequests?: boolean | undefined;
   /** `null` runs on the repo's own config (D3). */
   taskExecutionConfigId: UuidV7 | null;
   status: StepDefinitionStatus;
@@ -265,6 +270,7 @@ export class StepDefinitionEntity {
   public readonly maxTurns: number | null;
   public readonly concurrency: StepConcurrency | null;
   public readonly logArchive: LogArchive;
+  public readonly grantRequests: boolean;
   public readonly taskExecutionConfigId: UuidV7 | null;
   public readonly status: StepDefinitionStatus;
   public readonly createdAt: Date | null | undefined;
@@ -289,6 +295,7 @@ export class StepDefinitionEntity {
     this.maxTurns = props.maxTurns ?? null;
     this.concurrency = props.concurrency ?? null;
     this.logArchive = props.logArchive ?? DEFAULT_LOG_ARCHIVE;
+    this.grantRequests = props.grantRequests ?? false;
     this.taskExecutionConfigId =
       props.taskExecutionConfigId === null
         ? null
@@ -523,6 +530,7 @@ export class StepDefinitionEntity {
       maxTurns: this.maxTurns,
       concurrency: this.concurrency,
       logArchive: this.logArchive,
+      grantRequests: this.grantRequests,
       taskExecutionConfigId: this.taskExecutionConfigId,
       status: this.status,
       createdAt: this.createdAt,

@@ -224,6 +224,17 @@ export const readRepoConversationId = (
   return typeof conversationId === "string" ? conversationId : null;
 };
 
+/**
+ * The grant request a waiting-for-person notification is about: its agent
+ * asks for more access. Null for any other notification.
+ */
+export const readGrantRequestId = (
+  notification: Pick<UserNotificationContract, "payloadJson">,
+): string | null => {
+  const grantRequestId = notification.payloadJson?.["grantRequestId"];
+  return typeof grantRequestId === "string" ? grantRequestId : null;
+};
+
 /** Action buttons shared by both card and row presentations. */
 export function NotificationActions({
   notification,

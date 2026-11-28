@@ -1,3 +1,6 @@
+import { mkdtemp } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import { afterEach, describe, expect, spyOn, test, vi } from "bun:test";
 import { parseUuidV7 } from "../../../../src/common/contracts/uuid-v7";
 import { handOverAgentTask } from "../../../../src/work/task-run/application/process-project-work-yield";
@@ -19,7 +22,9 @@ describe("handOverAgentTask", () => {
 
   test("reports the saved session's key and uploaded size with the yield", async () => {
     const fetchSpy = spyOn(globalThis, "fetch").mockImplementation((() =>
-      Promise.resolve(new Response("", { status: 200 }))) as unknown as typeof fetch);
+      Promise.resolve(
+        new Response("", { status: 200 }),
+      )) as unknown as typeof fetch);
     const yieldTaskRun = vi.fn(() => Promise.resolve());
     const deps = {
       workerClient: {
@@ -38,6 +43,7 @@ describe("handOverAgentTask", () => {
       taskRunId: TASK_ID,
       claimToken: "claim-token",
       environment: {
+        workspacePath: await mkdtemp(path.join(os.tmpdir(), "scarn-yield-")),
         workBranch: "scarn/task-1",
         createdFromBranch: "main",
         commitAndPushWorkBranch: () => Promise.resolve({ pushed: true }),

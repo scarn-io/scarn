@@ -138,6 +138,10 @@ describe("buildCommitAndPushWorkBranch exclude paths", () => {
     );
   });
 
+  test("never commits the agent's grant request", async () => {
+    expect(await commitExcludePaths()).toContain(".scarn/grant-request.json");
+  });
+
   test("always excludes the managed devcontainers directory", async () => {
     expect(WORK_BRANCH_EXCLUDE_PATHS).toContain(MANAGED_DEVCONTAINERS_DIR);
     expect(await commitExcludePaths()).toContain(

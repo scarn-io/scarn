@@ -5,6 +5,11 @@
  * along with the saved agent session (see `saveAgentSession`). No artifacts
  * are collected: the attempt has no result for them to belong to.
  */
+import {
+  readGrantRequest,
+  removeGrantRequest,
+} from "@scarn/sdk/contracts/grant-request";
+import { readWorkItemChanges } from "@scarn/sdk/contracts/work-item-changes";
 import { saveAgentSession } from "./save-agent-session";
 import type {
   OpencodeServerHandle,
@@ -47,21 +52,33 @@ async function prepareYield(input: YieldInput, logMessage: string) {
     sessionObjectKey: session?.objectKey ?? null,
     sessionSizeBytes: session?.sizeBytes ?? null,
     sessionRestored: startedTask.sessionRestored ?? null,
+    workItemChanges: await readWorkItemChanges(
+      startedTask.environment.workspacePath,
+    ),
   };
 }
 
+/**
+ * Yields with the agent's final message, the grants it asked for with
+ * `scarn-request-access` (`.scarn/grant-request.json`, deleted once sent),
+ * and the work item changes recorded so far.
+ */
 export async function handOverAgentTask(
   input: YieldInput & {
     /** The agent's final message, already masked. */
     message: string;
   },
 ): Promise<void> {
+  const { workspacePath } = input.startedTask.environment;
   const shared = await prepareYield(
     input,
     "Agent ended its turn; handing over to a person",
   );
+  const grantRequest = await readGrantRequest(workspacePath);
   await input.deps.workerClient.yieldTaskRun({
     ...shared,
     message: input.message,
+    ...(grantRequest === null ? {} : { grantRequest }),
   });
+  await removeGrantRequest(workspacePath);
 }

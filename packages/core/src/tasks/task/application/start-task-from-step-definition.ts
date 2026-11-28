@@ -53,6 +53,8 @@ export type StandaloneTaskSpec = TaskInstructions & {
   concurrencyGroup: TaskConcurrencyGroup | null;
   /** The extra connectors a person added (`applyEnvironmentSelection`). */
   environmentSelection?: TaskEnvironmentSelection | null | undefined;
+  /** Whether the step declares `grantRequests`; ignored for a prompt Task. */
+  stepGrantRequests?: boolean | undefined;
 };
 
 /** The schedule that owns a scheduled Task, the cron time it runs for, and the schedule's concurrency limit. */
@@ -223,6 +225,7 @@ export const stepDefinitionTaskSpec = (
           maxAttempts: entry.maxAttempts,
         })),
   grants: stepDefinition.grants,
+  stepGrantRequests: stepDefinition.grantRequests,
   maxTurns: stepDefinition.maxTurns ?? DEFAULT_STANDALONE_MAX_TURNS,
   logArchive: stepDefinition.logArchive,
   concurrencyGroup: {

@@ -100,6 +100,7 @@ export async function launchRuntimeEnvironment(
       taskRunId: input.workerContext.task.id,
       resultSchemaJson: input.workerContext.task.resultSchemaJson,
       turnsRemaining: input.workerContext.task.turnsRemaining ?? null,
+      grantRequests: input.workerContext.task.grantRequests ?? false,
       workItemId: input.workerContext.task.workItemId,
       grants: input.workerContext.task.grants,
       api: deps.workerClient.apiBaseUrl
@@ -148,6 +149,7 @@ export async function launchRuntimeEnvironment(
       taskRunId: input.workerContext.task.id,
       resultSchemaJson: input.workerContext.task.resultSchemaJson,
       turnsRemaining: input.workerContext.task.turnsRemaining ?? null,
+      grantRequests: input.workerContext.task.grantRequests ?? false,
       workItemId: input.workerContext.task.workItemId,
       grants: input.workerContext.task.grants,
       api: deps.workerClient.apiBaseUrl

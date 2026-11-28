@@ -1,0 +1,832 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "3d68f9b8-8dbb-4b5c-812a-0a40e9d90836",
+  "prevIds": [
+    "520b959e-705a-48ce-ae07-9340222d622f"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "task_grant_request_status"
+      ],
+      "writes": [
+        "s|enum|public.task_grant_request_status",
+        "n|enum|public.task_grant_request_status",
+        "e|enum|public.task_grant_request_status",
+        "n|type|public.task_grant_request_status"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "app",
+        "task_grant_requests"
+      ],
+      "writes": [
+        "s|tbl|app.task_grant_requests",
+        "n|tbl|app.task_grant_requests",
+        "e|tbl|app.task_grant_requests",
+        "n|rel|app.task_grant_requests",
+        "n|type|app.task_grant_requests",
+        "n|rel|app.task_grant_requests_pkey"
+      ],
+      "reads": [
+        "n|sch|app",
+        "n|enum|public.task_grant_request_status"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "conversation_messages",
+        "grant_request_id"
+      ],
+      "writes": [
+        "s|col|app.conversation_messages.grant_request_id",
+        "n|col|app.conversation_messages.grant_request_id",
+        "e|col|app.conversation_messages.grant_request_id"
+      ],
+      "reads": [
+        "n|tbl|app.conversation_messages",
+        "n|sch|app"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "step_definitions",
+        "grant_requests"
+      ],
+      "writes": [
+        "s|col|app.step_definitions.grant_requests",
+        "n|col|app.step_definitions.grant_requests",
+        "e|col|app.step_definitions.grant_requests"
+      ],
+      "reads": [
+        "n|tbl|app.step_definitions",
+        "n|sch|app"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "tasks",
+        "grant_requests"
+      ],
+      "writes": [
+        "s|col|app.tasks.grant_requests",
+        "n|col|app.tasks.grant_requests",
+        "e|col|app.tasks.grant_requests"
+      ],
+      "reads": [
+        "n|tbl|app.tasks",
+        "n|sch|app"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "app",
+        "tasks",
+        "held_work_item_changes_json"
+      ],
+      "writes": [
+        "s|col|app.tasks.held_work_item_changes_json",
+        "n|col|app.tasks.held_work_item_changes_json",
+        "e|col|app.tasks.held_work_item_changes_json"
+      ],
+      "reads": [
+        "n|tbl|app.tasks",
+        "n|sch|app"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "app",
+        "conversation_messages",
+        "conversation_messages_grant_request_id_idx"
+      ],
+      "writes": [
+        "s|idx|app.conversation_messages_grant_request_id_idx",
+        "n|idx|app.conversation_messages_grant_request_id_idx",
+        "e|idx|app.conversation_messages_grant_request_id_idx",
+        "n|rel|app.conversation_messages_grant_request_id_idx"
+      ],
+      "reads": [
+        "n|tbl|app.conversation_messages",
+        "n|sch|app",
+        "n|col|app.conversation_messages.grant_request_id"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "app",
+        "task_grant_requests",
+        "task_grant_requests_project_id_idx"
+      ],
+      "writes": [
+        "s|idx|app.task_grant_requests_project_id_idx",
+        "n|idx|app.task_grant_requests_project_id_idx",
+        "e|idx|app.task_grant_requests_project_id_idx",
+        "n|rel|app.task_grant_requests_project_id_idx"
+      ],
+      "reads": [
+        "n|tbl|app.task_grant_requests",
+        "n|sch|app",
+        "n|col|app.task_grant_requests.project_id"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "app",
+        "task_grant_requests",
+        "task_grant_requests_task_id_idx"
+      ],
+      "writes": [
+        "s|idx|app.task_grant_requests_task_id_idx",
+        "n|idx|app.task_grant_requests_task_id_idx",
+        "e|idx|app.task_grant_requests_task_id_idx",
+        "n|rel|app.task_grant_requests_task_id_idx"
+      ],
+      "reads": [
+        "n|tbl|app.task_grant_requests",
+        "n|sch|app",
+        "n|col|app.task_grant_requests.task_id"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "app",
+        "task_grant_requests",
+        "task_grant_requests_task_run_id_idx"
+      ],
+      "writes": [
+        "s|idx|app.task_grant_requests_task_run_id_idx",
+        "n|idx|app.task_grant_requests_task_run_id_idx",
+        "e|idx|app.task_grant_requests_task_run_id_idx",
+        "n|rel|app.task_grant_requests_task_run_id_idx"
+      ],
+      "reads": [
+        "n|tbl|app.task_grant_requests",
+        "n|sch|app",
+        "n|col|app.task_grant_requests.task_run_id"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "app",
+        "task_grant_requests",
+        "task_grant_requests_task_id_pending_unique"
+      ],
+      "writes": [
+        "s|idx|app.task_grant_requests_task_id_pending_unique",
+        "n|idx|app.task_grant_requests_task_id_pending_unique",
+        "e|idx|app.task_grant_requests_task_id_pending_unique",
+        "n|rel|app.task_grant_requests_task_id_pending_unique"
+      ],
+      "reads": [
+        "n|tbl|app.task_grant_requests",
+        "n|sch|app",
+        "n|col|app.task_grant_requests.task_id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "app",
+        "conversation_messages"
+      ],
+      "writes": [
+        "s|fk|app.conversation_messages.conversation_messages_RHCLuZOYYrar_fkey",
+        "n|fk|app.conversation_messages.conversation_messages_RHCLuZOYYrar_fkey",
+        "e|fk|app.conversation_messages.conversation_messages_RHCLuZOYYrar_fkey",
+        "n|con|app.conversation_messages.conversation_messages_RHCLuZOYYrar_fkey"
+      ],
+      "reads": [
+        "n|tbl|app.conversation_messages",
+        "n|sch|app",
+        "n|tbl|app.task_grant_requests",
+        "n|sch|app",
+        "n|col|app.conversation_messages.grant_request_id",
+        "n|col|app.task_grant_requests.id",
+        "e|uniqueness|app.task_grant_requests.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "app",
+        "task_grant_requests"
+      ],
+      "writes": [
+        "s|fk|app.task_grant_requests.task_grant_requests_project_id_projects_id_fkey",
+        "n|fk|app.task_grant_requests.task_grant_requests_project_id_projects_id_fkey",
+        "e|fk|app.task_grant_requests.task_grant_requests_project_id_projects_id_fkey",
+        "n|con|app.task_grant_requests.task_grant_requests_project_id_projects_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|app.task_grant_requests",
+        "n|sch|app",
+        "n|tbl|app.projects",
+        "n|sch|app",
+        "n|col|app.task_grant_requests.project_id",
+        "n|col|app.projects.id",
+        "e|uniqueness|app.projects.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "app",
+        "task_grant_requests"
+      ],
+      "writes": [
+        "s|fk|app.task_grant_requests.task_grant_requests_task_id_tasks_id_fkey",
+        "n|fk|app.task_grant_requests.task_grant_requests_task_id_tasks_id_fkey",
+        "e|fk|app.task_grant_requests.task_grant_requests_task_id_tasks_id_fkey",
+        "n|con|app.task_grant_requests.task_grant_requests_task_id_tasks_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|app.task_grant_requests",
+        "n|sch|app",
+        "n|tbl|app.tasks",
+        "n|sch|app",
+        "n|col|app.task_grant_requests.task_id",
+        "n|col|app.tasks.id",
+        "e|uniqueness|app.tasks.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "app",
+        "task_grant_requests"
+      ],
+      "writes": [
+        "s|fk|app.task_grant_requests.task_grant_requests_task_run_id_task_runs_id_fkey",
+        "n|fk|app.task_grant_requests.task_grant_requests_task_run_id_task_runs_id_fkey",
+        "e|fk|app.task_grant_requests.task_grant_requests_task_run_id_task_runs_id_fkey",
+        "n|con|app.task_grant_requests.task_grant_requests_task_run_id_task_runs_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|app.task_grant_requests",
+        "n|sch|app",
+        "n|tbl|app.task_runs",
+        "n|sch|app",
+        "n|col|app.task_grant_requests.task_run_id",
+        "n|col|app.task_runs.id",
+        "e|uniqueness|app.task_runs.id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "name": "task_grant_requests",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "task_grant_request_status",
+        "values": [
+          "pending",
+          "decided",
+          "unanswered",
+          "withdrawn"
+        ],
+        "entityType": "enums"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "conversation_messages",
+        "name": "grant_request_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "step_definitions",
+        "name": "grant_requests",
+        "type": "boolean",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "false",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "task_grant_requests",
+        "name": "id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "task_grant_requests",
+        "name": "project_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "task_grant_requests",
+        "name": "task_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "task_grant_requests",
+        "name": "task_run_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "task_grant_requests",
+        "name": "reason",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "task_grant_requests",
+        "name": "requested_json",
+        "type": "jsonb",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "task_grant_requests",
+        "name": "status",
+        "type": "task_grant_request_status",
+        "typeSchema": "public",
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "task_grant_requests",
+        "name": "approved_json",
+        "type": "jsonb",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "task_grant_requests",
+        "name": "note",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "task_grant_requests",
+        "name": "decided_by_user_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "task_grant_requests",
+        "name": "decided_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "task_grant_requests",
+        "name": "schema_version",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "task_grant_requests",
+        "name": "created_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "tasks",
+        "name": "grant_requests",
+        "type": "boolean",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "false",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "tasks",
+        "name": "held_work_item_changes_json",
+        "type": "jsonb",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "'[]'",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "conversation_messages",
+        "name": "conversation_messages_grant_request_id_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "grant_request_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "task_grant_requests",
+        "name": "task_grant_requests_project_id_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "project_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "task_grant_requests",
+        "name": "task_grant_requests_task_id_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "task_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "task_grant_requests",
+        "name": "task_grant_requests_task_run_id_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "task_run_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "task_grant_requests",
+        "name": "task_grant_requests_task_id_pending_unique",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "task_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": true,
+        "where": "\"status\" = 'pending'",
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "conversation_messages",
+        "name": "conversation_messages_RHCLuZOYYrar_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "grant_request_id"
+        ],
+        "schemaTo": "app",
+        "tableTo": "task_grant_requests",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "SET NULL",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "task_grant_requests",
+        "name": "task_grant_requests_project_id_projects_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "project_id"
+        ],
+        "schemaTo": "app",
+        "tableTo": "projects",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "task_grant_requests",
+        "name": "task_grant_requests_task_id_tasks_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "task_id"
+        ],
+        "schemaTo": "app",
+        "tableTo": "tasks",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "task_grant_requests",
+        "name": "task_grant_requests_task_run_id_task_runs_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "task_run_id"
+        ],
+        "schemaTo": "app",
+        "tableTo": "task_runs",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "task_grant_requests",
+        "name": "task_grant_requests_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "app",
+        "table": "task_grant_requests",
+        "name": "task_grant_requests_schema_version_check",
+        "value": "\"schema_version\" >= 1",
+        "entityType": "checks"
+      }
+    }
+  ]
+}

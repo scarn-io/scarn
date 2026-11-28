@@ -2,6 +2,7 @@ import type { ApiResult } from "./api-result";
 import type { ProjectTaskStatus } from "./work-item-api-types";
 import type {
   TaskDetail,
+  TaskGrantRequest,
   TaskKind,
   TaskRunArtifact,
   TaskRunDetail,
@@ -32,6 +33,9 @@ export type TaskReadClient = {
     getTaskRuns: (options: {
       path: { taskId: string };
     }) => Promise<ApiResult<TaskRunDetail[]>>;
+    listTaskGrantRequests: (options: {
+      path: { taskId: string };
+    }) => Promise<ApiResult<TaskGrantRequest[]>>;
   };
   taskRuns: {
     getTaskRun: (options: {

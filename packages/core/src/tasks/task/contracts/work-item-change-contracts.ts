@@ -44,7 +44,12 @@ export const workItemChangeSchema = z.discriminatedUnion("kind", [
   }),
 ]);
 
-export const workItemChangesSchema = z.array(workItemChangeSchema).max(200);
+/** The most work item changes a Task applies when it succeeds, held ones included. */
+export const MAX_WORK_ITEM_CHANGES = 200;
+
+export const workItemChangesSchema = z
+  .array(workItemChangeSchema)
+  .max(MAX_WORK_ITEM_CHANGES);
 
 export type WorkItemChange = z.infer<typeof workItemChangeSchema>;
 export type WorkItemChangeKind = WorkItemChange["kind"];

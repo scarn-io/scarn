@@ -111,6 +111,8 @@ export const stepDefinitionSchema = z.object({
   /** The per-work-item concurrency limit; null for no limit. */
   concurrency: stepConcurrencySchema.nullable(),
   logs: stepLogsSchema,
+  /** Whether a Task of this step may ask a person for more grants. */
+  grantRequests: z.boolean(),
   opencodeMcpJson: openCodeMcpServersSchema.nullable(),
   healthChecksJson: healthChecksSchema.nullable(),
   repo: repoConfigSchema,
@@ -242,6 +244,8 @@ export const createStepDefinitionInputSchema = z
     concurrency: stepConcurrencySchema.nullable().optional(),
     /** Omitted means `{ archive: "always" }`. */
     logs: stepLogsSchema.optional(),
+    /** Whether a Task of this step may ask a person for more grants; omitted means `false`. */
+    grantRequests: z.boolean().optional(),
     opencodeMcpJson: taskExecutionConfigMcpServersSchema.nullable().optional(),
     healthChecksJson: healthChecksSchema.nullable().optional(),
     repo: repoConfigInputSchema.optional(),

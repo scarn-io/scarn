@@ -146,7 +146,8 @@ export type CompleteClaimedTaskRunDeps = FinalizeLogDeps &
  * recorded as `timeout` without the fence: it applies nothing either way.
  *
  * A succeeded run's `workItemChanges` apply in the same transaction, after
- * its log is archived (`settleWorkItemChanges`); when the archive isn't
+ * the ones its Task held from earlier hand-overs and once its log is
+ * archived (`settleWorkItemChanges`); when the archive isn't
  * written or a change is refused, the run fails with that named error
  * instead, applies nothing, and goes through the Task's retry policy.
  *
@@ -190,7 +191,7 @@ export const completeClaimedTaskRun = async (
         !isTimedOut &&
         authorityLoss === null &&
         parsedInput.status === "succeeded" &&
-        changes.length > 0;
+        (changes.length > 0 || (await holdsWorkItemChanges(task, deps, tx)));
       const archivesLog = await runLogArchiveRule(task, deps, tx);
       const archivesBeforeSettle = settlesChanges && archivesLog("succeeded");
       const refusal = settlesChanges
@@ -257,6 +258,15 @@ export const completeClaimedTaskRun = async (
   }
   return outcome;
 };
+
+/** Whether `run`'s Task holds work item changes from earlier hand-overs. */
+const holdsWorkItemChanges = async (
+  run: TaskRunEntity,
+  deps: CompleteClaimedTaskRunDeps,
+  tx: DbExecutor,
+): Promise<boolean> =>
+  ((await deps.taskRepo.load(run.taskId, tx))?.heldWorkItemChanges.length ??
+    0) > 0;
 
 /**
  * Whether `run` keeps its log once it ends with a given status, from its

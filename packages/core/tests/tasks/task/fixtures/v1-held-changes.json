@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "kind": "agent",
+  "owner": "workItem",
+  "status": "waiting_for_person",
+  "prompt": "Split the work item into children and label them.",
+  "entrypointJson": null,
+  "toolCallJson": null,
+  "resultSchemaJson": null,
+  "inputJson": null,
+  "retryJson": null,
+  "environmentSelectionJson": null,
+  "grantsJson": [
+    { "resource": "workItem", "action": "read", "scope": "self" },
+    {
+      "resource": "workItem",
+      "action": "label",
+      "scope": "self",
+      "labels": ["triaged", "needs-design"]
+    },
+    { "resource": "workItem", "action": "comment", "scope": "self" }
+  ],
+  "heldWorkItemChangesJson": [
+    {
+      "kind": "label",
+      "workItemId": "019abc00-0000-7000-8000-000000000001",
+      "add": ["triaged"],
+      "remove": ["needs-design"]
+    },
+    {
+      "kind": "comment",
+      "workItemId": "019abc00-0000-7000-8000-000000000001",
+      "body": "Example comment body."
+    },
+    {
+      "kind": "describe",
+      "workItemId": "019abc00-0000-7000-8000-000000000001",
+      "description": "Example description.",
+      "descriptionVersion": 3
+    },
+    {
+      "kind": "block",
+      "blockedWorkItemId": "019abc00-0000-7000-8000-000000000001",
+      "blockingWorkItemId": "019abc00-0000-7000-8000-000000000002"
+    },
+    {
+      "kind": "close",
+      "workItemId": "019abc00-0000-7000-8000-000000000002",
+      "reason": "superseded",
+      "resolution": null
+    }
+  ],
+  "resultJson": null,
+  "errorJson": null
+}

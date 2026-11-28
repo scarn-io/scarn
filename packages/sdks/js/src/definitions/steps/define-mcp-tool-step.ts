@@ -29,6 +29,7 @@ import { assertNoConnectorMcpCollisions, compileMcps } from "./compile-mcps";
 import { resolveMcpChecks, type McpHandle } from "./define-mcp";
 import type { StepConcurrency, StepDefinitionSpec } from "./define-step";
 import type { EnvRecord, PromptEnvContext } from "./env";
+import { hasGrantRequests, type AnyStepFeature } from "./step-features";
 import {
   assertBaseBranchFitsEnvironment,
   compileRepo,
@@ -283,6 +284,19 @@ function assertSchemaOptions(
   }
 }
 
+/** Rejects `Features.grantRequests()` for JS callers the types don't reach. */
+function assertNoGrantRequests(
+  stepKey: string,
+  options: AnyMcpToolStepOptions,
+): void {
+  const features: unknown = (options as { features?: unknown }).features;
+  if (!Array.isArray(features)) return;
+  if (!hasGrantRequests(features as AnyStepFeature[])) return;
+  throw new AuthoringError(
+    `Step "${stepKey}": Features.grantRequests() is for agent steps only. An MCP tool step calls one tool and has no agent to ask for grants.`,
+  );
+}
+
 function schemaObject(
   stepKey: string,
   which: "input" | "output",
@@ -303,6 +317,7 @@ function defineMcpToolStep(
 ): StepHandle {
   const key = options.key ?? defaultMcpToolStepKey(handle.name, tool.name);
   assertSchemaOptions(key, options);
+  assertNoGrantRequests(key, options);
   assertNoHealthChecks(key, handle);
 
   const environmentHandle = isEnvironmentHandle(options.environment)

@@ -27,6 +27,7 @@ import {
 } from "./runtime";
 import type { EnvRecord, PromptEnvContext } from "./env";
 import type { CodeStepFeature, FeatureGrants, Grant } from "./step-features";
+import { hasGrantRequests } from "./step-features";
 import { collectGrants } from "./define-step";
 import {
   createCodeStepWorkItemsClient,
@@ -286,6 +287,11 @@ export function codeStep<
   TErrors
 > {
   const features = (config.features ?? []) as CodeStepFeature[];
+  if (hasGrantRequests(features)) {
+    throw new Error(
+      `Step "${config.key}": Features.grantRequests() is for agent steps only. A code step has no agent to ask for grants; attach the grants it needs with Features.workItems.* instead.`,
+    );
+  }
   const grants = collectGrants(config.key, features);
   assertCodeStepGrants(config.key, grants);
 

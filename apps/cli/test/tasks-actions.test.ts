@@ -1,7 +1,9 @@
 import { describe, expect, setDefaultTimeout, test } from "bun:test";
 import type {
+  TaskAccessClient,
   TaskActionClient,
   TaskDetail,
+  TaskGrantRequest,
   TaskRunDetail,
 } from "@scarn/shared-core";
 import { createTasksCommand } from "../src/commands/tasks";
@@ -31,12 +33,41 @@ const task = {
 const run = (id: string, number: number) =>
   ({ id, number }) as unknown as TaskRunDetail;
 
-type Calls = { retries: unknown[]; cancels: string[] };
+const pendingRequest: TaskGrantRequest = {
+  id: "request-1",
+  taskId: TASK_ID,
+  taskRunId: "run-2",
+  reason: "I need to file the follow-ups.",
+  requested: [
+    { resource: "workItem", action: "comment", scope: "self" },
+    {
+      resource: "workItem",
+      action: "create",
+      scope: "children",
+      labels: ["bug", "chore"],
+    },
+  ],
+  status: "pending",
+  approved: null,
+  note: null,
+  decidedByUserId: null,
+  decidedAt: null,
+  createdAt: "2026-01-02T00:02:00.000Z",
+};
 
-function setup(io: FakeIo, overrides: Partial<TaskActionClient["tasks"]> = {}) {
-  const calls: Calls = { retries: [], cancels: [] };
-  const client: TaskActionClient = {
+type Calls = { retries: unknown[]; cancels: string[]; decisions: unknown[] };
+
+type Client = TaskActionClient & TaskAccessClient;
+
+function setup(io: FakeIo, overrides: Partial<Client["tasks"]> = {}) {
+  const calls: Calls = { retries: [], cancels: [], decisions: [] };
+  const client: Client = {
     tasks: {
+      listTaskGrantRequests: () => ok([pendingRequest]),
+      decideTaskGrantRequest: (options) => {
+        calls.decisions.push(options);
+        return ok({});
+      },
       getTask: () => ok(task),
       getTaskRuns: () => ok([run("run-2", 2), run("run-1", 1)]),
       retryTask: ({ path, body }) => {
@@ -51,8 +82,7 @@ function setup(io: FakeIo, overrides: Partial<TaskActionClient["tasks"]> = {}) {
     },
   };
   const command = createTasksCommand(unusedReads, {
-    connect: () =>
-      Promise.resolve({ client }),
+    connect: () => Promise.resolve({ client }),
     io,
   });
   return {
@@ -158,5 +188,126 @@ describe("scarn tasks cancel", () => {
     const error = await rejection(runTasks(["cancel", TASK_ID, "--yes"]));
 
     expect((error as CliError).code).toBe("action_rejected");
+  });
+});
+
+describe("scarn tasks access", () => {
+  test("--approve approves every requested grant as requested", async () => {
+    const { calls, run: runTasks } = setup(fakeIo());
+
+    const stdout = await runTasks(["access", TASK_ID, "--approve"]);
+
+    expect(calls.decisions).toEqual([
+      {
+        path: { grantRequestId: "request-1" },
+        body: { approved: pendingRequest.requested },
+      },
+    ]);
+    expect(stdout).toContain(
+      `Approved 2 of 2 requested grants for Task ${TASK_ID}`,
+    );
+    expect(stdout.trimEnd().endsWith(`→ scarn tasks view ${TASK_ID}`)).toBe(
+      true,
+    );
+  });
+
+  test("--only and --labels approve a subset, with the note", async () => {
+    const { calls, run: runTasks } = setup(fakeIo());
+
+    await runTasks([
+      "access",
+      TASK_ID,
+      "--approve",
+      "--only",
+      "create:children",
+      "--labels",
+      "bug",
+      "--note",
+      "Just bugs, please.",
+    ]);
+
+    expect(calls.decisions).toEqual([
+      {
+        path: { grantRequestId: "request-1" },
+        body: {
+          approved: [
+            {
+              resource: "workItem",
+              action: "create",
+              scope: "children",
+              labels: ["bug"],
+            },
+          ],
+          note: "Just bugs, please.",
+        },
+      },
+    ]);
+  });
+
+  test("--deny approves nothing", async () => {
+    const { calls, run: runTasks } = setup(fakeIo());
+
+    const stdout = await runTasks(["access", TASK_ID, "--deny"]);
+
+    expect(calls.decisions).toEqual([
+      { path: { grantRequestId: "request-1" }, body: { approved: [] } },
+    ]);
+    expect(stdout).toContain(`Denied the access request of Task ${TASK_ID}`);
+  });
+
+  test("needs exactly one of --approve and --deny", async () => {
+    const { calls, run: runTasks } = setup(fakeIo());
+
+    for (const flags of [[], ["--approve", "--deny"]]) {
+      const error = await rejection(runTasks(["access", TASK_ID, ...flags]));
+      expect((error as CliError).code).toBe("invalid_usage");
+    }
+    expect(calls.decisions).toEqual([]);
+  });
+
+  test("a selector or label the request lacks is refused before deciding", async () => {
+    const { calls, run: runTasks } = setup(fakeIo());
+
+    const selector = await rejection(
+      runTasks(["access", TASK_ID, "--approve", "--only", "close:self"]),
+    );
+    const label = await rejection(
+      runTasks(["access", TASK_ID, "--approve", "--labels", "feature"]),
+    );
+
+    expect((selector as CliError).code).toBe("action_rejected");
+    expect(selector.message).toContain("doesn't ask for close:self");
+    expect((label as CliError).code).toBe("action_rejected");
+    expect(label.message).toContain("got feature");
+    expect(calls.decisions).toEqual([]);
+  });
+
+  test("no pending request is action_conflict", async () => {
+    const { run: runTasks } = setup(fakeIo(), {
+      listTaskGrantRequests: () =>
+        ok([{ ...pendingRequest, status: "unanswered" }]),
+    });
+
+    const error = await rejection(runTasks(["access", TASK_ID, "--approve"]));
+
+    expect((error as CliError).code).toBe("action_conflict");
+    expect(error.message).toBe(
+      `Task ${TASK_ID} has no pending access request.`,
+    );
+  });
+
+  test("API refusals map to action_conflict and action_forbidden", async () => {
+    for (const [status, code] of [
+      [409, "action_conflict"],
+      [403, "action_forbidden"],
+    ] as const) {
+      const { run: runTasks } = setup(fakeIo(), {
+        decideTaskGrantRequest: () => fail(status, "refused"),
+      });
+
+      const error = await rejection(runTasks(["access", TASK_ID, "--deny"]));
+
+      expect((error as CliError).code).toBe(code);
+    }
   });
 });

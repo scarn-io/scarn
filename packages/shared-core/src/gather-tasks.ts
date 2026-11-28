@@ -2,6 +2,7 @@ import { describeApiError } from "./lib/api-errors";
 import type { ApiResult } from "./lib/api-result";
 import type {
   TaskDetail,
+  TaskGrantRequest,
   TaskKind,
   TaskRunArtifact,
   TaskRunDetail,
@@ -94,19 +95,22 @@ export type GatheredTaskView = {
   previousTasks: TaskDetail[];
   /** Set when the walk back stopped before the first Task. */
   previousTasksCutOff: string | null;
+  /** The agent's requests for more access, oldest first. */
+  grantRequests: TaskSection<TaskGrantRequest[]>;
 };
 
 /**
- * A Task, its runs, and the Tasks before it (through `previousTaskId`). The
- * Task itself must load; its runs and the earlier Tasks are best effort.
+ * A Task, its runs, its grant requests, and the Tasks before it (through
+ * `previousTaskId`). The Task itself must load; the rest is best effort.
  */
 export async function gatherTaskView(
   options: GatherTaskViewOptions,
 ): Promise<GatheredTaskView> {
   const { client, taskId } = options;
-  const [taskResult, runs] = await Promise.all([
+  const [taskResult, runs, grantRequests] = await Promise.all([
     client.tasks.getTask({ path: { taskId } }),
     section(() => client.tasks.getTaskRuns({ path: { taskId } })),
+    section(() => client.tasks.listTaskGrantRequests({ path: { taskId } })),
   ]);
   const task = unwrap(`Task ${taskId}`, taskResult);
 
@@ -129,7 +133,7 @@ export async function gatherTaskView(
     previousTasks.push(previous.data);
     nextId = previous.data.previousTaskId;
   }
-  return { task, runs, previousTasks, previousTasksCutOff };
+  return { task, runs, previousTasks, previousTasksCutOff, grantRequests };
 }
 
 export type GatherTaskRunViewOptions = {

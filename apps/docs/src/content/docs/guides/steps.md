@@ -973,6 +973,16 @@ export const plan = defineStep({
 });
 ```
 
+### `Features.grantRequests()`
+
+Lets the step's Tasks ask a person for more access while they run. The agent gets a `scarn-request-access` tool: it names the `Features.workItems.*` grants it needs and why, then hands over. A person approves all, some or none of them, and the Task continues with the approved grants and is told about its new tools. Approved grants belong to that Task, kept across its retries; they never change the step. It adds nothing to the result or the prompt.
+
+```typescript
+features: [Features.workItems.read({ scope: "self" }), Features.grantRequests()],
+```
+
+Only an agent step's Tasks on a Scarn work item that a person started get the tool; a scheduled or automation-started Task doesn't, since nobody may be watching. A code or MCP tool step refuses the feature. Prompt Tasks always have it. See [Let an agent ask for access](/scarn/how-to/let-an-agent-ask-for-access/).
+
 ### Building notifications at runtime — `Notify`
 
 `Features.notifications()` wires the schema for you, but composing a well-formed `NotificationItem` by hand still requires knowing the exact field names and the `$scarn_notifications_v1` key. `Notify` is a separate, flat namespace of builder functions for constructing a notification result value directly — most useful in a [code step](#code-steps), where there's no agent to follow the prompt instructions. It's deliberately separate from `Features`: `Features.*` is only ever something you attach via `features: [...]`; `Notify.*` is only ever something you call to build a value.

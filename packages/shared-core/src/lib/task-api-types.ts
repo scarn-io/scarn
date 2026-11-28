@@ -1,3 +1,4 @@
+import type { Grant } from "@scarn/sdk/definitions/steps";
 import type { Artifact } from "./api-types";
 import type { ProjectTaskStatus } from "./work-item-api-types";
 
@@ -116,6 +117,27 @@ export type TaskDetail = {
   scheduledFor: string | null;
   waitingOn: { userId: string; username: string | null }[];
   conversationId: string | null;
+  /** The work item grants the Task holds: its step's, plus any approved. */
+  grants: Grant[];
+};
+
+export type TaskGrantRequestStatus =
+  "pending" | "decided" | "unanswered" | "withdrawn";
+
+/** One entry of `GET /tasks/{id}/grant-requests`: an agent asking for more
+ * access. `approved` is null until decided; `[]` is a deny. */
+export type TaskGrantRequest = {
+  id: string;
+  taskId: string;
+  taskRunId: string;
+  reason: string;
+  requested: Grant[];
+  status: TaskGrantRequestStatus;
+  approved: Grant[] | null;
+  note: string | null;
+  decidedByUserId: string | null;
+  decidedAt: string | null;
+  createdAt: string;
 };
 
 export type TaskRunStatus =

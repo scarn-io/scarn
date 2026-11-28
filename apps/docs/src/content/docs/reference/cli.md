@@ -801,7 +801,7 @@ scarn inbox --project acme/app --json
 
 ## `scarn tasks`
 
-List Tasks, read one with its runs, and retry or cancel one. Every subcommand prints text by default and ends with the next command to run; `cancel` asks for confirmation on a terminal and needs `--yes` when there is none; `--json` prints one JSON document and nothing else on stdout.
+List Tasks, read one with its runs, retry or cancel one, and answer an agent's request for more access. Every subcommand prints text by default and ends with the next command to run; `cancel` asks for confirmation on a terminal and needs `--yes` when there is none; `--json` prints one JSON document and nothing else on stdout.
 
 ### `scarn tasks list`
 
@@ -825,17 +825,17 @@ scarn tasks list --kind code --limit 10 --json
 
 ### `scarn tasks view <taskId>`
 
-Show a Task: where its instructions came from (step definition key and version, or the prompt), its input, its config, its result or error, its runs oldest first with each one's reason (`initial`, `retry` or `continuation`), and the earlier Tasks of the same step, followed back through `previousTaskId`. It ends with `scarn logs` and `scarn task-runs view` for the latest run, and `scarn runs thread` when a pipeline run created the Task.
+Show a Task: where its instructions came from (step definition key and version, or the prompt), its input, its config, its result or error, its runs oldest first with each one's reason (`initial`, `retry` or `continuation`), the earlier Tasks of the same step, followed back through `previousTaskId`, and its access: every work item grant it holds, one sentence each, and the agent's pending request for more, if any, with its reason. It ends with `scarn logs` and `scarn task-runs view` for the latest run, `scarn runs thread` when a pipeline run created the Task, and `scarn tasks access` while a request is pending.
 
 ```bash
 scarn tasks view 0196a000-0000-7000-8000-0000000000c1
 scarn tasks view 0196a000-0000-7000-8000-0000000000c1 --json
 ```
 
-| Flag               | Default | Description                                                |
-| ------------------ | ------- | ---------------------------------------------------------- |
-| `--json`           | `false` | Print `{ task, runs, previousTasks, previousTasksCutOff }` |
-| `--base-url <url>` | —       | Override the API server URL                                |
+| Flag               | Default | Description                                                               |
+| ------------------ | ------- | ------------------------------------------------------------------------- |
+| `--json`           | `false` | Print `{ task, runs, previousTasks, previousTasksCutOff, grantRequests }` |
+| `--base-url <url>` | —       | Override the API server URL                                               |
 
 ### `scarn tasks retry <taskId>`
 
@@ -863,6 +863,28 @@ scarn tasks cancel 0196a000-0000-7000-8000-0000000000c1 --yes
 | `--yes`, `-y`      | `false` | Skip the confirmation (required when not on a terminal) |
 | `--json`           | `false` | Print `{ taskId }`                                      |
 | `--base-url <url>` | —       | Override the API server URL                             |
+
+### `scarn tasks access <taskId>`
+
+Answer the agent's pending request for more access, and resume the Task. `--approve` approves every requested grant as requested; `--only` picks grants by `action:scope` (as `scarn tasks view` lists them) and `--labels` keeps only some of the labels the picked grants ask for. `--deny` grants nothing. Either way the agent is told the decision and your note when it resumes; see [Let an agent ask for access](/scarn/how-to/let-an-agent-ask-for-access/). Doesn't ask for confirmation. Ends with `scarn tasks view`.
+
+```bash
+scarn tasks access 0196a000-0000-7000-8000-0000000000c1 --approve
+scarn tasks access 0196a000-0000-7000-8000-0000000000c1 --approve --only create:children --labels bug --note "Bugs only."
+scarn tasks access 0196a000-0000-7000-8000-0000000000c1 --deny --note "Ask in the comments instead."
+```
+
+A selector or label the request doesn't ask for fails with `action_rejected` before anything is sent. With no pending request (already decided, or closed by a reply), it fails with `action_conflict`; without `executions:write`, or `work-items:write` to approve a grant that changes work items, with `action_forbidden`.
+
+| Flag                    | Default | Description                                                                    |
+| ----------------------- | ------- | ------------------------------------------------------------------------------ |
+| `--approve`             | `false` | Approve the requested grants (exactly one of `--approve` and `--deny`)         |
+| `--deny`                | `false` | Deny the request; nothing is granted                                           |
+| `--only <action:scope>` | all     | With `--approve`: approve only this requested grant; repeatable                |
+| `--labels <label>`      | all     | With `--approve`: keep only these of the labels the grants ask for; repeatable |
+| `--note <text>`         | —       | A note for the agent                                                           |
+| `--json`                | `false` | Print `{ taskId, grantRequestId, requested, approved }`                        |
+| `--base-url <url>`      | —       | Override the API server URL                                                    |
 
 ---
 

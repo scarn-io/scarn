@@ -29,6 +29,8 @@ export type ConversationPromptEntry = {
   /** The username for a person, the agent's name for an agent message. */
   author: string | null;
   body: string;
+  /** Set on the `system` message that records a grant request's decision. */
+  grantRequestId?: UuidV7 | null;
 };
 
 /**
@@ -155,6 +157,7 @@ const entryMapper = async (
         ? CONVERSATION_AGENT_AUTHOR_NAME
         : authorName(usernames, message.authorUserId),
     body: message.body,
+    grantRequestId: message.grantRequestId,
   });
 };
 
@@ -220,16 +223,23 @@ const authorName = (
   userId: UuidV7 | null,
 ): string | null => (userId ? (usernames.get(userId)?.username ?? null) : null);
 
+/** A `system` message that isn't a grant request's decision: a continue without a reply. */
+const isContinueWithoutReply = (entry: ConversationPromptEntry) =>
+  entry.authorKind === "system" && !entry.grantRequestId;
+
 /**
- * The next user message for a restored session: one "Reply from <name>: …"
- * per delivered person message, oldest first, and the no-answer text for a
- * continue without a reply.
+ * The next user message for a restored session: the decision on the access
+ * request the previous run made, if any, then one "Reply from <name>: …" per
+ * delivered person message, oldest first, and the no-answer text for a
+ * continue without a reply. A decision's own `system` message is skipped,
+ * since `grantDecision` already says it.
  */
 export const buildRestoredSessionMessage = (
   delivered: ConversationPromptEntry[],
+  grantDecision: string | null = null,
 ): string => {
   const parts = delivered.flatMap((entry) => {
-    if (entry.authorKind === "system") {
+    if (isContinueWithoutReply(entry)) {
       return [NO_ANSWER_TEXT];
     }
     if (entry.authorKind === "person") {
@@ -237,6 +247,9 @@ export const buildRestoredSessionMessage = (
     }
     return [];
   });
+  if (grantDecision !== null) {
+    return [grantDecision, ...parts].join("\n\n");
+  }
   return parts.length > 0 ? parts.join("\n\n") : NO_ANSWER_TEXT;
 };
 
@@ -255,7 +268,7 @@ export const buildConversationPromptLines = (
     return [];
   }
   const continuedWithoutReply = continuation.delivered.some(
-    (entry) => entry.authorKind === "system",
+    isContinueWithoutReply,
   );
   return [
     "The conversation so far, oldest first:",

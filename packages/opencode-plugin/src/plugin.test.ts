@@ -17,6 +17,7 @@ import {
 } from "./tools/_shared/work-item-test-workspace";
 import { SCARN_CREATE_WORK_ITEM_TOOL } from "./tools/scarn-create-work-item";
 import { SCARN_GET_WORK_ITEM_TOOL } from "./tools/scarn-get-work-item";
+import { SCARN_REQUEST_ACCESS_TOOL } from "./tools/scarn-request-access";
 import {
   SCARN_BLOCK_WORK_ITEM_TOOL,
   SCARN_CLOSE_WORK_ITEM_TOOL,
@@ -138,6 +139,22 @@ describe("ScarnOpencodePlugin", () => {
     expect(await registeredToolNames(directory)).toEqual(
       [...BASE_TOOLS, ...ALL_WORK_ITEM_TOOLS].sort(),
     );
+  });
+
+  test("setup registers scarn-request-access only when the Task allows grant requests", async () => {
+    const allowed = await workItemTestWorkspace({
+      grants: [],
+      grantRequests: true,
+    });
+    const refused = await workItemTestWorkspace({
+      grants: [],
+      grantRequests: false,
+    });
+
+    expect(await registeredToolNames(allowed)).toEqual(
+      [...BASE_TOOLS, SCARN_REQUEST_ACCESS_TOOL].sort(),
+    );
+    expect(await registeredToolNames(refused)).toEqual(BASE_TOOLS.sort());
   });
 
   test("setup registers no work item tools without grants", async () => {

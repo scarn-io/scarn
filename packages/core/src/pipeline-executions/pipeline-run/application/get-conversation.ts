@@ -45,6 +45,7 @@ const messageContract = (
     ? (usernames.get(message.authorUserId)?.username ?? null)
     : null,
   taskRunId: message.taskRunId,
+  grantRequestId: message.grantRequestId,
   body: message.body,
   createdAt: (message.createdAt ?? new Date(0)).toISOString(),
 });

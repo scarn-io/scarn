@@ -7,6 +7,7 @@ import type { RepoConfig } from "@scarn/sdk/repo-config";
 import type { StepBridgeUpsertRequest } from "@scarn/sdk/contracts/step-bridge";
 import type { WorkItemChange } from "@scarn/sdk/contracts/work-item-changes";
 import type { LaunchedRuntime } from "./launched-runtime";
+import type { YieldTaskRunInput } from "./yield-task-run-input";
 import type {
   McpBridgeSession,
   OpenMcpBridgeSessionInput,
@@ -318,16 +319,7 @@ export type TaskRunWorkerClient = {
    * null when the export or upload failed. `sessionSizeBytes` is the size of
    * the uploaded body, null without a session.
    */
-  yieldTaskRun(input: {
-    taskRunId: UuidV7;
-    claimToken: string;
-    workBranch: string | null;
-    createdFromBranch: string | null;
-    sessionObjectKey: string | null;
-    sessionSizeBytes: number | null;
-    sessionRestored: boolean | null;
-    message: string;
-  }): Promise<void>;
+  yieldTaskRun(input: YieldTaskRunInput): Promise<void>;
   appendTaskLogs(input: {
     taskRunId: UuidV7;
     claimToken: string;

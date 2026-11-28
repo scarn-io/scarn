@@ -118,7 +118,10 @@ export type TaskRepo = {
     conversationId: UuidV7,
     dbExecutor: DbExecutor,
   ): Promise<TaskEntity | null>;
-  /** Writes the Task's `status`, `resultJson` and `errorJson`. */
+  /**
+   * Writes the Task's `status`, `resultJson`, `errorJson`, conversation,
+   * `maxTurns`, grants and held work item changes.
+   */
   save(task: TaskEntity, dbExecutor?: DbExecutor): Promise<TaskEntity>;
   /**
    * Deletes the given Tasks, cascading to their runs (and through them to

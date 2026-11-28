@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "status": "decided",
+  "reason": "I need to create children and read the project's other items.",
+  "requestedJson": [
+    {
+      "resource": "workItem",
+      "action": "create",
+      "scope": "children",
+      "labels": ["subtask"]
+    },
+    { "resource": "workItem", "action": "read", "scope": "project" }
+  ],
+  "approvedJson": [
+    {
+      "resource": "workItem",
+      "action": "create",
+      "scope": "children",
+      "labels": ["subtask"]
+    }
+  ],
+  "note": "Example note."
+}

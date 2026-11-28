@@ -1677,6 +1677,7 @@ export type GetApiStepDefinitionsResponses = {
         logs: {
             archive: 'always' | 'on-failure';
         };
+        grantRequests: boolean;
         opencodeMcpJson: {
             [key: string]: {
                 type: 'local';
@@ -1965,6 +1966,7 @@ export type PostApiStepDefinitionsData = {
         logs?: {
             archive: 'always' | 'on-failure';
         };
+        grantRequests?: boolean;
         opencodeMcpJson?: {
             [key: string]: {
                 type: 'local';
@@ -2394,6 +2396,7 @@ export type PostApiStepDefinitionsResponses = {
         logs: {
             archive: 'always' | 'on-failure';
         };
+        grantRequests: boolean;
         opencodeMcpJson: {
             [key: string]: {
                 type: 'local';
@@ -2682,6 +2685,7 @@ export type PutApiStepDefinitionsData = {
         logs?: {
             archive: 'always' | 'on-failure';
         };
+        grantRequests?: boolean;
         opencodeMcpJson?: {
             [key: string]: {
                 type: 'local';
@@ -3073,6 +3077,7 @@ export type PutApiStepDefinitionsResponses = {
         logs: {
             archive: 'always' | 'on-failure';
         };
+        grantRequests: boolean;
         opencodeMcpJson: {
             [key: string]: {
                 type: 'local';
@@ -3474,6 +3479,7 @@ export type GetApiStepDefinitionsByStepDefinitionIdResponses = {
         logs: {
             archive: 'always' | 'on-failure';
         };
+        grantRequests: boolean;
         opencodeMcpJson: {
             [key: string]: {
                 type: 'local';
@@ -3875,6 +3881,7 @@ export type PutApiStepDefinitionsByStepDefinitionIdArchiveResponses = {
         logs: {
             archive: 'always' | 'on-failure';
         };
+        grantRequests: boolean;
         opencodeMcpJson: {
             [key: string]: {
                 type: 'local';
@@ -5899,6 +5906,7 @@ export type PostApiTaskRunsByTaskRunIdWorkerContextResponses = {
             } | null;
             declaredErrors: Array<string>;
             turnsRemaining: number | null;
+            grantRequests: boolean;
             workItemId: string | null;
             conversationId: string | null;
             grants: Array<{
@@ -6418,6 +6426,77 @@ export type PostApiTaskRunsByTaskRunIdYieldsData = {
         sessionObjectKey?: string | null;
         sessionSizeBytes?: number | null;
         sessionRestored?: boolean | null;
+        grantRequest?: {
+            reason: string;
+            grants: Array<{
+                resource: 'workItem';
+                action: 'read';
+                scope: 'self' | 'children' | 'project';
+            } | {
+                resource: 'workItem';
+                action: 'update';
+                scope: 'self' | 'children';
+            } | {
+                resource: 'workItem';
+                action: 'update';
+                scope: 'project';
+                keyPrefix?: string;
+                labels?: Array<string>;
+            } | {
+                resource: 'workItem';
+                action: 'comment';
+                scope: 'self' | 'children';
+            } | {
+                resource: 'workItem';
+                action: 'label';
+                scope: 'self' | 'children';
+                labels: Array<string>;
+            } | {
+                resource: 'workItem';
+                action: 'block';
+                scope: 'self' | 'children';
+            } | {
+                resource: 'workItem';
+                action: 'close';
+                scope: 'self' | 'children';
+            } | {
+                resource: 'workItem';
+                action: 'create';
+                scope: 'children';
+                labels: Array<string>;
+            } | {
+                resource: 'workItem';
+                action: 'create';
+                scope: 'project';
+                labels: Array<string>;
+                keyPrefix?: string;
+            }>;
+        };
+        workItemChanges?: Array<{
+            kind: 'label';
+            workItemId: string;
+            add?: Array<string>;
+            remove?: Array<string>;
+        } | {
+            kind: 'block';
+            blockedWorkItemId: string;
+            blockingWorkItemId: string;
+            remove?: boolean;
+        } | {
+            kind: 'describe';
+            workItemId: string;
+            description: string;
+            descriptionVersion: number;
+        } | {
+            kind: 'comment';
+            workItemId: string;
+            body: string;
+        } | {
+            kind: 'close';
+            workItemId: string;
+            reason: 'completed' | 'out_of_scope' | 'superseded';
+            resolution?: string | null;
+        }>;
     };
     path: {
         taskRunId: string;
@@ -16003,6 +16082,7 @@ export type GetApiConversationsByConversationIdResponses = {
             authorKind: 'agent' | 'person' | 'system';
             authorName: string | null;
             taskRunId: string | null;
+            grantRequestId?: string | null;
             body: string;
             createdAt: string;
         }>;
@@ -16192,6 +16272,7 @@ export type GetApiWorkItemsByWorkItemIdConversationsResponses = {
             authorKind: 'agent' | 'person' | 'system';
             authorName: string | null;
             taskRunId: string | null;
+            grantRequestId?: string | null;
             body: string;
             createdAt: string;
         }>;
@@ -16501,6 +16582,7 @@ export type PostApiProjectsByProjectIdConversationsResponses = {
             authorKind: 'agent' | 'person' | 'system';
             authorName: string | null;
             taskRunId: string | null;
+            grantRequestId?: string | null;
             body: string;
             createdAt: string;
         }>;
@@ -16690,6 +16772,7 @@ export type PostApiConversationsByConversationIdMessagesResponses = {
             authorKind: 'agent' | 'person' | 'system';
             authorName: string | null;
             taskRunId: string | null;
+            grantRequestId?: string | null;
             body: string;
             createdAt: string;
         }>;
@@ -16877,6 +16960,7 @@ export type PostApiConversationsByConversationIdContinueResponses = {
             authorKind: 'agent' | 'person' | 'system';
             authorName: string | null;
             taskRunId: string | null;
+            grantRequestId?: string | null;
             body: string;
             createdAt: string;
         }>;
@@ -17064,6 +17148,7 @@ export type PostApiConversationsByConversationIdDoneResponses = {
             authorKind: 'agent' | 'person' | 'system';
             authorName: string | null;
             taskRunId: string | null;
+            grantRequestId?: string | null;
             body: string;
             createdAt: string;
         }>;
@@ -17253,6 +17338,7 @@ export type PostApiConversationsByConversationIdRetryResponses = {
             authorKind: 'agent' | 'person' | 'system';
             authorName: string | null;
             taskRunId: string | null;
+            grantRequestId?: string | null;
             body: string;
             createdAt: string;
         }>;
@@ -17440,6 +17526,7 @@ export type PostApiConversationsByConversationIdEndResponses = {
             authorKind: 'agent' | 'person' | 'system';
             authorName: string | null;
             taskRunId: string | null;
+            grantRequestId?: string | null;
             body: string;
             createdAt: string;
         }>;
@@ -21414,6 +21501,453 @@ export type DeleteApiWorkItemBlocksByBlockIdResponses = {
 };
 
 export type DeleteApiWorkItemBlocksByBlockIdResponse = DeleteApiWorkItemBlocksByBlockIdResponses[keyof DeleteApiWorkItemBlocksByBlockIdResponses];
+
+export type PostApiTaskGrantRequestsByGrantRequestIdDecisionData = {
+    body: {
+        approved: Array<{
+            resource: 'workItem';
+            action: 'read';
+            scope: 'self' | 'children' | 'project';
+        } | {
+            resource: 'workItem';
+            action: 'update';
+            scope: 'self' | 'children';
+        } | {
+            resource: 'workItem';
+            action: 'update';
+            scope: 'project';
+            keyPrefix?: string;
+            labels?: Array<string>;
+        } | {
+            resource: 'workItem';
+            action: 'comment';
+            scope: 'self' | 'children';
+        } | {
+            resource: 'workItem';
+            action: 'label';
+            scope: 'self' | 'children';
+            labels: Array<string>;
+        } | {
+            resource: 'workItem';
+            action: 'block';
+            scope: 'self' | 'children';
+        } | {
+            resource: 'workItem';
+            action: 'close';
+            scope: 'self' | 'children';
+        } | {
+            resource: 'workItem';
+            action: 'create';
+            scope: 'children';
+            labels: Array<string>;
+        } | {
+            resource: 'workItem';
+            action: 'create';
+            scope: 'project';
+            labels: Array<string>;
+            keyPrefix?: string;
+        }>;
+        note?: string;
+    };
+    path: {
+        grantRequestId: string;
+    };
+    query?: never;
+    url: '/api/task-grant-requests/{grantRequestId}/decision';
+};
+
+export type PostApiTaskGrantRequestsByGrantRequestIdDecisionErrors = {
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 404
+     */
+    404: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 409
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type PostApiTaskGrantRequestsByGrantRequestIdDecisionError = PostApiTaskGrantRequestsByGrantRequestIdDecisionErrors[keyof PostApiTaskGrantRequestsByGrantRequestIdDecisionErrors];
+
+export type PostApiTaskGrantRequestsByGrantRequestIdDecisionResponses = {
+    /**
+     * Response for status 200
+     */
+    200: {
+        id: string;
+        projectId: string;
+        workItemId: string | null;
+        status: 'agent_turn' | 'waiting_for_person' | 'reply_pending' | 'closed';
+        messages: Array<{
+            id: string;
+            authorKind: 'agent' | 'person' | 'system';
+            authorName: string | null;
+            taskRunId: string | null;
+            grantRequestId?: string | null;
+            body: string;
+            createdAt: string;
+        }>;
+        visit: {
+            pipelineExecutionId: string;
+            visitId: string;
+            nodeId: string;
+        } | null;
+        endsWith: 'findings' | 'conversation' | null;
+        createdAt: string;
+        closedAt: string | null;
+        taskId?: string;
+        creator?: {
+            userId: string;
+            username: string | null;
+            image: string | null;
+        } | null;
+        context?: {
+            kind: 'project_repo';
+            repository: string;
+            branch: string | null;
+            commit: string | null;
+            pinnedAt: string | null;
+        };
+        state?: 'queued' | 'running' | 'retry_queued' | 'waiting' | 'failed' | 'ended';
+        latestRun?: {
+            id: string;
+            status: 'pending' | 'queued' | 'running' | 'succeeded' | 'failed' | 'timeout' | 'abandoned' | 'cancelled' | 'skipped' | 'yielded';
+            reason: 'initial' | 'retry' | 'continuation';
+        } | null;
+        error?: {
+            code: string;
+            message: string;
+        } | null;
+        capabilities?: {
+            canReply: boolean;
+            canRetry: boolean;
+            canEnd: boolean;
+            canDelete: boolean;
+        };
+    };
+};
+
+export type PostApiTaskGrantRequestsByGrantRequestIdDecisionResponse = PostApiTaskGrantRequestsByGrantRequestIdDecisionResponses[keyof PostApiTaskGrantRequestsByGrantRequestIdDecisionResponses];
+
+export type GetApiTasksByTaskIdGrantRequestsData = {
+    body?: never;
+    path: {
+        taskId: string;
+    };
+    query?: never;
+    url: '/api/tasks/{taskId}/grant-requests';
+};
+
+export type GetApiTasksByTaskIdGrantRequestsErrors = {
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 404
+     */
+    404: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type GetApiTasksByTaskIdGrantRequestsError = GetApiTasksByTaskIdGrantRequestsErrors[keyof GetApiTasksByTaskIdGrantRequestsErrors];
+
+export type GetApiTasksByTaskIdGrantRequestsResponses = {
+    /**
+     * Response for status 200
+     */
+    200: Array<{
+        id: string;
+        taskId: string;
+        taskRunId: string;
+        reason: string;
+        requested: Array<{
+            resource: 'workItem';
+            action: 'read';
+            scope: 'self' | 'children' | 'project';
+        } | {
+            resource: 'workItem';
+            action: 'update';
+            scope: 'self' | 'children';
+        } | {
+            resource: 'workItem';
+            action: 'update';
+            scope: 'project';
+            keyPrefix?: string;
+            labels?: Array<string>;
+        } | {
+            resource: 'workItem';
+            action: 'comment';
+            scope: 'self' | 'children';
+        } | {
+            resource: 'workItem';
+            action: 'label';
+            scope: 'self' | 'children';
+            labels: Array<string>;
+        } | {
+            resource: 'workItem';
+            action: 'block';
+            scope: 'self' | 'children';
+        } | {
+            resource: 'workItem';
+            action: 'close';
+            scope: 'self' | 'children';
+        } | {
+            resource: 'workItem';
+            action: 'create';
+            scope: 'children';
+            labels: Array<string>;
+        } | {
+            resource: 'workItem';
+            action: 'create';
+            scope: 'project';
+            labels: Array<string>;
+            keyPrefix?: string;
+        }>;
+        status: 'pending' | 'decided' | 'unanswered' | 'withdrawn';
+        approved: Array<{
+            resource: 'workItem';
+            action: 'read';
+            scope: 'self' | 'children' | 'project';
+        } | {
+            resource: 'workItem';
+            action: 'update';
+            scope: 'self' | 'children';
+        } | {
+            resource: 'workItem';
+            action: 'update';
+            scope: 'project';
+            keyPrefix?: string;
+            labels?: Array<string>;
+        } | {
+            resource: 'workItem';
+            action: 'comment';
+            scope: 'self' | 'children';
+        } | {
+            resource: 'workItem';
+            action: 'label';
+            scope: 'self' | 'children';
+            labels: Array<string>;
+        } | {
+            resource: 'workItem';
+            action: 'block';
+            scope: 'self' | 'children';
+        } | {
+            resource: 'workItem';
+            action: 'close';
+            scope: 'self' | 'children';
+        } | {
+            resource: 'workItem';
+            action: 'create';
+            scope: 'children';
+            labels: Array<string>;
+        } | {
+            resource: 'workItem';
+            action: 'create';
+            scope: 'project';
+            labels: Array<string>;
+            keyPrefix?: string;
+        }> | null;
+        note: string | null;
+        decidedByUserId: string | null;
+        decidedAt: string | null;
+        createdAt: string;
+    }>;
+};
+
+export type GetApiTasksByTaskIdGrantRequestsResponse = GetApiTasksByTaskIdGrantRequestsResponses[keyof GetApiTasksByTaskIdGrantRequestsResponses];
 
 export type GetApiProjectsByProjectIdArtifactsData = {
     body?: never;

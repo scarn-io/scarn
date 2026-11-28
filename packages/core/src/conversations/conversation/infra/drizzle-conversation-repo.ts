@@ -45,6 +45,7 @@ const toMessageEntity = (
     authorUserId: row.authorUserId as UuidV7 | null,
     taskRunId: row.taskRunId as UuidV7 | null,
     deliveredToTaskRunId: row.deliveredToTaskRunId as UuidV7 | null,
+    grantRequestId: row.grantRequestId as UuidV7 | null,
     body: row.body,
     createdAt: row.createdAt,
   });
@@ -56,6 +57,7 @@ const toMessageRow = (message: ConversationMessageEntity) => ({
   authorUserId: message.authorUserId,
   taskRunId: message.taskRunId,
   deliveredToTaskRunId: message.deliveredToTaskRunId,
+  grantRequestId: message.grantRequestId,
   body: message.body,
   createdAt: message.createdAt ?? new Date(),
 });

@@ -31,4 +31,5 @@ export type StepDefContract = {
   retry?: { on: string[]; maxAttempts: number }[];
   maxTurns?: number | null;
   grants?: readonly Grant[];
+  grantRequests?: boolean;
 };

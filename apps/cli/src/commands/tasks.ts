@@ -177,7 +177,8 @@ export function createTasksCommand(
 ): CommandModule<object, object> {
   return {
     command: "tasks <command>",
-    describe: "List Tasks, read one with its runs, and retry or cancel one",
+    describe:
+      "List Tasks, read one with its runs, retry or cancel one, and answer its access request",
     builder: (argv) =>
       withTaskActionCommands(
         argv.command(taskListCommand(deps)).command(taskViewCommand(deps)),

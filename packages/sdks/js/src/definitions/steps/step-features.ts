@@ -115,10 +115,32 @@ export type CodeStepGrant =
 
 /**
  * A feature a code step may attach: one with no grant, or a work item feature
- * for `read`, `create` or `update` on `project`.
+ * for `read`, `create` or `update` on `project`. Not `grantRequests()`: a code
+ * step has no agent to ask.
  */
-export type CodeStepFeature =
-  StepFeature | StepFeature<Record<never, never>, CodeStepGrant>;
+export type CodeStepFeature = (
+  StepFeature | StepFeature<Record<never, never>, CodeStepGrant>
+) & { readonly _grantRequests?: never };
+
+/**
+ * `Features.grantRequests()`: the step's Tasks may ask a person for more
+ * grants. Adds nothing to the result or the prompt.
+ */
+export type GrantRequestsFeature = StepFeature<Record<never, never>> & {
+  readonly _grantRequests: true;
+};
+
+/** True when `features` include `Features.grantRequests()`. */
+export function hasGrantRequests(features: readonly AnyStepFeature[]): boolean {
+  return features.some(
+    (feature) => "_grantRequests" in feature && feature._grantRequests === true,
+  );
+}
+
+const grantRequestsFeature: GrantRequestsFeature = {
+  _promptAddition: "",
+  _grantRequests: true,
+};
 
 /** The grants a list of features carries, as a union. */
 export type FeatureGrants<TFeatures extends readonly AnyStepFeature[]> =
@@ -310,6 +332,12 @@ export const Features = {
    */
   feedbackRequests: (): NotificationsFeature => feedbackRequestsFeature,
   workItems: workItemFeatures,
+  /**
+   * Lets the step's Tasks ask a person for work item grants the step doesn't
+   * give them. The runtime prompt tells the agent how; this adds no prompt
+   * section and no result fields.
+   */
+  grantRequests: (): GrantRequestsFeature => grantRequestsFeature,
 } as const;
 
 // ─── Notify — construct a notification result value at runtime ────────────────

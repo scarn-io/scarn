@@ -203,6 +203,7 @@ describe("processProjectWork findings persistence", () => {
           },
         },
         turnsRemaining: 2,
+        grantRequests: false,
         workItemId: null,
         grants: [],
         api: null,

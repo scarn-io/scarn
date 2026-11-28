@@ -11,6 +11,7 @@ import type { TaskRunRepo } from "./task-run-repo";
 export type TaskFacts = {
   turnsRemaining: number | null;
   grants: Grant[];
+  grantRequests: boolean;
   chatConversationId: UuidV7 | null;
   extraConnectors: ExtraConnector[];
   declaredErrors: string[];
@@ -19,7 +20,8 @@ export type TaskFacts = {
 
 /**
  * What `run`'s Task contributes: how many more times `run` may hand over (its
- * turns left as of `run`), which work items its agent may change, the
+ * turns left as of `run`), which work items its agent may change and
+ * whether it may ask for more, the
  * conversation of a chat (a Task with no work item), the extra connectors it
  * selected, and the key and error names of the step definition it came from.
  */
@@ -54,6 +56,7 @@ export const loadTaskFacts = async (
   return {
     turnsRemaining,
     grants,
+    grantRequests: task?.grantRequests ?? false,
     chatConversationId,
     extraConnectors,
     declaredErrors,

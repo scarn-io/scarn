@@ -181,6 +181,8 @@ export {
   TASK_STATUSES,
   type JsonValue,
   type TaskDetail,
+  type TaskGrantRequest,
+  type TaskGrantRequestStatus,
   type TaskKind,
   type TaskRunArtifact,
   type TaskRunArtifactFailure,
@@ -200,6 +202,7 @@ export {
 export type {
   RunActionClient,
   SentVisitMessage,
+  TaskAccessClient,
   TaskActionClient,
   WorkItemActionClient,
 } from "./lib/action-clients";
@@ -247,4 +250,13 @@ export {
   retryTask,
   type RetriedTask,
 } from "./task-actions";
+export {
+  decideTaskAccess,
+  formatTaskAccess,
+  grantSelector,
+  pendingGrantRequest,
+  selectApproval,
+  type AccessDecision,
+  type DecidedAccess,
+} from "./task-access";
 export { addComment, answerQuestion } from "./work-item-actions";

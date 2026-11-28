@@ -46,6 +46,7 @@ const toStepDefinitionRow = (stepDefinition: StepDefinitionEntity) => ({
   maxTurns: stepDefinition.maxTurns,
   concurrencyJson: stepDefinition.concurrency,
   logArchive: stepDefinition.logArchive,
+  grantRequests: stepDefinition.grantRequests,
   schemaVersion: CURRENT_STEP_DEFINITION_SCHEMA_VERSION,
   taskExecutionConfigId: stepDefinition.taskExecutionConfigId,
   status: stepDefinition.status,
@@ -89,6 +90,7 @@ export const readStepDefinitionRow = (
         maxTurns: row.maxTurns,
         concurrency: document.concurrencyJson,
         logArchive: row.logArchive,
+        grantRequests: row.grantRequests,
         taskExecutionConfigId:
           row.taskExecutionConfigId === null
             ? null
@@ -334,6 +336,7 @@ export class DrizzleStepDefinitionRepo implements StepDefinitionRepo {
             maxTurns: stepDefinition.maxTurns,
             concurrencyJson: stepDefinition.concurrency,
             logArchive: stepDefinition.logArchive,
+            grantRequests: stepDefinition.grantRequests,
             schemaVersion: CURRENT_STEP_DEFINITION_SCHEMA_VERSION,
             taskExecutionConfigId: stepDefinition.taskExecutionConfigId,
             status: stepDefinition.status,

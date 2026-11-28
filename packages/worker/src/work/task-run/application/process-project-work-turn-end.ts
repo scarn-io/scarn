@@ -9,7 +9,8 @@
  *    the turn failed;
  * 2. a turn that failed (e.g. the provider rejected the request) fails the
  *    Task with its error;
- * 3. with turns left and a non-empty final message, the turn is handed over;
+ * 3. with turns left and a non-empty final message, or a grant request the
+ *    agent recorded with `scarn-request-access`, the turn is handed over;
  * 4. with no turns left in a run, the agent gets one more message saying so,
  *    and the decision waits for that turn to end;
  * 5. otherwise a conversation step ends, and a step with a schema takes the
@@ -22,6 +23,7 @@
 import { TASK_AGENT } from "@scarn/opencode-plugin";
 import { access, rm } from "node:fs/promises";
 import path from "node:path";
+import { buildGrantRequestPath } from "@scarn/sdk/contracts/grant-request";
 import { readWorkItemChanges } from "@scarn/sdk/contracts/work-item-changes";
 import type { AnyJsonValue } from "../../../common/contracts/json";
 import type {
@@ -51,6 +53,15 @@ async function hasEndConversationMarker(
 ): Promise<boolean> {
   try {
     await access(buildEndConversationPath(workspacePath));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function hasGrantRequest(workspacePath: string): Promise<boolean> {
+  try {
+    await access(buildGrantRequestPath(workspacePath));
     return true;
   } catch {
     return false;
@@ -118,7 +129,11 @@ export async function decideTurnEnd(
       : { kind: "missing-findings" };
   }
 
-  if (turnsRemaining !== null && turnsRemaining > 0 && finalMessage !== "") {
+  if (
+    turnsRemaining !== null &&
+    turnsRemaining > 0 &&
+    (finalMessage !== "" || (await hasGrantRequest(workspacePath)))
+  ) {
     return { kind: "hand-over", message: finalMessage };
   }
 

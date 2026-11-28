@@ -124,6 +124,7 @@ describe("createStepDefinitionsClient.upsertFromSpec", () => {
         maxTurns: null,
         concurrency: null,
         grants: [],
+        grantRequests: false,
         projectId: "proj-1",
       });
       // Headers.entries() lowercases header names per the WHATWG spec.
@@ -230,12 +231,14 @@ describe("createStepDefinitionsClient.upsertFromSpec", () => {
         features: [
           Features.workItems.read({ scope: "children" }),
           Features.workItems.create({ scope: "children", labels: ["afk"] }),
+          Features.grantRequests(),
         ],
       });
       await client.upsertFromSpec("proj-1", wayfinder, {
         headers: AUTH_HEADER,
       });
       expect(captured[0]?.body).toMatchObject({
+        grantRequests: true,
         maxTurns: 40,
         concurrency: { max: 1, waiting: 1 },
         grants: [

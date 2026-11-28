@@ -14,7 +14,10 @@ import {
 } from "@scarn/core/pipeline-definitions/step-definition/contracts/step-definition-contracts";
 import { workItemChangesSchema } from "@scarn/core/tasks/task/contracts/work-item-change-contracts";
 import { logFeedTokenSchema } from "@scarn/core/tasks/task-log/contracts/log-feed-token-contracts";
-import { grantsSchema } from "@scarn/core/tasks/task/domain/grants";
+import {
+  grantSchema,
+  grantsSchema,
+} from "@scarn/core/tasks/task/domain/grants";
 import { extraConnectorSchema } from "@scarn/core/tasks/task/contracts/task-environment-selection-contracts";
 import {
   taskKindValues,
@@ -185,6 +188,8 @@ export const taskRunWorkerContextSchema = z.object({
      * no turns.
      */
     turnsRemaining: z.number().int().nonnegative().nullable(),
+    /** Whether the agent may ask a person for more grants when it hands over. */
+    grantRequests: z.boolean(),
     /** The Task's work item: what the `self` scope covers; null for a chat. */
     workItemId: uuidV7Schema.nullable(),
     /** A chat's (repo conversation's) conversation; null for any other Task. */
@@ -273,19 +278,36 @@ export const completeClaimedTaskRunInputSchema = z.object({
 
 /**
  * The agent ended its turn with a yield; the run ends `yielded` and the
- * conversation goes to a person. `message` is the turn's final text.
+ * conversation goes to a person. `message` is the turn's final text; it may
+ * be empty only when the yield carries a `grantRequest`, whose reason then
+ * stands in for it.
  */
-export const yieldClaimedTaskRunInputSchema = z.object({
-  claimToken: nonEmptyStringSchema,
-  message: nonEmptyStringSchema,
-  workBranch: z.string().trim().min(1).nullable().optional(),
-  createdFromBranch: z.string().trim().min(1).nullable().optional(),
-  // Object-storage key of the exported agent session, when it was uploaded.
-  sessionObjectKey: z.string().trim().min(1).nullable().optional(),
-  // Size in bytes of the uploaded session export; metered and stored with it.
-  sessionSizeBytes: z.number().int().nonnegative().nullable().optional(),
-  sessionRestored: z.boolean().nullable().optional(),
-});
+export const yieldClaimedTaskRunInputSchema = z
+  .object({
+    claimToken: nonEmptyStringSchema,
+    message: z.string().trim(),
+    workBranch: z.string().trim().min(1).nullable().optional(),
+    createdFromBranch: z.string().trim().min(1).nullable().optional(),
+    // Object-storage key of the exported agent session, when it was uploaded.
+    sessionObjectKey: z.string().trim().min(1).nullable().optional(),
+    // Size in bytes of the uploaded session export; metered and stored with it.
+    sessionSizeBytes: z.number().int().nonnegative().nullable().optional(),
+    sessionRestored: z.boolean().nullable().optional(),
+    // The agent asking a person for more work item grants with its yield.
+    grantRequest: z
+      .object({
+        reason: z.string().trim().min(1).max(2000),
+        grants: z.array(grantSchema).min(1).max(20),
+      })
+      .optional(),
+    // The work item changes the agent's tools recorded during the run; the
+    // Task holds them and applies them only when it succeeds.
+    workItemChanges: workItemChangesSchema.optional(),
+  })
+  .refine((input) => input.message.length > 0 || input.grantRequest, {
+    message: "message must not be empty without a grantRequest",
+    path: ["message"],
+  });
 
 /** Request for a presigned PUT URL for the Task's exported agent session. */
 export const createSessionUploadUrlInputSchema = z.object({

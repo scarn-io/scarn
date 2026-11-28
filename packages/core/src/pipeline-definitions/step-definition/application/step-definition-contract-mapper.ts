@@ -56,6 +56,7 @@ export const stepDefinitionEntityToContract = (
     maxTurns: stepDefinition.maxTurns,
     concurrency: stepDefinition.concurrency,
     logs: { archive: stepDefinition.logArchive },
+    grantRequests: stepDefinition.grantRequests,
     opencodeMcpJson: inline.opencodeMcpJson,
     healthChecksJson: inline.healthChecksJson,
     repo: inline.repo,

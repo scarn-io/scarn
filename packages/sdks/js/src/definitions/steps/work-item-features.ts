@@ -72,7 +72,11 @@ const actionHeading: Record<GrantAction, string> = {
   create: "Create",
 };
 
-function workItemPrompt(grant: Grant): string {
+/**
+ * The prompt section an agent step appends for `grant`: what it may do, the
+ * tool to use, and any key prefix or labels it is limited to.
+ */
+export function workItemPrompt(grant: Grant): string {
   const heading =
     grant.action === "create"
       ? `## Work Items: ${createHeading[grant.scope]}`
@@ -100,6 +104,51 @@ function workItemPrompt(grant: Grant): string {
     );
   }
   return lines.join("\n");
+}
+
+const SENTENCE_SCOPE_TEXT: Record<GrantScope, string> = {
+  self: "your work item",
+  children: "its child work items",
+  project: "any work item in this project",
+};
+
+const SENTENCE_CREATE_SCOPE_TEXT: Record<CreateGrantScope, string> = {
+  children: "child work items of your work item",
+  project: "top-level work items in this project",
+};
+
+const capitalize = (text: string) =>
+  text.charAt(0).toUpperCase() + text.slice(1);
+
+const grantAction = (grant: Grant): string => {
+  if (grant.action === "update" && grant.scope === "project") {
+    return PROJECT_UPDATE_TEXT;
+  }
+  if (grant.action === "create") {
+    return `create ${SENTENCE_CREATE_SCOPE_TEXT[grant.scope]}`;
+  }
+  const scope = SENTENCE_SCOPE_TEXT[grant.scope];
+  return grant.action === "block"
+    ? `mark ${scope} as blocked`
+    : `${WORK_ITEM_ACTION_TEXT[grant.action]} ${scope}`;
+};
+
+/**
+ * One sentence saying what `grant` allows, such as "Add or remove labels on
+ * your work item, with the labels `bug`." Names its key prefix and labels.
+ */
+export function grantSentence(grant: Grant): string {
+  const limits = [
+    ...("keyPrefix" in grant && grant.keyPrefix !== undefined
+      ? [`only items whose \`platformKey\` starts with \`${grant.keyPrefix}\``]
+      : []),
+    ...("labels" in grant && grant.labels !== undefined
+      ? [
+          `with the ${grant.labels.length === 1 ? "label" : "labels"} ${grant.labels.map((label) => `\`${label}\``).join(", ")}`,
+        ]
+      : []),
+  ];
+  return `${capitalize(grantAction(grant))}${limits.map((limit) => `, ${limit}`).join("")}.`;
 }
 
 function workItemFeature<TGrant extends Grant>(

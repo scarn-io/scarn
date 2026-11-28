@@ -10,6 +10,7 @@ import { createProjectRoutes } from "./http/routes/projects";
 import { createProjectRunsRoutes } from "./http/routes/project-runs";
 import { createStepDefinitionRoutes } from "./http/routes/step-definitions";
 import { createTaskRunsRoutes } from "./http/routes/task-runs";
+import { createTaskGrantRequestRoutes } from "./http/routes/task-grant-requests";
 import { createTasksRoutes } from "./http/routes/tasks";
 import { createWorkItemsRoutes } from "./http/routes/work-items";
 import { createWorkItemCommentsRoutes } from "./http/routes/work-item-comments";
@@ -122,7 +123,11 @@ export const createAppCore = <OpenApi extends OpenApiPlugin | AnyElysia>(
     .use(createWorkItemsRoutes(appContext))
     .use(createWorkItemCommentsRoutes(appContext))
     .use(createWorkItemCommentDraftsRoutes(appContext))
-    .use(createWorkItemBlocksRoutes(appContext))
+    .use(
+      new Elysia()
+        .use(createWorkItemBlocksRoutes(appContext))
+        .use(createTaskGrantRequestRoutes(appContext)),
+    )
     .use(createProjectArtifactsRoutes(appContext))
     .use(
       new Elysia()

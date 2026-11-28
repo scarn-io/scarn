@@ -6,6 +6,7 @@ import type {
   StepDefinitionContract,
 } from "@scarn/api/frontend-contracts";
 import { installDom } from "@/tests/support/install-dom";
+import { makeStep as baseStep } from "./step-definition-dialog-test-helpers";
 
 type SavedStepBody = { opencodeMcpJson: unknown; healthChecksJson: unknown };
 
@@ -81,26 +82,7 @@ function setupDom() {
 function makeStep(
   overrides: Partial<StepDefinitionContract> = {},
 ): StepDefinitionContract {
-  return {
-    id: parseUuidV7("01966a2c-9494-7db5-aa46-0f8f5cbbe201"),
-    projectId: parseUuidV7("01966a2c-9494-7db5-aa46-0f8f5cbbe001"),
-    key: "browser-repro",
-    name: "Browser Repro",
-    description: null,
-    prompt: "Open the app.",
-    version: 1,
-    kind: "user_defined",
-    entrypointJson: null,
-    toolCallJson: null,
-    environment: null,
-    inputSchemaJson: {},
-    resultSchemaJson: {},
-    errors: [],
-    retry: [],
-    grants: [],
-    maxTurns: null,
-    concurrency: null,
-    logs: { archive: "always" },
+  return baseStep({
     opencodeMcpJson: {
       postgres: { type: "ref", name: "postgres-readonly" },
       playwright: {
@@ -154,19 +136,8 @@ function makeStep(
         timeoutSeconds: 15,
       },
     ],
-    repo: {
-      mode: "readWrite",
-      message: null,
-      onPushFailure: "fail",
-      gitCredentials: "auto",
-      baseBranch: null,
-      workBranch: { kind: "create" },
-    },
-    status: "active",
-    createdAt: "2026-04-26T12:00:00.000Z",
-    updatedAt: "2026-04-26T12:00:00.000Z",
     ...overrides,
-  };
+  });
 }
 
 function renderDialog(step: StepDefinitionContract) {

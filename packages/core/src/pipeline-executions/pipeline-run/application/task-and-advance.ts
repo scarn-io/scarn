@@ -35,7 +35,7 @@ import type { JsonValue } from "@scarn/sdk/contracts/pipeline-document";
 import type {
   ActedOnTask,
   ActOnTaskDeps,
-} from "@scarn/core/tasks/task/application/reply-to-task";
+} from "@scarn/core/tasks/task/application/resume-task";
 import type { EngineEvent } from "../domain/engine/types";
 import {
   loadConversation,
@@ -307,6 +307,12 @@ export const actOnTaskAndAdvance = async <I>(
     : outcome;
 };
 
+/** The yield's final message, or its grant request's reason when empty. */
+const yieldedMessage = (input: YieldClaimedTaskRunInput): string => {
+  const { message, grantRequest } = yieldClaimedTaskRunInputSchema.parse(input);
+  return message === "" && grantRequest ? grantRequest.reason : message;
+};
+
 /**
  * `yieldClaimedTaskRun` with the pipeline port, which advances the Task's run
  * with `task_waiting`: it posts the agent's message and makes the visit wait.
@@ -327,7 +333,7 @@ export const yieldTaskAndAdvance = async (
       }),
     deps,
     deps.dbExecutor,
-    { yieldMessage: yieldClaimedTaskRunInputSchema.parse(input).message },
+    { yieldMessage: yieldedMessage(input) },
   );
 
 /** Claim and heartbeat handlers that fail a run with the pipeline port. */

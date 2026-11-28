@@ -92,6 +92,10 @@ export const setup = (task: TaskEntity, runs: TaskRunEntity[] = []) => {
   } as unknown as HandOverDeps["notifications"];
   const deps = {
     taskRepo,
+    grantRequestRepo: {
+      findPendingByTaskId: vi.fn(() => Promise.resolve(null)),
+      save: vi.fn(),
+    },
     taskRunRepo,
     conversationRepo,
     workItemCommentRepo: { create: vi.fn() },
@@ -112,6 +116,7 @@ export const setup = (task: TaskEntity, runs: TaskRunEntity[] = []) => {
     message: "v1 or v2?",
     deps: {
       taskRepo,
+      grantRequestRepo: { insert: vi.fn() },
       timeProvider: deps.timeProvider,
       conversationRepo,
       workItemRepo: { load: vi.fn(() => Promise.resolve(null)) },

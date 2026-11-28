@@ -3,6 +3,7 @@ import { getDb } from "@scarn/core/lib/db";
 import type { DbExecutor } from "@scarn/core/lib/db/db-executor";
 import {
   CoreValidationError,
+  InvariantViolationError,
   ResourceNotFoundError,
 } from "@scarn/core/lib/errors";
 import { Result } from "@scarn/core/lib/result";
@@ -29,12 +30,26 @@ import {
   type OnRunEndedDeps,
 } from "@scarn/core/tasks/task/application/on-run-ended";
 import type { HandOverDeps } from "@scarn/core/tasks/task/application/hand-over";
+import { validateWorkItemChanges } from "@scarn/core/tasks/task/application/validate-work-item-changes";
+import {
+  MAX_WORK_ITEM_CHANGES,
+  type WorkItemChange,
+} from "@scarn/core/tasks/task/contracts/work-item-change-contracts";
+import type { WorkItemRepo } from "@scarn/core/work-items/work-item/application/work-item-repo";
+import {
+  tooManyWorkItemChanges,
+  workItemChangesRefusal,
+} from "./settle-work-item-changes";
 import {
   withTaskSessionCleanup,
   type EndedTaskSessions,
 } from "./delete-task-sessions";
 import type { TaskRunEntity } from "../domain/task-run-entity";
 import type { NamedError } from "@scarn/core/tasks/task/domain/run-error";
+import {
+  grantKindRefusals,
+  type Grant,
+} from "@scarn/core/tasks/task/domain/grants";
 import {
   assertManagedAuthorityForSeal,
   type AssertManagedAuthorityForSealDeps,
@@ -51,6 +66,7 @@ export type YieldClaimedTaskRunDeps = FinalizeLogDeps &
   TaskRunSessionsDeps &
   AssertManagedAuthorityForSealDeps & {
     userAuthz: UserAuthorizationService;
+    workItemRepo: Pick<WorkItemRepo, "loadMany">;
     dbExecutor?: DbExecutor | undefined;
   };
 
@@ -64,14 +80,22 @@ export type YieldClaimedTaskRunDeps = FinalizeLogDeps &
  * (`recordSessionSaved`).
  * `taskOutcomePort` hears of the Task in the same transaction.
  *
+ * The work item changes the agent recorded (`workItemChanges`) are checked
+ * against the Task's grants as they are now and held on the Task, to apply
+ * when it succeeds (`holdYieldedWorkItemChanges`). A refused change fails the
+ * run with the named error settling would, instead of yielding.
+ *
  * The hand-over posts the agent's message to the Task's conversation and
  * leaves the Task waiting for a person (`onRunEnded`). It counts as a turn.
+ * A `grantRequest` rides along and is recorded by the hand-over; one the
+ * Task may not make is refused with a 422 before anything changes
+ * (`assertGrantRequestAllowed`).
  *
  * A yield is a seal: the authority fence (`assertManagedAuthorityForSeal`)
  * runs first, as on completion. When authority moved first, the run fails
- * with `ManagedConnectionAuthorityLost` instead of yielding
- * (`failForAuthorityLoss`); a relayed call in flight or a pending refresh
- * refuses the yield with a 409 for the worker to retry.
+ * with `ManagedConnectionAuthorityLost` instead of yielding (`failYield`); a
+ * relayed call in flight or a pending refresh refuses the yield with a 409
+ * for the worker to retry.
  */
 export const yieldClaimedTaskRun = async (
   taskIdInput: GetTaskRunInput,
@@ -92,6 +116,7 @@ export const yieldClaimedTaskRun = async (
       await userAuthz.requireProjectPermission({
         projectId: task.projectId,
         permission: "executions:write",
+        dbExecutor: tx,
       });
 
       const now = timeProvider.now();
@@ -110,14 +135,29 @@ export const yieldClaimedTaskRun = async (
         task.executionDeadlineAt !== null &&
         task.executionDeadlineAt !== undefined &&
         task.executionDeadlineAt.getTime() <= now.getTime();
-      const authorityLoss = isTimedOut
+      if (!isTimedOut && parsedInput.grantRequest) {
+        await assertGrantRequestAllowed(
+          task,
+          parsedInput.grantRequest.grants,
+          deps,
+          tx,
+        );
+      }
+      const failure = isTimedOut
         ? null
-        : await assertManagedAuthorityForSeal(task, now, deps, tx);
-      if (authorityLoss) {
-        return Result.ok(
-          await failForAuthorityLoss(
+        : ((await assertManagedAuthorityForSeal(task, now, deps, tx)) ??
+          (await holdYieldedWorkItemChanges(
             task,
-            authorityLoss,
+            parsedInput.workItemChanges ?? [],
+            now,
+            deps,
+            tx,
+          )));
+      if (failure) {
+        return Result.ok(
+          await failYield(
+            task,
+            failure,
             parsedInput,
             now,
             { ...deps, endedTaskSessions },
@@ -148,6 +188,7 @@ export const yieldClaimedTaskRun = async (
       await finalizeCompletedStepLog(saved.id, saved.projectId, deps, tx);
       await onRunEnded(saved, { ...deps, endedTaskSessions }, tx, {
         message: parsedInput.message,
+        grantRequest: parsedInput.grantRequest,
         deps,
       });
 
@@ -157,14 +198,85 @@ export const yieldClaimedTaskRun = async (
 };
 
 /**
- * A yield the authority fence refused: the run fails with `loss` instead,
- * keeping its branches but not its session, which is never restored and is
- * deleted once the transaction commits. Its log is archived and it ends
+ * Refuses, with a 422 before anything changes, a grant request the Task may
+ * not make: its Task doesn't take grant requests, or a grant doesn't fit an
+ * agent (`grantKindRefusals`).
+ */
+const assertGrantRequestAllowed = async (
+  run: TaskRunEntity,
+  grants: readonly Grant[],
+  deps: YieldClaimedTaskRunDeps,
+  tx: DbExecutor,
+): Promise<void> => {
+  const task = await deps.taskRepo.lock(run.taskId, tx);
+  if (!task) {
+    throw new InvariantViolationError(
+      `Task ${run.taskId} of run ${run.id} is missing`,
+      "TASK_MISSING",
+    );
+  }
+  if (!task.grantRequests) {
+    throw new CoreValidationError(
+      `Task ${task.id} may not request grants`,
+      "GRANT_REQUEST_NOT_ALLOWED",
+    );
+  }
+  const refusals = grantKindRefusals("agent", grants);
+  if (refusals.length > 0) {
+    throw new CoreValidationError(
+      refusals.join("; "),
+      "GRANT_REQUEST_NOT_ALLOWED",
+      { refusals },
+    );
+  }
+};
+
+/**
+ * Holds `changes` on `run`'s Task after the ones it already holds, once
+ * they all pass `validateWorkItemChanges` against its grants as they are now
+ * and stay within `MAX_WORK_ITEM_CHANGES`. Returns null when they're held,
+ * or the named error the run fails with instead.
+ */
+const holdYieldedWorkItemChanges = async (
+  run: TaskRunEntity,
+  changes: WorkItemChange[],
+  now: Date,
+  deps: YieldClaimedTaskRunDeps,
+  tx: DbExecutor,
+): Promise<NamedError | null> => {
+  if (changes.length === 0) {
+    return null;
+  }
+  const task = await deps.taskRepo.lock(run.taskId, tx);
+  if (!task) {
+    throw new InvariantViolationError(
+      `Task ${run.taskId} of run ${run.id} is missing`,
+      "TASK_MISSING",
+    );
+  }
+  const held = [...task.heldWorkItemChanges, ...changes];
+  if (held.length > MAX_WORK_ITEM_CHANGES) {
+    return tooManyWorkItemChanges(held.length);
+  }
+  const refusal = await workItemChangesRefusal(() =>
+    validateWorkItemChanges(task, held, deps, tx),
+  );
+  if (refusal) {
+    return refusal;
+  }
+  await deps.taskRepo.save(task.holdWorkItemChanges(changes, now), tx);
+  return null;
+};
+
+/**
+ * A yield refused by the authority fence or its work item changes: the run
+ * fails with `failure` instead, keeping its branches but not its session,
+ * which is never restored and is deleted once the transaction commits. Its log is archived and it ends
  * through `onRunEnded` as a failure, with no hand-over.
  */
-const failForAuthorityLoss = async (
+const failYield = async (
   task: TaskRunEntity,
-  loss: NamedError,
+  failure: NamedError,
   input: z.output<typeof yieldClaimedTaskRunInputSchema>,
   now: Date,
   deps: YieldClaimedTaskRunDeps & { endedTaskSessions: EndedTaskSessions },
@@ -173,7 +285,7 @@ const failForAuthorityLoss = async (
   const saved = await deps.taskRunRepo.save(
     task.complete("failed", now, {
       resultJson: null,
-      errorJson: loss,
+      errorJson: failure,
       workBranch: input.workBranch,
       createdFromBranch: input.createdFromBranch,
       sessionRestored: input.sessionRestored,

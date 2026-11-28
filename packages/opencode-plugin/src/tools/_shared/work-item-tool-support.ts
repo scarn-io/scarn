@@ -14,10 +14,10 @@ import {
 import { resolveWorktree } from "./resolve-worktree";
 
 export const RECORDED_CHANGE_NOTE =
-  "Recorded. Nothing changes until this run succeeds; the server checks and applies recorded changes then.";
+  "Recorded. Nothing changes until the Task succeeds; the server checks and applies recorded changes then.";
 
 export const DEFERRED_DESCRIPTION_NOTE =
-  "Nothing changes until this run succeeds: the change is recorded, then checked and applied by the server when the run completes.";
+  "Nothing changes until the Task succeeds: the change is recorded, then checked and applied by the server when the Task completes.";
 
 export const NO_WORK_ITEM_MESSAGE =
   "This run is not on a work item, so work item tools are unavailable.";

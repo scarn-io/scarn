@@ -32,6 +32,11 @@ export type ConversationMessageEntityProps = {
   taskRunId: UuidV7 | null;
   /** The attempt a person or system message was delivered into. */
   deliveredToTaskRunId: UuidV7 | null;
+  /**
+   * The grant request an agent message carries, or whose decision a system
+   * message records; omitted means none.
+   */
+  grantRequestId?: UuidV7 | null | undefined;
   body: string;
   createdAt?: Date | string | null | undefined;
 };
@@ -40,6 +45,7 @@ type NewMessageProps = {
   id?: UuidV7 | undefined;
   conversationId: UuidV7;
   body: string;
+  grantRequestId?: UuidV7 | null | undefined;
   createdAt?: Date | undefined;
 };
 
@@ -50,6 +56,7 @@ export class ConversationMessageEntity {
   public readonly authorUserId: UuidV7 | null;
   public readonly taskRunId: UuidV7 | null;
   public readonly deliveredToTaskRunId: UuidV7 | null;
+  public readonly grantRequestId: UuidV7 | null;
   public readonly body: string;
   public readonly createdAt: Date | null | undefined;
 
@@ -85,6 +92,8 @@ export class ConversationMessageEntity {
       props.deliveredToTaskRunId === null
         ? null
         : parseUuidV7(props.deliveredToTaskRunId);
+    this.grantRequestId =
+      props.grantRequestId == null ? null : parseUuidV7(props.grantRequestId);
     this.body = body;
     this.createdAt = normalizeDate(props.createdAt);
   }
@@ -99,6 +108,7 @@ export class ConversationMessageEntity {
       authorUserId: null,
       taskRunId: props.taskRunId,
       deliveredToTaskRunId: null,
+      grantRequestId: props.grantRequestId,
       body: props.body,
       createdAt: props.createdAt,
     });
@@ -127,6 +137,7 @@ export class ConversationMessageEntity {
       authorUserId: props.authorUserId,
       taskRunId: null,
       deliveredToTaskRunId: null,
+      grantRequestId: props.grantRequestId,
       body: props.body,
       createdAt: props.createdAt,
     });
@@ -146,6 +157,7 @@ export class ConversationMessageEntity {
       authorUserId: this.authorUserId,
       taskRunId: this.taskRunId,
       deliveredToTaskRunId: this.deliveredToTaskRunId,
+      grantRequestId: this.grantRequestId,
       body: this.body,
       createdAt: this.createdAt,
     };

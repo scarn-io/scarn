@@ -673,6 +673,8 @@ export const stepDefinitions = appSchema.table(
     // `on-failure` (code steps only): a succeeded run no person started
     // keeps no log. Copied onto `tasks.log_archive`.
     logArchive: logArchiveEnum("log_archive").notNull().default("always"),
+    // Whether a Task of this step may ask a person for more grants.
+    grantRequests: boolean("grant_requests").notNull().default(false),
     // Version of the row's JSON columns; see `step-definition-stored.ts`.
     schemaVersion: integer("schema_version").notNull(),
     taskExecutionConfigId: uuid("task_execution_config_id").references(
@@ -983,6 +985,14 @@ export const tasks = appSchema.table(
     // What the Task's agent may do (`Grant[]`): its step definition's grants
     // when the Task started, plus `read` on `self`.
     grants: jsonb("grants_json").notNull().default([]),
+    // Whether the Task's agent may ask a person for more grants; set when
+    // the Task is created.
+    grantRequests: boolean("grant_requests").notNull().default(false),
+    // Work item changes (`WorkItemChange[]`) earlier runs recorded before
+    // handing over, applied when the Task succeeds.
+    heldWorkItemChangesJson: jsonb("held_work_item_changes_json")
+      .notNull()
+      .default([]),
     maxTurns: integer("max_turns"),
     // Its step definition's `log_archive` when the Task started.
     logArchive: logArchiveEnum("log_archive").notNull().default("always"),
@@ -1158,6 +1168,59 @@ export const storageSweeps = appSchema.table(
   (table) => [index("storage_sweeps_not_before_idx").on(table.notBefore)],
 );
 
+export const taskGrantRequestStatusEnum = pgEnum("task_grant_request_status", [
+  "pending",
+  "decided",
+  "unanswered",
+  "withdrawn",
+]);
+
+/**
+ * A Task's agent asking a person for more grants when it hands over. A Task
+ * has at most one `pending` request. Approved grants are added to the Task.
+ */
+export const taskGrantRequests = appSchema.table(
+  "task_grant_requests",
+  {
+    id: uuid("id").primaryKey(),
+    projectId: uuid("project_id")
+      .references(() => projects.id, { onDelete: "cascade" })
+      .notNull(),
+    taskId: uuid("task_id")
+      .references(() => tasks.id, { onDelete: "cascade" })
+      .notNull(),
+    // The run that handed over with the request.
+    taskRunId: uuid("task_run_id")
+      .references(() => taskRuns.id, { onDelete: "cascade" })
+      .notNull(),
+    reason: text("reason").notNull(),
+    // The grants (`Grant[]`) the agent asked for.
+    requestedJson: jsonb("requested_json").notNull(),
+    status: taskGrantRequestStatusEnum("status").notNull(),
+    // The grants a person approved; null until decided, `[]` is a deny.
+    approvedJson: jsonb("approved_json"),
+    note: text("note"),
+    // References identity.user.id by value.
+    decidedByUserId: uuid("decided_by_user_id"),
+    decidedAt: timestamp("decided_at", { withTimezone: true }),
+    // Version of the row's JSON columns; see `grant-request-stored.ts`.
+    schemaVersion: integer("schema_version").notNull(),
+    createdAt: createdAtColumn(),
+  },
+  (table) => [
+    index("task_grant_requests_project_id_idx").on(table.projectId),
+    index("task_grant_requests_task_id_idx").on(table.taskId),
+    index("task_grant_requests_task_run_id_idx").on(table.taskRunId),
+    uniqueIndex("task_grant_requests_task_id_pending_unique")
+      .on(table.taskId)
+      .where(sql`${table.status} = 'pending'`),
+    check(
+      "task_grant_requests_schema_version_check",
+      sql`${table.schemaVersion} >= 1`,
+    ),
+  ],
+);
+
 /**
  * A message a user sent to a step, attached to the Task it started. A run's
  * messages are the messages on the Tasks of every run in its previous-run chain.
@@ -1225,6 +1288,12 @@ export const conversationMessages = appSchema.table(
       },
     ),
     body: text("body").notNull(),
+    // The grant request an agent message carries, or whose decision a
+    // system message records.
+    grantRequestId: uuid("grant_request_id").references(
+      (): AnyPgColumn => taskGrantRequests.id,
+      { onDelete: "set null" },
+    ),
     createdAt: createdAtColumn(),
   },
   (table) => [
@@ -1233,6 +1302,9 @@ export const conversationMessages = appSchema.table(
       table.createdAt,
     ),
     index("conversation_messages_task_run_id_idx").on(table.taskRunId),
+    index("conversation_messages_grant_request_id_idx").on(
+      table.grantRequestId,
+    ),
   ],
 );
 

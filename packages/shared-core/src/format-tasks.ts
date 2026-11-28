@@ -10,6 +10,7 @@ import type {
   TaskWorkItemRef,
 } from "./lib/task-api-types";
 import { shortId } from "./lib/short-id";
+import { formatTaskAccess, pendingGrantRequest } from "./task-access";
 import { looseStatusGlyph } from "./lib/status-glyphs";
 
 /** Text renderings for `tasks list` and `tasks view`. */
@@ -187,6 +188,7 @@ export function formatTaskView(gathered: GatheredTaskView): string {
     ...jsonSection("Input", task.inputJson),
     ...jsonSection("Result", task.resultJson),
     ...jsonSection("Error", task.errorJson),
+    ...formatTaskAccess(gathered),
     "",
   ];
 
@@ -229,6 +231,12 @@ function taskViewHints(gathered: GatheredTaskView): string[] {
     hints.push(
       `→ scarn runs thread ${task.pipelineRunId} --step ${task.nodeId}`,
     );
+  }
+  if (
+    gathered.grantRequests.status === "loaded" &&
+    pendingGrantRequest(gathered.grantRequests.data) !== undefined
+  ) {
+    hints.push(`→ scarn tasks access ${task.id} --approve`);
   }
   if (hints.length === 0) hints.push(`→ scarn tasks list`);
   return hints;

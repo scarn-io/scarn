@@ -98,7 +98,15 @@ export const cancelTaskMock = mock((taskId: string) => {
   return Promise.resolve({ data: { ok: true }, error: null });
 });
 
+/** The Task's grant requests the fake lists, and the decisions it received. */
+export const grantRequests = {
+  list: [] as unknown[],
+  decisions: [] as { id: string; body: Record<string, unknown> }[],
+};
+
 export function resetApi() {
+  grantRequests.list = [];
+  grantRequests.decisions = [];
   api.status = "waiting_for_person";
   api.endsWith = "findings";
   api.requestedIds = [];
@@ -131,6 +139,31 @@ void mock.module("@/app/_lib/scarn-browser-api-client", () => ({
       },
       tasks: ({ taskId }: { taskId: string }) => ({
         cancel: { post: () => cancelTaskMock(taskId) },
+        "grant-requests": {
+          get: () => Promise.resolve({ data: grantRequests.list, error: null }),
+        },
+      }),
+      "task-runs": ({ taskRunId }: { taskRunId: string }) => ({
+        get: () =>
+          Promise.resolve({
+            data: { id: taskRunId, taskId: agentTaskId },
+            error: null,
+          }),
+      }),
+      "task-grant-requests": ({
+        grantRequestId,
+      }: {
+        grantRequestId: string;
+      }) => ({
+        decision: {
+          post: (body: Record<string, unknown>) => {
+            grantRequests.decisions.push({ id: grantRequestId, body });
+            return Promise.resolve({
+              data: buildConversation("reply_pending", api.endsWith),
+              error: null,
+            });
+          },
+        },
       }),
     },
   }),

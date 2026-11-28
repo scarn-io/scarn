@@ -18,6 +18,7 @@ const step = {
   name: "Review Notion",
   description: null,
   prompt: "Review",
+  grantRequests: false,
   version: 1,
   kind: "user_defined",
   entrypointJson: null,

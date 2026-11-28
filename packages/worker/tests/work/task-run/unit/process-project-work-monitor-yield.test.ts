@@ -1,5 +1,10 @@
 import { writeFile } from "node:fs/promises";
 import { describe, expect, test, vi } from "bun:test";
+import { buildGrantRequestPath } from "@scarn/sdk/contracts/grant-request";
+import {
+  appendWorkItemChange,
+  type WorkItemChange,
+} from "@scarn/sdk/contracts/work-item-changes";
 import { buildFindingsSubmissionPath } from "../../../../src/work/task-run/application/process-project-work-findings";
 import { FINDINGS_LAST_TURN_PROMPT } from "../../../../src/work/task-run/application/process-project-work-turn-end";
 import type { StartedClaimedTask } from "../../../../src/work/task-run/contracts/process-project-work-types";
@@ -9,11 +14,23 @@ import {
   createStartedTask,
   createTracker,
   createWorkspace,
+  exists,
   retryPromptTexts,
   runMonitor,
   TASK_ID,
   writeExecutionInfo,
 } from "./helpers/monitor-turn-end-harness";
+
+const GRANT_REQUEST = {
+  reason: "I need to close the item once it is fixed.",
+  grants: [{ resource: "workItem", action: "close", scope: "self" }],
+};
+
+const COMMENT: WorkItemChange = {
+  kind: "comment",
+  workItemId: "item-self",
+  body: "Started.",
+};
 
 describe("monitorStartedClaimedTaskRun — handing over", () => {
   test.concurrent(
@@ -43,6 +60,7 @@ describe("monitorStartedClaimedTaskRun — handing over", () => {
         sessionObjectKey: null,
         sessionSizeBytes: null,
         sessionRestored: null,
+        workItemChanges: [],
       });
       expect(harness.completeTaskRun).not.toHaveBeenCalled();
       expect(harness.saveArtifact).not.toHaveBeenCalled();
@@ -158,6 +176,62 @@ describe("monitorStartedClaimedTaskRun — handing over", () => {
       expect(failure.message).toMatch(/without findings submission/);
       expect(harness.sendRetryPrompt).toHaveBeenCalled();
       expect(harness.yieldTaskRun).not.toHaveBeenCalled();
+    },
+  );
+
+  test.concurrent(
+    "hands over on a recorded grant request even with an empty final message, sending and deleting it",
+    async () => {
+      const workspacePath = await createWorkspace();
+      await writeExecutionInfo(workspacePath, {
+        conversation: false,
+        turnsRemaining: 2,
+      });
+      await writeFile(
+        buildGrantRequestPath(workspacePath),
+        JSON.stringify(GRANT_REQUEST),
+      );
+      await appendWorkItemChange(workspacePath, COMMENT);
+      const startedTask = createStartedTask(workspacePath, () =>
+        Promise.resolve({ pushed: true }),
+      );
+      const harness = createHarness(startedTask, { finalText: "" });
+
+      await runMonitor(startedTask, harness);
+
+      expect(harness.yieldTaskRun).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: "",
+          grantRequest: GRANT_REQUEST,
+          workItemChanges: [COMMENT],
+        }),
+      );
+      expect(harness.sendRetryPrompt).not.toHaveBeenCalled();
+      expect(await exists(buildGrantRequestPath(workspacePath))).toBe(false);
+    },
+  );
+
+  test.concurrent(
+    "sends the recorded work item changes on a hand-over without a grant request",
+    async () => {
+      const workspacePath = await createWorkspace();
+      await writeExecutionInfo(workspacePath, {
+        conversation: true,
+        turnsRemaining: 1,
+      });
+      await appendWorkItemChange(workspacePath, COMMENT);
+      const startedTask = createStartedTask(workspacePath, () =>
+        Promise.resolve({ pushed: true }),
+      );
+      const harness = createHarness(startedTask, { finalText: "Which env?" });
+
+      await runMonitor(startedTask, harness);
+
+      const [call] = harness.yieldTaskRun.mock.calls as unknown as [
+        Record<string, unknown>,
+      ][];
+      expect(call?.[0]).toMatchObject({ workItemChanges: [COMMENT] });
+      expect(call?.[0]).not.toHaveProperty("grantRequest");
     },
   );
 

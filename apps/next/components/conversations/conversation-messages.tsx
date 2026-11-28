@@ -14,6 +14,8 @@ import { formatClockTime } from "@/components/executions/format-datetime";
 import { Prose } from "@/components/executions/prose";
 import { SystemLine, TextLink } from "@/components/executions/thread-parts";
 import { UserBubble } from "@/components/executions/user-bubble";
+import type { GrantRequestCardContext } from "./grant-request-api";
+import { GrantRequestMessageCard } from "./grant-request-card";
 import type { LocalConversationMessage } from "./use-conversation";
 
 export function AgentAvatar({ agentName }: { agentName: string }) {
@@ -42,10 +44,12 @@ export function ConversationMessage({
   message,
   agentName,
   onShowWork,
+  grantRequest = null,
 }: {
   message: ConversationMessageContract;
   agentName: string;
   onShowWork: (taskRunId: string) => void;
+  grantRequest?: GrantRequestCardContext | null;
 }) {
   const time = formatClockTime(message.createdAt);
   if (message.authorKind === "system") {
@@ -85,6 +89,13 @@ export function ConversationMessage({
         <Box data-quotable>
           <Prose text={message.body} />
         </Box>
+        {message.grantRequestId && grantRequest ? (
+          <GrantRequestMessageCard
+            grantRequestId={message.grantRequestId}
+            taskRunId={taskRunId}
+            {...grantRequest}
+          />
+        ) : null}
         {taskRunId ? (
           <Typography variant="body2" sx={{ color: "text.disabled" }}>
             <TextLink

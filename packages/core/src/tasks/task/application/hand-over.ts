@@ -18,9 +18,56 @@ import type { TaskRunEntity } from "@scarn/core/tasks/task-run/domain/task-run-e
 import type { TaskEntity } from "../domain/task-entity";
 import type { TaskPipelineRunPort } from "./task-pipeline-run-port";
 import type { TaskRepo } from "./task-repo";
+import type { GrantRequestRepo } from "@scarn/core/tasks/grant-request/application/grant-request-repo";
+import { newGrantRequest } from "@scarn/core/tasks/grant-request/domain/grant-request";
+import { grantsNotHeld, type Grant } from "../domain/grants";
+
+/** The agent asking for more work item grants with its hand-over. */
+export type AgentGrantRequest = { reason: string; grants: Grant[] };
+
+/** What the agent handed over with: its final message and any grant request. */
+export type AgentHandOver = {
+  message: string;
+  grantRequest?: AgentGrantRequest | undefined;
+};
+
+/**
+ * Inserts `requested` as the Task's `pending` grant request, without the
+ * grants it already holds (`grantsNotHeld`). Returns its id, or null when
+ * nothing is left to ask for: then it's a plain hand-over.
+ */
+const recordGrantRequest = async (
+  task: TaskEntity,
+  run: TaskRunEntity,
+  requested: AgentGrantRequest | undefined,
+  deps: HandOverDeps,
+  now: Date,
+  tx: DbExecutor,
+): Promise<UuidV7 | null> => {
+  if (!requested) {
+    return null;
+  }
+  const grants = grantsNotHeld(task.grants, requested.grants);
+  if (grants.length === 0) {
+    return null;
+  }
+  const request = await deps.grantRequestRepo.insert(
+    newGrantRequest({
+      projectId: task.projectId,
+      taskId: task.id,
+      taskRunId: run.id,
+      reason: requested.reason,
+      requested: grants,
+      now,
+    }),
+    tx,
+  );
+  return request.id;
+};
 
 export type HandOverDeps = {
   taskRepo: TaskRepo;
+  grantRequestRepo: Pick<GrantRequestRepo, "insert">;
   conversationRepo: ConversationRepo;
   workItemRepo: Pick<WorkItemRepo, "load">;
   notifications: NotifyWaitingForPersonDeps;
@@ -72,11 +119,16 @@ const openConversation = async (
  * A chat (no work item) only tells its creator, content-free, that the
  * answer is ready (`notifyRepoConversation`). Returns the Task with its
  * conversation.
+ *
+ * A `grantRequest` is recorded `pending` (`recordGrantRequest`) and linked
+ * from the agent's message, and the notification carries its
+ * `grantRequestId`. When the message is empty, the request's reason is
+ * posted instead.
  */
 export const handOver = async (
   task: TaskEntity,
   run: TaskRunEntity,
-  message: string,
+  { message, grantRequest }: AgentHandOver,
   deps: HandOverDeps,
   tx: DbExecutor,
 ): Promise<TaskEntity> => {
@@ -95,11 +147,22 @@ export const handOver = async (
   );
   const withConversation = await openConversation(task, deps, now, tx);
   const conversationId = withConversation.conversationId as UuidV7;
-  const { body } = agentMessageBody(message);
+  const grantRequestId = await recordGrantRequest(
+    task,
+    run,
+    grantRequest,
+    deps,
+    now,
+    tx,
+  );
+  const { body } = agentMessageBody(
+    message.trim() === "" && grantRequest ? grantRequest.reason : message,
+  );
   await deps.conversationRepo.insertMessage(
     ConversationMessageEntity.agent({
       conversationId,
       taskRunId: run.id,
+      grantRequestId,
       body,
       createdAt: now,
     }),
@@ -129,6 +192,7 @@ export const handOver = async (
       taskId: task.id,
       body,
       subject: { conversationId, source: "agent" },
+      grantRequestId,
       recipientUserIds,
       now,
     },

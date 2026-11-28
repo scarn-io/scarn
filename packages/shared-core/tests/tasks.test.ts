@@ -8,7 +8,11 @@ import {
   PREVIOUS_TASK_CHAIN_LIMIT,
 } from "../src/gather-tasks";
 import type { ApiResult } from "../src/lib/api-result";
-import type { TaskDetail, TaskRunDetail } from "../src/lib/task-api-types";
+import type {
+  TaskDetail,
+  TaskGrantRequest,
+  TaskRunDetail,
+} from "../src/lib/task-api-types";
 import type { TaskReadClient } from "../src/lib/task-read-client";
 import {
   makeArtifact,
@@ -40,6 +44,7 @@ function fakeClient(options: {
   tasks?: Record<string, TaskDetail>;
   runs?: TaskRunDetail[] | "down";
   calls?: { listQuery?: unknown };
+  grantRequests?: TaskGrantRequest[];
 }): TaskReadClient {
   const tasks = options.tasks ?? {};
   return {
@@ -60,6 +65,7 @@ function fakeClient(options: {
         options.runs === "down"
           ? fail(500, "runs are down")
           : ok(options.runs ?? []),
+      listTaskGrantRequests: () => ok(options.grantRequests ?? []),
     },
     taskRuns: {
       getTaskRun: ({ path }) =>
@@ -180,6 +186,9 @@ describe("tasks view", () => {
           "message": "Agent crashed"
         }
 
+      Access:
+        read:self         Read your work item.
+
       Runs (2), oldest first:
         #1 ✗ failed  initial  run-1  finished 2026-01-02T00:01:10.000Z
         #2 ✗ failed  continuation  0196a000-0000-7000-8000-0000000000e1  finished 2026-01-02T00:01:10.000Z
@@ -222,6 +231,51 @@ describe("tasks view", () => {
       `… could not load Task ${PREVIOUS_TASK_ID}: Not found`,
     );
     expect(text.trimEnd().endsWith("→ scarn tasks list")).toBe(true);
+  });
+
+  test("shows the Task's access and a pending request, with the access hint", async () => {
+    const pending: TaskGrantRequest = {
+      id: "request-1",
+      taskId: TASK_ID,
+      taskRunId: TASK_RUN_ID,
+      reason: "I need to file the follow-ups.",
+      requested: [
+        {
+          resource: "workItem",
+          action: "create",
+          scope: "children",
+          labels: ["bug", "chore"],
+        },
+      ],
+      status: "pending",
+      approved: null,
+      note: null,
+      decidedByUserId: null,
+      decidedAt: null,
+      createdAt: "2026-01-02T00:02:00.000Z",
+    };
+    const gathered = await gatherTaskView({
+      client: fakeClient({
+        tasks: { [TASK_ID]: makeTaskDetail({ status: "waiting_for_person" }) },
+        grantRequests: [pending],
+      }),
+      taskId: TASK_ID,
+    });
+    const text = formatTaskView(gathered);
+
+    expect(text).toContain(
+      [
+        "Access:",
+        "  read:self         Read your work item.",
+        "",
+        "The agent is asking for more access (request request-1):",
+        "  > I need to file the follow-ups.",
+        "  create:children   Create child work items of your work item, with the labels `bug`, `chore`.",
+      ].join("\n"),
+    );
+    expect(
+      text.trimEnd().endsWith(`→ scarn tasks access ${TASK_ID} --approve`),
+    ).toBe(true);
   });
 
   test("stops following previousTaskId after the chain limit", async () => {

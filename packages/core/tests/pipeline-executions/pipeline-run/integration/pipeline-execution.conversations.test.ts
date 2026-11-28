@@ -60,6 +60,7 @@ describe("pipeline execution conversations: a step visit talks with people", () 
           authorName: null,
           taskRunId: claimed.taskId,
           body: "Should the fix target v1 or v2 of the client?",
+          grantRequestId: null,
           createdAt: expect.any(String) as string,
         },
       ]);

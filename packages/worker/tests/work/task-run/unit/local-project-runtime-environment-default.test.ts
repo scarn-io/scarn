@@ -141,6 +141,20 @@ describe("Repo default launch runtime", () => {
     });
   }
 
+  test("clears a grant request carried over on the branch", async () => {
+    await writeConfig(".devcontainer/devcontainer.json");
+    await writeConfig(".scarn/grant-request.json", "{}");
+    const { orchestrator, input } = setup();
+
+    await orchestrator.launch(input);
+
+    expect(
+      await Bun.file(
+        path.join(workspacePath, ".scarn/grant-request.json"),
+      ).exists(),
+    ).toBe(false);
+  });
+
   test("keeps fallback config and install artifacts out of commits", async () => {
     const { orchestrator, input, commitPush } = setup();
     const env = await orchestrator.launch({ ...input, stepKey: "code" });

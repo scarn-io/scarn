@@ -30,6 +30,8 @@ export type CurrentExecutionInfo = {
   resultSchemaJson: Record<string, unknown> | null;
   /** How many more times the agent may hand the conversation to a person; `null` outside a run. */
   turnsRemaining: number | null;
+  /** Whether the agent may ask for more grants when it hands over; absent outside a run. */
+  grantRequests?: boolean | undefined;
   /** The Task's own work item; absent outside a run. */
   workItemId?: string | undefined;
   /** What the agent's work item tools may do, and to which work items. */
@@ -88,6 +90,7 @@ export async function writeCurrentExecutionInfoFile(
         taskRunId: input.taskRunId,
         resultSchemaJson: input.resultSchemaJson,
         turnsRemaining: input.turnsRemaining,
+        grantRequests: input.grantRequests ?? false,
         workItemId: input.workItemId ?? null,
         grants: input.grants ?? [],
         api: input.api ?? null,

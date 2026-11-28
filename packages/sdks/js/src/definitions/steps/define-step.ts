@@ -6,6 +6,7 @@ import type {
   FeatureResultExtensions,
   Grant,
 } from "./step-features";
+import { hasGrantRequests } from "./step-features";
 import {
   createPromptTemplateContext,
   type PromptTemplateContext,
@@ -218,6 +219,11 @@ export type StepDefinitionSpec = {
    * `Features.workItems.*` features. Every Task may also read its own.
    */
   grants?: readonly Grant[];
+  /**
+   * True when the step attaches `Features.grantRequests()`, so its Tasks may
+   * ask a person for more grants; omitted otherwise.
+   */
+  grantRequests?: true;
   /**
    * `kind === "code"` only: the live function of a spec produced by
    * `codeStep()`: the step's `fn`, wrapped to add `mcp` to its context when
@@ -454,6 +460,7 @@ export function defineStep<
         }
       : {}),
     ...(grants.length > 0 ? { grants } : {}),
+    ...(hasGrantRequests(features) ? { grantRequests: true as const } : {}),
   };
   return toStepHandle(
     spec,

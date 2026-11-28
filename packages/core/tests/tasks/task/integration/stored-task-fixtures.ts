@@ -17,6 +17,7 @@ import type { TaskStatus } from "@/tasks/task/domain/task-entity";
 import v1Agent from "../fixtures/v1-agent.json";
 import v1Code from "../fixtures/v1-code.json";
 import v1Failed from "../fixtures/v1-failed.json";
+import v1HeldChanges from "../fixtures/v1-held-changes.json";
 import v1McpTool from "../fixtures/v1-mcp-tool.json";
 import v1Scheduled from "../fixtures/v1-scheduled.json";
 
@@ -33,6 +34,8 @@ export type StoredTaskFixture = {
   retryJson: unknown;
   environmentSelectionJson: unknown;
   grantsJson: unknown;
+  /** Absent from fixtures written before the column existed; reads as `[]`. */
+  heldWorkItemChangesJson?: unknown;
   resultJson: unknown;
   errorJson: unknown;
 };
@@ -43,6 +46,7 @@ export const storedTaskFixtures = {
   "mcp-tool": v1McpTool,
   scheduled: v1Scheduled,
   failed: v1Failed,
+  "held-changes": v1HeldChanges,
 } as const satisfies Record<string, StoredTaskFixture>;
 
 export const v1FailedTask: StoredTaskFixture = v1Failed;
@@ -133,6 +137,7 @@ export const insertStoredTask = async (
       retryJson: fixture.retryJson,
       environmentSelectionJson: fixture.environmentSelectionJson,
       grants: fixture.grantsJson,
+      heldWorkItemChangesJson: fixture.heldWorkItemChangesJson,
       resultJson: fixture.resultJson,
       errorJson: fixture.errorJson,
       status: fixture.status as TaskStatus,

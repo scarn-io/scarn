@@ -129,6 +129,29 @@ describe("drizzle step definition repo: task execution config reference", () => 
     },
   );
 
+  concurrentTest(
+    "grantRequests round-trips through create and save",
+    async () => {
+      const key = `grant_requests_${crypto.randomUUID()}`;
+      const entity = createEntity(key, null);
+      expect(entity.grantRequests).toBe(false);
+      expect((await stepDefinitionRepo.create(entity)).grantRequests).toBe(
+        false,
+      );
+
+      const saved = await stepDefinitionRepo.save(
+        StepDefinitionEntity.rehydrate({
+          ...entity.toJSON(),
+          grantRequests: true,
+        }),
+      );
+      expect(saved.grantRequests).toBe(true);
+      expect((await stepDefinitionRepo.load(entity.id))?.grantRequests).toBe(
+        true,
+      );
+    },
+  );
+
   concurrentTest("create rejects a duplicate key as a conflict", async () => {
     const key = `config_ref_${crypto.randomUUID()}`;
     const taskExecutionConfigId = await resolveConfigId(key);

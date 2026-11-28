@@ -9,6 +9,7 @@ import {
   NotificationActions,
   NotificationChips,
   formatTimestamp,
+  readGrantRequestId,
   useNotificationState,
   type NotificationProps,
 } from "./notification-internals";
@@ -49,6 +50,15 @@ export function NotificationRow({
             <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
               {notification.title}
             </Typography>
+            {readGrantRequestId(notification) ? (
+              <Typography
+                variant="body2"
+                sx={{ color: "warning.main", fontWeight: 600 }}
+                data-testid="notification-asks-for-access"
+              >
+                The agent asks for more access
+              </Typography>
+            ) : null}
             <Typography variant="body2" color="text.secondary">
               {notification.body}
             </Typography>

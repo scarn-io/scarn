@@ -47,9 +47,10 @@ const optionalUuid = (value: string | null): UuidV7 | null =>
   value === null ? null : parseUuidV7(value);
 
 const toRow = (task: TaskEntity) => {
-  const { environmentSelection, ...props } = task.toJSON();
+  const { environmentSelection, heldWorkItemChanges, ...props } = task.toJSON();
   return {
     ...props,
+    heldWorkItemChangesJson: heldWorkItemChanges,
     environmentSelectionJson:
       toStoredTaskEnvironmentSelection(environmentSelection),
     schemaVersion: CURRENT_TASK_SCHEMA_VERSION,
@@ -85,6 +86,8 @@ export const readTaskRow = (row: TaskRow): StoredReadResult<TaskEntity> => {
       inputJson: stored.inputJson,
       retryJson: stored.retryJson,
       grants: stored.grants,
+      grantRequests: row.grantRequests,
+      heldWorkItemChanges: stored.heldWorkItemChanges,
       maxTurns: row.maxTurns,
       logArchive: row.logArchive,
       heartbeatSeconds: row.heartbeatSeconds,
@@ -351,6 +354,8 @@ export class DrizzleTaskRepo implements TaskRepo {
         errorJson: task.errorJson,
         conversationId: task.conversationId,
         maxTurns: task.maxTurns,
+        grants: task.grants,
+        heldWorkItemChangesJson: task.heldWorkItemChanges,
         updatedAt: task.updatedAt,
       })
       .where(eq(tasks.id, task.id))

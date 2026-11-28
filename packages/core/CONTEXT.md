@@ -21,6 +21,14 @@ The code that turns one kind of context reference into the summary, files and br
 The live Tasks that share a limit on how many can run at once and how many may wait behind them. It is keyed either by one step on one work item, when that step sets the limit, or by one schedule, whose rule sets it (see **Schedule**); a step's own limit doesn't apply when a schedule starts it, and a chat is never in one. A Task holds its place from when it's let in until it ends, including while it waits for a person, for work or for a retry. Tasks beyond both limits are dropped. It limits only live Tasks: whether the work is done is decided by its work item closing, not by an earlier Task succeeding.
 _Avoid_: lock, mutex, queue, singleton, claim
 
+**Grant request**:
+A Task's agent asking a person for more step grants during the Task. The Task waits for a person as for any hand-over, and the person approves all of the requested grants, some or none. Its outcome is `approved` (all or some), `denied`, `unanswered` (the person replied or continued without deciding) or `withdrawn` (the Task was cancelled). Approved grants are added to that Task's grants for the rest of the Task, never to the step. User-facing copy says "access": "The agent is asking for more access". See `docs/adr/0019-tasks-gain-grants-by-approval.md`.
+_Avoid_: permission request (a permission is the user's, see **Project permission**), escalation
+
+**Requested grant** / **approved grant**:
+The grants a grant request asks for, and the subset of them a person approved.
+_Avoid_: pending grant, candidate grant (those are about a managed connection's **Grant**)
+
 ### Environments
 
 **Environment**:
@@ -187,7 +195,7 @@ The name a membership or invite stores (`read`, `write` or `admin`); its project
 _Avoid_: access level, permission set
 
 **Step feature**:
-What a step declares it will do with work items, such as `Features.workItems.update({ scope: "project", keyPrefix: "acme:" })`; stored as the step's grants. A feature never adds a power: a step's work-item call is allowed only when the claiming user has the project permission, checked on every call, and the step declares a matching feature. Removing a member's role stops their worker's writes on its next call. See `docs/adr/0018-user-built-issue-import.md`.
+What a step declares it will do with work items, such as `Features.workItems.update({ scope: "project", keyPrefix: "acme:" })`; stored as the step's grants. A feature never adds a power: a step's work-item call is allowed only when the claiming user has the project permission, checked on every call, and the step declares a matching feature. Removing a member's role stops their worker's writes on its next call. A Task starts with its step's grants; they can grow during the Task only by a person approving a grant request, and the growth stays on that Task. See `docs/adr/0018-user-built-issue-import.md` and `docs/adr/0019-tasks-gain-grants-by-approval.md`.
 _Avoid_: permission (that's the user's), sync grant, import grant
 
 ### Work items

@@ -95,6 +95,7 @@ const buildStepDefinitionsClient = (stepDefinitions: StepDefinitions) => {
           ? { logs: { archive: spec.logs.archive } }
           : {}),
         grants: (spec.grants ?? []).map((grant) => ({ ...grant })),
+        grantRequests: spec.grantRequests === true,
         status: spec.status,
         projectId,
         ...(spec.toolCall !== undefined
