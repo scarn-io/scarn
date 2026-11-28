@@ -76,6 +76,7 @@ The `scheduler` service POSTs these API routes with
 | ------------------------- | ------------------------------------------------ | ------------------------- | -------------------------------------- |
 | Storage reconciliation    | `/api/internal/usage/reconcile-storage`          | Daily 08:00               | `RECONCILE_CRON_SECRET`                |
 | Abandoned-log cleanup     | `/api/internal/executions/purge-abandoned-logs`  | Daily 08:30               | `RECONCILE_CRON_SECRET`                |
+| Scheduled-Task pruning    | `/api/internal/executions/prune-scheduled-tasks` | Daily 08:45               | `RECONCILE_CRON_SECRET`                |
 | Deleted-storage sweep     | `/api/internal/executions/sweep-deleted-storage` | Daily 09:00               | `RECONCILE_CRON_SECRET`                |
 | Managed-connections sweep | `/api/internal/connections/sweep`                | Daily 09:30               | `RECONCILE_CRON_SECRET`                |
 | GitHub reconciliation     | `/api/internal/integrations/reconcile`           | Daily 10:00               | `GITHUB_RECONCILE_CRON_SECRET`         |

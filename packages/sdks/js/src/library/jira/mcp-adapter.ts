@@ -149,21 +149,26 @@ export function cloudIdOf(site: string): string {
 }
 
 /**
- * JQL for `projectKey`'s issues updated at or after `since`, oldest first.
- * JQL reads absolute dates in the account's timezone, which MCP can't
- * reliably tell us, so `since` is written relative to now (`"-90m"`),
- * rounded down to a whole minute earlier; the poller's overlap absorbs it.
+ * JQL for the issues in any of `projectKeys` updated at or after `since`,
+ * oldest first. JQL reads absolute dates in the account's timezone, which
+ * MCP can't reliably tell us, so `since` is written relative to now
+ * (`"-90m"`), rounded down to a whole minute earlier; the poller's overlap
+ * absorbs it.
  */
 export function buildJiraSearchJql(
-  projectKey: string,
+  projectKeys: readonly string[],
   since: string,
   now: Date,
 ): string {
+  if (projectKeys.length === 0) {
+    throw new Error("A Jira search needs at least one project key.");
+  }
   const minutes = Math.max(
     1,
     Math.ceil((now.getTime() - Date.parse(since)) / 60_000),
   );
-  return `project = "${projectKey}" AND updated >= "-${String(minutes)}m" ORDER BY updated ASC, key ASC`;
+  const projects = projectKeys.map((key) => `"${key}"`).join(", ");
+  return `project in (${projects}) AND updated >= "-${String(minutes)}m" ORDER BY updated ASC, key ASC`;
 }
 
 const label = `MCP tool ${ATLASSIAN_MCP_KEY}.searchJiraIssuesUsingJql`;
@@ -273,13 +278,13 @@ export function createJiraMcpSourceClient(options: {
   const cloudId = cloudIdOf(options.site);
   const now = options.now ?? (() => new Date());
   return {
-    searchIssuesUpdatedSince: async ({ projectKey, since, cursor }) => {
+    searchIssuesUpdatedSince: async ({ projectKeys, since, cursor }) => {
       const state = readCursor(cursor);
       const restartedFrom =
         state !== null && "since" in state ? state.since : null;
       const args = {
         cloudId,
-        jql: buildJiraSearchJql(projectKey, restartedFrom ?? since, now()),
+        jql: buildJiraSearchJql(projectKeys, restartedFrom ?? since, now()),
         fields: JIRA_SEARCH_FIELDS,
         maxResults: JIRA_PAGE_SIZE,
         responseContentFormat: "markdown" as const,

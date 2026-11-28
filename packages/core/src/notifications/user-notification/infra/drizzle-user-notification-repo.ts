@@ -1,4 +1,4 @@
-import { and, desc, eq, isNull, or, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import { getDb } from "@scarn/core/lib/db";
 import type { DbExecutor } from "@scarn/core/lib/db/db-executor";
 import type { UuidV7 } from "@scarn/core/common/contracts/uuid-v7";
@@ -142,6 +142,27 @@ export class DrizzleUserNotificationRepo implements UserNotificationRepo {
             eq(userNotifications.taskId, target.taskId),
             sql`${userNotifications.payloadJson}->>'conversationId' = ${target.conversationId}`,
           ),
+        ),
+      )
+      .returning({ id: userNotifications.id });
+
+    return rows.length;
+  }
+
+  async deleteByTaskIds(
+    target: { projectId: UuidV7; taskIds: UuidV7[] },
+    dbExecutor?: DbExecutor,
+  ): Promise<number> {
+    if (target.taskIds.length === 0) {
+      return 0;
+    }
+    const db = dbExecutor ?? getDb();
+    const rows = await db
+      .delete(userNotifications)
+      .where(
+        and(
+          eq(userNotifications.projectId, target.projectId),
+          inArray(userNotifications.taskId, target.taskIds),
         ),
       )
       .returning({ id: userNotifications.id });

@@ -967,7 +967,7 @@ export default defineAutomation({
 });
 ```
 
-Both factories set `read` on `project`, and `create` and `update` on `project` per Jira project key or repo, with that key prefix and the library's labels. Each run reads every source oldest-updated first from the newest `sourceUpdatedAt` already imported, less 5 minutes; the first run reaches back `firstSyncHorizonDays`. Credentials are resolved by the worker for the library's MCP server only, so they never reach the step's container or `process.env`.
+Both factories set `read` on `project`, and `create` and `update` on `project` per Jira project key or repo, with that key prefix and the library's labels. Each run reads every source oldest-updated first from the newest `sourceUpdatedAt` already imported, less 5 minutes; the first run reaches back `firstSyncHorizonDays`. The Jira step searches all its project keys at once, from the key that is furthest behind. Credentials are resolved by the worker for the library's MCP server only, so they never reach the step's container or `process.env`.
 
 ### `jiraIssueImport(options)`
 

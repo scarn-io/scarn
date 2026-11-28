@@ -41,6 +41,12 @@ export const scheduledJobs: readonly ScheduledJob[] = [
     secretEnv: "RECONCILE_CRON_SECRET",
   },
   {
+    name: "prune-scheduled-tasks",
+    path: "/api/internal/executions/prune-scheduled-tasks",
+    schedules: ["45 8 * * *"],
+    secretEnv: "RECONCILE_CRON_SECRET",
+  },
+  {
     name: "sweep-deleted-storage",
     path: "/api/internal/executions/sweep-deleted-storage",
     schedules: ["0 9 * * *"],

@@ -67,7 +67,7 @@ function clientWith(respond: (args: Args) => unknown) {
 }
 
 const request = {
-  projectKey: "ABC",
+  projectKeys: ["ABC"],
   since: "2026-11-24T10:30:00.000Z",
   cursor: null,
 };
@@ -82,7 +82,7 @@ describe("Jira MCP adapter", () => {
     expect(calls).toEqual([
       {
         cloudId: "acme.atlassian.net",
-        jql: 'project = "ABC" AND updated >= "-90m" ORDER BY updated ASC, key ASC',
+        jql: 'project in ("ABC") AND updated >= "-90m" ORDER BY updated ASC, key ASC',
         fields: expect.arrayContaining(["summary", "description", "updated"]),
         maxResults: JIRA_PAGE_SIZE,
         responseContentFormat: "markdown",
@@ -143,12 +143,33 @@ describe("Jira MCP adapter", () => {
   });
 
   test("relative minutes round up, so the window never starts late", () => {
-    expect(buildJiraSearchJql("ABC", "2026-11-24T11:58:30.000Z", now)).toBe(
-      'project = "ABC" AND updated >= "-2m" ORDER BY updated ASC, key ASC',
+    expect(buildJiraSearchJql(["ABC"], "2026-11-24T11:58:30.000Z", now)).toBe(
+      'project in ("ABC") AND updated >= "-2m" ORDER BY updated ASC, key ASC',
     );
     expect(
-      buildJiraSearchJql("ABC", "2026-11-24T12:00:30.000Z", now),
+      buildJiraSearchJql(["ABC"], "2026-11-24T12:00:30.000Z", now),
     ).toContain('"-1m"');
+  });
+
+  test("one search covers every project key", async () => {
+    expect(
+      buildJiraSearchJql(["ABC", "XYZ"], "2026-11-24T10:30:00.000Z", now),
+    ).toBe(
+      'project in ("ABC", "XYZ") AND updated >= "-90m" ORDER BY updated ASC, key ASC',
+    );
+    expect(() =>
+      buildJiraSearchJql([], "2026-11-24T10:30:00.000Z", now),
+    ).toThrow(/at least one project key/);
+    const { source, calls } = clientWith(() =>
+      page([issue(1)], { isLast: true }),
+    );
+    await source.searchIssuesUpdatedSince({
+      ...request,
+      projectKeys: ["ABC", "XYZ"],
+    });
+    expect(calls.map((call) => call["jql"])).toEqual([
+      'project in ("ABC", "XYZ") AND updated >= "-90m" ORDER BY updated ASC, key ASC',
+    ]);
   });
 
   test("a full page passes the server's token back", async () => {

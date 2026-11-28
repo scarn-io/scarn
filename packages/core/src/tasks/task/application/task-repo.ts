@@ -1,5 +1,9 @@
 import type { UuidV7 } from "@scarn/core/common/contracts/uuid-v7";
 import type { DbExecutor } from "@scarn/core/lib/db/db-executor";
+import type {
+  PrunableScheduledTask,
+  ScheduledTaskRetentionPolicy,
+} from "@scarn/core/tasks/scheduled-task-retention/domain/scheduled-task-retention";
 import type { TaskEntity, TaskStatus } from "../domain/task-entity";
 
 /** A concurrency group of the Tasks of one step key on one work item. */
@@ -44,6 +48,28 @@ export type TaskRepo = {
     scheduleId: UuidV7,
     dbExecutor?: DbExecutor,
   ): Promise<Date | null>;
+  /**
+   * Up to `limit` ended Tasks, across every schedule, that `policy` lets go
+   * (see `scheduled-task-retention.ts`), oldest `scheduledFor` first. Never
+   * returns a Task with a conversation, one another Task's
+   * `previous_task_id` points at, or one a node visit points at.
+   */
+  listPrunableScheduled(
+    policy: ScheduledTaskRetentionPolicy,
+    limit: number,
+    dbExecutor?: DbExecutor,
+  ): Promise<PrunableScheduledTask[]>;
+  /**
+   * The given Tasks that `policy` still lets go, locked for update until the
+   * transaction ends. Rows another transaction holds are skipped. The rule
+   * is checked again after the lock, which also keeps new references
+   * (`previous_task_id`, node visits) from arriving before the delete.
+   */
+  lockPrunableScheduled(
+    ids: UuidV7[],
+    policy: ScheduledTaskRetentionPolicy,
+    dbExecutor: DbExecutor,
+  ): Promise<PrunableScheduledTask[]>;
   /**
    * Takes the transaction-scoped advisory lock of a concurrency group (a
    * step key on a work item, or a schedule), so arrivals and promotions in

@@ -51,6 +51,7 @@ describe("planJobs", () => {
     expect(plan.active.map((job) => job.name)).toEqual([
       "reconcile-storage",
       "purge-abandoned-logs",
+      "prune-scheduled-tasks",
       "sweep-deleted-storage",
       "managed-connections-sweep",
     ]);

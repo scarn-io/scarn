@@ -58,16 +58,13 @@ function issue(key: string, updated: string, labels: string[] = []): JiraIssue {
 
 type Request = Parameters<JiraSourceClient["searchIssuesUpdatedSince"]>[0];
 
-/** A source that serves `pages[projectKey]` one after another. */
-function fakeSource(pages: Record<string, JiraSearchPage[]>) {
+/** A source that serves `pages` one after another, whatever the request. */
+function fakeSource(pages: JiraSearchPage[]) {
   const requests: Request[] = [];
   const source: JiraSourceClient = {
     searchIssuesUpdatedSince: (request) => {
       requests.push(request);
-      const served = requests.filter(
-        (r) => r.projectKey === request.projectKey,
-      ).length;
-      const page = pages[request.projectKey]?.[served - 1];
+      const page = pages[requests.length - 1];
       return Promise.resolve(page ?? { issues: [], next: null });
     },
   };
@@ -96,23 +93,21 @@ const fakeWorkItems = (seed: Parameters<typeof createFakeWorkItems>[1] = {}) =>
     JiraImportOptions["workItems"];
 
 describe("runJiraIssueImport", () => {
-  test("first run reaches back the horizon and upserts each page in order", async () => {
-    const { source, requests } = fakeSource({
-      ABC: [
-        { issues: [issue("ABC-1", "2026-11-20T10:00:00.000Z")], next: "p2" },
-        {
-          issues: [issue("ABC-2", "2026-11-21T10:00:00.000Z", ["bug"])],
-          next: null,
-        },
-      ],
-    });
+  test("first run makes one search per page across every key, from the horizon", async () => {
+    const { source, requests } = fakeSource([
+      { issues: [issue("ABC-1", "2026-11-20T10:00:00.000Z")], next: "p2" },
+      {
+        issues: [issue("ABC-2", "2026-11-21T10:00:00.000Z", ["bug"])],
+        next: null,
+      },
+    ]);
     const workItems = fakeWorkItems();
     const result = await runJiraIssueImport(options(source, workItems));
 
+    const since = "2026-10-25T12:00:00.000Z";
     expect(requests).toEqual([
-      { projectKey: "ABC", since: "2026-10-25T12:00:00.000Z", cursor: null },
-      { projectKey: "ABC", since: "2026-10-25T12:00:00.000Z", cursor: "p2" },
-      { projectKey: "XYZ", since: "2026-10-25T12:00:00.000Z", cursor: null },
+      { projectKeys: ["ABC", "XYZ"], since, cursor: null },
+      { projectKeys: ["ABC", "XYZ"], since, cursor: "p2" },
     ]);
     expect(result).toEqual({
       upserted: 2,
@@ -133,7 +128,7 @@ describe("runJiraIssueImport", () => {
     });
   });
 
-  test("a later run resumes from each key's newest item minus the overlap", async () => {
+  test("a later run searches from the earliest key's cursor and skips what each key already has", async () => {
     const workItems = fakeWorkItems({
       items: [
         {
@@ -152,58 +147,97 @@ describe("runJiraIssueImport", () => {
         },
       ],
     });
-    const { source, requests } = fakeSource({
-      ABC: [
-        {
-          issues: [
-            issue("ABC-1", "2026-11-24T11:00:00.000Z"),
-            issue("ABC-1x", "2026-11-24T11:30:00.000Z"),
-          ],
-          next: null,
-        },
-      ],
-    });
+    const { source, requests } = fakeSource([
+      {
+        issues: [
+          // Inside XYZ's window but before ABC's: ABC already has it.
+          issue("ABC-0", "2026-11-23T09:00:00.000Z"),
+          issue("XYZ-9", "2026-11-23T09:30:00.000Z"),
+          issue("ABC-1", "2026-11-24T11:00:00.000Z"),
+          issue("ABC-1x", "2026-11-24T11:30:00.000Z"),
+        ],
+        next: null,
+      },
+    ]);
     const result = await runJiraIssueImport(options(source, workItems));
     expect(requests.map((r) => r.since)).toEqual([
-      new Date(
-        Date.parse("2026-11-24T11:00:00.000Z") - JIRA_CURSOR_OVERLAP_MS,
-      ).toISOString(),
       new Date(
         Date.parse("2026-11-23T08:00:00.000Z") - JIRA_CURSOR_OVERLAP_MS,
       ).toISOString(),
     ]);
     // The overlap re-reads ABC-1, which isn't newer, so only ABC-1x counts.
-    expect(result.projects[0]).toEqual({
-      projectKey: "ABC",
-      seen: 2,
-      upserted: 1,
-    });
-  });
-
-  test("an issue moved in from another project isn't written under this key", async () => {
-    const { source } = fakeSource({
-      ABC: [
-        { issues: [issue("OLD-3", "2026-11-24T11:00:00.000Z")], next: null },
+    expect(result).toEqual({
+      upserted: 2,
+      projects: [
+        { projectKey: "ABC", seen: 2, upserted: 1 },
+        { projectKey: "XYZ", seen: 1, upserted: 1 },
       ],
     });
+    expect(workItems.items().map((item) => item.platformKey)).not.toContain(
+      "ABC-0",
+    );
+  });
+
+  test("routes each issue on a shared page to its own key", async () => {
+    const { source } = fakeSource([
+      {
+        issues: [
+          issue("XYZ-1", "2026-11-20T10:00:00.000Z"),
+          issue("ABC-1", "2026-11-20T11:00:00.000Z"),
+          issue("XYZ-2", "2026-11-20T12:00:00.000Z"),
+        ],
+        next: null,
+      },
+    ]);
     const workItems = fakeWorkItems();
     const result = await runJiraIssueImport(options(source, workItems));
-    expect(result.projects[0]).toEqual({
-      projectKey: "ABC",
-      seen: 1,
+    expect(result).toEqual({
+      upserted: 3,
+      projects: [
+        { projectKey: "ABC", seen: 1, upserted: 1 },
+        { projectKey: "XYZ", seen: 2, upserted: 2 },
+      ],
+    });
+    expect(workItems.items().map((item) => item.platformKey)).toEqual([
+      "XYZ-1",
+      "ABC-1",
+      "XYZ-2",
+    ]);
+  });
+
+  test("an issue under none of the keys (moved to another project) is dropped", async () => {
+    const { source } = fakeSource([
+      {
+        issues: [
+          issue("OLD-3", "2026-11-24T11:00:00.000Z"),
+          issue("ABCD-1", "2026-11-24T11:01:00.000Z"),
+        ],
+        next: null,
+      },
+    ]);
+    const workItems = fakeWorkItems();
+    const result = await runJiraIssueImport(options(source, workItems));
+    expect(result).toEqual({
       upserted: 0,
+      projects: [
+        { projectKey: "ABC", seen: 0, upserted: 0 },
+        { projectKey: "XYZ", seen: 0, upserted: 0 },
+      ],
     });
     expect(workItems.items()).toEqual([]);
   });
 
-  test("a failing page keeps earlier pages and stops", async () => {
+  test("a failing page keeps earlier pages, and the next run resumes before what it missed", async () => {
     let calls = 0;
     const source: JiraSourceClient = {
       searchIssuesUpdatedSince: () => {
         calls += 1;
         if (calls === 1) {
           return Promise.resolve({
-            issues: [issue("ABC-1", "2026-11-20T10:00:00.000Z")],
+            issues: [
+              issue("ABC-1", "2026-11-20T10:00:00.000Z"),
+              issue("XYZ-1", "2026-11-20T11:00:00.000Z"),
+            ],
             next: "p2",
           });
         }
@@ -216,15 +250,23 @@ describe("runJiraIssueImport", () => {
     ).toBeInstanceOf(McpToolError);
     expect(workItems.items().map((item) => item.platformKey)).toEqual([
       "ABC-1",
+      "XYZ-1",
+    ]);
+
+    // Every unsaved issue was on a later page, so newer than both cursors.
+    const retry = fakeSource([]);
+    await runJiraIssueImport(options(retry.source, workItems));
+    expect(retry.requests.map((r) => r.since)).toEqual([
+      new Date(
+        Date.parse("2026-11-20T10:00:00.000Z") - JIRA_CURSOR_OVERLAP_MS,
+      ).toISOString(),
     ]);
   });
 
   test("a refused upsert fails the run", async () => {
-    const { source } = fakeSource({
-      ABC: [
-        { issues: [issue("ABC-1", "2026-11-20T10:00:00.000Z")], next: null },
-      ],
-    });
+    const { source } = fakeSource([
+      { issues: [issue("ABC-1", "2026-11-20T10:00:00.000Z")], next: null },
+    ]);
     const workItems = fakeWorkItems();
     expect(
       await rejection(
@@ -239,7 +281,7 @@ describe("runJiraIssueImport", () => {
 
   test("an issue with no updated time fails", async () => {
     const broken = issue("ABC-1", "");
-    const { source } = fakeSource({ ABC: [{ issues: [broken], next: null }] });
+    const { source } = fakeSource([{ issues: [broken], next: null }]);
     expect(
       (await rejection(runJiraIssueImport(options(source, fakeWorkItems()))))
         .message,

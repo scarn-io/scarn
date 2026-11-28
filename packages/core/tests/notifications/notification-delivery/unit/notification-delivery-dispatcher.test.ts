@@ -77,6 +77,10 @@ class FakeNotificationRepo implements UserNotificationRepo {
     return Promise.resolve(0);
   }
 
+  deleteByTaskIds(): Promise<number> {
+    return Promise.resolve(0);
+  }
+
   deleteByProjectId(): Promise<number> {
     return Promise.resolve(0);
   }

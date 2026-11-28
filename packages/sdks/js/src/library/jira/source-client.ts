@@ -17,11 +17,12 @@ export type JiraSearchPage = {
 
 export type JiraSourceClient = {
   /**
-   * One page of `projectKey`'s issues updated at or after `since` (an ISO
-   * datetime), oldest first. Pass the previous page's `next` as `cursor`.
+   * One page of the issues in any of `projectKeys` updated at or after
+   * `since` (an ISO datetime), oldest first across all of them. Pass the
+   * previous page's `next` as `cursor`.
    */
   readonly searchIssuesUpdatedSince: (request: {
-    readonly projectKey: string;
+    readonly projectKeys: readonly string[];
     readonly since: string;
     readonly cursor: JiraSearchCursor | null;
   }) => Promise<JiraSearchPage>;

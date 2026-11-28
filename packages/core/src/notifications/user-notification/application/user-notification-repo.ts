@@ -39,6 +39,14 @@ export interface UserNotificationRepo {
     target: { projectId: UuidV7; taskId: UuidV7; conversationId: UuidV7 },
     dbExecutor?: DbExecutor,
   ): Promise<number>;
+  /**
+   * Deletes the project's notifications about the given Tasks (`task_id`)
+   * and, by cascade, their deliveries. Returns the number deleted.
+   */
+  deleteByTaskIds(
+    target: { projectId: UuidV7; taskIds: UuidV7[] },
+    dbExecutor?: DbExecutor,
+  ): Promise<number>;
   /** Deletes the project's notifications and, by cascade, their deliveries. */
   deleteByProjectId(
     projectId: UuidV7,

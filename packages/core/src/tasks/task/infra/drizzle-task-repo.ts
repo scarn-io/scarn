@@ -11,6 +11,10 @@ import {
 import { getDb } from "@scarn/core/lib/db";
 import type { DbExecutor } from "@scarn/core/lib/db/db-executor";
 import { stepDefinitions, taskRuns, tasks } from "@scarn/core/lib/db/schema";
+import {
+  lockPrunableScheduled,
+  selectPrunableScheduled,
+} from "./scheduled-task-pruning-queries";
 import { parseUuidV7, type UuidV7 } from "@scarn/core/common/contracts/uuid-v7";
 import { PersistenceError } from "@scarn/core/lib/errors";
 import {
@@ -204,6 +208,15 @@ export class DrizzleTaskRepo implements TaskRepo {
       .limit(1);
     return row?.scheduledFor ?? null;
   }
+
+  listPrunableScheduled: TaskRepo["listPrunableScheduled"] = async (
+    policy,
+    limit,
+    dbExecutor,
+  ) => await selectPrunableScheduled(policy, limit, dbExecutor ?? getDb());
+
+  lockPrunableScheduled: TaskRepo["lockPrunableScheduled"] =
+    lockPrunableScheduled;
 
   async lockConcurrencyGroup(
     group: ConcurrencyGroupKey,
