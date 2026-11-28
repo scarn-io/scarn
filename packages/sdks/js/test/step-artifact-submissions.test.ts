@@ -9,6 +9,7 @@ import {
   checkReturnedArtifactPaths,
   checkSubmittedArtifactFiles,
   findSubmittableArtifactFields,
+  findSubmittableArtifactFieldsWithProblems,
   readStepArtifactSubmissions,
   writeStepArtifactSubmissions,
   type StepArtifactSubmissions,
@@ -27,6 +28,7 @@ const schema = z.toJSONSchema(
 const fields = findSubmittableArtifactFields(schema);
 
 const submitted = (stored: string) => ({
+  kind: "file" as const,
   stored,
   sourcePath: `/tmp/${stored}`,
   sizeBytes: 3,
@@ -37,6 +39,26 @@ describe("findSubmittableArtifactFields", () => {
     expect(fields.map((field) => field.path)).toEqual([
       "reproVideo",
       "details.screenshot",
+    ]);
+  });
+
+  test.concurrent("reports keyword problems alongside the fields", () => {
+    const result = findSubmittableArtifactFieldsWithProblems({
+      type: "object",
+      properties: {
+        clip: {
+          type: "string",
+          "x-scarn-artifact": { accept: [".mp4"], maxBytes: 10 },
+        },
+        shots: {
+          type: "array",
+          items: { type: "string", "x-scarn-artifact": { accept: [] } },
+        },
+      },
+    });
+    expect(result.fields.map((field) => field.path)).toEqual(["clip"]);
+    expect(result.problems).toEqual([
+      { path: "clip", message: 'unknown key "maxBytes"' },
     ]);
   });
 });
@@ -205,10 +227,7 @@ describe("checkReturnedArtifactPaths", () => {
         "`details.screenshot` is details/shot.jpg, but .scarn/step-artifacts/details/shot.jpg is missing or empty.",
       ]);
 
-      await writeFile(
-        join(workspace, ".scarn/step-artifacts/clip.mp4"),
-        "mp4",
-      );
+      await writeFile(join(workspace, ".scarn/step-artifacts/clip.mp4"), "mp4");
       expect(
         await checkReturnedArtifactPaths({
           workspacePath: workspace,

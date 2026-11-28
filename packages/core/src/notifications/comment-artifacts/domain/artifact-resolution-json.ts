@@ -7,6 +7,7 @@ import {
   type ArtifactMarkerRef,
   type ArtifactMarkerWarning,
   type ResolvedArtifactMarker,
+  type ResolvedCommentArtifact,
   type StoredArtifactMarkerOutcome,
 } from "./comment-artifact-types";
 
@@ -41,6 +42,20 @@ const refJson = (ref: ArtifactMarkerRef): AnyJsonObject =>
   ref.type === "signal"
     ? { type: "signal", stepKey: ref.stepKey, signalKey: ref.signalKey }
     : { type: "path", pattern: ref.pattern };
+
+/**
+ * A bundle is stored like a file with `kind: "bundle"`; its share link is a
+ * capability and is not persisted.
+ */
+const storedArtifactJson = (
+  artifact: ResolvedCommentArtifact,
+): AnyJsonObject => ({
+  artifactId: artifact.artifactId,
+  name: artifact.name,
+  contentType: artifact.contentType,
+  kind: artifact.kind,
+  sizeBytes: artifact.sizeBytes,
+});
 
 /** The per-marker outcomes stored on a delivery, skipping malformed entries. */
 export const readArtifactMarkerOutcomes = readStoredArtifactMarkerOutcomes;
@@ -84,7 +99,9 @@ export const buildArtifactResolutionJson = (input: {
       required: isRequiredArtifactMarker(marker),
       reason: resolution.status === "unavailable" ? resolution.reason : null,
       artifact:
-        resolution.status === "resolved" ? { ...resolution.artifact } : null,
+        resolution.status === "resolved"
+          ? storedArtifactJson(resolution.artifact)
+          : null,
     })),
     leftOut: (input.leftOut ?? []).map((entry) => ({
       markerIndex: entry.markerIndex,

@@ -13,6 +13,7 @@ import { createUuidV7, type UuidV7 } from "@/common/contracts/uuid-v7";
 import { DrizzleStepDefinitionRepo } from "@/pipeline-definitions/step-definition/infra/drizzle-step-definition-repo";
 import { concurrentTest } from "tests/utils";
 import v1AgentFixture from "../fixtures/v1-agent.json";
+import v1AgentBundleFieldFixture from "../fixtures/v1-agent-bundle-field.json";
 import v1CodeFixture from "../fixtures/v1-code.json";
 import v1McpToolFixture from "../fixtures/v1-mcp-tool.json";
 import v1RetryGrantsConcurrencyFixture from "../fixtures/v1-retry-grants-concurrency.json";
@@ -105,6 +106,7 @@ const withProject = async (run: (projectId: UuidV7) => Promise<void>) => {
 describe("step definition stored json compatibility", () => {
   for (const [name, fixture] of [
     ["agent", v1AgentFixture],
+    ["agent-bundle-field", v1AgentBundleFieldFixture],
     ["code", v1CodeFixture],
     ["mcp-tool", v1McpToolFixture],
     ["retry-grants-concurrency", v1RetryGrantsConcurrencyFixture],
@@ -128,7 +130,7 @@ describe("step definition stored json compatibility", () => {
           expect(stepDefinition?.inputSchemaJson).toEqual(
             fixture.inputSchemaJson,
           );
-          expect(stepDefinition?.resultSchemaJson).toEqual(
+          expect(stepDefinition?.resultSchemaJson as unknown).toEqual(
             fixture.resultSchemaJson,
           );
           expect(stepDefinition?.errors).toEqual(fixture.errorsJson);

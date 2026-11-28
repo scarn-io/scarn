@@ -1015,7 +1015,7 @@ export const notifyBlocked = codeStep({
 
 ## Attaching artifacts to comments
 
-A step can produce files, such as a screen recording or a screenshot, and a work item comment can show them. There are two kinds of artifact:
+A step can produce files, such as a screen recording or a screenshot, and a work item comment can show them. It can also produce a [bundle](#declaring-a-bundle-field), a folder such as an HTML report, which a comment links to. There are two kinds of artifact:
 
 - **Declared** artifacts are fields in the step's result schema, built with `z.artifact(...)`. They have a known name, can drive routing, and can be embedded by reference.
 - **Undeclared** artifacts are any other files the step leaves in `scarn.artifactsDir`. They are uploaded too, and a comment can only point at them by file name or glob.
@@ -1046,12 +1046,50 @@ scarn-submit-artifact using field "reproVideo".`,
 
 An artifact field can't sit inside an array.
 
+### Declaring a bundle field
+
+A **bundle** is a folder with an entry page, such as an HTML bug report with its screenshots and videos, or a built prototype. Declare one with `z.artifact.bundle(...)`:
+
+```typescript
+export const reproduceBug = defineStep({
+  key: "reproduce-bug",
+  name: "Reproduce Bug",
+  result: z.object({
+    summary: z.string(),
+    report: z.artifact.bundle({ share: true }),
+  }),
+  agentPrompt: `Write an HTML report in out/report/ and submit the folder with
+scarn-submit-artifact using field "report".`,
+});
+```
+
+| Option  | Default        | Meaning                                                                                        |
+| ------- | -------------- | ---------------------------------------------------------------------------------------------- |
+| `entry` | `"index.html"` | The page a link opens, relative to the folder. It must end in `.html`.                         |
+| `share` | `false`        | Share the bundle by link as soon as it is uploaded. See [Sharing a bundle](#sharing-a-bundle). |
+
+A bundle field can't sit inside an array; that is an error when the step is defined. An older worker or plugin that doesn't know bundle fields refuses the step with "this step needs a newer Scarn worker". Update the CLI on the machine that runs the worker.
+
+To build a bundle that works when it is opened from a link, see [Building shareable HTML bundles](/scarn/guides/artifact-bundles/).
+
 ### Submitting the file from an agent step
 
-The agent calls the `scarn-submit-artifact` tool with `{ path, field?, name? }`. The tool copies the file into the step's artifacts:
+The agent calls the `scarn-submit-artifact` tool with `{ path, field?, name?, entry? }`. The tool copies the file or folder into the step's artifacts at once, so later edits don't change what was submitted:
 
 - With `field`, the file fills that declared field and is stored as `<field><ext>`, for example `reproVideo.mp4`. Submitting again replaces the earlier file.
-- With only `name`, it becomes an undeclared artifact under that name.
+- With `field` naming a bundle field, `path` must be a folder that holds the field's entry page. It is stored as `<field>/`. The entry comes from the field, so `entry` is refused.
+- With only `name`, a file becomes an undeclared artifact under that name.
+- A folder without `field` becomes an **undeclared bundle**, stored as `<name>/`. `name` defaults to the folder's name and `entry` to `index.html`. This works in any Task, including chat and ad hoc Tasks.
+
+A bundle is refused when its entry page is missing, when it is empty, when a symlink points outside the folder, or when it is over the limits:
+
+| Limit          | Value   |
+| -------------- | ------- |
+| Files          | 1,000   |
+| Size of a file | 100 MiB |
+| Total size     | 250 MiB |
+
+Each file also counts against the project's storage, like any other artifact. A self-hosted server can set its own limits with `ARTIFACT_BUNDLE_MAX_FILES`, `ARTIFACT_BUNDLE_MAX_FILE_BYTES` and `ARTIFACT_BUNDLE_MAX_BYTES`. The submit tool always checks the defaults above, so raising a server limit doesn't let an agent submit a bigger bundle.
 
 When the agent writes its findings, Scarn fills in the artifact fields itself. The agent must not write artifact values into its findings. A nullable field that was never submitted is set to `null`. A non-nullable field that was never submitted is rejected, and the agent is asked to submit the file.
 
@@ -1086,6 +1124,30 @@ export const renderChart = codeStep({
 
 The worker checks every returned path: it must stay inside the folder, exist, be non-empty and have an accepted extension.
 
+To fill a bundle field, write a folder under `artifactsDir` and return `Artifact.path(...)` with the folder's path. The folder must hold the field's entry page. A folder returned for a file field, or a file for a bundle field, is an error. Code steps can't create undeclared bundles.
+
+```typescript
+fn: async (_input, { artifactsDir }) => {
+  await writeReport(join(artifactsDir, "report")); // writes report/index.html
+  return { report: Artifact.path("report") };
+},
+```
+
+### Sharing a bundle
+
+A bundle is private until it is shared. A **share link** lets anyone with the link open the bundle in a browser, with no Scarn account. There are two ways to share:
+
+- **From the step definition.** A bundle field declared with `share: true` is shared as soon as it has uploaded. Only a step definition can turn this on, and only project admins can push step definitions. An agent can't share a bundle, and undeclared bundles are never shared automatically.
+- **By hand.** On the run's artifact list, or on the bundle's page, click **Share**. You need write access to the project.
+
+The share panel shows the link with a copy button and the warning "Anyone with this link can view this bundle. It expires on <date>." **Revoke link** turns the link off at once. Project settings list every active share link, and you can revoke them there too.
+
+- A share link expires with the bundle, after 30 days. Sharing doesn't extend it. An expired link shows a "Link expired" page; a revoked or unknown link shows "Link not available".
+- Sharing is explicit even in public projects. People who aren't project members can open a bundle only through a share link.
+- The bundle page also previews the bundle for project members, whether or not it is shared.
+
+Share links are served from a separate content address. A self-hosted server needs a second hostname for it (see [Configuration](/scarn/self-hosting/quickstart/#configuration)). Without one, bundles still upload and download, but they can't be previewed or shared, and the bundle page says so.
+
 ### Embedding and linking in a comment
 
 `Artifact.embed(target, { caption })` and `Artifact.link(target, { label })` return a marker string that you put in a notification `body` or in a step prompt:
@@ -1116,6 +1178,18 @@ Rules for markers:
 - Embedding a step that isn't in the pipeline is an error. Embedding a field whose `accept` has no extension the platforms can embed is a warning.
 
 Scarn checks the markers in step prompts when you push.
+
+#### Linking a bundle
+
+A bundle can only be linked, never embedded. `Artifact.embed` on a bundle field is an error when the step is defined.
+
+```typescript
+Artifact.link({ step: reproduceBug, path: "report" }, { label: "Full report" });
+```
+
+To link an undeclared bundle, use a path marker with its name and a trailing slash: `Artifact.link("prototype/", { label: "Prototype" })`, which writes `[Prototype](artifact:prototype/)`. A `![...]` marker that matches a bundle is shown as a link.
+
+The link goes to the bundle's share link when it is shared, so anyone on the issue can open it. Otherwise it goes to the bundle's page in Scarn, which only project members can open.
 
 ### When the file is missing
 
@@ -1182,7 +1256,7 @@ Recording of the failure
 - **GitHub** comments are posted with the GitHub App's installation token (or your token), and GitHub doesn't let those tokens upload files, so every file is linked. This is the same with the App and with a token.
 - **Bitbucket** links every file in v1.
 
-Links go to the file's page in Scarn, `/projects/<projectId>/artifacts/<artifactId>`, which shows a preview and a download button. Readers need to sign in to Scarn as a project member to open it, so people on the issue who aren't project members can't see linked files. After 30 days the page says the file has expired.
+Links go to the file's page in Scarn, `/projects/<projectId>/artifacts/<artifactId>`, which shows a preview and a download button. Readers need to sign in to Scarn as a project member to open it, so people on the issue who aren't project members can't see linked files. After 30 days the page says the file has expired. A link to a shared bundle is the exception: it goes to the share link, which anyone can open.
 
 ## Versioning
 

@@ -2,6 +2,8 @@ import { createApiClient } from "./create-api-client";
 import { TaskRuns } from "./generated/sdk.gen";
 import type {
   GetApiTaskRunsByTaskRunIdLogsData,
+  PostApiTaskRunsByTaskRunIdArtifactBundlesByBundleIdFinalizeData,
+  PostApiTaskRunsByTaskRunIdArtifactBundlesData,
   PostApiTaskRunsByTaskRunIdArtifactFailuresData,
   PostApiTaskRunsByTaskRunIdArtifactUploadUrlData,
   PostApiTaskRunsByTaskRunIdArtifactsData,
@@ -226,6 +228,30 @@ const buildTaskPlaneClient = (taskRuns: TaskRuns) => {
     },
     listTaskArtifacts: async ({ taskRunId }: TaskRunRef) =>
       unwrap(await taskRuns.listTaskArtifacts({ path: { taskRunId } })),
+    /** Opens a `pending` bundle; members then upload with its `bundleId`. */
+    createArtifactBundle: async ({
+      taskRunId,
+      ...body
+    }: TaskRunRef & PostApiTaskRunsByTaskRunIdArtifactBundlesData["body"]) =>
+      unwrap(
+        await taskRuns.createArtifactBundle({ path: { taskRunId }, body }),
+      ),
+    /** Marks the bundle `ready` once its recorded members match `manifest`. */
+    finalizeArtifactBundle: async ({
+      taskRunId,
+      bundleId,
+      ...body
+    }: TaskRunRef & {
+      bundleId: string;
+    } & PostApiTaskRunsByTaskRunIdArtifactBundlesByBundleIdFinalizeData["body"]) =>
+      unwrap(
+        await taskRuns.finalizeArtifactBundle({
+          path: { taskRunId, bundleId },
+          body,
+        }),
+      ),
+    listArtifactBundles: async ({ taskRunId }: TaskRunRef) =>
+      unwrap(await taskRuns.listArtifactBundles({ path: { taskRunId } })),
     /** Not unwrapped: callers read `response.status` (404 = push unavailable). */
     issueWorkSignalToken: ({
       projectId,

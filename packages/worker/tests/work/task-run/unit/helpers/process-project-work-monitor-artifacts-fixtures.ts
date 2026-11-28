@@ -102,13 +102,17 @@ export function createDeps(config: {
   getSessionStatus: ProcessProjectWorkDeps["agentRunner"]["getSessionStatus"];
   prune?: ReturnType<typeof vi.fn>;
   recordArtifactFailure?: ReturnType<typeof vi.fn>;
+  saveBundle?: ReturnType<typeof vi.fn>;
 }): ProcessProjectWorkDeps {
   return {
     workerClient: {
       userId: parseUuidV7("01966a2c-9494-7db5-aa46-0f8f5cbbe004"),
       claimTaskRuns: vi.fn(),
       heartbeatTaskRun: vi.fn(() =>
-        Promise.resolve({ status: "running" as const, managedAuthority: "ok" as const }),
+        Promise.resolve({
+          status: "running" as const,
+          managedAuthority: "ok" as const,
+        }),
       ),
       reportTaskRunBaseCommit: vi.fn(),
       failTaskRun: vi.fn(() => Promise.resolve(undefined)),
@@ -121,6 +125,8 @@ export function createDeps(config: {
       createArtifactUploadUrl: vi.fn(),
       createSessionUploadUrl: vi.fn(),
       recordArtifact: vi.fn(),
+      createArtifactBundle: vi.fn(),
+      finalizeArtifactBundle: vi.fn(),
       recordArtifactFailure: config.recordArtifactFailure ?? vi.fn(),
       appendTaskLogs: vi.fn(() => Promise.resolve({ nextOffset: 0 })),
     },
@@ -134,6 +140,7 @@ export function createDeps(config: {
     },
     artifactStore: {
       saveArtifact: config.saveArtifact,
+      ...(config.saveBundle ? { saveBundle: config.saveBundle } : {}),
       ...(config.prune ? { prune: config.prune } : {}),
     },
     sleep: vi.fn(() => Promise.resolve(undefined)),

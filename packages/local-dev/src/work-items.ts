@@ -256,6 +256,15 @@ export const WORK_ITEMS: LocalWorkItem[] = [
     expect: "fail: unknown-sku",
   },
   {
+    key: "bundles",
+    title: "Coupon field hides behind the cart total on mobile",
+    note: "ld-bundles: write-report fills a share: true bundle field (auto-shared), build-prototype's agent submits an undeclared prototype bundle (private), and post-bundle-links drafts a comment linking both.",
+    description:
+      "On phones the coupon input on /checkout.html slides under the cart total, so shoppers can't tap it to enter SAVE10. Expected the coupon field to sit above the total.",
+    fields: { demo: "bundles" },
+    expect: "succeed: done",
+  },
+  {
     key: "routing-closed",
     title: "Closed: old header bug",
     note: "Closed, so it is never ready and nothing runs.",

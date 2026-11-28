@@ -15,7 +15,10 @@ import {
   DELETED_MESSAGE,
   EXPIRED_MESSAGE,
 } from "@/components/artifacts/artifact-media-preview";
-import { artifactPagePath } from "@/components/artifacts/artifact-page-path";
+import {
+  artifactBundlePagePath,
+  artifactPagePath,
+} from "@/components/artifacts/artifact-page-path";
 import { humanizeArtifactMarkerReason } from "@/components/artifacts/artifact-marker-reason";
 import {
   useArtifactDownloadUrl,
@@ -44,6 +47,19 @@ const resolvedByRef = (
     ]),
   );
 
+const BUNDLE_ARTIFACT_KIND = "bundle";
+
+const isBundle = (resolved: ResolvedMarker | null): boolean =>
+  resolved?.artifact?.kind === BUNDLE_ARTIFACT_KIND;
+
+const resolvedArtifactPath = (
+  projectId: string,
+  artifact: NonNullable<ResolvedMarker["artifact"]>,
+): string =>
+  artifact.kind === BUNDLE_ARTIFACT_KIND
+    ? artifactBundlePagePath(projectId, artifact.artifactId)
+    : artifactPagePath(projectId, artifact.artifactId);
+
 const isStandalone = (body: string, match: ArtifactMarkerMatch): boolean => {
   const before = body.slice(0, match.start);
   const after = body.slice(match.end);
@@ -55,8 +71,9 @@ const isStandalone = (body: string, match: ArtifactMarkerMatch): boolean => {
 
 /**
  * Splits a draft body into prose and standalone embed markers. Link and
- * inline markers become ordinary markdown links to the artifact page, or the
- * bare caption when the artifact is unavailable.
+ * inline markers, and any marker on a bundle (never embedded), become
+ * ordinary markdown links to the artifact or bundle page, or the bare
+ * caption when the artifact is unavailable.
  */
 const toSegments = (
   body: string,
@@ -71,15 +88,19 @@ const toSegments = (
     text += body.slice(cursor, match.start);
     cursor = match.end;
     const resolved = byRef.get(formatArtifactMarkerRef(match.ref)) ?? null;
-    if (match.kind === "embed" && isStandalone(body, match)) {
+    if (
+      match.kind === "embed" &&
+      !isBundle(resolved) &&
+      isStandalone(body, match)
+    ) {
       segments.push({ type: "text", text });
       segments.push({ type: "embed", match, resolved });
       text = "";
       continue;
     }
-    const artifactId = resolved?.artifact?.artifactId;
-    text += artifactId
-      ? `[${escapeLinkText(match.text)}](${artifactPagePath(projectId, artifactId)})`
+    const artifact = resolved?.artifact;
+    text += artifact
+      ? `[${escapeLinkText(match.text)}](${resolvedArtifactPath(projectId, artifact)})`
       : match.text;
   }
   segments.push({ type: "text", text: text + body.slice(cursor) });

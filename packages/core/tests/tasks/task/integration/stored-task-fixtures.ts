@@ -15,6 +15,7 @@ import {
 } from "@/lib/db/schema";
 import type { TaskStatus } from "@/tasks/task/domain/task-entity";
 import v1Agent from "../fixtures/v1-agent.json";
+import v1AgentBundleField from "../fixtures/v1-agent-bundle-field.json";
 import v1Code from "../fixtures/v1-code.json";
 import v1Failed from "../fixtures/v1-failed.json";
 import v1HeldChanges from "../fixtures/v1-held-changes.json";
@@ -42,6 +43,7 @@ export type StoredTaskFixture = {
 
 export const storedTaskFixtures = {
   agent: v1Agent,
+  "agent-bundle-field": v1AgentBundleField,
   code: v1Code,
   "mcp-tool": v1McpTool,
   scheduled: v1Scheduled,

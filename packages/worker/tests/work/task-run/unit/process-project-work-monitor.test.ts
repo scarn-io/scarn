@@ -37,6 +37,8 @@ function createWorkerClient(input: {
     createArtifactUploadUrl: vi.fn(),
     createSessionUploadUrl: vi.fn(),
     recordArtifact: vi.fn(),
+    createArtifactBundle: vi.fn(),
+    finalizeArtifactBundle: vi.fn(),
     recordArtifactFailure: vi.fn(),
     appendTaskLogs: vi.fn(() => Promise.resolve({ nextOffset: 0 })),
   };

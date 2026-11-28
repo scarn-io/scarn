@@ -64,6 +64,7 @@ describe("deleteRunStorage", () => {
     const failingStore: ObjectStore = {
       putObject: () => Promise.resolve({ sizeBytes: 0 }),
       getObject: () => Promise.resolve(null),
+      getObjectStream: () => Promise.resolve(null),
       getPresignedGetUrl: () => Promise.resolve(null),
       getPresignedPutUrl: () => Promise.resolve(null),
       deleteObject: () => Promise.resolve(),

@@ -87,6 +87,7 @@ const fakeObjectStore = (
       },
       getPresignedPutUrl: () => Promise.resolve(null),
       getObject: () => Promise.resolve(null),
+      getObjectStream: () => Promise.resolve(null),
       putObject: () => Promise.resolve({ sizeBytes: 0 }),
       deleteObject: () => Promise.resolve(),
       deletePrefix: () => Promise.resolve({ deletedCount: 0 }),
@@ -111,6 +112,7 @@ const fakeObjectStoreWithBytes = (
           sizeBytes: body.byteLength,
         });
       },
+      getObjectStream: () => Promise.resolve(null),
       putObject: () => Promise.resolve({ sizeBytes: 0 }),
       deleteObject: () => Promise.resolve(),
       deletePrefix: () => Promise.resolve({ deletedCount: 0 }),

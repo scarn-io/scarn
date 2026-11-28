@@ -45,7 +45,8 @@ const markerLabel = (marker: StepMarker): string =>
 
 /**
  * Check: a step marker names an artifact field in that step's result, and an
- * embed marker points at a field some platform can show inline. Only steps in
+ * embed marker points at a file field (never a bundle) some platform can
+ * show inline. Only steps in
  * this batch that declare a result schema can be checked.
  */
 function checkMarkerTargets(
@@ -85,6 +86,16 @@ function checkMarkerTargets(
         }
 
         if (marker.kind !== "embed") continue;
+        if (field.bundle) {
+          issues.push({
+            check: "artifact-marker",
+            severity: "error",
+            message:
+              `${where}, but "${marker.resultPath}" on step "${target.key}" ` +
+              `is a bundle, which can't be embedded. Use Artifact.link instead.`,
+          });
+          continue;
+        }
         const { accept } = field;
         if (accept.length === 0) continue;
         if (accept.some((extension) => embeddable.has(extension))) continue;

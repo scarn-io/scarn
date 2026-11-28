@@ -186,6 +186,73 @@ describe("scarnSubmitStepFindings", () => {
     },
   );
 
+  test.concurrent(
+    "fills a bundle field in with the bundle folder",
+    async () => {
+      const workspacePath = await mkdtemp(
+        path.join(os.tmpdir(), "scarn-submit-findings-"),
+      );
+      await writeCurrentExecutionInfo(workspacePath, {
+        taskRunId: "task-id",
+        resultSchemaJson: {
+          type: "object",
+          required: ["report"],
+          additionalProperties: false,
+          properties: {
+            report: {
+              type: "string",
+              "x-scarn-artifact": {
+                accept: [],
+                bundle: { entry: "index.html" },
+              },
+            },
+          },
+        },
+      });
+      await mkdir(path.join(workspacePath, "dist"));
+      await writeFile(path.join(workspacePath, "dist/index.html"), "<html>");
+      await submitArtifact({ path: "dist", field: "report" }, workspacePath);
+
+      await submitStepFindings({ findingsJson: {} }, workspacePath);
+
+      expect(
+        JSON.parse(
+          await readFile(
+            path.join(workspacePath, ".scarn/step-findings-submission.json"),
+            "utf8",
+          ),
+        ),
+      ).toEqual({ findingsJson: { report: "report" } });
+    },
+  );
+
+  test.concurrent(
+    "refuses a schema whose artifact keyword has unknown keys",
+    async () => {
+      const workspacePath = await mkdtemp(
+        path.join(os.tmpdir(), "scarn-submit-findings-"),
+      );
+      await writeCurrentExecutionInfo(workspacePath, {
+        taskRunId: "task-id",
+        resultSchemaJson: {
+          type: "object",
+          properties: {
+            clip: {
+              type: "string",
+              "x-scarn-artifact": { accept: [".mp4"], maxBytes: 10 },
+            },
+          },
+        },
+      });
+
+      expect(
+        submitStepFindings({ findingsJson: {} }, workspacePath),
+      ).rejects.toThrow(
+        'Artifact field `clip`: unknown key "maxBytes"; this step needs a newer Scarn worker.',
+      );
+    },
+  );
+
   test("reports every artifact and schema problem in one error", async () => {
     const workspacePath = await mkdtemp(
       path.join(os.tmpdir(), "scarn-submit-findings-"),

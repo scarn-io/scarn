@@ -29,16 +29,27 @@ export type ParsedArtifactMarkers = {
   warnings: ArtifactMarkerWarning[];
 };
 
+/** The `kind` a resolved artifact has when it is a bundle. */
+export const BUNDLE_COMMENT_ARTIFACT_KIND = "bundle";
+
+/**
+ * What a marker resolved to: a stored file, or a bundle (`kind: "bundle"`,
+ * `artifactId` is the bundle id, `name` the bundle name, and `bundle` is
+ * set). A bundle is always rendered as a link, never embedded.
+ */
 export type ResolvedCommentArtifact = {
   artifactId: string;
   name: string;
   contentType: string | null;
   kind: string;
   sizeBytes: number | null;
+  /** Set for a bundle: its active share link, or null when it is private. */
+  bundle?: { shareUrl: string | null };
 };
 
 /**
- * Why a marker could not be resolved. Step refs also carry the artifact
+ * Why a marker could not be resolved (`bundle_not_ready`: the bundle is
+ * still pending or failed). Step refs also carry the artifact
  * field's own `unavailable_reason` from `task_artifact_resolutions`
  * (`not_reported`, `wrong_extension`, `not_found`, `upload_failed:<code>`).
  */
@@ -49,6 +60,7 @@ export type ArtifactMarkerUnavailableReason =
   | "no_match"
   | "deleted"
   | "expired"
+  | "bundle_not_ready"
   | (string & {});
 
 export type ArtifactMarkerResolution =

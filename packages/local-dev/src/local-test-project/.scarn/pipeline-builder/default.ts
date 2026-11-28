@@ -1,5 +1,6 @@
 import { contains, equal } from "@scarn/sdk/pipelines";
 import { defineAutomation, onEvent, skip } from "@scarn/sdk/automations";
+import ldBundles from "./ld-bundles";
 import ldChoice from "./ld-choice";
 import ldDecision from "./ld-decision";
 import ldErrors from "./ld-errors";
@@ -77,6 +78,10 @@ export default defineAutomation({
         {
           when: (r) => equal(r.workItem.fields.demo, "codestep-with-mcp"),
           to: ldCodestepWithMcp,
+        },
+        {
+          when: (r) => equal(r.workItem.fields.demo, "bundles"),
+          to: ldBundles,
         },
       ],
       otherwise: ldLinear,

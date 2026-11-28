@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { AppContext } from "@scarn/core/lib/di";
 import { purgeAbandonedTaskLogs } from "@scarn/core/tasks/task-log/application/purge-abandoned-task-logs";
 import { sweepDeletedStorage } from "@scarn/core/tasks/storage-sweep/application/sweep-deleted-storage";
+import { sweepStaleArtifactBundles } from "@scarn/core/tasks/storage-sweep/application/sweep-stale-artifact-bundles";
 import { pruneScheduledTasks } from "@scarn/core/tasks/scheduled-task-retention/application/prune-scheduled-tasks";
 import { createServiceAuthenticated } from "./service-authenticated";
 import { stdErrors } from "./task-run-route-helpers";
@@ -17,6 +18,8 @@ const sweepDeletedStorageResultSchema = z.object({
   swept: z.number().int().nonnegative(),
   failed: z.number().int().nonnegative(),
   overdue: z.number().int().nonnegative(),
+  staleBundlesFailed: z.number().int().nonnegative(),
+  staleBundleMembersDeleted: z.number().int().nonnegative(),
 });
 
 const pruneScheduledTasksResultSchema = z.object({
@@ -36,7 +39,9 @@ const pruneScheduledTasksResultSchema = z.object({
 //
 // `sweep-deleted-storage` is the delayed second pass of the deletion contract
 // (docs/adr/0003-conversation-deletion-contract.md): it deletes the stored
-// objects of deleted runs once their pre-issued upload URLs have expired.
+// objects of deleted runs once their pre-issued upload URLs have expired. It
+// also fails artifact bundles left `pending` for over a day and deletes the
+// members they did upload.
 // Scheduled by infra/sweep-deleted-storage-schedule.tf.
 //
 // `prune-scheduled-tasks` deletes the old, ended Tasks schedules started,
@@ -77,13 +82,28 @@ export const createExecutionsMaintenanceRoutes = (appContext: AppContext) =>
           tags: ["TaskRuns"],
         },
       },
-      async () =>
-        await sweepDeletedStorage({
+      async () => {
+        const swept = await sweepDeletedStorage({
           storageSweepRepo: appContext.storageSweepRepo,
           objectStore: appContext.objectStore,
           timeProvider: appContext.timeProvider,
           logger: appContext.logger,
-        }),
+        });
+        const staleBundles = await sweepStaleArtifactBundles({
+          artifactBundleRepo: appContext.artifactBundleRepo,
+          artifactRepo: appContext.artifactRepo,
+          objectStore: appContext.objectStore,
+          orgRepo: appContext.orgRepo,
+          domainEventDispatcher: appContext.domainEventDispatcher,
+          timeProvider: appContext.timeProvider,
+          logger: appContext.logger,
+        });
+        return {
+          ...swept,
+          staleBundlesFailed: staleBundles.failed,
+          staleBundleMembersDeleted: staleBundles.membersDeleted,
+        };
+      },
     )
     .post(
       "/internal/executions/prune-scheduled-tasks",

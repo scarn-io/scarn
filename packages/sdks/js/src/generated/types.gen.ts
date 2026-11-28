@@ -8396,6 +8396,7 @@ export type PostApiTaskRunsByTaskRunIdArtifactUploadUrlData = {
         relativeStorePath: string;
         contentType?: string;
         sizeBytes?: number;
+        bundleId?: string;
     };
     path: {
         taskRunId: string;
@@ -8680,6 +8681,7 @@ export type GetApiTaskRunsByTaskRunIdArtifactsResponses = {
         contentType: string | null;
         kind: 'generic' | 'playwright-trace' | 'video' | 'image';
         createdAt: string;
+        bundleId: string | null;
     }>;
 };
 
@@ -8693,6 +8695,7 @@ export type PostApiTaskRunsByTaskRunIdArtifactsData = {
         sizeBytes: number;
         contentType?: string;
         kind?: 'generic' | 'playwright-trace' | 'video' | 'image';
+        bundleId?: string;
     };
     path: {
         taskRunId: string;
@@ -8835,10 +8838,595 @@ export type PostApiTaskRunsByTaskRunIdArtifactsResponses = {
         contentType: string | null;
         kind: 'generic' | 'playwright-trace' | 'video' | 'image';
         createdAt: string;
+        bundleId: string | null;
     };
 };
 
 export type PostApiTaskRunsByTaskRunIdArtifactsResponse = PostApiTaskRunsByTaskRunIdArtifactsResponses[keyof PostApiTaskRunsByTaskRunIdArtifactsResponses];
+
+export type GetApiTaskRunsByTaskRunIdArtifactBundlesData = {
+    body?: never;
+    path: {
+        taskRunId: string;
+    };
+    query?: never;
+    url: '/api/task-runs/{taskRunId}/artifact-bundles';
+};
+
+export type GetApiTaskRunsByTaskRunIdArtifactBundlesErrors = {
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 404
+     */
+    404: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type GetApiTaskRunsByTaskRunIdArtifactBundlesError = GetApiTaskRunsByTaskRunIdArtifactBundlesErrors[keyof GetApiTaskRunsByTaskRunIdArtifactBundlesErrors];
+
+export type GetApiTaskRunsByTaskRunIdArtifactBundlesResponses = {
+    /**
+     * Response for status 200
+     */
+    200: Array<{
+        id: string;
+        taskRunId: string;
+        projectId: string;
+        name: string;
+        fieldPath: string | null;
+        rootPath: string;
+        entryPath: string;
+        status: 'pending' | 'ready' | 'failed';
+        fileCount: number | null;
+        sizeBytes: number | null;
+        createdAt: string;
+        finalizedAt: string | null;
+        expiresAt: string;
+        expired: boolean;
+    }>;
+};
+
+export type GetApiTaskRunsByTaskRunIdArtifactBundlesResponse = GetApiTaskRunsByTaskRunIdArtifactBundlesResponses[keyof GetApiTaskRunsByTaskRunIdArtifactBundlesResponses];
+
+export type PostApiTaskRunsByTaskRunIdArtifactBundlesData = {
+    body: {
+        claimToken: string;
+        name: string;
+        rootPath: string;
+        entryPath?: string;
+        fieldPath?: string;
+    };
+    path: {
+        taskRunId: string;
+    };
+    query?: never;
+    url: '/api/task-runs/{taskRunId}/artifact-bundles';
+};
+
+export type PostApiTaskRunsByTaskRunIdArtifactBundlesErrors = {
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 404
+     */
+    404: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 409
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type PostApiTaskRunsByTaskRunIdArtifactBundlesError = PostApiTaskRunsByTaskRunIdArtifactBundlesErrors[keyof PostApiTaskRunsByTaskRunIdArtifactBundlesErrors];
+
+export type PostApiTaskRunsByTaskRunIdArtifactBundlesResponses = {
+    /**
+     * Response for status 200
+     */
+    200: {
+        id: string;
+        taskRunId: string;
+        projectId: string;
+        name: string;
+        fieldPath: string | null;
+        rootPath: string;
+        entryPath: string;
+        status: 'pending' | 'ready' | 'failed';
+        fileCount: number | null;
+        sizeBytes: number | null;
+        createdAt: string;
+        finalizedAt: string | null;
+        expiresAt: string;
+        expired: boolean;
+    };
+};
+
+export type PostApiTaskRunsByTaskRunIdArtifactBundlesResponse = PostApiTaskRunsByTaskRunIdArtifactBundlesResponses[keyof PostApiTaskRunsByTaskRunIdArtifactBundlesResponses];
+
+export type PostApiTaskRunsByTaskRunIdArtifactBundlesByBundleIdFinalizeData = {
+    body: {
+        claimToken: string;
+        manifest: Array<{
+            path: string;
+            sizeBytes: number;
+        }>;
+    };
+    path: {
+        taskRunId: string;
+        bundleId: string;
+    };
+    query?: never;
+    url: '/api/task-runs/{taskRunId}/artifact-bundles/{bundleId}/finalize';
+};
+
+export type PostApiTaskRunsByTaskRunIdArtifactBundlesByBundleIdFinalizeErrors = {
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 404
+     */
+    404: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 409
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type PostApiTaskRunsByTaskRunIdArtifactBundlesByBundleIdFinalizeError = PostApiTaskRunsByTaskRunIdArtifactBundlesByBundleIdFinalizeErrors[keyof PostApiTaskRunsByTaskRunIdArtifactBundlesByBundleIdFinalizeErrors];
+
+export type PostApiTaskRunsByTaskRunIdArtifactBundlesByBundleIdFinalizeResponses = {
+    /**
+     * Response for status 200
+     */
+    200: {
+        id: string;
+        taskRunId: string;
+        projectId: string;
+        name: string;
+        fieldPath: string | null;
+        rootPath: string;
+        entryPath: string;
+        status: 'pending' | 'ready' | 'failed';
+        fileCount: number | null;
+        sizeBytes: number | null;
+        createdAt: string;
+        finalizedAt: string | null;
+        expiresAt: string;
+        expired: boolean;
+    };
+};
+
+export type PostApiTaskRunsByTaskRunIdArtifactBundlesByBundleIdFinalizeResponse = PostApiTaskRunsByTaskRunIdArtifactBundlesByBundleIdFinalizeResponses[keyof PostApiTaskRunsByTaskRunIdArtifactBundlesByBundleIdFinalizeResponses];
+
+export type GetApiTaskRunsByTaskRunIdArtifactBundlesByBundleIdData = {
+    body?: never;
+    path: {
+        taskRunId: string;
+        bundleId: string;
+    };
+    query?: never;
+    url: '/api/task-runs/{taskRunId}/artifact-bundles/{bundleId}';
+};
+
+export type GetApiTaskRunsByTaskRunIdArtifactBundlesByBundleIdErrors = {
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 404
+     */
+    404: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type GetApiTaskRunsByTaskRunIdArtifactBundlesByBundleIdError = GetApiTaskRunsByTaskRunIdArtifactBundlesByBundleIdErrors[keyof GetApiTaskRunsByTaskRunIdArtifactBundlesByBundleIdErrors];
+
+export type GetApiTaskRunsByTaskRunIdArtifactBundlesByBundleIdResponses = {
+    /**
+     * Response for status 200
+     */
+    200: {
+        id: string;
+        taskRunId: string;
+        projectId: string;
+        name: string;
+        fieldPath: string | null;
+        rootPath: string;
+        entryPath: string;
+        status: 'pending' | 'ready' | 'failed';
+        fileCount: number | null;
+        sizeBytes: number | null;
+        createdAt: string;
+        finalizedAt: string | null;
+        expiresAt: string;
+        expired: boolean;
+    };
+};
+
+export type GetApiTaskRunsByTaskRunIdArtifactBundlesByBundleIdResponse = GetApiTaskRunsByTaskRunIdArtifactBundlesByBundleIdResponses[keyof GetApiTaskRunsByTaskRunIdArtifactBundlesByBundleIdResponses];
 
 export type GetApiTaskRunsByTaskRunIdArtifactsByArtifactIdDownloadUrlData = {
     body?: never;
@@ -22055,7 +22643,24 @@ export type GetApiProjectsByProjectIdArtifactsResponses = {
             contentType: string | null;
             kind: 'generic' | 'playwright-trace' | 'video' | 'image';
             createdAt: string;
+            bundleId: string | null;
             nodeKey: string | null;
+        }>;
+        bundles: Array<{
+            id: string;
+            taskRunId: string;
+            projectId: string;
+            name: string;
+            fieldPath: string | null;
+            rootPath: string;
+            entryPath: string;
+            status: 'pending' | 'ready' | 'failed';
+            fileCount: number | null;
+            sizeBytes: number | null;
+            createdAt: string;
+            finalizedAt: string | null;
+            expiresAt: string;
+            expired: boolean;
         }>;
         hasMore: boolean;
     };
@@ -22433,6 +23038,838 @@ export type DeleteApiProjectsByProjectIdArtifactsBatchResponses = {
 };
 
 export type DeleteApiProjectsByProjectIdArtifactsBatchResponse = DeleteApiProjectsByProjectIdArtifactsBatchResponses[keyof DeleteApiProjectsByProjectIdArtifactsBatchResponses];
+
+export type GetApiProjectsByProjectIdArtifactBundlesByBundleIdData = {
+    body?: never;
+    path: {
+        projectId: string;
+        bundleId: string;
+    };
+    query?: never;
+    url: '/api/projects/{projectId}/artifact-bundles/{bundleId}';
+};
+
+export type GetApiProjectsByProjectIdArtifactBundlesByBundleIdErrors = {
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 404
+     */
+    404: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type GetApiProjectsByProjectIdArtifactBundlesByBundleIdError = GetApiProjectsByProjectIdArtifactBundlesByBundleIdErrors[keyof GetApiProjectsByProjectIdArtifactBundlesByBundleIdErrors];
+
+export type GetApiProjectsByProjectIdArtifactBundlesByBundleIdResponses = {
+    /**
+     * Response for status 200
+     */
+    200: {
+        id: string;
+        taskRunId: string;
+        projectId: string;
+        name: string;
+        fieldPath: string | null;
+        rootPath: string;
+        entryPath: string;
+        status: 'pending' | 'ready' | 'failed';
+        fileCount: number | null;
+        sizeBytes: number | null;
+        createdAt: string;
+        finalizedAt: string | null;
+        expiresAt: string;
+        expired: boolean;
+        deleted: boolean;
+        members: Array<{
+            id: string;
+            taskRunId: string;
+            projectId: string;
+            relativeStorePath: string;
+            storeRef: string | null;
+            objectKey: string | null;
+            sizeBytes: number | null;
+            contentType: string | null;
+            kind: 'generic' | 'playwright-trace' | 'video' | 'image';
+            createdAt: string;
+            bundleId: string | null;
+        }>;
+    };
+};
+
+export type GetApiProjectsByProjectIdArtifactBundlesByBundleIdResponse = GetApiProjectsByProjectIdArtifactBundlesByBundleIdResponses[keyof GetApiProjectsByProjectIdArtifactBundlesByBundleIdResponses];
+
+export type GetApiProjectsByProjectIdArtifactSharesData = {
+    body?: never;
+    path: {
+        projectId: string;
+    };
+    query?: never;
+    url: '/api/projects/{projectId}/artifact-shares';
+};
+
+export type GetApiProjectsByProjectIdArtifactSharesErrors = {
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type GetApiProjectsByProjectIdArtifactSharesError = GetApiProjectsByProjectIdArtifactSharesErrors[keyof GetApiProjectsByProjectIdArtifactSharesErrors];
+
+export type GetApiProjectsByProjectIdArtifactSharesResponses = {
+    /**
+     * Response for status 200
+     */
+    200: {
+        shares: Array<{
+            id: string;
+            bundleId: string;
+            bundleName: string;
+            taskRunId: string;
+            status: 'private' | 'shared' | 'expired' | 'deleted' | 'unavailable';
+            url: string | null;
+            createdVia: 'person' | 'step';
+            createdAt: string;
+            expiresAt: string;
+        }>;
+        hasMore: boolean;
+    };
+};
+
+export type GetApiProjectsByProjectIdArtifactSharesResponse = GetApiProjectsByProjectIdArtifactSharesResponses[keyof GetApiProjectsByProjectIdArtifactSharesResponses];
+
+export type DeleteApiProjectsByProjectIdArtifactBundlesByBundleIdShareData = {
+    body?: never;
+    path: {
+        projectId: string;
+        bundleId: string;
+    };
+    query?: never;
+    url: '/api/projects/{projectId}/artifact-bundles/{bundleId}/share';
+};
+
+export type DeleteApiProjectsByProjectIdArtifactBundlesByBundleIdShareErrors = {
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 404
+     */
+    404: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type DeleteApiProjectsByProjectIdArtifactBundlesByBundleIdShareError = DeleteApiProjectsByProjectIdArtifactBundlesByBundleIdShareErrors[keyof DeleteApiProjectsByProjectIdArtifactBundlesByBundleIdShareErrors];
+
+export type DeleteApiProjectsByProjectIdArtifactBundlesByBundleIdShareResponses = {
+    /**
+     * Response for status 200
+     */
+    200: {
+        bundleId: string;
+        status: 'private' | 'shared' | 'expired' | 'deleted' | 'unavailable';
+        reason: 'sharing_disabled' | null;
+        url: string | null;
+        expiresAt: string;
+        shareDeclared: boolean;
+        share: {
+            id: string;
+            createdVia: 'person' | 'step';
+            createdAt: string;
+        } | null;
+    };
+};
+
+export type DeleteApiProjectsByProjectIdArtifactBundlesByBundleIdShareResponse = DeleteApiProjectsByProjectIdArtifactBundlesByBundleIdShareResponses[keyof DeleteApiProjectsByProjectIdArtifactBundlesByBundleIdShareResponses];
+
+export type GetApiProjectsByProjectIdArtifactBundlesByBundleIdShareData = {
+    body?: never;
+    path: {
+        projectId: string;
+        bundleId: string;
+    };
+    query?: never;
+    url: '/api/projects/{projectId}/artifact-bundles/{bundleId}/share';
+};
+
+export type GetApiProjectsByProjectIdArtifactBundlesByBundleIdShareErrors = {
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 404
+     */
+    404: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type GetApiProjectsByProjectIdArtifactBundlesByBundleIdShareError = GetApiProjectsByProjectIdArtifactBundlesByBundleIdShareErrors[keyof GetApiProjectsByProjectIdArtifactBundlesByBundleIdShareErrors];
+
+export type GetApiProjectsByProjectIdArtifactBundlesByBundleIdShareResponses = {
+    /**
+     * Response for status 200
+     */
+    200: {
+        bundleId: string;
+        status: 'private' | 'shared' | 'expired' | 'deleted' | 'unavailable';
+        reason: 'sharing_disabled' | null;
+        url: string | null;
+        expiresAt: string;
+        shareDeclared: boolean;
+        share: {
+            id: string;
+            createdVia: 'person' | 'step';
+            createdAt: string;
+        } | null;
+    };
+};
+
+export type GetApiProjectsByProjectIdArtifactBundlesByBundleIdShareResponse = GetApiProjectsByProjectIdArtifactBundlesByBundleIdShareResponses[keyof GetApiProjectsByProjectIdArtifactBundlesByBundleIdShareResponses];
+
+export type PostApiProjectsByProjectIdArtifactBundlesByBundleIdShareData = {
+    body?: never;
+    path: {
+        projectId: string;
+        bundleId: string;
+    };
+    query?: never;
+    url: '/api/projects/{projectId}/artifact-bundles/{bundleId}/share';
+};
+
+export type PostApiProjectsByProjectIdArtifactBundlesByBundleIdShareErrors = {
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 404
+     */
+    404: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 409
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type PostApiProjectsByProjectIdArtifactBundlesByBundleIdShareError = PostApiProjectsByProjectIdArtifactBundlesByBundleIdShareErrors[keyof PostApiProjectsByProjectIdArtifactBundlesByBundleIdShareErrors];
+
+export type PostApiProjectsByProjectIdArtifactBundlesByBundleIdShareResponses = {
+    /**
+     * Response for status 200
+     */
+    200: {
+        bundleId: string;
+        status: 'private' | 'shared' | 'expired' | 'deleted' | 'unavailable';
+        reason: 'sharing_disabled' | null;
+        url: string | null;
+        expiresAt: string;
+        shareDeclared: boolean;
+        share: {
+            id: string;
+            createdVia: 'person' | 'step';
+            createdAt: string;
+        } | null;
+    };
+};
+
+export type PostApiProjectsByProjectIdArtifactBundlesByBundleIdShareResponse = PostApiProjectsByProjectIdArtifactBundlesByBundleIdShareResponses[keyof PostApiProjectsByProjectIdArtifactBundlesByBundleIdShareResponses];
+
+export type PostApiProjectsByProjectIdArtifactBundlesByBundleIdPreviewData = {
+    body?: never;
+    path: {
+        projectId: string;
+        bundleId: string;
+    };
+    query?: never;
+    url: '/api/projects/{projectId}/artifact-bundles/{bundleId}/preview';
+};
+
+export type PostApiProjectsByProjectIdArtifactBundlesByBundleIdPreviewErrors = {
+    /**
+     * Response for status 401
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 402
+     */
+    402: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 403
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 404
+     */
+    404: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 409
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 422
+     */
+    422: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+    /**
+     * Response for status 500
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail?: string;
+        instance?: string;
+        code?: string;
+        errors?: Array<{
+            path: string;
+            message: string;
+            summary?: string;
+        }>;
+        meta?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type PostApiProjectsByProjectIdArtifactBundlesByBundleIdPreviewError = PostApiProjectsByProjectIdArtifactBundlesByBundleIdPreviewErrors[keyof PostApiProjectsByProjectIdArtifactBundlesByBundleIdPreviewErrors];
+
+export type PostApiProjectsByProjectIdArtifactBundlesByBundleIdPreviewResponses = {
+    /**
+     * Response for status 200
+     */
+    200: {
+        url: string;
+        expiresAt: string;
+    };
+};
+
+export type PostApiProjectsByProjectIdArtifactBundlesByBundleIdPreviewResponse = PostApiProjectsByProjectIdArtifactBundlesByBundleIdPreviewResponses[keyof PostApiProjectsByProjectIdArtifactBundlesByBundleIdPreviewResponses];
 
 export type GetApiProjectsByProjectIdNotificationsData = {
     body?: never;

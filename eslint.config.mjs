@@ -67,6 +67,8 @@ export default defineConfig(
       "**/src/generated/**",
       "**/playwright-report/**",
       "**/test-results/**",
+      // Static bundle files the artifact-sharing e2e uploads as-is.
+      "apps/next/tests/e2e/fixtures/artifact-bundles/**",
       // Astro apps: only have minimal TS shims, no meaningful code to lint
       "apps/docs/**",
       "apps/landing/**",

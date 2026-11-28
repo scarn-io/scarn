@@ -80,6 +80,7 @@ const presigningStore = (): {
     store: {
       putObject: () => Promise.resolve({ sizeBytes: 0 }),
       getObject: () => Promise.resolve(null),
+      getObjectStream: () => Promise.resolve(null),
       getPresignedGetUrl: () => Promise.resolve(null),
       getPresignedPutUrl: (
         key: string,

@@ -1,6 +1,8 @@
 import { gunzipSync, gzipSync } from "node:zlib";
 import type {
   GetObjectResult,
+  GetObjectStreamResult,
+  ObjectByteRange,
   ObjectStore,
   PutObjectInput,
 } from "@scarn/core/artifacts/object-store";
@@ -48,6 +50,41 @@ export class InMemoryObjectStore implements ObjectStore {
       body,
       contentType: stored.contentType,
       sizeBytes: body.byteLength,
+    };
+  }
+
+  /** Slices the stored bytes; gzip-encoded objects ignore `range` (see the port). */
+  // eslint-disable-next-line @typescript-eslint/require-await
+  async getObjectStream(
+    key: string,
+    options: { range?: ObjectByteRange | undefined; signal?: AbortSignal } = {},
+  ): Promise<GetObjectStreamResult | null> {
+    options.signal?.throwIfAborted();
+    const stored = this.objects.get(key);
+    if (!stored) {
+      return null;
+    }
+    const whole =
+      stored.contentEncoding === "gzip" ? gunzipSync(stored.body) : stored.body;
+    const total = whole.byteLength;
+    const range =
+      options.range && stored.contentEncoding !== "gzip"
+        ? {
+            start: options.range.start,
+            end: Math.min(options.range.end ?? total - 1, total - 1),
+          }
+        : null;
+    const body = range ? whole.slice(range.start, range.end + 1) : whole;
+    return {
+      body: new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(body);
+          controller.close();
+        },
+      }),
+      contentType: stored.contentType,
+      sizeBytes: total,
+      contentRange: range ? { ...range, total } : null,
     };
   }
 

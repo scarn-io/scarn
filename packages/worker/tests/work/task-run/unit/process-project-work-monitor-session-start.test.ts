@@ -102,7 +102,10 @@ describe("monitorStartedClaimedTaskRun session-start fail-fast", () => {
         userId: parseUuidV7("01966a2c-9494-7db5-aa46-0f8f5cbbe004"),
         claimTaskRuns: vi.fn(),
         heartbeatTaskRun: vi.fn(() =>
-          Promise.resolve({ status: "running" as const, managedAuthority: "ok" as const }),
+          Promise.resolve({
+            status: "running" as const,
+            managedAuthority: "ok" as const,
+          }),
         ),
         reportTaskRunBaseCommit: vi.fn(),
         failTaskRun: vi.fn(() => Promise.resolve(undefined)),
@@ -115,6 +118,8 @@ describe("monitorStartedClaimedTaskRun session-start fail-fast", () => {
         createArtifactUploadUrl: vi.fn(),
         createSessionUploadUrl: vi.fn(),
         recordArtifact: vi.fn(),
+        createArtifactBundle: vi.fn(),
+        finalizeArtifactBundle: vi.fn(),
         recordArtifactFailure: vi.fn(),
         appendTaskLogs: vi.fn(() => Promise.resolve({ nextOffset: 0 })),
       },

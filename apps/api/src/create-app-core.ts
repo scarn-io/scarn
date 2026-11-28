@@ -3,6 +3,7 @@ import { autoHead } from "elysia/auto-head";
 import type { AppContext as CoreAppContext } from "@scarn/core/lib/di";
 import { initServerAnalytics } from "./analytics";
 import { cors } from "./http/cors";
+import { createArtifactContentGate } from "./http/routes/artifact-content";
 import { apiErrorHandler } from "./http/error-handler";
 import type { OpenApiPlugin } from "./http/openapi";
 import { createAuthRoutes } from "./http/routes/auth";
@@ -64,6 +65,8 @@ export type CreateAppCoreOptions<OpenApi = OpenApiPlugin> = {
 
 /**
  * Builds the `/api` Elysia app around a caller-supplied OpenAPI plugin.
+ * The artifact content gate goes first: requests for the content origin are
+ * answered at the root (`/s/…`, `/p/…`) before CORS or any API route runs.
  * `createApp` passes the live `@elysia/openapi` plugin; the Cloudflare Worker
  * passes documents pre-rendered at build time, so `@elysia/openapi` (and the
  * spec generation it does on first request) stays out of the Worker bundle.
@@ -86,7 +89,10 @@ export const createAppCore = <OpenApi extends OpenApiPlugin | AnyElysia>(
 
   const routeMetadataRef = { current: buildRouteMetadata([]) };
   const { app: timingApp, captureErrorTiming } = applyPosthogApiTiming(
-    new Elysia({ prefix: "/api" }).use(cors()).use(openApi),
+    new Elysia({ prefix: "/api" })
+      .use(createArtifactContentGate(appContext))
+      .use(cors())
+      .use(openApi),
     routeMetadataRef,
   );
   const app = timingApp

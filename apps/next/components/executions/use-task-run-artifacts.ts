@@ -6,10 +6,12 @@ import { unwrapTreatyResponse } from "@/app/_lib/scarn-treaty";
 import {
   artifactSchema,
   artifactDownloadUrlSchema,
+  listArtifactBundlesResponseSchema,
   parseUuidV7,
 } from "@scarn/api/frontend-contracts";
 import { z } from "zod";
 import type {
+  ArtifactBundleContract,
   ArtifactContract,
   ArtifactDownloadUrlContract,
 } from "@scarn/api/frontend-contracts";
@@ -67,6 +69,11 @@ export type ArtifactsStatus = "idle" | "loading" | "loaded" | "error";
 export type TaskRunArtifactsData = {
   /** The task's persisted artifacts, once loaded. */
   artifacts: ArtifactContract[];
+  /**
+   * The task's artifact bundles, fetched alongside the artifacts. A failed
+   * bundles fetch reads as no bundles, so member files still list loose.
+   */
+  bundles: ArtifactBundleContract[];
   /** Coarse lifecycle state for driving idle/loading/loaded/error UI. */
   status: ArtifactsStatus;
   /** True while the list request is in flight (equivalent to status === "loading"). */
@@ -85,7 +92,9 @@ export type TaskRunArtifactsData = {
    * hook's `error` state, including the 402 read-cap and 410 expired-artifact
    * messages).
    */
-  getDownloadUrl: (artifactId: string) => Promise<ArtifactDownloadUrlContract | null>;
+  getDownloadUrl: (
+    artifactId: string,
+  ) => Promise<ArtifactDownloadUrlContract | null>;
 };
 
 /**
@@ -103,6 +112,7 @@ export function useTaskRunArtifacts(
 ): TaskRunArtifactsData {
   const apiClient = useMemo(() => getBrowserScarnApiClient(), []);
   const [artifacts, setArtifacts] = useState<ArtifactContract[]>([]);
+  const [bundles, setBundles] = useState<ArtifactBundleContract[]>([]);
   const [status, setStatus] = useState<ArtifactsStatus>("idle");
   const [error, setError] = useState("");
   // Guards against overlapping list fetches (e.g. rapid expand/collapse).
@@ -119,16 +129,23 @@ export function useTaskRunArtifacts(
     void (async () => {
       try {
         const id = parseUuidV7(taskRunId);
-        const result = await unwrapTreatyResponse(
-          apiClient.api["task-runs"]({ taskRunId: id }).artifacts.get(),
-        );
+        const taskRunApi = apiClient.api["task-runs"]({ taskRunId: id });
+        const [result, bundlesResult] = await Promise.all([
+          unwrapTreatyResponse(taskRunApi.artifacts.get()),
+          unwrapTreatyResponse(taskRunApi["artifact-bundles"].get()).catch(
+            () => null,
+          ),
+        ]);
         const parsed = z.array(artifactSchema).safeParse(result);
         if (!parsed.success) {
           setStatus("error");
           setError("Received invalid artifacts payload");
           return;
         }
+        const parsedBundles =
+          listArtifactBundlesResponseSchema.safeParse(bundlesResult);
         setArtifacts(parsed.data);
+        setBundles(parsedBundles.success ? parsedBundles.data : []);
         setStatus("loaded");
       } catch (loadError) {
         setStatus("error");
@@ -188,6 +205,7 @@ export function useTaskRunArtifacts(
 
   return {
     artifacts,
+    bundles,
     status,
     loading: status === "loading",
     error,

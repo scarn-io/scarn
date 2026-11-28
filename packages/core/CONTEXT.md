@@ -184,6 +184,32 @@ _Avoid_: source branch, environment branch
 The branch a readWrite run commits to: a new `scarn/<key>-<id>` branch, or the base branch itself with `WorkBranch.base()`.
 _Avoid_: feature branch, output branch
 
+### Artifacts
+
+**Artifact bundle**:
+A folder of static files a Task run submitted as one artifact, such as an HTML bug report with its screenshots and videos, or a built prototype. Each file in it is still an ordinary artifact, stored, metered and expired like any other; the bundle records their shared root and its entry page. It can be opened only once every file has uploaded, and it is private until it is shared. Bundles hold static content only: no backends or dev servers.
+_Avoid_: site, app, archive, zip, folder artifact
+
+**Bundle field**:
+A declared result field that a bundle fills, written as `z.artifact.bundle({ entry, share })` in a step's result schema. The bundle's root is written into the findings at that field, the field can be required, and markers can point at it. Only a bundle field can be shared automatically, when it says `share: true`. See `docs/adr/0020-auto-share-on-declared-bundle-field.md`.
+_Avoid_: bundle artifact (say bundle field or undeclared bundle), share flag (sharing is a field's policy, not a request's)
+
+**Undeclared bundle**:
+A bundle submitted with a name and no field, the same way undeclared files are. Any Task can submit one, including a chat or a prompt Task. It is never shared automatically: it stays private until a person shares it.
+_Avoid_: extra bundle, ad hoc bundle, unnamed bundle
+
+**Entry page**:
+The `.html` file inside a bundle that opens when someone follows its link. It defaults to `index.html`; a bundle field declares its own.
+_Avoid_: index (it needn't be `index.html`), landing page, main file
+
+**Share link**:
+The URL on the content origin that lets anyone holding it view one bundle without a Scarn account. It is made by a person with project write permission or by a bundle field's `share: true`, never by an agent. Its token is `<shareId>.<mac>`, so Scarn can show it again at any time; revoking it stops it working at once, and it still expires with the bundle's files. See `docs/adr/0019-artifact-content-origin.md`.
+_Avoid_: public link (public means a public project), share token (that's only the path segment), permalink
+
+**Content origin**:
+The separate site that serves bundles: `/s/<token>/…` for share links and `/p/<previewToken>/…` for previews in the app. It is a different registrable domain from the app and API and outside the auth-cookie domain, so the browser never sends it Scarn's session cookie. Without one configured, bundles still upload and download but can't be previewed or shared. See `docs/adr/0019-artifact-content-origin.md`.
+_Avoid_: CDN, artifact domain, user-content domain (in prose), bucket (bytes are streamed through the API, never from presigned URLs)
+
 ### Projects
 
 **Project permission**:

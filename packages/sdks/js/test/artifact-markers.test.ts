@@ -73,6 +73,9 @@ const artifactStep = (accept: readonly string[]): StepDefinitionSpec =>
     z.object({ reproVideo: artifact({ accept }), note: z.string() }),
   );
 
+const bundleStep = (): StepDefinitionSpec =>
+  stepSpec("record", z.object({ report: artifact.bundle({ share: true }) }));
+
 const commentStep = (prompt: string): StepDefinitionSpec => ({
   ...stepSpec("comment", null),
   prompt,
@@ -142,6 +145,27 @@ describe("validateDefinitionSpecs — artifact markers", () => {
       expect(markerIssues([commentStep(prompt)])).toEqual([]);
     },
   );
+
+  test.concurrent("rejects Artifact.embed on a bundle field", () => {
+    const report = { step: { key: "record" }, path: "report" } as const;
+    const issues = markerIssues([
+      bundleStep(),
+      commentStep(Artifact.embed(report, { caption: "Report" })),
+    ]);
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.severity).toBe("error");
+    expect(issues[0]?.message).toContain("is a bundle");
+  });
+
+  test.concurrent("accepts Artifact.link on a bundle field", () => {
+    const report = { step: { key: "record" }, path: "report" } as const;
+    expect(
+      markerIssues([
+        bundleStep(),
+        commentStep(Artifact.link(report, { label: "Full report" })),
+      ]),
+    ).toEqual([]);
+  });
 
   test.concurrent("ignores path markers", () => {
     const prompt = Artifact.embed("shots/*.png", { caption: "Shots" });

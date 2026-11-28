@@ -92,7 +92,10 @@ function createDeps(
       userId: parseUuidV7("01966a2c-9494-7db5-aa46-0f8f5cbbe004"),
       claimTaskRuns: vi.fn(),
       heartbeatTaskRun: vi.fn(() =>
-        Promise.resolve({ status: "running" as const, managedAuthority: "ok" as const }),
+        Promise.resolve({
+          status: "running" as const,
+          managedAuthority: "ok" as const,
+        }),
       ),
       reportTaskRunBaseCommit: vi.fn(),
       failTaskRun: vi.fn(),
@@ -104,6 +107,8 @@ function createDeps(
       createArtifactUploadUrl: vi.fn(),
       createSessionUploadUrl: vi.fn(),
       recordArtifact: vi.fn(),
+      createArtifactBundle: vi.fn(),
+      finalizeArtifactBundle: vi.fn(),
       recordArtifactFailure: vi.fn(),
     },
     createRunTracker: vi.fn(),
@@ -122,13 +127,14 @@ function createDeps(
 async function setUpWorkspace(input: {
   findingsJson: AnyJsonValue;
   files?: Record<string, string>;
+  resultSchemaJson?: Record<string, unknown>;
 }): Promise<string> {
   const workspacePath = await mkdtemp(
     path.join(os.tmpdir(), "scarn-findings-artifacts-"),
   );
   await writeCurrentExecutionInfoFile(workspacePath, {
     taskRunId: TASK_ID,
-    resultSchemaJson: RESULT_SCHEMA,
+    resultSchemaJson: input.resultSchemaJson ?? RESULT_SCHEMA,
     turnsRemaining: null,
   });
   await writeFile(
@@ -165,6 +171,7 @@ async function persist(
 }
 
 const submitted = (stored: string) => ({
+  kind: "file" as const,
   stored,
   sourcePath: `/tmp/${stored}`,
   sizeBytes: 5,
@@ -301,6 +308,68 @@ describe("findings artifact checks — code steps", () => {
       expect(error?.message).toBe(
         "`reproVideo` accepts .webm, .mp4, but clip.mkv has .mkv.",
       );
+    },
+  );
+});
+
+describe("findings artifact checks — artifact keywords this worker can't read", () => {
+  test.concurrent(
+    "fails the step with the newer-worker hint for an unknown keyword key",
+    async () => {
+      const workspacePath = await setUpWorkspace({
+        findingsJson: { report: "out/report" },
+        files: { "out/report/index.html": "<h1>hi</h1>" },
+        resultSchemaJson: {
+          type: "object",
+          properties: {
+            report: {
+              type: "string",
+              "x-scarn-artifact": {
+                accept: [],
+                bundle: { entry: "index.html" },
+                expires: "1d",
+              },
+            },
+          },
+        },
+      });
+
+      for (const mode of ["agent", "code"] as const) {
+        const { completeTaskRun, error } = await persist(workspacePath, mode);
+
+        expect(error?.message).toContain("Artifact field `report`");
+        expect(error?.message).toContain(
+          "this step needs a newer Scarn worker",
+        );
+        expect(completeTaskRun).not.toHaveBeenCalled();
+      }
+    },
+  );
+
+  test.concurrent(
+    "completes a code step that fills a bundle field with a folder",
+    async () => {
+      const workspacePath = await setUpWorkspace({
+        findingsJson: { report: "out/report" },
+        files: { "out/report/index.html": "<h1>hi</h1>" },
+        resultSchemaJson: {
+          type: "object",
+          properties: {
+            report: {
+              type: "string",
+              "x-scarn-artifact": {
+                accept: [],
+                bundle: { entry: "index.html" },
+              },
+            },
+          },
+        },
+      });
+
+      const { completeTaskRun, error } = await persist(workspacePath, "code");
+
+      expect(error).toBeNull();
+      expect(completeTaskRun).toHaveBeenCalledTimes(1);
     },
   );
 });

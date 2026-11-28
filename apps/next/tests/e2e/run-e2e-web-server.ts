@@ -35,6 +35,30 @@ const nextServerEnv: Record<string, string> = {
   E2E_SKIP_TYPECHECK: "1",
 };
 
+const e2eApiPort = process.env["E2E_API_PORT"] ?? "3101";
+const e2eArtifactContentUrl =
+  process.env["E2E_ARTIFACT_CONTENT_URL"] ??
+  `http://artifacts.localhost:${e2eApiPort}`;
+
+// Runtime-only env shared by `next start` and the standalone Bun API. Kept out
+// of `nextServerEnv` so it doesn't feed the build-input hash: nothing here is
+// inlined at build time. Object storage is the local RustFS from the repo's
+// docker-compose (`docker compose up -d rustfs rustfs-init`). The Bun API
+// serves the artifact content origin (`/s/<token>/`), which must be its own
+// host: Next only mounts the API under `/api`.
+const runtimeEnv: Record<string, string> = {
+  S3_BUCKET: process.env["E2E_S3_BUCKET"] ?? "scarn-logs",
+  S3_REGION: "us-east-1",
+  S3_ENDPOINT: process.env["E2E_S3_ENDPOINT"] ?? "http://localhost:9000",
+  S3_FORCE_PATH_STYLE: "true",
+  S3_ACCESS_KEY_ID: process.env["E2E_S3_ACCESS_KEY_ID"] ?? "scarn",
+  S3_SECRET_ACCESS_KEY:
+    process.env["E2E_S3_SECRET_ACCESS_KEY"] ?? "scarn-local-secret",
+  SCARN_ARTIFACT_CONTENT_URL: e2eArtifactContentUrl,
+  ARTIFACT_SHARE_SECRET: "e2e-artifact-share-secret-not-for-production",
+  SECRETS_ENCRYPTION_KEY: "ZTJlLWxvY2FsLXNlY3JldHMta2V5LW5vdC1wcm9kISE=",
+};
+
 const appRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const repoRoot = resolve(appRoot, "../..");
 const nextLockFile = resolve(appRoot, ".next/dev/lock");
@@ -184,6 +208,7 @@ const startNextServer = async (): Promise<number> => {
       env: {
         ...process.env,
         ...nextServerEnv,
+        ...runtimeEnv,
       },
       stdout: "ignore",
       stderr: "inherit",
@@ -192,6 +217,37 @@ const startNextServer = async (): Promise<number> => {
   childProcesses.add(server);
 
   return server.exited;
+};
+
+const startApiServer = async (): Promise<number> => {
+  const server = Bun.spawn(["bun", "run", "apps/api/src/index.ts"], {
+    cwd: repoRoot,
+    env: {
+      ...process.env,
+      ...nextServerEnv,
+      ...runtimeEnv,
+      PORT: e2eApiPort,
+    },
+    stdout: "ignore",
+    stderr: "inherit",
+  });
+  childProcesses.add(server);
+
+  return server.exited;
+};
+
+const waitForApiServer = async (): Promise<void> => {
+  const deadline = Date.now() + 60_000;
+  while (Date.now() < deadline) {
+    try {
+      await fetch(`http://localhost:${e2eApiPort}/`);
+      return;
+    } catch {
+      await Bun.sleep(250);
+    }
+  }
+  killChildProcesses();
+  throw new Error(`[e2e] API server did not start on port ${e2eApiPort}`);
 };
 
 for (const signal of ["SIGINT", "SIGTERM"] as const) {
@@ -208,5 +264,8 @@ try {
   killChildProcesses();
   throw error;
 }
-const exitCode = await startNextServer();
+const apiExited = startApiServer();
+await waitForApiServer();
+const exitCode = await Promise.race([apiExited, startNextServer()]);
+killChildProcesses();
 process.exit(exitCode);

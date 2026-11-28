@@ -2,11 +2,14 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import Ajv2020, { type ErrorObject } from "ajv/dist/2020";
 import type { Info as ToolInfo } from "@opencode/plugin/promise/tool";
-import { ARTIFACT_SCHEMA_KEYWORD } from "@scarn/sdk/contracts/artifacts";
+import {
+  ARTIFACT_SCHEMA_KEYWORD,
+  describeArtifactFieldProblem,
+} from "@scarn/sdk/contracts/artifacts";
 import {
   applyArtifactSubmissions,
   checkSubmittedArtifactFiles,
-  findSubmittableArtifactFields,
+  findSubmittableArtifactFieldsWithProblems,
   readStepArtifactSubmissions,
   type StepFindingsJson,
 } from "@scarn/sdk/contracts/step-artifact-submissions";
@@ -84,9 +87,15 @@ export async function submitStepFindings(
     }
 
     const validate = compileResultSchema(currentExecutionInfo.resultSchemaJson);
-    const artifactFields = findSubmittableArtifactFields(
-      currentExecutionInfo.resultSchemaJson,
-    );
+    const { fields: artifactFields, problems: fieldProblems } =
+      findSubmittableArtifactFieldsWithProblems(
+        currentExecutionInfo.resultSchemaJson,
+      );
+    if (fieldProblems.length > 0) {
+      throw new Error(
+        fieldProblems.map(describeArtifactFieldProblem).join("\n"),
+      );
+    }
     const submissions = await readStepArtifactSubmissions(worktree);
     const filled = applyArtifactSubmissions({
       findings: input.findingsJson,

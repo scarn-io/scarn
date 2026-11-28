@@ -213,6 +213,10 @@ export default defineConfig({
           label: "SDK",
           items: [
             { label: "Defining Steps", slug: "guides/steps" },
+            {
+              label: "Shareable HTML bundles",
+              slug: "guides/artifact-bundles",
+            },
             { label: "Environments", slug: "guides/environments" },
             { label: "Project secrets", slug: "guides/secrets" },
             { label: "Building Pipelines", slug: "guides/pipelines" },

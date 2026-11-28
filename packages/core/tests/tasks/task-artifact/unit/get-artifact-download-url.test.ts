@@ -89,6 +89,7 @@ const anArtifact = (
   contentType: "application/json",
   kind: "generic",
   createdAt: NOW.toISOString(),
+  bundleId: null,
   ...overrides,
 });
 
@@ -116,6 +117,7 @@ const fakeObjectStore = (
       },
       getPresignedPutUrl: () => Promise.resolve(null),
       getObject: () => Promise.resolve(null),
+      getObjectStream: () => Promise.resolve(null),
       putObject: () => Promise.resolve({ sizeBytes: 0 }),
       deleteObject: () => Promise.resolve(),
       deletePrefix: () => Promise.resolve({ deletedCount: 0 }),

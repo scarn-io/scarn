@@ -46,7 +46,7 @@
     "typescript-eslint": "^8.65.0"
   },
   "scripts": {
-    "dev": "bun --elide-lines=0 --env-file=.env run --filter @scarn/next dev",
+    "dev": "bun --env-file=.env run --parallel dev:next api",
     "api": "bun --elide-lines=0 --env-file=.env run --filter @scarn/api dev",
     "docs": "bun --elide-lines=0 run --filter scarn-docs dev",
     "work-signal": "bun --elide-lines=0 run --filter @scarn/work-signal dev",

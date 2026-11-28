@@ -2,7 +2,9 @@ import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import { cleanup, fireEvent, render, waitFor } from "@testing-library/react";
 import { parseUuidV7 } from "@scarn/api/frontend-contracts";
 import type {
+  ArtifactBundleContract,
   ArtifactContract,
+  ArtifactDownloadUrlContract,
   ArtifactFailureContract,
 } from "@scarn/api/frontend-contracts";
 import type { ArtifactsStatus } from "./use-task-run-artifacts";
@@ -24,26 +26,32 @@ function buildArtifact(
     contentType: "application/zip",
     kind: "playwright-trace",
     createdAt: "2026-06-05T12:00:00.000Z",
+    bundleId: null,
     ...overrides,
   };
 }
 
 let currentArtifacts: ArtifactContract[] = [];
+let currentBundles: ArtifactBundleContract[] = [];
 let currentStatus: ArtifactsStatus = "loaded";
 let currentFailures: ArtifactFailureContract[] = [];
 const loadMock = mock(() => {});
-const getDownloadUrlMock = mock(() =>
-  Promise.resolve({
-    url: "https://store.example/trace.zip?sig=abc",
-    sizeBytes: 10,
-    contentType: "application/zip",
-    relativeStorePath: "test-results/foo/trace.zip",
-  }),
+const getDownloadUrlMock = mock(
+  (artifactId: string): Promise<ArtifactDownloadUrlContract | null> => {
+    void artifactId;
+    return Promise.resolve({
+      url: "https://store.example/trace.zip?sig=abc",
+      sizeBytes: 10,
+      contentType: "application/zip",
+      relativeStorePath: "test-results/foo/trace.zip",
+    });
+  },
 );
 
 void mock.module("./use-task-run-artifacts", () => ({
   useTaskRunArtifacts: () => ({
     artifacts: currentArtifacts,
+    bundles: currentBundles,
     status: currentStatus,
     loading: currentStatus === "loading",
     error: "",
@@ -61,13 +69,54 @@ void mock.module("./use-task-run-artifact-failures", () => ({
   }),
 }));
 
+const { ProjectRouteProvider } =
+  await import("@/components/project-route-context");
 const { RunArtifactsCard } = await import("./run-artifacts-card");
+
+const projectId = parseUuidV7("019e9a92-b432-73e8-9341-3519156fa802");
+const bundleId = parseUuidV7("019e9a92-b432-73e8-9341-3519156fa900");
+
+function buildBundle(
+  overrides: Partial<ArtifactBundleContract> = {},
+): ArtifactBundleContract {
+  return {
+    id: bundleId,
+    taskRunId: taskId,
+    projectId,
+    name: "site",
+    fieldPath: null,
+    rootPath: "out/site",
+    entryPath: "index.html",
+    status: "ready",
+    fileCount: 2,
+    sizeBytes: 3072,
+    createdAt: "2026-06-05T12:00:00.000Z",
+    finalizedAt: "2026-06-05T12:01:00.000Z",
+    expiresAt: "2026-07-05T12:00:00.000Z",
+    expired: false,
+    ...overrides,
+  };
+}
+
+const renderCard = () =>
+  render(
+    <ProjectRouteProvider
+      username="tester"
+      projectSlug="demo"
+      projectId={projectId}
+      isMember
+      permissions={["executions:write"]}
+    >
+      <RunArtifactsCard taskRunId={taskId} />
+    </ProjectRouteProvider>,
+  );
 
 describe("RunArtifactsCard", () => {
   let openMock: ReturnType<typeof mock>;
 
   beforeEach(() => {
     currentArtifacts = [];
+    currentBundles = [];
     currentStatus = "loaded";
     currentFailures = [];
     loadMock.mockClear();
@@ -83,7 +132,7 @@ describe("RunArtifactsCard", () => {
   });
 
   test("renders nothing when the run produced no artifacts", () => {
-    const view = render(<RunArtifactsCard taskRunId={taskId} />);
+    const view = renderCard();
     expect(loadMock).toHaveBeenCalled();
     expect(view.queryByRole("region", { name: "Run artifacts" })).toBeNull();
   });
@@ -91,7 +140,7 @@ describe("RunArtifactsCard", () => {
   test("renders nothing while the list is loading", () => {
     currentStatus = "loading";
     currentArtifacts = [buildArtifact()];
-    const view = render(<RunArtifactsCard taskRunId={taskId} />);
+    const view = renderCard();
     expect(view.queryByRole("region", { name: "Run artifacts" })).toBeNull();
   });
 
@@ -105,7 +154,7 @@ describe("RunArtifactsCard", () => {
       }),
       buildArtifact(),
     ];
-    const view = render(<RunArtifactsCard taskRunId={taskId} />);
+    const view = renderCard();
 
     expect(view.getByRole("region", { name: "Run artifacts" })).toBeTruthy();
     expect(view.getByText("· 2 files")).toBeTruthy();
@@ -119,7 +168,7 @@ describe("RunArtifactsCard", () => {
 
   test("View Playwright trace opens the trace viewer", async () => {
     currentArtifacts = [buildArtifact()];
-    const view = render(<RunArtifactsCard taskRunId={taskId} />);
+    const view = renderCard();
 
     fireEvent.click(view.getByLabelText("View Playwright trace trace.zip"));
 
@@ -129,6 +178,64 @@ describe("RunArtifactsCard", () => {
         "_blank",
         "noopener,noreferrer",
       );
+    });
+  });
+
+  test("collapses a bundle's files into one row and keeps loose files", () => {
+    currentBundles = [buildBundle()];
+    currentArtifacts = [
+      buildArtifact({
+        id: parseUuidV7("019e9a92-b432-73e8-9341-3519156fa804"),
+        kind: "generic",
+        relativeStorePath: "out/site/index.html",
+        bundleId,
+      }),
+      buildArtifact({
+        id: parseUuidV7("019e9a92-b432-73e8-9341-3519156fa805"),
+        kind: "generic",
+        relativeStorePath: "out/site/app.js",
+        bundleId,
+      }),
+      buildArtifact(),
+    ];
+    const view = renderCard();
+
+    expect(view.getByText("site")).toBeTruthy();
+    expect(view.getByText("2 files · 3.0 KiB")).toBeTruthy();
+    expect(view.queryByText("index.html")).toBeNull();
+    expect(view.queryByText("app.js")).toBeNull();
+    expect(view.getByLabelText("View Playwright trace trace.zip")).toBeTruthy();
+    expect(view.getByLabelText("Open site").getAttribute("href")).toBe(
+      `/projects/${projectId}/artifact-bundles/${bundleId}`,
+    );
+    expect(view.getByLabelText("Share site")).toBeTruthy();
+  });
+
+  test("Download on a bundle row downloads its entry file", async () => {
+    const entryId = parseUuidV7("019e9a92-b432-73e8-9341-3519156fa804");
+    currentBundles = [buildBundle()];
+    currentArtifacts = [
+      buildArtifact({
+        id: entryId,
+        kind: "generic",
+        relativeStorePath: "out/site/index.html",
+        bundleId,
+      }),
+    ];
+    getDownloadUrlMock.mockImplementationOnce(() =>
+      Promise.resolve({
+        url: null,
+        sizeBytes: 10,
+        contentType: "text/html",
+        relativeStorePath: "out/site/index.html",
+      }),
+    );
+    const view = renderCard();
+
+    fireEvent.click(view.getByLabelText("Download site"));
+
+    await waitFor(() => {
+      expect(getDownloadUrlMock).toHaveBeenCalledWith(entryId);
     });
   });
 });

@@ -16,8 +16,79 @@ export type ArtifactKind = z.infer<typeof artifactKindSchema>;
 
 export const ARTIFACT_SCHEMA_KEYWORD = "x-scarn-artifact";
 
+/** The entry page a bundle field gets when it doesn't name one. */
+export const DEFAULT_ARTIFACT_BUNDLE_ENTRY = "index.html";
+
+const MIB = 1024 * 1024;
+
+export type ArtifactBundleLimits = {
+  maxFiles: number;
+  maxFileBytes: number;
+  maxBundleBytes: number;
+};
+
+/** Default bundle limits. The server may be configured with others. */
+export const ARTIFACT_BUNDLE_LIMITS: ArtifactBundleLimits = Object.freeze({
+  maxFiles: 1_000,
+  maxFileBytes: 100 * MIB,
+  maxBundleBytes: 250 * MIB,
+});
+
+export type ArtifactBundleKeyword = { readonly entry: string };
+
+/**
+ * The stored `x-scarn-artifact` keyword. `bundle` marks a bundle field (a
+ * folder with an entry page) and is omitted for file fields; `share` is only
+ * written when true.
+ */
 export type ArtifactSchemaKeyword = {
   readonly accept: readonly string[];
+  readonly bundle?: ArtifactBundleKeyword;
+  readonly share?: boolean;
+};
+
+const KNOWN_ARTIFACT_KEYWORD_KEYS: readonly string[] = [
+  "accept",
+  "bundle",
+  "share",
+];
+const KNOWN_ARTIFACT_BUNDLE_KEYS: readonly string[] = ["entry"];
+
+/**
+ * Appended to every problem with an `x-scarn-artifact` keyword this SDK
+ * can't read, so an old plugin or worker fails clearly on a newer step.
+ */
+export const ARTIFACT_KEYWORD_NEWER_WORKER_HINT =
+  "this step needs a newer Scarn worker";
+
+/**
+ * Why a bundle entry page is invalid, or null when it is a relative path
+ * inside the bundle (no `.`/`..`/empty segments, no backslashes) ending in
+ * `.html`.
+ */
+export function artifactBundleEntryProblem(entry: string): string | null {
+  const segments = entry.split("/");
+  if (
+    entry.trim() === "" ||
+    entry.includes("\\") ||
+    entry.startsWith("/") ||
+    segments.some((segment) => ["", ".", ".."].includes(segment))
+  ) {
+    return `entry "${entry}" must be a relative path inside the bundle, e.g. "index.html"`;
+  }
+  if (!entry.toLowerCase().endsWith(".html")) {
+    return `entry "${entry}" must be an .html file`;
+  }
+  return null;
+}
+
+/** The keyword as read: defaults applied, plus anything this SDK can't read. */
+export type ReadArtifactKeyword = {
+  readonly accept: readonly string[];
+  readonly bundle: ArtifactBundleKeyword | null;
+  readonly share: boolean;
+  /** Each unknown or malformed part of the keyword, e.g. `unknown key "foo"`. */
+  readonly problems: readonly string[];
 };
 
 /** A JSON Schema node. `true` / `false` are the boolean schema forms. */
@@ -37,6 +108,16 @@ export type ArtifactField = {
   readonly description: string | null;
   /** True when the field sits inside an array, which v1 does not support. */
   readonly inArray: boolean;
+  /** Set for a bundle field: its value is a folder holding `entry`. */
+  readonly bundle: ArtifactBundleKeyword | null;
+  /** Whether a bundle field is shared automatically. Always false for files. */
+  readonly share: boolean;
+};
+
+/** A problem with a declared artifact field's keyword. */
+export type ArtifactFieldProblem = {
+  readonly path: string;
+  readonly message: string;
 };
 
 export const artifactPlatforms = ["github", "jira", "bitbucket"] as const;
@@ -104,26 +185,74 @@ function schemaBranches(
   );
 }
 
-/** Reads the `x-scarn-artifact` keyword on this exact node. */
+function readBundleKeyword(
+  value: ArtifactJsonSchemaNode | undefined,
+  problems: string[],
+): ArtifactBundleKeyword | null {
+  if (value === undefined) return null;
+  const bundle = asRecord(value);
+  if (!bundle || Array.isArray(value)) {
+    problems.push(`"bundle" must be an object`);
+    return null;
+  }
+  for (const key of Object.keys(bundle)) {
+    if (!KNOWN_ARTIFACT_BUNDLE_KEYS.includes(key)) {
+      problems.push(`unknown key "bundle.${key}"`);
+    }
+  }
+  const entry = bundle["entry"];
+  if (entry !== undefined && typeof entry !== "string") {
+    problems.push(`"bundle.entry" must be a string`);
+  }
+  return {
+    entry:
+      typeof entry === "string" && entry.trim() !== ""
+        ? entry
+        : DEFAULT_ARTIFACT_BUNDLE_ENTRY,
+  };
+}
+
+/**
+ * Reads the `x-scarn-artifact` keyword on this exact node. Keys this SDK
+ * doesn't know, and known keys with the wrong type, are reported in
+ * `problems` rather than ignored.
+ */
 export function readArtifactKeyword(
   node: ArtifactJsonSchemaNode,
-): ArtifactSchemaKeyword | null {
+): ReadArtifactKeyword | null {
   const record = asRecord(node);
   const keyword = asRecord(
     record?.[ARTIFACT_SCHEMA_KEYWORD] as ArtifactJsonSchemaNode | undefined,
   );
   if (!keyword) return null;
+  const problems: string[] = [];
+  for (const key of Object.keys(keyword)) {
+    if (!KNOWN_ARTIFACT_KEYWORD_KEYS.includes(key)) {
+      problems.push(`unknown key "${key}"`);
+    }
+  }
   const accept = keyword["accept"];
+  const share = keyword["share"];
+  if (share !== undefined && typeof share !== "boolean") {
+    problems.push(`"share" must be a boolean`);
+  }
+  const bundle = readBundleKeyword(
+    keyword["bundle"] as ArtifactJsonSchemaNode | undefined,
+    problems,
+  );
   return {
     accept: Array.isArray(accept)
       ? (accept as unknown[]).filter(
           (entry): entry is string => typeof entry === "string",
         )
       : [],
+    bundle,
+    share: bundle !== null && share === true,
+    problems,
   };
 }
 
-export type ArtifactNodeMatch = ArtifactSchemaKeyword & {
+export type ArtifactNodeMatch = ReadArtifactKeyword & {
   readonly nullable: boolean;
   readonly description: string | null;
 };
@@ -192,14 +321,40 @@ function resolveLocalRef(
  * Every artifact field declared in a result schema: walks object
  * properties, `anyOf` / `oneOf` / `allOf` branches, local `$ref`s and array
  * items. Fields inside arrays are returned with `inArray: true`; v1 rejects
- * them at definition time.
+ * them at definition time. Keyword problems (unknown keys) are dropped here;
+ * use `findArtifactFieldsWithProblems` where they must stop the step.
  */
 export function findArtifactFields(
   schema: ArtifactJsonSchemaNode | null | undefined,
 ): ArtifactField[] {
-  if (schema === null || schema === undefined) return [];
+  return findArtifactFieldsWithProblems(schema).fields;
+}
+
+/** Formats a field problem as one line ending in the newer-worker hint. */
+export function describeArtifactFieldProblem(
+  problem: ArtifactFieldProblem,
+): string {
+  return `Artifact field \`${problem.path}\`: ${problem.message}; ${ARTIFACT_KEYWORD_NEWER_WORKER_HINT}.`;
+}
+
+/**
+ * `findArtifactFields` plus every problem with a field's `x-scarn-artifact`
+ * keyword, such as a key this SDK doesn't know. The plugin and the worker
+ * refuse a step whose result schema has any (see
+ * `describeArtifactFieldProblem`).
+ */
+export function findArtifactFieldsWithProblems(
+  schema: ArtifactJsonSchemaNode | null | undefined,
+): {
+  readonly fields: ArtifactField[];
+  readonly problems: ArtifactFieldProblem[];
+} {
+  if (schema === null || schema === undefined) {
+    return { fields: [], problems: [] };
+  }
   const root = schema;
   const fields = new Map<string, ArtifactField>();
+  const problems: ArtifactFieldProblem[] = [];
 
   const visit = (
     node: ArtifactJsonSchemaNode,
@@ -227,7 +382,10 @@ export function findArtifactFields(
           nullable: match.nullable,
           description: match.description,
           inArray,
+          bundle: match.bundle,
+          share: match.share,
         });
+        for (const message of match.problems) problems.push({ path, message });
       }
       return;
     }
@@ -257,5 +415,5 @@ export function findArtifactFields(
   };
 
   visit(schema, "", false, 0);
-  return [...fields.values()];
+  return { fields: [...fields.values()], problems };
 }

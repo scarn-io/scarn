@@ -126,9 +126,7 @@ export class FakeTaskRunWorkerClient implements TaskRunWorkerClient {
     taskRunId: UuidV7;
     claimToken: string;
     leaseDurationSeconds: number;
-  }): Promise<
-    Pick<TaskRunContract, "status"> & { managedAuthority: "ok" }
-  > {
+  }): Promise<Pick<TaskRunContract, "status"> & { managedAuthority: "ok" }> {
     this.heartbeatCalls.push({ ...input });
     return Promise.resolve({ status: "running", managedAuthority: "ok" });
   }
@@ -222,28 +220,21 @@ export class FakeTaskRunWorkerClient implements TaskRunWorkerClient {
     return Promise.resolve(step.workerContext);
   }
 
-  readonly artifactUploadUrlCalls: {
-    taskRunId: string;
-    claimToken: string;
-    relativeStorePath: string;
-    contentType?: string | undefined;
-  }[] = [];
+  readonly artifactUploadUrlCalls: Parameters<
+    TaskRunWorkerClient["createArtifactUploadUrl"]
+  >[0][] = [];
 
-  readonly recordedArtifacts: {
-    taskRunId: string;
-    claimToken: string;
-    objectKey: string;
-    relativeStorePath: string;
-    sizeBytes: number;
-    contentType?: string | undefined;
-    kind: ArtifactKind;
-  }[] = [];
+  readonly recordedArtifacts: Parameters<
+    TaskRunWorkerClient["recordArtifact"]
+  >[0][] = [];
 
   createArtifactUploadUrl(input: {
     taskRunId: string;
     claimToken: string;
     relativeStorePath: string;
     contentType?: string | undefined;
+    sizeBytes?: number | undefined;
+    bundleId?: string | undefined;
   }): Promise<{
     uploadUrl: string;
     storeRef: string;
@@ -292,9 +283,33 @@ export class FakeTaskRunWorkerClient implements TaskRunWorkerClient {
     sizeBytes: number;
     contentType?: string | undefined;
     kind: ArtifactKind;
+    bundleId?: string | undefined;
   }): Promise<void> {
     this.recordedArtifacts.push({ ...input });
     return Promise.resolve();
+  }
+
+  readonly createdArtifactBundles: (Parameters<
+    TaskRunWorkerClient["createArtifactBundle"]
+  >[0] & { id: string })[] = [];
+
+  createArtifactBundle(
+    input: Parameters<TaskRunWorkerClient["createArtifactBundle"]>[0],
+  ): Promise<{ id: string }> {
+    const id = `bundle-${String(this.createdArtifactBundles.length + 1)}`;
+    this.createdArtifactBundles.push({ ...input, id });
+    return Promise.resolve({ id });
+  }
+
+  readonly finalizedArtifactBundles: Parameters<
+    TaskRunWorkerClient["finalizeArtifactBundle"]
+  >[0][] = [];
+
+  finalizeArtifactBundle(
+    input: Parameters<TaskRunWorkerClient["finalizeArtifactBundle"]>[0],
+  ): Promise<unknown> {
+    this.finalizedArtifactBundles.push({ ...input });
+    return Promise.resolve({ id: input.bundleId, status: "ready" });
   }
 
   readonly recordedArtifactFailures: {

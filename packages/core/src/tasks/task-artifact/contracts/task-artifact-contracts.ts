@@ -1,6 +1,7 @@
 import { uuidV7Schema } from "@scarn/core/common/contracts/uuid-v7";
 import { artifactKindSchema } from "@scarn/sdk/contracts/artifacts";
 import { z } from "zod";
+import { ARTIFACT_BUNDLE_STATUSES } from "../domain/artifact-bundle";
 
 export { artifactKindSchema };
 export type { ArtifactKind } from "@scarn/sdk/contracts/artifacts";
@@ -24,6 +25,7 @@ export const createArtifactUploadUrlInputSchema = z.object({
   relativeStorePath: nonEmptyStringSchema,
   contentType: z.string().trim().min(1).optional(),
   sizeBytes: z.number().int().nonnegative().optional(),
+  bundleId: uuidV7Schema.optional(),
 });
 
 /** Response carrying the minted upload URL and the resolved storage location. */
@@ -46,6 +48,7 @@ export const recordArtifactInputSchema = z.object({
   sizeBytes: z.number().int().nonnegative(),
   contentType: z.string().trim().min(1).optional(),
   kind: artifactKindSchema.optional(),
+  bundleId: uuidV7Schema.optional(),
 });
 
 /**
@@ -67,6 +70,75 @@ export const artifactSchema = z.object({
   contentType: z.string().trim().min(1).nullable(),
   kind: artifactKindSchema,
   createdAt: z.iso.datetime(),
+  /** The bundle this file is a member of; null for a single-file artifact. */
+  bundleId: uuidV7Schema.nullable(),
+});
+
+/**
+ * Request to open a `pending` artifact bundle. `rootPath` is a run-relative
+ * store path; `entryPath` is the `.html` entry page, relative to the root,
+ * and defaults to `index.html` (or the declared field's entry). `fieldPath`
+ * names the declared bundle field in the Task's result schema this bundle
+ * fills; omit it for an undeclared bundle. Name, root and entry are
+ * validated by the bundle domain, not here.
+ */
+export const createArtifactBundleInputSchema = z.object({
+  claimToken: nonEmptyStringSchema,
+  name: nonEmptyStringSchema,
+  rootPath: nonEmptyStringSchema,
+  entryPath: nonEmptyStringSchema.optional(),
+  fieldPath: nonEmptyStringSchema.optional(),
+});
+
+/** One member file the client uploaded, with its path relative to the root. */
+export const artifactBundleManifestEntrySchema = z.object({
+  path: nonEmptyStringSchema,
+  sizeBytes: z.number().int().nonnegative(),
+});
+
+/**
+ * Request to finalize a bundle. The manifest lists every member the client
+ * uploaded; finalize rejects it unless the recorded members match exactly.
+ */
+export const finalizeArtifactBundleInputSchema = z.object({
+  claimToken: nonEmptyStringSchema,
+  manifest: z.array(artifactBundleManifestEntrySchema).min(1),
+});
+
+export const artifactBundleStatusSchema = z.enum(ARTIFACT_BUNDLE_STATUSES);
+
+/**
+ * A persisted artifact bundle. `entryPath` is relative to `rootPath`.
+ * `expiresAt` is when it ages past `STORAGE_RETENTION_DAYS` (with its
+ * files); `expired` says whether that moment has passed.
+ */
+export const artifactBundleSchema = z.object({
+  id: uuidV7Schema,
+  taskRunId: uuidV7Schema,
+  projectId: uuidV7Schema,
+  name: nonEmptyStringSchema,
+  fieldPath: nonEmptyStringSchema.nullable(),
+  rootPath: nonEmptyStringSchema,
+  entryPath: nonEmptyStringSchema,
+  status: artifactBundleStatusSchema,
+  fileCount: z.number().int().nonnegative().nullable(),
+  sizeBytes: z.number().int().nonnegative().nullable(),
+  createdAt: z.iso.datetime(),
+  finalizedAt: z.iso.datetime().nullable(),
+  expiresAt: z.iso.datetime(),
+  expired: z.boolean(),
+});
+
+export const listArtifactBundlesResponseSchema = z.array(artifactBundleSchema);
+
+/**
+ * A bundle as the dashboard's bundle page sees it: the bundle, whether it was
+ * deleted (a deleted bundle is still returned so the page can say so), and
+ * its non-deleted member files (empty once deleted).
+ */
+export const projectArtifactBundleDetailSchema = artifactBundleSchema.extend({
+  deleted: z.boolean(),
+  members: z.array(artifactSchema),
 });
 
 /**
@@ -89,6 +161,8 @@ export const projectArtifactSchema = artifactSchema.extend({
 
 export const listProjectArtifactsResponseSchema = z.object({
   artifacts: z.array(projectArtifactSchema),
+  /** The bundles that the listed members (`bundleId`) belong to. */
+  bundles: z.array(artifactBundleSchema),
   hasMore: z.boolean(),
 });
 
@@ -129,6 +203,19 @@ export type CreateArtifactUploadUrlInput = z.input<
 export type ArtifactUploadUrlContract = z.infer<typeof artifactUploadUrlSchema>;
 export type RecordArtifactInput = z.input<typeof recordArtifactInputSchema>;
 export type ArtifactContract = z.infer<typeof artifactSchema>;
+export type CreateArtifactBundleInput = z.input<
+  typeof createArtifactBundleInputSchema
+>;
+export type FinalizeArtifactBundleInput = z.input<
+  typeof finalizeArtifactBundleInputSchema
+>;
+export type ArtifactBundleManifestEntry = z.infer<
+  typeof artifactBundleManifestEntrySchema
+>;
+export type ArtifactBundleContract = z.infer<typeof artifactBundleSchema>;
+export type ProjectArtifactBundleDetailContract = z.infer<
+  typeof projectArtifactBundleDetailSchema
+>;
 export type ArtifactDownloadUrlContract = z.infer<
   typeof artifactDownloadUrlSchema
 >;

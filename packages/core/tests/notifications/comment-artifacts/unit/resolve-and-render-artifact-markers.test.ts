@@ -8,8 +8,13 @@ import { prepareCommentDraftArtifacts } from "@/notifications/comment-artifacts/
 import type {
   CommentArtifactReader,
   RunArtifact,
+  RunArtifactBundle,
   RunArtifactResolution,
 } from "@/notifications/comment-artifacts/application/comment-artifact-reader";
+import { buildArtifactResolutionJson } from "@/notifications/comment-artifacts/domain/artifact-resolution-json";
+import { readStoredArtifactResolution } from "@/notifications/comment-artifacts/contracts/artifact-resolution-stored";
+import { createArtifactSharingConfig } from "@/tasks/artifact-share/domain/artifact-sharing-config";
+import { verifyShareToken } from "@/tasks/artifact-share/domain/share-token";
 
 const runArtifact = (overrides: Partial<RunArtifact> = {}): RunArtifact => ({
   id: createUuidV7(),
@@ -23,13 +28,35 @@ const runArtifact = (overrides: Partial<RunArtifact> = {}): RunArtifact => ({
   ...overrides,
 });
 
+const runBundle = (
+  overrides: Partial<RunArtifactBundle> = {},
+): RunArtifactBundle => ({
+  id: createUuidV7(),
+  name: "report",
+  fieldPath: null,
+  status: "ready",
+  createdAt: new Date(),
+  expiredAt: null,
+  deletedAt: null,
+  activeShareId: null,
+  ...overrides,
+});
+
 const fakeReader = (
   artifacts: RunArtifact[],
   resolutions: Record<string, RunArtifactResolution> = {},
+  bundles: RunArtifactBundle[] = [],
 ): CommentArtifactReader => ({
   findLatestStepArtifact: ({ stepKey, resultPath }) =>
     Promise.resolve(resolutions[`${stepKey}/${resultPath}`] ?? null),
   listRunArtifacts: () => Promise.resolve(artifacts),
+  findLatestStepBundle: ({ stepKey, fieldPath }) =>
+    Promise.resolve(
+      bundles.find(
+        (bundle) => stepKey === "reproduce" && bundle.fieldPath === fieldPath,
+      ) ?? null,
+    ),
+  listRunBundles: () => Promise.resolve(bundles),
 });
 
 const artifactResolution = (
@@ -210,4 +237,177 @@ describe("LinkOnlyCommentArtifactRenderer", () => {
 
     expect(rendered.body).toBe(`See [the log](${pageUrl(log.id)}).`);
   });
+});
+
+describe("artifact markers that point at bundles", () => {
+  const projectId = createUuidV7();
+  const sharing = createArtifactSharingConfig({
+    contentUrl: "https://content.test/",
+    shareSecret: "share-secret",
+  });
+
+  const renderBundles = async (
+    body: string,
+    bundles: RunArtifactBundle[],
+    artifactSharingConfig = sharing,
+  ) => {
+    const markers = await resolveArtifactMarkers(
+      parseArtifactMarkers(body).markers,
+      { pipelineRunId: createUuidV7() },
+      {
+        commentArtifactReader: fakeReader([], {}, bundles),
+        artifactSharingConfig,
+      },
+    );
+    const rendered = await new LinkOnlyCommentArtifactRenderer(
+      "github",
+      "https://app.test",
+    ).render({ body, markers, projectId });
+    return { markers, rendered };
+  };
+
+  const bundlePage = (bundleId: UuidV7) =>
+    `https://app.test/projects/${projectId}/artifact-bundles/${bundleId}`;
+
+  concurrentTest(
+    "links a signal marker to a shared bundle's share URL",
+    async () => {
+      const shareId = createUuidV7();
+      const bundle = runBundle({ fieldPath: "report", activeShareId: shareId });
+      const { markers, rendered } = await renderBundles(
+        "[Full report](artifact:signal/reproduce/report)",
+        [bundle],
+      );
+
+      expect(markers[0]?.resolution).toMatchObject({
+        status: "resolved",
+        artifact: { artifactId: bundle.id, name: "report", kind: "bundle" },
+      });
+      const url = /\((.+)\)/.exec(rendered.body)?.[1] ?? "";
+      expect(url).toStartWith("https://content.test/s/");
+      expect(url).toEndWith("/");
+      const token = url.slice("https://content.test/s/".length, -1);
+      expect(verifyShareToken("share-secret", token)).toBe(shareId);
+      expect(rendered.body).toBe(`[Full report](${url})`);
+    },
+  );
+
+  concurrentTest(
+    "links a signal marker to a private bundle's page",
+    async () => {
+      const bundle = runBundle({ fieldPath: "report" });
+      const { rendered } = await renderBundles(
+        "[Full report](artifact:signal/reproduce/report)",
+        [bundle],
+      );
+
+      expect(rendered.body).toBe(`[Full report](${bundlePage(bundle.id)})`);
+    },
+  );
+
+  concurrentTest(
+    "falls back to the bundle page when sharing is disabled",
+    async () => {
+      const bundle = runBundle({
+        fieldPath: "report",
+        activeShareId: createUuidV7(),
+      });
+      const { rendered } = await renderBundles(
+        "[Full report](artifact:signal/reproduce/report)",
+        [bundle],
+        createArtifactSharingConfig({}),
+      );
+
+      expect(rendered.body).toBe(`[Full report](${bundlePage(bundle.id)})`);
+    },
+  );
+
+  concurrentTest(
+    "links a path marker with a trailing slash to an undeclared bundle",
+    async () => {
+      const bundle = runBundle({ name: "coverage" });
+      const { rendered } = await renderBundles(
+        "See [coverage](artifact:coverage/).",
+        [runBundle({ name: "other" }), bundle],
+      );
+
+      expect(rendered.body).toBe(`See [coverage](${bundlePage(bundle.id)}).`);
+    },
+  );
+
+  concurrentTest("renders an embed marker on a bundle as a link", async () => {
+    const bundle = runBundle({ name: "site" });
+    const { rendered } = await renderBundles(
+      "Intro.\n\n![The site](artifact:site/)\n\nOutro.",
+      [bundle],
+    );
+
+    expect(rendered.body).toBe(
+      `Intro.\n\n[The site](${bundlePage(bundle.id)})\n\nOutro.`,
+    );
+    expect(rendered.outcomes[0]).toMatchObject({
+      artifactId: bundle.id,
+      outcome: "linked",
+    });
+  });
+
+  concurrentTest(
+    "reports deleted, expired and unready bundles as unavailable",
+    async () => {
+      const results = await resolveArtifactMarkers(
+        parseArtifactMarkers(
+          [
+            "[A](artifact:signal/reproduce/deleted)",
+            "[B](artifact:signal/reproduce/expired)",
+            "[C](artifact:signal/reproduce/pending)",
+            "[D](artifact:gone/)",
+            "[E](artifact:old/)",
+          ].join("\n\n"),
+        ).markers,
+        { pipelineRunId: createUuidV7() },
+        {
+          commentArtifactReader: fakeReader([], {}, [
+            runBundle({ fieldPath: "deleted", deletedAt: new Date() }),
+            runBundle({ fieldPath: "expired", expiredAt: new Date() }),
+            runBundle({ fieldPath: "pending", status: "pending" }),
+            runBundle({ name: "old", expiredAt: new Date() }),
+          ]),
+        },
+      );
+
+      expect(results.map(({ resolution }) => resolution)).toEqual([
+        { status: "unavailable", reason: "deleted", required: true },
+        { status: "unavailable", reason: "expired", required: true },
+        { status: "unavailable", reason: "bundle_not_ready", required: true },
+        { status: "unavailable", reason: "no_match", required: false },
+        { status: "unavailable", reason: "expired", required: false },
+      ]);
+    },
+  );
+
+  concurrentTest(
+    "stores a resolved bundle without its share link, readable as before",
+    async () => {
+      const bundle = runBundle({
+        fieldPath: "report",
+        activeShareId: createUuidV7(),
+      });
+      const { markers } = await renderBundles(
+        "[Full report](artifact:signal/reproduce/report)",
+        [bundle],
+      );
+      const json = buildArtifactResolutionJson({ markers, warnings: [] });
+
+      expect(JSON.stringify(json)).not.toContain("content.test");
+      const read = readStoredArtifactResolution(json);
+      expect(read.success).toBe(true);
+      expect(read.success && read.value.markers[0]?.artifact).toEqual({
+        artifactId: bundle.id,
+        name: "report",
+        contentType: null,
+        kind: "bundle",
+        sizeBytes: null,
+      });
+    },
+  );
 });

@@ -1,6 +1,7 @@
 import { getDb } from "@scarn/core/lib/db";
 import type { DbExecutor, DbTransaction } from "@scarn/core/lib/db/db-executor";
 import {
+  ConfigurationError,
   CoreValidationError,
   ResourceNotFoundError,
 } from "@scarn/core/lib/errors";
@@ -31,6 +32,10 @@ import {
 import type { ArtifactRepo } from "./artifact-repo";
 import type { TaskRunRepo } from "@scarn/core/tasks/task-run/application/task-run-repo";
 import { assertClaimOwnership } from "@scarn/core/tasks/task-run/application/task-run-claim-helpers";
+import type { ArtifactBundleNotPendingError } from "../domain/artifact-bundle-not-pending-error";
+import type { ArtifactBundleLimits } from "../domain/artifact-bundle";
+import type { ArtifactBundleRepo } from "./artifact-bundle-repo";
+import { resolvePendingBundleForMember } from "./resolve-pending-bundle";
 
 export const recordTaskArtifact = async (
   taskIdInput: GetTaskRunInput,
@@ -39,6 +44,8 @@ export const recordTaskArtifact = async (
     userAuthz,
     taskRunRepo: taskRunRepo,
     artifactRepo,
+    artifactBundleRepo,
+    artifactBundleLimits,
     objectStorageBucket,
     orgRepo,
     timeProvider,
@@ -50,6 +57,8 @@ export const recordTaskArtifact = async (
     userAuthz: UserAuthorizationService;
     taskRunRepo: TaskRunRepo;
     artifactRepo: ArtifactRepo;
+    artifactBundleRepo?: ArtifactBundleRepo | undefined;
+    artifactBundleLimits?: ArtifactBundleLimits | undefined;
     objectStorageBucket?: string | null | undefined;
     orgRepo?: OrgRepo | undefined;
     timeProvider: TimeProvider;
@@ -59,7 +68,13 @@ export const recordTaskArtifact = async (
     dbExecutor?: DbExecutor | undefined;
   },
 ): Promise<
-  Result<ArtifactContract, ResourceNotFoundError | CoreValidationError>
+  Result<
+    ArtifactContract,
+    | ResourceNotFoundError
+    | CoreValidationError
+    | ConfigurationError
+    | ArtifactBundleNotPendingError
+  >
 > => {
   const taskRunId = getTaskRunInputSchema.parse(taskIdInput);
   const parsedInput = recordArtifactInputSchema.parse(input);
@@ -94,6 +109,29 @@ export const recordTaskArtifact = async (
       );
     }
 
+    if (parsedInput.bundleId) {
+      if (!artifactBundleRepo) {
+        return Result.err(
+          new ConfigurationError(
+            "Artifact bundle repo is not configured",
+            "ARTIFACT_BUNDLE_REPO_NOT_CONFIGURED",
+          ),
+        );
+      }
+      const bundle = await resolvePendingBundleForMember(
+        {
+          bundleId: parsedInput.bundleId,
+          taskRunId: task.id,
+          relativeStorePath: parsedInput.relativeStorePath,
+          sizeBytes: parsedInput.sizeBytes,
+        },
+        { artifactBundleRepo, artifactBundleLimits, dbExecutor: tx },
+      );
+      if (!bundle.ok) {
+        return Result.err(bundle.error);
+      }
+    }
+
     const artifactId = createUuidV7();
     const artifact = await artifactRepo.record(
       {
@@ -106,6 +144,7 @@ export const recordTaskArtifact = async (
         sizeBytes: parsedInput.sizeBytes,
         contentType: parsedInput.contentType ?? null,
         kind: parsedInput.kind ?? "generic",
+        bundleId: parsedInput.bundleId ?? null,
       },
       tx,
     );

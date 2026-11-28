@@ -28,6 +28,18 @@ export type GetObjectResult = {
   sizeBytes: number;
 };
 
+/** An inclusive byte range; `end` omitted means "to the end of the object". */
+export type ObjectByteRange = { start: number; end?: number | undefined };
+
+export type GetObjectStreamResult = {
+  body: ReadableStream<Uint8Array>;
+  contentType: string | undefined;
+  /** The whole object's size in bytes, whatever range was read. */
+  sizeBytes: number;
+  /** The range `body` holds (inclusive), or null when it is the whole object. */
+  contentRange: { start: number; end: number; total: number } | null;
+};
+
 export interface ObjectStore {
   /**
    * Write (or overwrite) an object. Returns the stored byte size (post-
@@ -44,6 +56,19 @@ export interface ObjectStore {
     key: string,
     options?: { signal?: AbortSignal },
   ): Promise<GetObjectResult | null>;
+  /**
+   * Stream an object, or a byte range of it, or null when the key does not
+   * exist. The caller validates `range` against the object's size first (see
+   * `parseRangeHeader`). Objects stored gzip-encoded (`compress: true`, used
+   * for step logs; bundle files are stored raw) cannot be ranged by stored
+   * bytes, so for them the range is ignored and the whole decompressed object
+   * is returned with `contentRange: null`, which callers serve as a full 200.
+   * An aborted `signal` rejects the read and errors the stream.
+   */
+  getObjectStream(
+    key: string,
+    options?: { range?: ObjectByteRange | undefined; signal?: AbortSignal },
+  ): Promise<GetObjectStreamResult | null>;
   /**
    * Mint a short-lived presigned GET URL for an object so a browser can read
    * it directly without proxying bytes through the API. Adapters that cannot

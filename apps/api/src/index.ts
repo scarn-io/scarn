@@ -3,6 +3,7 @@ import { loadSecretCipherFromEnv } from "@scarn/core/secrets/secret/infra/load-s
 // Importing ./app runs initServerAnalytics() at module scope, so the PostHog
 // client is live before this process serves its first request.
 import { handleRequest } from "./app";
+import { setRequestClientIp } from "./http/client-ip";
 import { API_REQUIRED_ENV, assertRequiredEnv } from "./required-env";
 
 // Fail startup on missing configuration or an invalid SECRETS_ENCRYPTION_KEY
@@ -32,7 +33,10 @@ process.on("SIGTERM", () => {
 
 const server = Bun.serve({
   port: configuredPort,
-  fetch: (request) => handleRequest(request),
+  fetch: (request, bunServer) => {
+    setRequestClientIp(request, bunServer.requestIP(request)?.address);
+    return handleRequest(request);
+  },
 });
 
 const portText = String(server.port ?? configuredPort);

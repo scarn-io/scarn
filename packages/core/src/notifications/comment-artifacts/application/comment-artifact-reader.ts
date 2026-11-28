@@ -20,7 +20,22 @@ export type RunArtifact = {
   createdAt: Date;
 };
 
-/** Reads the artifact resolutions and artifacts a pipeline run produced. */
+/**
+ * A `task_artifact_bundles` row from a task in the run, deleted or not, with
+ * its active (unrevoked) share's id.
+ */
+export type RunArtifactBundle = {
+  id: UuidV7;
+  name: string;
+  fieldPath: string | null;
+  status: "pending" | "ready" | "failed";
+  createdAt: Date;
+  expiredAt: Date | null;
+  deletedAt: Date | null;
+  activeShareId: UuidV7 | null;
+};
+
+/** Reads the artifact resolutions, artifacts and bundles a pipeline run produced. */
 export interface CommentArtifactReader {
   /**
    * How the artifact field at `resultPath` resolved for the newest
@@ -36,4 +51,18 @@ export interface CommentArtifactReader {
     pipelineRunId: UuidV7,
     dbExecutor?: DbExecutor,
   ): Promise<RunArtifact[]>;
+  /**
+   * The bundle filling the declared field `fieldPath` in the newest
+   * non-superseded visit to `stepKey` (as {@link findLatestStepArtifact}),
+   * or null when that visit's task runs submitted none.
+   */
+  findLatestStepBundle(
+    input: { pipelineRunId: UuidV7; stepKey: string; fieldPath: string },
+    dbExecutor?: DbExecutor,
+  ): Promise<RunArtifactBundle | null>;
+  /** Every bundle from every task in the run, newest first. */
+  listRunBundles(
+    pipelineRunId: UuidV7,
+    dbExecutor?: DbExecutor,
+  ): Promise<RunArtifactBundle[]>;
 }

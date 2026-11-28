@@ -27,6 +27,10 @@ describe("sweep-deleted-storage endpoint", () => {
   const DELETED_AT = new Date("2001-06-15T12:00:00.000Z");
   const HOUR_MS = 60 * 60 * 1_000;
   const at = (offsetMs: number) => new Date(DELETED_AT.getTime() + offsetMs);
+  const noStaleBundles = {
+    staleBundlesFailed: 0,
+    staleBundleMembersDeleted: 0,
+  };
   const repo = new DrizzleStorageSweepRepo();
 
   const createClient = (input: {
@@ -164,7 +168,12 @@ describe("sweep-deleted-storage endpoint", () => {
     );
 
     expect(error).toBeNull();
-    expect(data).toEqual({ swept: 0, failed: 0, overdue: 0 });
+    expect(data).toEqual({
+      ...noStaleBundles,
+      swept: 0,
+      failed: 0,
+      overdue: 0,
+    });
     expect(await loadSweep(run.taskRunId)).toMatchObject({
       attempts: 0,
       notBefore: at(HOUR_MS),
@@ -188,7 +197,12 @@ describe("sweep-deleted-storage endpoint", () => {
       );
 
       expect(error).toBeNull();
-      expect(data).toEqual({ swept: 1, failed: 0, overdue: 0 });
+      expect(data).toEqual({
+        ...noStaleBundles,
+        swept: 1,
+        failed: 0,
+        overdue: 0,
+      });
       expect(await loadSweep(run.taskRunId)).toBeNull();
       for (const key of runObjectKeys(run)) {
         expect(await store.getObject(key)).toBeNull();
@@ -208,14 +222,24 @@ describe("sweep-deleted-storage endpoint", () => {
       const early = await sweep(
         createClient({ now: at(HOUR_MS - 1), objectStore: store }),
       );
-      expect(early.data).toEqual({ swept: 0, failed: 0, overdue: 0 });
+      expect(early.data).toEqual({
+        ...noStaleBundles,
+        swept: 0,
+        failed: 0,
+        overdue: 0,
+      });
 
       await seedObjects(store, run);
       const due = await sweep(
         createClient({ now: at(HOUR_MS), objectStore: store }),
       );
 
-      expect(due.data).toEqual({ swept: 1, failed: 0, overdue: 0 });
+      expect(due.data).toEqual({
+        ...noStaleBundles,
+        swept: 1,
+        failed: 0,
+        overdue: 0,
+      });
       for (const key of runObjectKeys(run)) {
         expect(await store.getObject(key)).toBeNull();
       }
@@ -230,6 +254,7 @@ describe("sweep-deleted-storage endpoint", () => {
       const failingStore: ObjectStore = {
         putObject: () => Promise.resolve({ sizeBytes: 0 }),
         getObject: () => Promise.resolve(null),
+        getObjectStream: () => Promise.resolve(null),
         getPresignedGetUrl: () => Promise.resolve(null),
         getPresignedPutUrl: () => Promise.resolve(null),
         deleteObject: () => Promise.resolve(),
@@ -239,7 +264,12 @@ describe("sweep-deleted-storage endpoint", () => {
       const first = await sweep(
         createClient({ now: at(HOUR_MS), objectStore: failingStore }),
       );
-      expect(first.data).toEqual({ swept: 0, failed: 1, overdue: 0 });
+      expect(first.data).toEqual({
+        ...noStaleBundles,
+        swept: 0,
+        failed: 1,
+        overdue: 0,
+      });
       expect(await loadSweep(run.taskRunId)).toMatchObject({
         attempts: 1,
         lastError: "Error: simulated S3 outage",
@@ -249,7 +279,12 @@ describe("sweep-deleted-storage endpoint", () => {
       const second = await sweep(
         createClient({ now: at(2 * HOUR_MS), objectStore: failingStore }),
       );
-      expect(second.data).toEqual({ swept: 0, failed: 1, overdue: 0 });
+      expect(second.data).toEqual({
+        ...noStaleBundles,
+        swept: 0,
+        failed: 1,
+        overdue: 0,
+      });
       expect(await loadSweep(run.taskRunId)).toMatchObject({
         attempts: 2,
         notBefore: at(4 * HOUR_MS),
@@ -260,7 +295,12 @@ describe("sweep-deleted-storage endpoint", () => {
       const third = await sweep(
         createClient({ now: at(4 * HOUR_MS), objectStore: store }),
       );
-      expect(third.data).toEqual({ swept: 1, failed: 0, overdue: 0 });
+      expect(third.data).toEqual({
+        ...noStaleBundles,
+        swept: 1,
+        failed: 0,
+        overdue: 0,
+      });
       expect(await loadSweep(run.taskRunId)).toBeNull();
     },
   );
@@ -274,7 +314,12 @@ describe("sweep-deleted-storage endpoint", () => {
         createClient({ now: at(HOUR_MS), objectStore: null }),
       );
 
-      expect(data).toEqual({ swept: 0, failed: 1, overdue: 0 });
+      expect(data).toEqual({
+        ...noStaleBundles,
+        swept: 0,
+        failed: 1,
+        overdue: 0,
+      });
       expect(await loadSweep(run.taskRunId)).toMatchObject({
         attempts: 1,
         lastError: "Error: Object storage is not configured",
@@ -289,7 +334,12 @@ describe("sweep-deleted-storage endpoint", () => {
       createClient({ now: at(25 * HOUR_MS), objectStore: null }),
     );
 
-    expect(data).toEqual({ swept: 0, failed: 1, overdue: 1 });
+    expect(data).toEqual({
+      ...noStaleBundles,
+      swept: 0,
+      failed: 1,
+      overdue: 1,
+    });
     expect(await loadSweep(run.taskRunId)).not.toBeNull();
   });
 
@@ -301,6 +351,7 @@ describe("sweep-deleted-storage endpoint", () => {
       const countingStore: ObjectStore = {
         putObject: async (input) => await store.putObject(input),
         getObject: async (key) => await store.getObject(key),
+        getObjectStream: store.getObjectStream.bind(store),
         getPresignedGetUrl: () => Promise.resolve(null),
         getPresignedPutUrl: () => Promise.resolve(null),
         deleteObject: async (key) => {
@@ -388,7 +439,12 @@ describe("sweep-deleted-storage endpoint", () => {
     const { data } = await sweep(
       createClient({ now: at(HOUR_MS), objectStore: store }),
     );
-    expect(data).toEqual({ swept: 1, failed: 0, overdue: 0 });
+    expect(data).toEqual({
+      ...noStaleBundles,
+      swept: 1,
+      failed: 0,
+      overdue: 0,
+    });
     for (const key of runObjectKeys(run)) {
       expect(await store.getObject(key)).toBeNull();
     }

@@ -22,6 +22,7 @@ function buildProjectArtifact(
     contentType: "application/zip",
     kind: "playwright-trace",
     createdAt: "2026-06-05T12:00:00.000Z",
+    bundleId: null,
     nodeKey: null,
     ...overrides,
   };

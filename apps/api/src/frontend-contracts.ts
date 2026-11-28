@@ -35,7 +35,20 @@ export {
   projectArtifactDetailSchema,
   listProjectArtifactsResponseSchema,
   deleteProjectArtifactsInputSchema,
+  artifactBundleSchema,
+  artifactBundleStatusSchema,
+  listArtifactBundlesResponseSchema,
+  projectArtifactBundleDetailSchema,
 } from "@scarn/core/tasks/task-artifact/contracts/task-artifact-contracts";
+export {
+  artifactShareSchema,
+  artifactShareStatusSchema,
+  artifactShareCreatedViaSchema,
+  artifactShareUnavailableReasonSchema,
+  artifactPreviewSchema,
+  projectArtifactShareSchema,
+  listProjectArtifactSharesResponseSchema,
+} from "@scarn/core/tasks/artifact-share/contracts/artifact-share-contracts";
 export { artifactFailureSchema } from "@scarn/core/tasks/task-artifact/contracts/task-artifact-failure-contracts";
 export { taskRunSchema } from "@scarn/core/tasks/task-run/contracts/task-run-contracts";
 export {
@@ -140,7 +153,20 @@ export type {
   ProjectArtifactDetailContract,
   ProjectArtifactStatus,
   ListProjectArtifactsResponse,
+  ArtifactBundleContract,
+  ProjectArtifactBundleDetailContract,
 } from "@scarn/core/tasks/task-artifact/contracts/task-artifact-contracts";
+export type {
+  ArtifactShareContract,
+  ArtifactPreviewContract,
+  ProjectArtifactShareContract,
+  ListProjectArtifactSharesResponse,
+} from "@scarn/core/tasks/artifact-share/contracts/artifact-share-contracts";
+export type {
+  ArtifactShareStatus,
+  ArtifactShareCreatedVia,
+} from "@scarn/core/tasks/artifact-share/domain/artifact-share";
+export type { ArtifactBundleStatus } from "@scarn/core/tasks/task-artifact/domain/artifact-bundle";
 export type { TaskMessageContract } from "@scarn/core/tasks/task-message/contracts/task-message-contracts";
 export type { ArtifactFailureContract } from "@scarn/core/tasks/task-artifact/contracts/task-artifact-failure-contracts";
 export type { StepDefinitionContract } from "@scarn/core/pipeline-definitions/step-definition/contracts/step-definition-contracts";

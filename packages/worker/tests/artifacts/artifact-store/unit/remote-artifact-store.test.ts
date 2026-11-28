@@ -38,6 +38,8 @@ const recordingUploader = (
         recordCalls.push(input);
         return Promise.resolve();
       },
+      createArtifactBundle: () => Promise.resolve({ id: "bundle-1" }),
+      finalizeArtifactBundle: () => Promise.resolve(undefined),
     },
   };
 };
@@ -96,6 +98,12 @@ describe("RemoteArtifactStore", () => {
     expect(
       (fetchCalls[0]?.init?.headers as Record<string, string>)["content-type"],
     ).toBe("application/json");
+    expect(
+      (fetchCalls[0]?.init?.headers as Record<string, string>)[
+        "content-length"
+      ],
+    ).toBe(String('{"ok":true}'.length));
+    expect(fetchCalls[0]?.init?.body).toBeInstanceOf(Blob);
 
     // recordArtifact called with the object key + real byte size.
     const sizeBytes = '{"ok":true}'.length;

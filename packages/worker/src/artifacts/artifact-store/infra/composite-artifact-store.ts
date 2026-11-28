@@ -1,7 +1,10 @@
-import type {
-  ArtifactStore,
-  SaveArtifactInput,
-  SaveArtifactResult,
+import {
+  saveArtifactBundle,
+  type ArtifactStore,
+  type SaveArtifactBundleInput,
+  type SaveArtifactBundleResult,
+  type SaveArtifactInput,
+  type SaveArtifactResult,
 } from "../domain/artifact-store";
 
 /**
@@ -36,6 +39,16 @@ export class CompositeArtifactStore implements ArtifactStore {
     );
     // Non-null: constructor guarantees at least one store, so at least one result.
     return results[0] as SaveArtifactResult;
+  }
+
+  /** Fans a bundle out to every store, with the same all-or-nothing contract. */
+  async saveBundle(
+    input: SaveArtifactBundleInput,
+  ): Promise<SaveArtifactBundleResult> {
+    const results = await Promise.all(
+      this.stores.map((store) => saveArtifactBundle(store, input)),
+    );
+    return results[0] as SaveArtifactBundleResult;
   }
 
   /**

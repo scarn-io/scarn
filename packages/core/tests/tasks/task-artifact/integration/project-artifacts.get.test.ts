@@ -76,6 +76,7 @@ const claimStep = async (
 const presigningObjectStore = (): ObjectStore => ({
   putObject: () => Promise.resolve({ sizeBytes: 0 }),
   getObject: () => Promise.resolve(null),
+  getObjectStream: () => Promise.resolve(null),
   getPresignedGetUrl: (key: string) =>
     Promise.resolve(`https://store.test/get/${key}`),
   getPresignedPutUrl: (key: string) =>

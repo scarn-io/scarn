@@ -173,9 +173,41 @@ yourself.
 | `SCARN_DEFAULT_PLAN`                                                                                       | The plan new organizations start on. Unset means unlimited.                                                            |
 | `POSTHOG_API_KEY`, `POSTHOG_HOST`                                                                          | Server-side product analytics. Off while unset.                                                                        |
 | `WORK_SIGNAL_*`, `LOG_FEED_*`                                                                              | The [work signal](#work-signal-optional) service.                                                                      |
+| `SCARN_ARTIFACT_CONTENT_URL`, `ARTIFACT_SHARE_SECRET`                                                      | Previews and share links for artifact bundles. See [Share links](#share-links).                                        |
+| `ARTIFACT_BUNDLE_MAX_FILES`, `ARTIFACT_BUNDLE_MAX_FILE_BYTES`, `ARTIFACT_BUNDLE_MAX_BYTES`                 | Your own limits for artifact bundles. Defaults: 1,000 files, 100 MiB per file, 250 MiB per bundle.                     |
 
 `SCARN_VERSION` and the `SCARN_*_PORT` variables are read by Compose itself,
 so they go in your shell or a `.env` file, not in `.env.selfhost`.
+
+### Share links
+
+Agents can submit folders, such as HTML reports, as
+[bundles](/scarn/guides/steps/#declaring-a-bundle-field). Previewing a bundle
+in the app and sharing it by link need a second hostname that serves only
+bundle content, for example `artifacts.example-content.com` next to an app on
+`scarn.example.com`.
+
+The hostname must be on a different registrable domain from `APP_URL`. A
+subdomain of the app's domain, such as `artifacts.scarn.example.com`, is
+refused and sharing stays off: a script in a bundle could otherwise reach the
+app's cookies.
+
+1. Point the hostname at the `api` service (port `3001`) through your reverse
+   proxy, with TLS. Keep the `Host` header the browser sent: the API serves
+   `/s/…` and `/p/…` only on the host in `SCARN_ARTIFACT_CONTENT_URL`.
+2. Set both variables in `.env.selfhost`:
+
+   ```bash
+   SCARN_ARTIFACT_CONTENT_URL=https://artifacts.example-content.com
+   ARTIFACT_SHARE_SECRET=<output of openssl rand -hex 32>
+   ```
+
+3. Apply the change with `docker compose -f docker-compose.selfhost.yml up -d`.
+
+Without both variables, bundles still upload and download, but the app can't
+preview or share them, and steps that share their bundles automatically skip
+it. The bundle page says sharing is off on this server. Rotating
+`ARTIFACT_SHARE_SECRET` turns off every existing share link at once.
 
 ### Sign-in
 

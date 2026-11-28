@@ -95,6 +95,21 @@ import type { TaskRepo } from "@scarn/core/tasks/task/application/task-repo";
 import type { GrantRequestRepo } from "@scarn/core/tasks/grant-request/application/grant-request-repo";
 import type { ArtifactRepo } from "@scarn/core/tasks/task-artifact/application/artifact-repo";
 import { DrizzleArtifactRepo } from "@scarn/core/tasks/task-artifact/infra/drizzle-artifact-repo";
+import type { ArtifactBundleRepo } from "@scarn/core/tasks/task-artifact/application/artifact-bundle-repo";
+import { DrizzleArtifactBundleRepo } from "@scarn/core/tasks/task-artifact/infra/drizzle-artifact-bundle-repo";
+import {
+  resolveArtifactBundleLimits,
+  type ArtifactBundleLimits,
+} from "@scarn/core/tasks/task-artifact/domain/artifact-bundle";
+import type { ArtifactShareRepo } from "@scarn/core/tasks/artifact-share/application/artifact-share-repo";
+import { DrizzleArtifactShareRepo } from "@scarn/core/tasks/artifact-share/infra/drizzle-artifact-share-repo";
+import {
+  applyContentOriginIsolationCheck,
+  resolveArtifactSharingConfig,
+  type ArtifactSharingConfig,
+} from "@scarn/core/tasks/artifact-share/domain/artifact-sharing-config";
+import type { ContentRateLimiter } from "@scarn/core/tasks/artifact-share/application/content-rate-limiter";
+import { InMemoryContentRateLimiter } from "@scarn/core/tasks/artifact-share/infra/in-memory-content-rate-limiter";
 import type { ArtifactFailureRepo } from "@scarn/core/tasks/task-artifact/application/artifact-failure-repo";
 import { DrizzleArtifactFailureRepo } from "@scarn/core/tasks/task-artifact/infra/drizzle-artifact-failure-repo";
 import type { PipelineGraphRepo } from "@scarn/core/pipeline-definitions/pipeline-graph/application/pipeline-graph-repo";
@@ -199,6 +214,14 @@ export type CreateAppContextOverrides = {
   taskSummaryReader?: TaskSummaryReader;
   taskRunRepo?: TaskRunRepo;
   artifactRepo?: ArtifactRepo;
+  artifactBundleRepo?: ArtifactBundleRepo;
+  /** Bundle file/size limits; defaults to `resolveArtifactBundleLimits(process.env)`. */
+  artifactBundleLimits?: ArtifactBundleLimits;
+  artifactShareRepo?: ArtifactShareRepo;
+  /** Share-link config; defaults to `resolveArtifactSharingConfig(process.env)`. */
+  artifactSharingConfig?: ArtifactSharingConfig;
+  /** Rate limiter for anonymous content-origin reads; defaults to an in-memory, per-instance one. */
+  contentRateLimiter?: ContentRateLimiter;
   artifactFailureRepo?: ArtifactFailureRepo;
   pipelineGraphRepo?: PipelineGraphRepo;
   pipelineGraphVersionRepo?: PipelineGraphVersionRepo;
@@ -324,6 +347,12 @@ export function createAppContext(overrides?: CreateAppContextOverrides) {
   const taskRunRepo =
     overrides?.taskRunRepo ?? new DrizzleTaskRunRepo(timeProvider, logger);
   const artifactRepo = overrides?.artifactRepo ?? new DrizzleArtifactRepo();
+  const artifactBundleRepo =
+    overrides?.artifactBundleRepo ?? new DrizzleArtifactBundleRepo();
+  const artifactBundleLimits =
+    overrides?.artifactBundleLimits ?? resolveArtifactBundleLimits(process.env);
+  const artifactShareRepo =
+    overrides?.artifactShareRepo ?? new DrizzleArtifactShareRepo();
   const artifactFailureRepo =
     overrides?.artifactFailureRepo ?? new DrizzleArtifactFailureRepo();
   const pipelineGraphRepo =
@@ -438,6 +467,24 @@ export function createAppContext(overrides?: CreateAppContextOverrides) {
         ? overrides.apiUrl
         : process.env["API_URL"],
   });
+  const artifactSharingConfig =
+    overrides?.artifactSharingConfig ??
+    applyContentOriginIsolationCheck(
+      resolveArtifactSharingConfig(process.env),
+      {
+        appUrl,
+        apiUrl: apiBaseUrl,
+        cookieDomain: process.env["BETTER_AUTH_COOKIE_DOMAIN"] ?? null,
+      },
+      (problems) => {
+        logger.error(
+          { problems },
+          "artifact sharing disabled: SCARN_ARTIFACT_CONTENT_URL is not an isolated origin",
+        );
+      },
+    );
+  const contentRateLimiter =
+    overrides?.contentRateLimiter ?? new InMemoryContentRateLimiter();
   const managedConnectionGuards = new ManagedConnectionGuards({
     loopbackOrigins: overrides?.managedOAuthLoopbackOrigins ?? [],
   });
@@ -518,6 +565,7 @@ export function createAppContext(overrides?: CreateAppContextOverrides) {
     adapterRegistry: notificationChannelAdapterRegistry,
     provenanceReader: notificationProvenanceReader,
     commentArtifactReader,
+    artifactSharingConfig,
   };
 
   const automationRunner = new AutomationRunner({
@@ -633,6 +681,11 @@ export function createAppContext(overrides?: CreateAppContextOverrides) {
     taskSummaryReader,
     taskRunRepo,
     artifactRepo,
+    artifactBundleRepo,
+    artifactBundleLimits,
+    artifactShareRepo,
+    artifactSharingConfig,
+    contentRateLimiter,
     artifactFailureRepo,
     pipelineGraphRepo,
     pipelineGraphVersionRepo,

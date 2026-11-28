@@ -143,6 +143,7 @@ describe("submitArtifact", () => {
       expect(await readSubmissions(workspacePath)).toEqual({
         fields: {
           reproVideo: {
+            kind: "file",
             stored: "reproVideo.webm",
             sourcePath: source,
             sizeBytes: 5,
@@ -218,8 +219,14 @@ describe("submitArtifact", () => {
       expect(await readSubmissions(workspacePath)).toEqual({
         fields: {},
         extra: [
-          { stored: "trace.zip", sourcePath: "out/trace.zip", sizeBytes: 5 },
           {
+            kind: "file",
+            stored: "trace.zip",
+            sourcePath: "out/trace.zip",
+            sizeBytes: 5,
+          },
+          {
+            kind: "file",
             stored: "screens/banner.png",
             sourcePath: "banner.png",
             sizeBytes: 5,
@@ -263,18 +270,13 @@ describe("submitArtifact", () => {
     },
   );
 
-  test.concurrent("rejects a missing, non-regular or empty file", async () => {
+  test.concurrent("rejects a missing or empty file", async () => {
     const workspacePath = await createWorkspace();
     await writeSource(workspacePath, "empty.png", "");
-    await mkdir(path.join(workspacePath, "dir.png"));
 
     expectRejection(
       submitArtifact({ path: "nope.png", field: "screenshot" }, workspacePath),
       "File not found",
-    );
-    expectRejection(
-      submitArtifact({ path: "dir.png", field: "screenshot" }, workspacePath),
-      "Not a regular file",
     );
     expectRejection(
       submitArtifact({ path: "empty.png", field: "screenshot" }, workspacePath),
@@ -324,6 +326,35 @@ describe("submitArtifact", () => {
           workspacePath,
         ),
         "could not be read",
+      );
+    },
+  );
+
+  test.concurrent(
+    "refuses a step whose artifact keyword has unknown keys",
+    async () => {
+      const schema = {
+        type: "object",
+        properties: {
+          clip: {
+            type: "string",
+            "x-scarn-artifact": { accept: [".mp4"], maxBytes: 10 },
+          },
+        },
+      };
+      const workspacePath = await createWorkspace(schema);
+      await writeSource(workspacePath, "clip.mp4");
+
+      expectRejection(
+        submitArtifact({ path: "clip.mp4", field: "clip" }, workspacePath),
+        "this step needs a newer Scarn worker",
+      );
+      expectRejection(
+        submitArtifact({ path: "clip.mp4" }, workspacePath),
+        "this step needs a newer Scarn worker",
+      );
+      expect(buildSubmitArtifactDescription(schema)).toContain(
+        "this step needs a newer Scarn worker",
       );
     },
   );

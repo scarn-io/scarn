@@ -2,7 +2,12 @@ import { and, desc, eq, inArray, isNotNull, isNull, lte } from "drizzle-orm";
 import { getDb } from "@scarn/core/lib/db";
 import type { DbExecutor } from "@scarn/core/lib/db/db-executor";
 import { projectInOrg } from "@scarn/core/lib/db/project-in-org";
-import { nodeVisits, taskArtifacts, taskRuns } from "@scarn/core/lib/db/schema";
+import {
+  nodeVisits,
+  taskArtifactBundles,
+  taskArtifacts,
+  taskRuns,
+} from "@scarn/core/lib/db/schema";
 import { PersistenceError } from "@scarn/core/lib/errors";
 import type { UuidV7 } from "@scarn/core/common/contracts/uuid-v7";
 import type {
@@ -15,7 +20,7 @@ import type {
   RecordArtifactRow,
 } from "../application/artifact-repo";
 
-const toContract = (
+export const toArtifactContract = (
   row: typeof taskArtifacts.$inferSelect,
 ): ArtifactContract => ({
   id: row.id as ArtifactContract["id"],
@@ -28,6 +33,7 @@ const toContract = (
   contentType: row.contentType,
   kind: row.kind as ArtifactKind,
   createdAt: row.createdAt.toISOString(),
+  bundleId: (row.bundleId as UuidV7 | null) ?? null,
 });
 
 export class DrizzleArtifactRepo implements ArtifactRepo {
@@ -48,6 +54,7 @@ export class DrizzleArtifactRepo implements ArtifactRepo {
         sizeBytes: input.sizeBytes,
         contentType: input.contentType,
         kind: input.kind,
+        bundleId: input.bundleId ?? null,
       })
       .returning();
 
@@ -58,7 +65,7 @@ export class DrizzleArtifactRepo implements ArtifactRepo {
       );
     }
 
-    return toContract(row);
+    return toArtifactContract(row);
   }
 
   async listByTask(
@@ -77,7 +84,7 @@ export class DrizzleArtifactRepo implements ArtifactRepo {
       )
       .orderBy(desc(taskArtifacts.createdAt));
 
-    return rows.map(toContract);
+    return rows.map(toArtifactContract);
   }
 
   async findById(
@@ -93,7 +100,7 @@ export class DrizzleArtifactRepo implements ArtifactRepo {
       )
       .limit(1);
 
-    return row ? toContract(row) : null;
+    return row ? toArtifactContract(row) : null;
   }
 
   async findWithRunContextById(
@@ -119,7 +126,7 @@ export class DrizzleArtifactRepo implements ArtifactRepo {
     }
 
     return {
-      ...toContract(row.artifact),
+      ...toArtifactContract(row.artifact),
       deletedAt: row.artifact.deletedAt?.toISOString() ?? null,
       pipelineRunId: (row.pipelineRunId as UuidV7 | null) ?? null,
       attemptNumber: row.pipelineRunId === null ? null : row.attemptNumber,
@@ -151,7 +158,7 @@ export class DrizzleArtifactRepo implements ArtifactRepo {
       .limit(limit + 1);
 
     return rows.map((row) => ({
-      ...toContract(row.artifact),
+      ...toArtifactContract(row.artifact),
       nodeKey: row.nodeKey ?? null,
     }));
   }
@@ -170,7 +177,7 @@ export class DrizzleArtifactRepo implements ArtifactRepo {
       .from(taskArtifacts)
       .where(inArray(taskArtifacts.id, artifactIds));
 
-    return rows.map(toContract);
+    return rows.map(toArtifactContract);
   }
 
   async softDeleteMany(
@@ -233,6 +240,19 @@ export class DrizzleArtifactRepo implements ArtifactRepo {
         ),
       )
       .returning({ id: taskArtifacts.id });
+
+    // A bundle expires with its files, on the same anchor and cutoff. Its
+    // members are recorded after it, so they expire on this pass or later.
+    await db
+      .update(taskArtifactBundles)
+      .set({ expiredAt: now })
+      .where(
+        and(
+          isNull(taskArtifactBundles.expiredAt),
+          lte(taskArtifactBundles.createdAt, cutoff),
+          projectInOrg(taskArtifactBundles.projectId, orgId),
+        ),
+      );
 
     return cleared.length;
   }

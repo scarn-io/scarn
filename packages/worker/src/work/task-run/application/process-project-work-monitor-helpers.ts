@@ -1,6 +1,6 @@
 import { TASK_AGENT } from "@scarn/opencode-plugin";
 import { execFile } from "node:child_process";
-import { access, readFile, readdir, stat } from "node:fs/promises";
+import { readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 import type { startProcessClaimedTaskRun } from "./process-claimed-task-run";
@@ -9,8 +9,6 @@ import type { ProcessProjectWorkDeps } from "../contracts/process-project-work-t
 import { buildFindingsSubmissionPath } from "./process-project-work-findings";
 import { resolveMonitorAgentContext } from "./process-project-work-monitor-agent";
 import { toOpencodeServerHandle } from "../../../runtime/runtime-service/infra/opencode-server-contract";
-import { detectArtifactKind } from "../../../artifacts/artifact-store/domain/detect-artifact-kind";
-import { classifyArtifactSaveError } from "../../../artifacts/artifact-store/domain/classify-artifact-save-error";
 
 const execFileAsync = promisify(execFile);
 
@@ -343,98 +341,4 @@ export async function captureMissingFindingsDiagnostics(input: {
       containerId: input.runtimeContainerId,
     }),
   };
-}
-
-export async function collectStepArtifacts(
-  deps: ProcessProjectWorkDeps,
-  startedTask: Awaited<ReturnType<typeof startProcessClaimedTaskRun>>,
-  logger: ReturnType<typeof resolveProjectWorkLogger>,
-): Promise<void> {
-  const stepArtifactsDir = path.join(
-    startedTask.environment.workspacePath,
-    ".scarn",
-    "step-artifacts",
-  );
-
-  try {
-    await access(stepArtifactsDir);
-  } catch {
-    return;
-  }
-
-  const entries = await readdir(stepArtifactsDir, { recursive: true });
-
-  for (const entry of entries) {
-    const relativeStorePath = entry;
-    const sourcePath = path.join(stepArtifactsDir, relativeStorePath);
-    const fileStat = await stat(sourcePath);
-    if (!fileStat.isFile()) {
-      continue;
-    }
-
-    logger.log("worker", "Saving step artifact", {
-      taskRunId: startedTask.taskRunId,
-      relativeStorePath,
-      sourcePath,
-    });
-
-    const kind = await detectArtifactKind(relativeStorePath, sourcePath);
-
-    try {
-      const result = await deps.artifactStore.saveArtifact({
-        taskRunId: startedTask.taskRunId,
-        claimToken: startedTask.claimToken,
-        sourcePath,
-        relativeStorePath,
-        kind,
-      });
-      logger.log("worker", "Saved step artifact", {
-        taskRunId: startedTask.taskRunId,
-        relativeStorePath,
-        storeRef: result.storeRef,
-        sizeBytes: result.sizeBytes,
-      });
-    } catch (error) {
-      logger.error("worker", "Failed to save step artifact", {
-        taskRunId: startedTask.taskRunId,
-        relativeStorePath,
-        sourcePath,
-        error: error instanceof Error ? error.message : String(error),
-      });
-
-      try {
-        const classified = classifyArtifactSaveError(error);
-        await deps.workerClient.recordArtifactFailure({
-          taskRunId: startedTask.taskRunId,
-          claimToken: startedTask.claimToken,
-          relativeStorePath,
-          attemptedSizeBytes: fileStat.size,
-          kind,
-          errorCode: classified.errorCode,
-          errorMessage: classified.errorMessage,
-          ...(classified.httpStatus === null
-            ? {}
-            : { httpStatus: classified.httpStatus }),
-        });
-      } catch (reportingError) {
-        logger.error("worker", "Failed to report step artifact save failure", {
-          taskRunId: startedTask.taskRunId,
-          relativeStorePath,
-          error:
-            reportingError instanceof Error
-              ? reportingError.message
-              : String(reportingError),
-        });
-      }
-    }
-  }
-
-  try {
-    await deps.artifactStore.prune?.();
-  } catch (error) {
-    logger.error("worker", "Failed to prune local artifacts", {
-      taskRunId: startedTask.taskRunId,
-      error: error instanceof Error ? error.message : String(error),
-    });
-  }
 }

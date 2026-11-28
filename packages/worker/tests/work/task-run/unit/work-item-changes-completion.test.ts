@@ -82,6 +82,8 @@ function createDeps(
       createArtifactUploadUrl: vi.fn(),
       createSessionUploadUrl: vi.fn(),
       recordArtifact: vi.fn(),
+      createArtifactBundle: vi.fn(),
+      finalizeArtifactBundle: vi.fn(),
       recordArtifactFailure: vi.fn(),
     },
     createRunTracker: vi.fn(),

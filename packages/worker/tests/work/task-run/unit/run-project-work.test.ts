@@ -120,6 +120,8 @@ function createWorkerClient(
       }),
     ),
     recordArtifact: vi.fn(() => Promise.resolve(undefined)),
+    createArtifactBundle: vi.fn(() => Promise.resolve({ id: "bundle-1" })),
+    finalizeArtifactBundle: vi.fn(() => Promise.resolve(undefined)),
     recordArtifactFailure: vi.fn(() => Promise.resolve(undefined)),
     ...overrides,
   };

@@ -172,6 +172,8 @@ export function createHarness(
       createArtifactUploadUrl: vi.fn(),
       createSessionUploadUrl,
       recordArtifact: vi.fn(),
+      createArtifactBundle: vi.fn(),
+      finalizeArtifactBundle: vi.fn(),
       recordArtifactFailure: vi.fn(),
       appendTaskLogs: vi.fn(() => Promise.resolve({ nextOffset: 0 })),
     },

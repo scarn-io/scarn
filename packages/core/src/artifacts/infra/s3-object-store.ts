@@ -11,6 +11,8 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { ConfigurationError } from "@scarn/core/lib/errors";
 import type {
   GetObjectResult,
+  GetObjectStreamResult,
+  ObjectByteRange,
   ObjectStore,
   PutObjectInput,
 } from "@scarn/core/artifacts/object-store";
@@ -99,6 +101,76 @@ const untilAborted = <T>(
   });
 };
 
+/**
+ * Errors (and cancels) `stream` once `signal` aborts, so a client that goes
+ * away mid-download stops the S3 read too.
+ */
+const abortableStream = (
+  stream: ReadableStream<Uint8Array>,
+  signal: AbortSignal | undefined,
+): ReadableStream<Uint8Array> => {
+  if (!signal) return stream;
+  const reader = stream.getReader();
+  let onAbort: (() => void) | null = null;
+  const detach = () => {
+    if (onAbort) signal.removeEventListener("abort", onAbort);
+  };
+  return new ReadableStream<Uint8Array>({
+    start(controller) {
+      onAbort = () => {
+        controller.error(signal.reason);
+        void reader.cancel(signal.reason);
+      };
+      if (signal.aborted) onAbort();
+      else signal.addEventListener("abort", onAbort, { once: true });
+    },
+    async pull(controller) {
+      try {
+        const chunk = await reader.read();
+        if (chunk.done) {
+          detach();
+          controller.close();
+        } else {
+          controller.enqueue(chunk.value);
+        }
+      } catch (error) {
+        detach();
+        controller.error(error);
+      }
+    },
+    async cancel(reason) {
+      detach();
+      await reader.cancel(reason);
+    },
+  });
+};
+
+const CONTENT_RANGE_PATTERN = /^bytes (\d+)-(\d+)\/(\d+)$/;
+
+/** Parses S3's `Content-Range: bytes <start>-<end>/<total>`. */
+export const parseS3ContentRange = (
+  header: string | undefined,
+): { start: number; end: number; total: number } | null => {
+  const match = header ? CONTENT_RANGE_PATTERN.exec(header) : null;
+  if (!match) return null;
+  return {
+    start: Number(match[1]),
+    end: Number(match[2]),
+    total: Number(match[3]),
+  };
+};
+
+const rangeHeaderValue = (range: ObjectByteRange): string =>
+  `bytes=${String(range.start)}-${range.end === undefined ? "" : String(range.end)}`;
+
+const singleChunkStream = (body: Uint8Array): ReadableStream<Uint8Array> =>
+  new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(body);
+      controller.close();
+    },
+  });
+
 export class S3ObjectStore implements ObjectStore {
   private readonly client: S3Client;
   private readonly bucket: string;
@@ -164,6 +236,73 @@ export class S3ObjectStore implements ObjectStore {
         body,
         contentType: response.ContentType,
         sizeBytes: body.byteLength,
+      };
+    } catch (error) {
+      if (isNotFound(error)) {
+        return null;
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * `GetObject` with a `Range` header. A gzip-encoded object (logs) is read
+   * whole and decompressed instead, since a range of compressed bytes is
+   * meaningless to the caller: see {@link ObjectStore.getObjectStream}.
+   */
+  async getObjectStream(
+    key: string,
+    options: { range?: ObjectByteRange | undefined; signal?: AbortSignal } = {},
+  ): Promise<GetObjectStreamResult | null> {
+    try {
+      const response = await this.client.send(
+        new GetObjectCommand({
+          Bucket: this.bucket,
+          Key: key,
+          ...(options.range ? { Range: rangeHeaderValue(options.range) } : {}),
+        }),
+        { abortSignal: options.signal },
+      );
+      if (!response.Body) {
+        return null;
+      }
+      if (response.ContentEncoding === GZIP_ENCODING) {
+        let stored: { body: Uint8Array; contentType: string | undefined };
+        if (options.range) {
+          await response.Body.transformToWebStream().cancel();
+          const whole = await this.getObject(key, options);
+          if (!whole) {
+            return null;
+          }
+          stored = whole;
+        } else {
+          const compressed = await untilAborted(
+            response.Body.transformToByteArray(),
+            options.signal,
+          );
+          stored = {
+            body: gunzipSync(compressed),
+            contentType: response.ContentType,
+          };
+        }
+        return {
+          body: singleChunkStream(stored.body),
+          contentType: stored.contentType,
+          sizeBytes: stored.body.byteLength,
+          contentRange: null,
+        };
+      }
+      const contentRange = options.range
+        ? parseS3ContentRange(response.ContentRange)
+        : null;
+      return {
+        body: abortableStream(
+          response.Body.transformToWebStream() as ReadableStream<Uint8Array>,
+          options.signal,
+        ),
+        contentType: response.ContentType,
+        sizeBytes: contentRange?.total ?? response.ContentLength ?? 0,
+        contentRange,
       };
     } catch (error) {
       if (isNotFound(error)) {
@@ -292,6 +431,13 @@ export class LazyS3ObjectStore implements ObjectStore {
     options?: { signal?: AbortSignal },
   ): Promise<GetObjectResult | null> {
     return await this.getDelegate().getObject(key, options);
+  }
+
+  async getObjectStream(
+    key: string,
+    options?: { range?: ObjectByteRange | undefined; signal?: AbortSignal },
+  ): Promise<GetObjectStreamResult | null> {
+    return await this.getDelegate().getObjectStream(key, options);
   }
 
   async getPresignedGetUrl(

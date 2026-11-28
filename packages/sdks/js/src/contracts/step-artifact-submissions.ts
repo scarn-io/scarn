@@ -5,14 +5,16 @@
  * artifact fields in from it, and the worker, which checks the findings file
  * against it before completing the step.
  */
-import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
 import {
   artifactAcceptsFile,
   artifactFileExtension,
   findArtifactFields,
+  findArtifactFieldsWithProblems,
   type ArtifactField,
+  type ArtifactFieldProblem,
   type ArtifactJsonSchemaNode,
 } from "./artifacts";
 
@@ -20,13 +22,27 @@ export const STEP_ARTIFACTS_RELATIVE_DIR = ".scarn/step-artifacts";
 export const STEP_ARTIFACT_SUBMISSIONS_RELATIVE_PATH =
   ".scarn/current-execution/artifacts.json";
 
-export type SubmittedArtifact = {
-  /** Path relative to the step-artifacts folder. */
+type SubmittedArtifactBase = {
+  /** Path relative to the step-artifacts folder: a file, or a bundle's folder. */
   readonly stored: string;
   /** The path the agent submitted, as given. */
   readonly sourcePath: string;
+  /** The file's size, or the total size of a bundle's files. */
   readonly sizeBytes: number;
 };
+
+export type SubmittedArtifactFile = SubmittedArtifactBase & {
+  readonly kind: "file";
+};
+
+export type SubmittedArtifactBundle = SubmittedArtifactBase & {
+  readonly kind: "bundle";
+  /** The entry page, relative to the bundle folder. */
+  readonly entry: string;
+  readonly fileCount: number;
+};
+
+export type SubmittedArtifact = SubmittedArtifactFile | SubmittedArtifactBundle;
 
 export type StepArtifactSubmissions = {
   readonly fields: Readonly<Record<string, SubmittedArtifact>>;
@@ -45,11 +61,38 @@ export function findSubmittableArtifactFields(
   return findArtifactFields(schema).filter((field) => !field.inArray);
 }
 
-const submittedArtifactSchema = z.object({
+/**
+ * `findSubmittableArtifactFields` plus each field's keyword problems, for
+ * callers that must refuse a schema they don't fully understand.
+ */
+export function findSubmittableArtifactFieldsWithProblems(
+  schema: ArtifactJsonSchemaNode | null | undefined,
+): {
+  readonly fields: ArtifactField[];
+  readonly problems: ArtifactFieldProblem[];
+} {
+  const { fields, problems } = findArtifactFieldsWithProblems(schema);
+  return { fields: fields.filter((field) => !field.inArray), problems };
+}
+
+const submittedArtifactBaseShape = {
   stored: z.string().min(1),
   sourcePath: z.string(),
   sizeBytes: z.number(),
-});
+};
+
+const submittedArtifactSchema = z.union([
+  z.object({
+    ...submittedArtifactBaseShape,
+    kind: z.literal("bundle"),
+    entry: z.string().min(1),
+    fileCount: z.number().int().nonnegative(),
+  }),
+  z.object({
+    ...submittedArtifactBaseShape,
+    kind: z.literal("file").default("file"),
+  }),
+]);
 
 const stepArtifactSubmissionsSchema = z.object({
   fields: z.record(z.string(), submittedArtifactSchema),
@@ -219,7 +262,7 @@ export function applyArtifactSubmissions(input: {
 
     if (!submitted && !field.nullable) {
       problems.push(
-        `\`${field.path}\` is required. Save the file and ${submitHint(field.path)} first.`,
+        `\`${field.path}\` is required. Save the ${field.bundle ? "folder" : "file"} and ${submitHint(field.path)} first.`,
       );
       continue;
     }
@@ -229,7 +272,69 @@ export function applyArtifactSubmissions(input: {
   return { findings, problems };
 }
 
-/** Checks every submitted field's stored file is still a non-empty file. */
+type StoredArtifactState =
+  | { readonly kind: "missing" }
+  | { readonly kind: "file"; readonly empty: boolean }
+  | {
+      readonly kind: "directory";
+      readonly empty: boolean;
+      readonly hasEntry: boolean;
+    };
+
+async function readStoredArtifact(
+  absolutePath: string,
+  entry: string | null,
+): Promise<StoredArtifactState> {
+  const stats = await stat(absolutePath).catch(() => null);
+  if (stats?.isFile()) return { kind: "file", empty: stats.size === 0 };
+  if (!stats?.isDirectory()) return { kind: "missing" };
+  const children = await readdir(absolutePath).catch(() => []);
+  const entryStats = entry
+    ? await stat(path.join(absolutePath, entry)).catch(() => null)
+    : null;
+  return {
+    kind: "directory",
+    empty: children.length === 0,
+    hasEntry: !!entryStats?.isFile(),
+  };
+}
+
+/**
+ * Why the stored artifact at `relativePath` can't fill `field`, or null.
+ * A file field needs a non-empty file; a bundle field needs a non-empty
+ * folder holding its entry page.
+ */
+function storedArtifactProblem(
+  field: ArtifactField,
+  relativePath: string,
+  state: StoredArtifactState,
+): string | null {
+  if (field.bundle) {
+    if (state.kind === "file") {
+      return `${relativePath} is a file, and a bundle field needs a folder`;
+    }
+    if (state.kind === "missing" || state.empty) {
+      return `${relativePath} is missing or empty`;
+    }
+    if (!state.hasEntry) {
+      return `${relativePath} has no entry page ${field.bundle.entry}`;
+    }
+    return null;
+  }
+  if (state.kind === "directory") {
+    return `${relativePath} is a folder, and a file field needs a file`;
+  }
+  if (state.kind === "missing" || state.empty) {
+    return `${relativePath} is missing or empty`;
+  }
+  return null;
+}
+
+/**
+ * Checks every submitted field's stored artifact is still there: a
+ * non-empty file for a file field, a non-empty folder holding the entry page
+ * for a bundle field.
+ */
 export async function checkSubmittedArtifactFiles(input: {
   readonly workspacePath: string;
   readonly fields: readonly ArtifactField[];
@@ -244,12 +349,24 @@ export async function checkSubmittedArtifactFiles(input: {
       STEP_ARTIFACTS_RELATIVE_DIR,
       submitted.stored,
     );
-    const stats = await stat(path.join(artifactsDir, submitted.stored)).catch(
-      () => null,
-    );
-    if (!stats?.isFile() || stats.size === 0) {
+    const again = field.bundle
+      ? "Save the folder again"
+      : "Save the file again";
+    const expectedKind = field.bundle ? "bundle" : "file";
+    if (submitted.kind !== expectedKind) {
       problems.push(
-        `\`${field.path}\` was submitted as ${submitted.stored}, but ${relativePath} is missing or empty. Save the file again and ${submitHint(field.path)}.`,
+        `\`${field.path}\` is a ${expectedKind} field, but ${submitted.stored} was submitted as a ${submitted.kind}. ${again} and ${submitHint(field.path)}.`,
+      );
+      continue;
+    }
+    const state = await readStoredArtifact(
+      path.join(artifactsDir, submitted.stored),
+      field.bundle?.entry ?? null,
+    );
+    const problem = storedArtifactProblem(field, relativePath, state);
+    if (problem) {
+      problems.push(
+        `\`${field.path}\` was submitted as ${submitted.stored}, but ${problem}. ${again} and ${submitHint(field.path)}.`,
       );
     }
   }
@@ -272,8 +389,9 @@ function isInsideArtifactsDir(value: string): boolean {
 /**
  * Checks the artifact fields a code step returned (`Artifact.path(...)`
  * values): each must be a path inside the step-artifacts folder naming a
- * non-empty file with an accepted extension. `null` and absent values are
- * left to the schema check.
+ * non-empty file with an accepted extension, or, for a bundle field, a
+ * non-empty folder holding the entry page. `null` and absent values are left
+ * to the schema check.
  */
 export async function checkReturnedArtifactPaths(input: {
   readonly workspacePath: string;
@@ -291,14 +409,20 @@ export async function checkReturnedArtifactPaths(input: {
       );
       continue;
     }
-    const stats = await stat(path.join(artifactsDir, value)).catch(() => null);
-    if (!stats?.isFile() || stats.size === 0) {
-      problems.push(
-        `\`${field.path}\` is ${value}, but ${path.posix.join(STEP_ARTIFACTS_RELATIVE_DIR, value)} is missing or empty.`,
-      );
+    const state = await readStoredArtifact(
+      path.join(artifactsDir, value),
+      field.bundle?.entry ?? null,
+    );
+    const problem = storedArtifactProblem(
+      field,
+      path.posix.join(STEP_ARTIFACTS_RELATIVE_DIR, value),
+      state,
+    );
+    if (problem) {
+      problems.push(`\`${field.path}\` is ${value}, but ${problem}.`);
       continue;
     }
-    if (!artifactAcceptsFile(field.accept, value)) {
+    if (!field.bundle && !artifactAcceptsFile(field.accept, value)) {
       problems.push(
         `\`${field.path}\` accepts ${field.accept.join(", ")}, but ${value} has ${artifactFileExtension(value) || "no extension"}.`,
       );

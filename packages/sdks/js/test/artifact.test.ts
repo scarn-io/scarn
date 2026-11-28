@@ -7,6 +7,7 @@ import {
   artifact,
   normalizeArtifactAccept,
 } from "../src/definitions/artifacts";
+import { checkArtifactFields } from "../src/definitions/validation/validate-artifacts";
 
 describe("normalizeArtifactAccept", () => {
   test.concurrent("treats an omitted list as accepting any file", () => {
@@ -121,6 +122,127 @@ describe("artifact()", () => {
     expect(z.toJSONSchema(z.object({ a: z.artifact() }))).toMatchObject({
       properties: { a: { "x-scarn-artifact": { accept: [] } } },
     });
+  });
+});
+
+describe("artifact.bundle()", () => {
+  test.concurrent(
+    "serialises bundle and share; share: false is omitted",
+    () => {
+      const schema = z.object({
+        report: z.artifact.bundle({ share: true }),
+        site: artifact.bundle({ entry: "docs/start.html" }),
+        plain: artifact.bundle(),
+      });
+      expect(z.toJSONSchema(schema).properties).toEqual({
+        report: {
+          type: "string",
+          "x-scarn-artifact": {
+            accept: [],
+            bundle: { entry: "index.html" },
+            share: true,
+          },
+        },
+        site: {
+          type: "string",
+          "x-scarn-artifact": {
+            accept: [],
+            bundle: { entry: "docs/start.html" },
+          },
+        },
+        plain: {
+          type: "string",
+          "x-scarn-artifact": { accept: [], bundle: { entry: "index.html" } },
+        },
+      });
+    },
+  );
+
+  test.concurrent("rejects an entry that isn't a relative .html path", () => {
+    expect(() => artifact.bundle({ entry: "report.md" })).toThrow(
+      'artifact.bundle({ entry }): entry "report.md" must be an .html file.',
+    );
+    expect(() => artifact.bundle({ entry: "../index.html" })).toThrow(
+      "must be a relative path inside the bundle",
+    );
+  });
+
+  test.concurrent(
+    "plain artifact() options don't allow bundle or share",
+    () => {
+      // @ts-expect-error share is only an artifact.bundle option
+      artifact({ share: true });
+      // @ts-expect-error bundle is only an artifact.bundle option
+      artifact({ bundle: { entry: "index.html" } });
+      // @ts-expect-error artifact.bundle has no accept option
+      artifact.bundle({ accept: [".html"] });
+    },
+  );
+
+  test.concurrent("parses a folder path", () => {
+    expect(artifact.bundle().parse("report")).toBe(Artifact.path("report"));
+  });
+});
+
+describe("artifact field validation", () => {
+  const step = (resultSchemaJson: Record<string, unknown>) =>
+    ({ key: "build", resultSchemaJson }) as Parameters<
+      typeof checkArtifactFields
+    >[0][number];
+
+  test.concurrent("rejects a bundle field inside an array", () => {
+    const issues = checkArtifactFields([
+      step(z.toJSONSchema(z.object({ reports: z.array(artifact.bundle()) }))),
+    ]);
+    expect(issues.map((issue) => issue.message)).toEqual([
+      'Step "build" declares bundle field "reports[]" inside an array. Bundle fields in arrays aren\'t supported; declare a fixed number of named bundle fields, or submit extra bundles without a field (undeclared bundles).',
+    ]);
+  });
+
+  test.concurrent("rejects an unknown keyword key", () => {
+    const issues = checkArtifactFields([
+      step({
+        type: "object",
+        properties: {
+          clip: { type: "string", "x-scarn-artifact": { accept: [], spa: 1 } },
+        },
+      }),
+    ]);
+    expect(issues.map((issue) => issue.message)).toEqual([
+      'Step "build" artifact field "clip": unknown key "spa".',
+    ]);
+  });
+
+  test.concurrent("rejects a stored entry that isn't .html", () => {
+    const issues = checkArtifactFields([
+      step({
+        type: "object",
+        properties: {
+          report: {
+            type: "string",
+            "x-scarn-artifact": { accept: [], bundle: { entry: "a.md" } },
+          },
+        },
+      }),
+    ]);
+    expect(issues.map((issue) => issue.message)).toEqual([
+      'Step "build" bundle field "report": entry "a.md" must be an .html file.',
+    ]);
+  });
+
+  test.concurrent("accepts bundle and file fields outside arrays", () => {
+    expect(
+      checkArtifactFields([
+        step(
+          z.toJSONSchema(
+            z.object({
+              report: artifact.bundle({ share: true }),
+              clip: artifact(),
+            }),
+          ),
+        ),
+      ]),
+    ).toEqual([]);
   });
 });
 

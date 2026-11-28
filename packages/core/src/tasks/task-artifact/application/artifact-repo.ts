@@ -15,6 +15,8 @@ export type RecordArtifactRow = {
   sizeBytes: number;
   contentType: string | null;
   kind: ArtifactKind;
+  /** The bundle this file belongs to; omitted/null for a standalone artifact. */
+  bundleId?: UuidV7 | null;
 };
 
 /** An artifact row (deleted or not) joined to the node run that produced it. */
@@ -31,7 +33,11 @@ export type ArtifactRepo = {
     input: RecordArtifactRow,
     dbExecutor?: DbExecutor,
   ): Promise<ArtifactContract>;
-  /** List all artifacts recorded for a task, newest first. */
+  /**
+   * List all artifacts recorded for a task, newest first. Bundle members are
+   * included and carry their `bundleId`, which groups them under the run's
+   * bundles (`ArtifactBundleRepo.listByTask`).
+   */
   listByTask(
     taskRunId: UuidV7,
     dbExecutor?: DbExecutor,
@@ -86,6 +92,9 @@ export type ArtifactRepo = {
    * subsequent reconciliation no longer counts them. Returns the number of
    * rows cleared. Idempotent: already-cleared rows (null store ref) are
    * skipped. Limited to `orgId`'s projects when given.
+   *
+   * Bundles expire with their files: any bundle created on or before the same
+   * cutoff gets `expiredAt = now` (not counted in the return value).
    */
   clearExpiredArtifacts(
     now: Date,

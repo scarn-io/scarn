@@ -1,6 +1,7 @@
 import type { DbExecutor } from "@scarn/core/lib/db/db-executor";
 import {
   ConfigurationError,
+  type CoreValidationError,
   ResourceNotFoundError,
   type UsageLimitExceededError,
 } from "@scarn/core/lib/errors";
@@ -24,6 +25,10 @@ import {
 } from "@scarn/core/tasks/task-run/contracts/task-run-contracts";
 import type { TaskRunRepo } from "@scarn/core/tasks/task-run/application/task-run-repo";
 import { assertClaimOwnership } from "@scarn/core/tasks/task-run/application/task-run-claim-helpers";
+import type { ArtifactBundleNotPendingError } from "../domain/artifact-bundle-not-pending-error";
+import type { ArtifactBundleLimits } from "../domain/artifact-bundle";
+import type { ArtifactBundleRepo } from "./artifact-bundle-repo";
+import { resolvePendingBundleForMember } from "./resolve-pending-bundle";
 
 /** Presigned upload URL lifetime. Short-lived: the client uploads immediately. */
 const UPLOAD_URL_EXPIRES_IN_SECONDS = 900;
@@ -34,6 +39,8 @@ export const createArtifactUploadUrl = async (
   {
     userAuthz,
     taskRunRepo: taskRunRepo,
+    artifactBundleRepo,
+    artifactBundleLimits,
     objectStore,
     objectStorageBucket,
     timeProvider,
@@ -43,6 +50,8 @@ export const createArtifactUploadUrl = async (
   }: {
     userAuthz: UserAuthorizationService;
     taskRunRepo: TaskRunRepo;
+    artifactBundleRepo?: ArtifactBundleRepo | undefined;
+    artifactBundleLimits?: ArtifactBundleLimits | undefined;
     objectStore?: ObjectStore | null | undefined;
     objectStorageBucket?: string | null | undefined;
     timeProvider: TimeProvider;
@@ -53,7 +62,11 @@ export const createArtifactUploadUrl = async (
 ): Promise<
   Result<
     ArtifactUploadUrlContract,
-    ResourceNotFoundError | ConfigurationError | UsageLimitExceededError
+    | ResourceNotFoundError
+    | ConfigurationError
+    | UsageLimitExceededError
+    | CoreValidationError
+    | ArtifactBundleNotPendingError
   >
 > => {
   const taskRunId = getTaskRunInputSchema.parse(taskIdInput);
@@ -72,6 +85,29 @@ export const createArtifactUploadUrl = async (
   });
 
   assertClaimOwnership(task, parsedInput.claimToken, timeProvider.now());
+
+  if (parsedInput.bundleId) {
+    if (!artifactBundleRepo) {
+      return Result.err(
+        new ConfigurationError(
+          "Artifact bundle repo is not configured",
+          "ARTIFACT_BUNDLE_REPO_NOT_CONFIGURED",
+        ),
+      );
+    }
+    const bundle = await resolvePendingBundleForMember(
+      {
+        bundleId: parsedInput.bundleId,
+        taskRunId: task.id,
+        relativeStorePath: parsedInput.relativeStorePath,
+        sizeBytes: parsedInput.sizeBytes,
+      },
+      { artifactBundleRepo, artifactBundleLimits, dbExecutor },
+    );
+    if (!bundle.ok) {
+      return Result.err(bundle.error);
+    }
+  }
 
   // Pre-flight WRITE cap enforcement (parity with the read-side download-URL
   // guard): block (402) before minting a presigned PUT URL when the org is

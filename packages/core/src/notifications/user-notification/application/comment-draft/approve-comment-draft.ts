@@ -48,6 +48,7 @@ import {
 import { postJiraCommentDraft } from "./post-jira-comment-draft";
 import { createCommentDraftDeliveryTracker } from "./comment-draft-delivery-tracker";
 import type { CommentArtifactReader } from "@scarn/core/notifications/comment-artifacts/application/comment-artifact-reader";
+import type { ArtifactSharingConfig } from "@scarn/core/tasks/artifact-share/domain/artifact-sharing-config";
 import {
   artifactPlatforms,
   type ArtifactPlatform,
@@ -87,6 +88,8 @@ export type ApproveCommentDraftDeps = {
   secretRepo: SecretRepo;
   secretCipher: SecretCipher;
   commentArtifactReader: CommentArtifactReader;
+  /** Builds shared bundles' links; without it bundles link to their page. */
+  artifactSharingConfig?: ArtifactSharingConfig;
   artifactRepo: ArtifactRepo;
   /** Where Jira embeds read artifact bytes from; null when unconfigured. */
   objectStore: ObjectStore | null;

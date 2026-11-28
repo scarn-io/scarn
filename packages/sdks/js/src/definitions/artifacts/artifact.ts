@@ -1,6 +1,8 @@
 import { z } from "zod";
 import {
   ARTIFACT_SCHEMA_KEYWORD,
+  DEFAULT_ARTIFACT_BUNDLE_ENTRY,
+  artifactBundleEntryProblem,
   type ArtifactSchemaKeyword,
 } from "../../contracts/artifacts";
 import {
@@ -83,22 +85,57 @@ export function normalizeArtifactAccept(
   return out;
 }
 
-/**
- * A result field holding a file the step produced. The field's value is the
- * file's path relative to `artifactsDir`; agents fill it with
- * `scarn-submit-artifact` and code steps return `Artifact.path(...)`.
- *
- * Serialises to `{ "type": "string", "x-scarn-artifact": { "accept": [...] } }`.
- */
-export function artifact(options: ArtifactOptions = {}): ArtifactSchema {
-  const keyword: ArtifactSchemaKeyword = {
-    accept: normalizeArtifactAccept(options.accept),
-  };
+function artifactFile(options: ArtifactOptions = {}): ArtifactSchema {
+  return artifactSchema({ accept: normalizeArtifactAccept(options.accept) });
+}
+
+function artifactSchema(keyword: ArtifactSchemaKeyword): ArtifactSchema {
   return z
     .string()
     .brand<ArtifactBrand>()
     .meta({ [ARTIFACT_SCHEMA_KEYWORD]: keyword });
 }
+
+export type ArtifactBundleOptions = {
+  /** The bundle's entry page, relative to its folder. Defaults to `index.html`. */
+  readonly entry?: string;
+  /**
+   * Share the bundle automatically once it is ready. Defaults to false. Only
+   * step definitions (written by project admins) can turn this on.
+   */
+  readonly share?: boolean;
+};
+
+/**
+ * A result field holding a folder of files the step produced, opened at its
+ * entry page (an HTML report, say). The field's value is the folder's path
+ * relative to `artifactsDir`.
+ *
+ * Serialises to `{ "type": "string", "x-scarn-artifact": { "accept": [],
+ * "bundle": { "entry": "index.html" } } }`, plus `"share": true` when set.
+ */
+function artifactBundle(options: ArtifactBundleOptions = {}): ArtifactSchema {
+  const entry = options.entry ?? DEFAULT_ARTIFACT_BUNDLE_ENTRY;
+  const problem = artifactBundleEntryProblem(entry);
+  if (problem) throw new Error(`artifact.bundle({ entry }): ${problem}.`);
+  return artifactSchema({
+    accept: [],
+    bundle: { entry },
+    ...(options.share === true ? { share: true } : {}),
+  });
+}
+
+/**
+ * A result field holding a file the step produced. The field's value is the
+ * file's path relative to `artifactsDir`; agents fill it with
+ * `scarn-submit-artifact` and code steps return `Artifact.path(...)`.
+ * `artifact.bundle(...)` declares a folder instead.
+ *
+ * Serialises to `{ "type": "string", "x-scarn-artifact": { "accept": [...] } }`.
+ */
+export const artifact: typeof artifactFile & {
+  readonly bundle: typeof artifactBundle;
+} = Object.assign(artifactFile, { bundle: artifactBundle });
 
 /** An artifact field in a step's result: `path` is its dotted result path. */
 export type StepArtifactRef = {

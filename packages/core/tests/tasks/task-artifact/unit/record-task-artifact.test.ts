@@ -94,6 +94,7 @@ const fakeArtifactRepo = (): {
           contentType: input.contentType,
           kind: input.kind,
           createdAt: NOW.toISOString(),
+          bundleId: input.bundleId ?? null,
         });
       },
       listByTask: () => Promise.resolve([]),

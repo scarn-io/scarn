@@ -20,6 +20,7 @@ ENABLE_DEV_LOGIN=true bun run dev         # leave running
   which runs on `Runtime.host()`.
 - **An AI provider configured for OpenCode.** Most steps are AI steps. Only
   `ld-loop`, `ld-errors`, `ld-merges` and `ld-codestep-with-mcp` run without an agent;
+  `ld-bundles` needs one for `build-prototype`;
   `ld-grill` also uses the `/grilling` skill.
 
 ## Commands
@@ -90,7 +91,7 @@ server, so its worker, logs and saved settings stay apart from an installed
    pipelines and the `default`, `ld-schedule` and `ld-github-import` project
    automations, then enables `default` and `ld-schedule` with
    `automations enable`.
-9. **Work items.** Upserts 28 work items. The default automation routes and
+9. **Work items.** Upserts 29 work items. The default automation routes and
    queues each one as it becomes ready.
 10. **Prints** the project URL and a table of each item's key, pipeline,
     expected outcome and id.
@@ -99,8 +100,9 @@ server, so its worker, logs and saved settings stay apart from an installed
 
 Sources are in `src/local-test-project/.scarn/pipeline-builder/`. The shared
 steps are in `steps.ts`, `ld-routes-all`'s in `routes-all-steps.ts`,
-`ld-merges`'s in `merges-steps.ts`, `ld-secrets`'s in `secrets-steps.ts` and
-`ld-codestep-with-mcp`'s in `mcp-steps.ts`.
+`ld-merges`'s in `merges-steps.ts`, `ld-secrets`'s in `secrets-steps.ts`,
+`ld-codestep-with-mcp`'s in `mcp-steps.ts` and `ld-bundles`'s in
+`bundles-steps.ts`.
 The `local-secrets` environment `ld-secrets` runs in is defined in
 `secrets-environment.ts`, and push publishes it before the steps. `shop.ts`
 holds what the AI steps share.
@@ -131,6 +133,7 @@ steps, so those branches are exact.
 | `ld-grill`             | Agent conversation, `maxTurns`, `catch(Scarn.MaxTurnsExceeded)`                   | The work item title is the topic; you answer in the UI        |
 | `ld-secrets`           | Named environment (`local-secrets`) with a `secret` var, log masking              | The `LOCAL_DEV_API_KEY` project secret seed saves             |
 | `ld-codestep-with-mcp` | Typed MCP tool step, code step calling `context.mcp`, declared error caught       | `sku`: `MUG-01`, `TEE-02` (short), `SCARF-09` (unknown)       |
+| `ld-bundles`           | Auto-shared bundle field, undeclared agent bundle, comment linking both           | —                                                             |
 
 `ld-schedule.ts` and `ld-github-import.ts` are project automations rather
 than pipelines; see [Schedules](#schedules) and
@@ -157,6 +160,43 @@ The catalog and `mcp/inventory.lock.json` are generated; don't edit them.
 After changing a tool in `inventory-mcp.mjs`, run `pull-inventory`, which
 lists the server's tools with the codegen `scarn mcp pull` uses. Stock resets
 whenever the server restarts, so every run starts from the same numbers.
+
+### Artifact bundles
+
+`ld-bundles` (`fields.demo: "bundles"`) produces one bundle of each kind and
+a comment that links to both:
+
+- `write-report` is a code step. It writes an HTML bug report (page,
+  stylesheet, a hash-routed script and an SVG) under `artifactsDir` and
+  returns `Artifact.path("report")` for its `z.artifact.bundle({ share: true })`
+  field, so the report is shared by link as soon as it has uploaded.
+- `build-prototype` is an AI step. Its agent builds a static prototype in
+  `out/prototype/` and submits it with `scarn-submit-artifact` and
+  `name: "prototype"`, without `field`. That makes it an undeclared bundle,
+  which stays private until you click **Share** on the run's artifacts.
+- `post-bundle-links` drafts a work item comment with
+  `Artifact.link({ step: writeReport, path: "report" })` (required) and
+  `Artifact.link("prototype/")` (optional, dropped if the agent didn't submit
+  it). Approve the draft from the work item to see the resolved links.
+
+Without sharing configured, both bundles still upload and download, the
+report's link points at its page in the app, and the bundle page says
+sharing is off. To turn sharing on, the content origin must be a host other
+than `localhost`. Add to the root `.env` (`.env.example` already has both):
+
+```sh
+SCARN_ARTIFACT_CONTENT_URL=http://artifacts.localhost:3001
+ARTIFACT_SHARE_SECRET=<openssl rand -hex 32>
+```
+
+Restart `bun run dev`. It starts the standalone API on port 3001 next to
+Next, and that API serves `/s/…` and `/p/…` for the content host (Next only
+mounts the API under `/api`, so port 3000 can't).
+
+Browsers resolve `*.localhost` to loopback, so the share link opens without
+any DNS setup. Set this up before the item runs: auto-sharing happens when
+the bundle finishes uploading, so a report uploaded while sharing was off
+stays private (share it by hand, or rerun `seed` and `work`).
 
 Routing items are seeded too: a closed item (never ready), a
 `status: "resolved"` item (skipped) and one with no `demo` field (runs

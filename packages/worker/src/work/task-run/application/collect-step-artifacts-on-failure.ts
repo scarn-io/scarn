@@ -1,7 +1,7 @@
 import type { startProcessClaimedTaskRun } from "./process-claimed-task-run";
 import type { resolveProjectWorkLogger } from "./process-project-work-logger";
 import type { ProcessProjectWorkDeps } from "../contracts/process-project-work-types";
-import { collectStepArtifacts } from "./process-project-work-monitor-helpers";
+import { collectStepArtifacts } from "./collect-step-artifacts";
 
 /**
  * Collect step artifacts on the monitor's failure path, while the step is

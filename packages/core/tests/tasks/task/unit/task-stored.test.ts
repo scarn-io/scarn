@@ -1,4 +1,6 @@
 import { describe, expect } from "bun:test";
+import { findArtifactFieldsWithProblems } from "@scarn/sdk/contracts/artifacts";
+import { findBundleField } from "@/tasks/task-artifact/domain/bundle-field";
 import {
   CURRENT_TASK_SCHEMA_VERSION,
   readStoredTask,
@@ -182,4 +184,53 @@ describe("tasks stored reader", () => {
     });
     expect(readStoredTaskInstructions(99, fixture).success).toBe(false);
   });
+
+  concurrentTest(
+    "the SDK reads bundle and share from a stored bundle field",
+    () => {
+      const read = readStoredTask(
+        1,
+        columnsOf(storedTaskFixtures["agent-bundle-field"]),
+      );
+      const schema = read.success ? read.value.resultSchemaJson : null;
+      expect(findArtifactFieldsWithProblems(schema)).toEqual({
+        fields: [
+          {
+            path: "report",
+            accept: [],
+            nullable: false,
+            description: null,
+            inArray: false,
+            bundle: { entry: "index.html" },
+            share: true,
+          },
+          {
+            path: "coverage",
+            accept: [],
+            nullable: true,
+            description: null,
+            inArray: false,
+            bundle: { entry: "docs/start.html" },
+            share: false,
+          },
+          {
+            path: "clip",
+            accept: [".webm"],
+            nullable: false,
+            description: null,
+            inArray: false,
+            bundle: null,
+            share: false,
+          },
+        ],
+        problems: [],
+      });
+      expect(findBundleField(schema, "report")).toEqual({
+        path: "report",
+        entry: "index.html",
+        share: true,
+      });
+      expect(findBundleField(schema, "clip")).toBeNull();
+    },
+  );
 });

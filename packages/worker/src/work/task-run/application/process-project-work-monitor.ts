@@ -22,9 +22,9 @@ import {
 } from "./process-project-work-monitor-agent";
 import {
   captureMissingFindingsDiagnostics,
-  collectStepArtifacts,
   handleMissingFindings,
 } from "./process-project-work-monitor-helpers";
+import { collectStepArtifacts } from "./collect-step-artifacts";
 import { runTurnEnd, type TurnEndState } from "./process-project-work-turn-end";
 import { collectStepArtifactsOnFailure } from "./collect-step-artifacts-on-failure";
 import { TaskRunCancelledError } from "./task-run-cancelled-error";
@@ -138,7 +138,7 @@ export async function monitorStartedClaimedTaskRun(
       },
     );
     if (!hasCollectedArtifacts) {
-      await collectStepArtifacts(deps, startedTask, logger);
+      await collectStepArtifacts(deps, startedTask, logger, { findingsJson });
       hasCollectedArtifacts = true;
       // Ship the artifact log lines NOW, while the step is still
       // "running". completeTaskRun (next in tryPersistAgentFindings)

@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "kind": "user_defined",
+  "prompt": "Build an HTML report of the failing tests.",
+  "entrypointJson": null,
+  "toolCallJson": null,
+  "inputSchemaJson": {
+    "type": "object",
+    "properties": {
+      "title": {
+        "type": "string"
+      }
+    }
+  },
+  "resultSchemaJson": {
+    "type": "object",
+    "required": ["summary", "report"],
+    "properties": {
+      "summary": {
+        "type": "string"
+      },
+      "report": {
+        "type": "string",
+        "x-scarn-artifact": {
+          "accept": [],
+          "bundle": {
+            "entry": "index.html"
+          },
+          "share": true
+        }
+      },
+      "coverage": {
+        "anyOf": [
+          {
+            "type": "string",
+            "x-scarn-artifact": {
+              "accept": [],
+              "bundle": {
+                "entry": "docs/start.html"
+              }
+            }
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "clip": {
+        "type": "string",
+        "x-scarn-artifact": {
+          "accept": [".webm"]
+        }
+      }
+    },
+    "additionalProperties": false
+  },
+  "errorsJson": [],
+  "retryJson": [],
+  "grantsJson": [],
+  "concurrencyJson": null
+}

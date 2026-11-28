@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, test, vi } from "bun:test";
-import { collectStepArtifacts } from "../../../../src/work/task-run/application/process-project-work-monitor-helpers";
+import { collectStepArtifacts } from "../../../../src/work/task-run/application/collect-step-artifacts";
 import {
   createDeps,
   createStartedTask,

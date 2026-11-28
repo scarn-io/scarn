@@ -11,6 +11,7 @@ import { ProjectMcpConnectionsPanel } from "@/components/settings/project-mcp-co
 import { isManagedOAuthCallbackError } from "@/components/settings/project-mcp-connection-messages";
 import { ProjectCollaboratorsPanel } from "@/components/settings/project-collaborators-panel";
 import { ProjectArtifactsPanel } from "@/components/settings/project-artifacts-panel";
+import { ProjectArtifactSharesPanel } from "@/components/settings/project-artifact-shares-panel";
 import { ProjectAutomationsPanel } from "@/components/settings/project-automations-panel";
 import { NotificationRulesPanel } from "@/components/notifications/notification-rules-panel";
 import {
@@ -165,6 +166,14 @@ export default async function ProjectSettingsPage({
   const initialArtifacts = artifactsResponse.data?.artifacts ?? [];
   const initialArtifactsHasMore = artifactsResponse.data?.hasMore ?? false;
 
+  const artifactSharesResponse = await scarnApiClient.api
+    .projects({ projectId })
+    ["artifact-shares"].get({ headers: requestHeaders });
+
+  const initialArtifactShares = artifactSharesResponse.data?.shares ?? [];
+  const initialArtifactSharesHasMore =
+    artifactSharesResponse.data?.hasMore ?? false;
+
   const automationsResponse = await scarnApiClient.api
     .projects({ projectId })
     .automations.get({ headers: requestHeaders });
@@ -278,6 +287,18 @@ export default async function ProjectSettingsPage({
           projectId={projectId}
           initialArtifacts={initialArtifacts}
           initialHasMore={initialArtifactsHasMore}
+        />
+      </Stack>
+      <Stack spacing={2}>
+        <Typography variant="h6">Active share links</Typography>
+        <Typography variant="body2" color="text.secondary">
+          Public links to artifact bundles in this project. Anyone with a link
+          can view its bundle until the bundle expires or you revoke the link.
+        </Typography>
+        <ProjectArtifactSharesPanel
+          projectId={projectId}
+          initialShares={initialArtifactShares}
+          initialHasMore={initialArtifactSharesHasMore}
         />
       </Stack>
     </Stack>

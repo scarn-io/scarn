@@ -43,6 +43,31 @@ export const artifactPageUrl = (
 ): string =>
   `${appBaseUrl.replace(/\/+$/, "")}/projects/${projectId}/artifacts/${artifactId}`;
 
+/**
+ * The Scarn page for an artifact bundle. Must match apps/next
+ * `artifactBundlePagePath`.
+ */
+export const artifactBundlePageUrl = (
+  appBaseUrl: string,
+  projectId: string,
+  bundleId: string,
+): string =>
+  `${appBaseUrl.replace(/\/+$/, "")}/projects/${projectId}/artifact-bundles/${bundleId}`;
+
+/**
+ * Where a comment links a resolved artifact: a bundle's share link when it
+ * is shared, else its bundle page; a file's artifact page.
+ */
+export const commentArtifactUrl = (
+  appBaseUrl: string,
+  projectId: string,
+  artifact: ResolvedCommentArtifact,
+): string =>
+  artifact.bundle
+    ? (artifact.bundle.shareUrl ??
+      artifactBundlePageUrl(appBaseUrl, projectId, artifact.artifactId))
+    : artifactPageUrl(appBaseUrl, projectId, artifact.artifactId);
+
 const escapeLinkText = (value: string): string =>
   value.replace(/[\\[\]]/g, "\\$&");
 
@@ -69,8 +94,9 @@ export const orderedResolvedMarkers = (
 
 /**
  * Renders every marker as a markdown link to the artifact's Scarn page. An
- * embed marker keeps its caption as a lead-in line. GitHub and Bitbucket use
- * this.
+ * embed marker keeps its caption as a lead-in line. A bundle, even under an
+ * embed marker, becomes a single link labelled with the caption, to its
+ * share link or bundle page. GitHub and Bitbucket use this.
  */
 export class LinkOnlyCommentArtifactRenderer implements CommentArtifactRenderer {
   constructor(
@@ -84,19 +110,19 @@ export class LinkOnlyCommentArtifactRenderer implements CommentArtifactRenderer 
     let body = "";
     let cursor = 0;
     for (const { marker, artifact } of orderedResolvedMarkers(input.markers)) {
-      const url = artifactPageUrl(
+      const url = commentArtifactUrl(
         this.appBaseUrl,
         input.projectId,
-        artifact.artifactId,
+        artifact,
       );
       const name = escapeLinkText(artifactBaseName(artifact));
       const caption = marker.caption.trim();
       const link =
-        marker.kind === "link"
+        marker.kind === "link" || artifact.bundle
           ? `[${escapeLinkText(caption || artifactBaseName(artifact))}](${url})`
           : `[View ${name} in Scarn](${url})`;
       const rendered =
-        marker.kind === "embed" && caption
+        marker.kind === "embed" && !artifact.bundle && caption
           ? `${caption}${marker.standalone ? "\n" : " "}${link}`
           : link;
 

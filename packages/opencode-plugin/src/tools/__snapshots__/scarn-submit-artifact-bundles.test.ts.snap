@@ -1,0 +1,15 @@
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+
+exports[`submitArtifact with folders describes bundle fields and the authoring guide 1`] = `
+"Submit a file or folder produced by this step. This step declares:
+- report (folder with entry page app/index.html; required; shared by link automatically): Interactive report
+- screenshot (.png; required)
+Submit declared files and folders with \`field\`. Don't put artifact paths in findingsJson;
+scarn-submit-step-findings fills those fields in.
+Other files and folders can be submitted without \`field\`, optionally with \`name\` for the stored name.
+To submit a web page (an HTML report or prototype), submit its folder as a bundle. The folder must be self-contained, with an entry page (index.html unless the field names another):
+- use relative paths only (e.g. Vite \`base: "./"\`) and load nothing from other sites;
+- use hash routing (\`#/page\`); there is no server-side routing;
+- don't rely on \`localStorage\`, \`IndexedDB\` or cookies; they fail inside the page, so keep state in memory.
+A bundle can hold up to 1,000 files, 100 MiB per file and 250 MiB in total."
+`;

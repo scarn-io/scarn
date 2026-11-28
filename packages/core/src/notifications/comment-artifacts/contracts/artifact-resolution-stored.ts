@@ -23,6 +23,10 @@ import type { StoredArtifactMarkerOutcome } from "../domain/comment-artifact-typ
  *   platform this code no longer knows is kept; renderers only reuse
  *   outcomes for their own platform.
  *
+ * A marker that resolved to an artifact bundle stores the bundle id as
+ * `artifact.artifactId`, its name as `name` and `kind: "bundle"`; older
+ * records only ever hold files, so no version bump was needed.
+ *
  * Structural only and frozen here: no SDK enums. See
  * `docs/persistence/json-columns.md`.
  */

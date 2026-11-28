@@ -1,5 +1,8 @@
 import { formatBytes } from "./format-bytes";
-import type { ArtifactContract } from "@scarn/api/frontend-contracts";
+import type {
+  ArtifactBundleContract,
+  ArtifactContract,
+} from "@scarn/api/frontend-contracts";
 
 /** Returns the trailing path segment (basename) of a relative store path. */
 export function basename(relativeStorePath: string): string {
@@ -30,4 +33,19 @@ export function formatArtifactMeta(
     return `${size} · ${artifact.contentType}`;
   }
   return size ?? artifact.contentType ?? "";
+}
+
+/**
+ * A bundle row's meta line: its file count and total size. Both are null
+ * until the bundle is finalized, so a pending bundle reads "".
+ */
+export function formatBundleMeta(
+  bundle: Pick<ArtifactBundleContract, "fileCount" | "sizeBytes">,
+): string {
+  const files =
+    bundle.fileCount === null
+      ? null
+      : `${String(bundle.fileCount)} ${bundle.fileCount === 1 ? "file" : "files"}`;
+  const size = bundle.sizeBytes === null ? null : formatBytes(bundle.sizeBytes);
+  return [files, size].filter(Boolean).join(" · ");
 }

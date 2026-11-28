@@ -9,11 +9,23 @@ import {
   deleteProjectArtifacts,
 } from "@scarn/core/tasks/task-artifact/application/delete-project-artifacts";
 import { getProjectArtifact } from "@scarn/core/tasks/task-artifact/application/get-project-artifact";
+import { getProjectArtifactBundle } from "@scarn/core/tasks/task-artifact/application/get-project-artifact-bundle";
 import {
   deleteProjectArtifactsInputSchema,
   listProjectArtifactsResponseSchema,
+  projectArtifactBundleDetailSchema,
   projectArtifactDetailSchema,
 } from "@scarn/core/tasks/task-artifact/contracts/task-artifact-contracts";
+import { shareArtifactBundle } from "@scarn/core/tasks/artifact-share/application/share-artifact-bundle";
+import { revokeArtifactShare } from "@scarn/core/tasks/artifact-share/application/revoke-artifact-share";
+import { getArtifactShare } from "@scarn/core/tasks/artifact-share/application/get-artifact-share";
+import { createArtifactPreview } from "@scarn/core/tasks/artifact-share/application/create-artifact-preview";
+import { listProjectArtifactShares } from "@scarn/core/tasks/artifact-share/application/list-project-artifact-shares";
+import {
+  artifactPreviewSchema,
+  artifactShareSchema,
+  listProjectArtifactSharesResponseSchema,
+} from "@scarn/core/tasks/artifact-share/contracts/artifact-share-contracts";
 import { apiErrorResponseSchema } from "../../contracts";
 import { createAuthenticated } from "./authenticated";
 import { stdErrors } from "./task-run-route-helpers";
@@ -26,6 +38,18 @@ const projectArtifactItemParamsSchema = z.object({
 });
 const deleteProjectArtifactsBodySchema = z.object({
   input: deleteProjectArtifactsInputSchema,
+});
+const projectBundleParamsSchema = z.object({
+  projectId: uuidV7Schema,
+  bundleId: uuidV7Schema,
+});
+
+const shareDeps = (appContext: AppContext) => ({
+  artifactBundleRepo: appContext.artifactBundleRepo,
+  artifactShareRepo: appContext.artifactShareRepo,
+  artifactSharingConfig: appContext.artifactSharingConfig,
+  taskRunRepo: appContext.taskRunRepo,
+  timeProvider: appContext.timeProvider,
 });
 
 export const createProjectArtifactsRoutes = (appContext: AppContext) =>
@@ -49,6 +73,8 @@ export const createProjectArtifactsRoutes = (appContext: AppContext) =>
         return await listProjectArtifacts(projectId, {
           userAuthz: auth.userAuthz,
           artifactRepo: appContext.artifactRepo,
+          artifactBundleRepo: appContext.artifactBundleRepo,
+          timeProvider: appContext.timeProvider,
         });
       },
     )
@@ -134,6 +160,160 @@ export const createProjectArtifactsRoutes = (appContext: AppContext) =>
             objectStore: appContext.objectStore,
             orgRepo: appContext.orgRepo,
             timeProvider: appContext.timeProvider,
+            domainEventDispatcher: appContext.domainEventDispatcher,
+            logger: appContext.logger,
+          }),
+        );
+      },
+    )
+    .get(
+      "/projects/:projectId/artifact-bundles/:bundleId",
+      {
+        params: projectBundleParamsSchema,
+        response: responseSchemas({
+          200: projectArtifactBundleDetailSchema,
+          404: apiErrorResponseSchema,
+          ...stdErrors,
+        }),
+        detail: {
+          operationId: "getProjectArtifactBundle",
+          tags: ["ProjectArtifacts"],
+        },
+      },
+      async ({ params, auth }) => {
+        const { projectId, bundleId } = projectBundleParamsSchema.parse(params);
+        return Result.unwrap(
+          await getProjectArtifactBundle(projectId, bundleId, {
+            userAuthz: auth.userAuthz,
+            artifactBundleRepo: appContext.artifactBundleRepo,
+            timeProvider: appContext.timeProvider,
+          }),
+        );
+      },
+    )
+    .get(
+      "/projects/:projectId/artifact-shares",
+      {
+        params: projectArtifactsParamsSchema,
+        response: responseSchemas({
+          200: listProjectArtifactSharesResponseSchema,
+          ...stdErrors,
+        }),
+        detail: {
+          operationId: "listProjectArtifactShares",
+          tags: ["ProjectArtifacts"],
+        },
+      },
+      async ({ params, auth }) => {
+        const { projectId } = projectArtifactsParamsSchema.parse(params);
+        return await listProjectArtifactShares(projectId, {
+          userAuthz: auth.userAuthz,
+          artifactBundleRepo: appContext.artifactBundleRepo,
+          artifactShareRepo: appContext.artifactShareRepo,
+          artifactSharingConfig: appContext.artifactSharingConfig,
+          timeProvider: appContext.timeProvider,
+        });
+      },
+    )
+    .post(
+      "/projects/:projectId/artifact-bundles/:bundleId/share",
+      {
+        params: projectBundleParamsSchema,
+        response: responseSchemas({
+          200: artifactShareSchema,
+          404: apiErrorResponseSchema,
+          409: apiErrorResponseSchema,
+          ...stdErrors,
+        }),
+        detail: {
+          operationId: "shareArtifactBundle",
+          tags: ["ProjectArtifacts"],
+        },
+      },
+      async ({ params, auth }) => {
+        const { projectId, bundleId } = projectBundleParamsSchema.parse(params);
+        return Result.unwrap(
+          await shareArtifactBundle(projectId, bundleId, {
+            userAuthz: auth.userAuthz,
+            ...shareDeps(appContext),
+          }),
+        );
+      },
+    )
+    .delete(
+      "/projects/:projectId/artifact-bundles/:bundleId/share",
+      {
+        params: projectBundleParamsSchema,
+        response: responseSchemas({
+          200: artifactShareSchema,
+          404: apiErrorResponseSchema,
+          ...stdErrors,
+        }),
+        detail: {
+          operationId: "revokeArtifactShare",
+          tags: ["ProjectArtifacts"],
+        },
+      },
+      async ({ params, auth }) => {
+        const { projectId, bundleId } = projectBundleParamsSchema.parse(params);
+        return Result.unwrap(
+          await revokeArtifactShare(projectId, bundleId, {
+            userAuthz: auth.userAuthz,
+            ...shareDeps(appContext),
+          }),
+        );
+      },
+    )
+    .get(
+      "/projects/:projectId/artifact-bundles/:bundleId/share",
+      {
+        params: projectBundleParamsSchema,
+        response: responseSchemas({
+          200: artifactShareSchema,
+          404: apiErrorResponseSchema,
+          ...stdErrors,
+        }),
+        detail: {
+          operationId: "getArtifactShare",
+          tags: ["ProjectArtifacts"],
+        },
+      },
+      async ({ params, auth }) => {
+        const { projectId, bundleId } = projectBundleParamsSchema.parse(params);
+        return Result.unwrap(
+          await getArtifactShare(projectId, bundleId, {
+            userAuthz: auth.userAuthz,
+            ...shareDeps(appContext),
+          }),
+        );
+      },
+    )
+    .post(
+      "/projects/:projectId/artifact-bundles/:bundleId/preview",
+      {
+        params: projectBundleParamsSchema,
+        response: responseSchemas({
+          200: artifactPreviewSchema,
+          402: apiErrorResponseSchema,
+          404: apiErrorResponseSchema,
+          409: apiErrorResponseSchema,
+          ...stdErrors,
+        }),
+        detail: {
+          operationId: "createArtifactBundlePreview",
+          tags: ["ProjectArtifacts"],
+        },
+      },
+      async ({ params, auth }) => {
+        const { projectId, bundleId } = projectBundleParamsSchema.parse(params);
+        return Result.unwrap(
+          await createArtifactPreview(projectId, bundleId, {
+            userAuthz: auth.userAuthz,
+            artifactBundleRepo: appContext.artifactBundleRepo,
+            artifactSharingConfig: appContext.artifactSharingConfig,
+            timeProvider: appContext.timeProvider,
+            orgRepo: appContext.orgRepo,
+            usageMeterRepo: appContext.usageMeterRepo,
             domainEventDispatcher: appContext.domainEventDispatcher,
             logger: appContext.logger,
           }),

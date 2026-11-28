@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import { cleanup, fireEvent, render, waitFor } from "@testing-library/react";
 import { parseUuidV7 } from "@scarn/api/frontend-contracts";
 import type {
+  ArtifactBundleContract,
   ArtifactContract,
   ArtifactDownloadUrlContract,
   ArtifactFailureContract,
@@ -25,6 +26,7 @@ function buildArtifact(
     contentType: "application/zip",
     kind: "playwright-trace",
     createdAt: "2026-06-05T12:00:00.000Z",
+    bundleId: null,
     ...overrides,
   };
 }
@@ -60,6 +62,7 @@ const getDownloadUrlMock = mock(
 );
 
 let currentArtifacts: ArtifactContract[] = [];
+let currentBundles: ArtifactBundleContract[] = [];
 // Read dynamically (rather than captured once) so a test can flip it — e.g.
 // simulating the hook's `error` state after a failed `getDownloadUrl` call —
 // and have the next render (triggered by the component's own state updates)
@@ -69,6 +72,7 @@ let currentError = "";
 void mock.module("./use-task-run-artifacts", () => ({
   useTaskRunArtifacts: () => ({
     artifacts: currentArtifacts,
+    bundles: currentBundles,
     status: "loaded",
     loading: false,
     error: currentError,
@@ -94,8 +98,48 @@ void mock.module("./use-task-run-artifact-failures", () => ({
   }),
 }));
 
+const { ProjectRouteProvider } =
+  await import("@/components/project-route-context");
 const { ExecutionArtifactsSection } =
   await import("./execution-artifacts-section");
+
+const projectId = parseUuidV7("019e9a92-b432-73e8-9341-3519156fa802");
+const bundleId = parseUuidV7("019e9a92-b432-73e8-9341-3519156fa900");
+
+function buildBundle(
+  overrides: Partial<ArtifactBundleContract> = {},
+): ArtifactBundleContract {
+  return {
+    id: bundleId,
+    taskRunId: taskId,
+    projectId,
+    name: "site",
+    fieldPath: null,
+    rootPath: "out/site",
+    entryPath: "index.html",
+    status: "ready",
+    fileCount: 2,
+    sizeBytes: 3072,
+    createdAt: "2026-06-05T12:00:00.000Z",
+    finalizedAt: "2026-06-05T12:01:00.000Z",
+    expiresAt: "2026-07-05T12:00:00.000Z",
+    expired: false,
+    ...overrides,
+  };
+}
+
+const renderSection = (permissions: string[] = ["executions:write"]) =>
+  render(
+    <ProjectRouteProvider
+      username="tester"
+      projectSlug="demo"
+      projectId={projectId}
+      isMember
+      permissions={permissions}
+    >
+      <ExecutionArtifactsSection taskRunId={taskId} />
+    </ProjectRouteProvider>,
+  );
 
 describe("ExecutionArtifactsSection", () => {
   let openMock: ReturnType<typeof mock>;
@@ -112,6 +156,7 @@ describe("ExecutionArtifactsSection", () => {
       }),
     );
     currentArtifacts = [];
+    currentBundles = [];
     currentArtifactFailures = [];
     currentError = "";
     loadFailuresMock.mockClear();
@@ -147,7 +192,7 @@ describe("ExecutionArtifactsSection", () => {
   test("renders a View trace control before Download for a playwright-trace artifact", () => {
     currentArtifacts = [buildArtifact()];
 
-    const view = render(<ExecutionArtifactsSection taskRunId={taskId} />);
+    const view = renderSection();
 
     const viewTrace = view.getByLabelText("View Playwright trace trace.zip");
     const download = view.getByLabelText("Download trace.zip");
@@ -169,7 +214,7 @@ describe("ExecutionArtifactsSection", () => {
       }),
     ];
 
-    const view = render(<ExecutionArtifactsSection taskRunId={taskId} />);
+    const view = renderSection();
 
     expect(view.getByLabelText("Download output.txt")).toBeTruthy();
     expect(view.queryByLabelText(/^View Playwright trace/)).toBeNull();
@@ -178,7 +223,7 @@ describe("ExecutionArtifactsSection", () => {
   test("clicking View trace mints a URL and opens the Playwright viewer", async () => {
     currentArtifacts = [buildArtifact()];
 
-    const view = render(<ExecutionArtifactsSection taskRunId={taskId} />);
+    const view = renderSection();
 
     fireEvent.click(view.getByLabelText("View Playwright trace trace.zip"));
 
@@ -207,7 +252,7 @@ describe("ExecutionArtifactsSection", () => {
       }),
     ];
 
-    const view = render(<ExecutionArtifactsSection taskRunId={taskId} />);
+    const view = renderSection();
 
     expect(view.getByText("Expired")).toBeTruthy();
     const download = view.getByLabelText(
@@ -232,7 +277,7 @@ describe("ExecutionArtifactsSection", () => {
       return Promise.resolve(null);
     });
 
-    const view = render(<ExecutionArtifactsSection taskRunId={taskId} />);
+    const view = renderSection();
 
     fireEvent.click(view.getByLabelText("Download output.txt"));
 
@@ -247,7 +292,7 @@ describe("ExecutionArtifactsSection", () => {
     currentArtifacts = [];
     currentArtifactFailures = [];
 
-    const view = render(<ExecutionArtifactsSection taskRunId={taskId} />);
+    const view = renderSection();
 
     expect(view.getByText("No artifacts")).toBeTruthy();
   });
@@ -256,7 +301,7 @@ describe("ExecutionArtifactsSection", () => {
     currentArtifacts = [];
     currentArtifactFailures = [buildArtifactFailure()];
 
-    const view = render(<ExecutionArtifactsSection taskRunId={taskId} />);
+    const view = renderSection();
 
     expect(view.queryByText("No artifacts")).toBeNull();
   });
@@ -264,7 +309,7 @@ describe("ExecutionArtifactsSection", () => {
   test("shows a singular-pluralized warning banner for one failure", () => {
     currentArtifactFailures = [buildArtifactFailure()];
 
-    const view = render(<ExecutionArtifactsSection taskRunId={taskId} />);
+    const view = renderSection();
 
     expect(
       view.getByText("1 artifact failed to save for this step."),
@@ -282,7 +327,7 @@ describe("ExecutionArtifactsSection", () => {
       }),
     ];
 
-    const view = render(<ExecutionArtifactsSection taskRunId={taskId} />);
+    const view = renderSection();
 
     expect(
       view.getByText("2 artifacts failed to save for this step."),
@@ -301,7 +346,7 @@ describe("ExecutionArtifactsSection", () => {
       buildArtifact({ kind: "generic", relativeStorePath: "logs/output.txt" }),
     ];
 
-    const view = render(<ExecutionArtifactsSection taskRunId={taskId} />);
+    const view = renderSection();
 
     const failureName = view.getByText("upload-failure.json");
     const artifactName = view.getByText("output.txt");
@@ -318,5 +363,68 @@ describe("ExecutionArtifactsSection", () => {
     // attribute, so the humanized reason is queryable by accessible name.
     const expectedReason = humanizeArtifactFailureReason(failure);
     expect(view.getByLabelText(expectedReason)).toBeTruthy();
+  });
+
+  test("collapses a bundle's files into one row and keeps loose files", () => {
+    currentBundles = [buildBundle()];
+    currentArtifacts = [
+      buildArtifact({
+        id: parseUuidV7("019e9a92-b432-73e8-9341-3519156fa804"),
+        kind: "generic",
+        relativeStorePath: "out/site/index.html",
+        bundleId,
+      }),
+      buildArtifact({
+        id: parseUuidV7("019e9a92-b432-73e8-9341-3519156fa805"),
+        kind: "generic",
+        relativeStorePath: "out/site/app.js",
+        bundleId,
+      }),
+      buildArtifact({ kind: "generic", relativeStorePath: "logs/output.txt" }),
+    ];
+
+    const view = renderSection();
+
+    expect(view.getByText("site")).toBeTruthy();
+    expect(view.getByText("2 files · 3.0 KiB")).toBeTruthy();
+    expect(view.queryByText("index.html")).toBeNull();
+    expect(view.queryByText("app.js")).toBeNull();
+    expect(view.getByLabelText("Download output.txt")).toBeTruthy();
+    expect(view.getByLabelText("Open site").getAttribute("href")).toBe(
+      `/projects/${projectId}/artifact-bundles/${bundleId}`,
+    );
+  });
+
+  test("a member whose bundle isn't listed stays a loose file", () => {
+    currentArtifacts = [
+      buildArtifact({
+        kind: "generic",
+        relativeStorePath: "out/site/index.html",
+        bundleId,
+      }),
+    ];
+
+    const view = renderSection();
+
+    expect(view.getByText("index.html")).toBeTruthy();
+    expect(view.queryByLabelText("Open site")).toBeNull();
+  });
+
+  test("hides Share without executions:write", () => {
+    currentBundles = [buildBundle()];
+
+    const view = renderSection([]);
+
+    expect(view.getByLabelText("Open site")).toBeTruthy();
+    expect(view.queryByLabelText("Share site")).toBeNull();
+  });
+
+  test("a bundle with no files still suppresses the empty state", () => {
+    currentBundles = [buildBundle({ status: "pending", fileCount: null })];
+
+    const view = renderSection();
+
+    expect(view.queryByText("No artifacts")).toBeNull();
+    expect(view.getByText("site")).toBeTruthy();
   });
 });

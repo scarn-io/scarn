@@ -12,6 +12,7 @@ import {
   type DispatchChannelDecision,
 } from "@scarn/core/notifications/notification-delivery/application/notification-delivery-dispatcher";
 import type { CommentArtifactReader } from "@scarn/core/notifications/comment-artifacts/application/comment-artifact-reader";
+import type { ArtifactSharingConfig } from "@scarn/core/tasks/artifact-share/domain/artifact-sharing-config";
 import {
   ARTIFACT_UNAVAILABLE_SUPPRESSION_REASON,
   prepareCommentDraftArtifacts,
@@ -47,6 +48,7 @@ export type CreateUserNotificationsDeps = {
   adapterRegistry: NotificationChannelAdapterRegistry;
   provenanceReader: NotificationProvenanceReader;
   commentArtifactReader: CommentArtifactReader;
+  artifactSharingConfig?: ArtifactSharingConfig;
 };
 
 const readNotificationItems = (resultJson: AnyJsonValue | null) => {
@@ -98,6 +100,7 @@ export const createUserNotificationsFromTaskResult = async (
           { pipelineRunId: provenance.pipelineExecutionId },
           {
             commentArtifactReader: deps.commentArtifactReader,
+            artifactSharingConfig: deps.artifactSharingConfig,
             dbExecutor: tx,
           },
         )

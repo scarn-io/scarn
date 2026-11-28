@@ -10,6 +10,7 @@ const REASON_LABELS: Record<string, string> = {
   not_reported: "the step didn't submit the file",
   wrong_extension: "the file type isn't accepted for this field",
   not_found: "the file was never saved",
+  bundle_not_ready: "the bundle never finished uploading",
 };
 
 const UPLOAD_FAILURE_LABELS: Record<string, string> = {

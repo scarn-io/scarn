@@ -5,7 +5,7 @@ import {
 import {
   LinkOnlyCommentArtifactRenderer,
   artifactBaseName,
-  artifactPageUrl,
+  commentArtifactUrl,
   orderedResolvedMarkers,
   type CommentArtifactRenderer,
   type RenderCommentArtifactsInput,
@@ -93,7 +93,8 @@ const withLeadIn = (caption: string, link: AdfNode): AdfPlaceholder => ({
  * Renders a body for a Jira Cloud comment as ADF. A standalone embed marker
  * whose extension Jira can show is attached to the issue and shown inline
  * under its caption; when Jira gives no media UUID, the caption links to the
- * attachment instead. Every other marker links to its Scarn page.
+ * attachment instead. Every other marker links to its Scarn page; a bundle
+ * is always a link, to its share link when shared.
  *
  * Each upload is reported through `onOutcome` as soon as Jira accepts it,
  * then again once its media UUID is found, so an outcome from an earlier
@@ -143,13 +144,13 @@ export class JiraCommentArtifactRenderer implements CommentArtifactRenderer {
     });
     const name = artifactBaseName(artifact);
     const caption = marker.caption.trim();
-    const pageUrl = artifactPageUrl(
+    const pageUrl = commentArtifactUrl(
       this.options.appBaseUrl,
       input.projectId,
-      artifact.artifactId,
+      artifact,
     );
 
-    if (marker.kind === "link") {
+    if (marker.kind === "link" || artifact.bundle) {
       const link = linkNode(caption || name, pageUrl);
       return {
         placeholder: {

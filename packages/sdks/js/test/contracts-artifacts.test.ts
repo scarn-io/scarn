@@ -3,8 +3,11 @@ import { z } from "zod";
 import {
   EMBEDDABLE_ARTIFACT_EXTENSIONS,
   artifactAcceptsFile,
+  artifactBundleEntryProblem,
   artifactFileExtension,
+  describeArtifactFieldProblem,
   findArtifactFields,
+  findArtifactFieldsWithProblems,
   isEmbeddableArtifactExtension,
   matchArtifactNode,
 } from "../src/contracts/artifacts";
@@ -37,6 +40,8 @@ describe("findArtifactFields", () => {
         nullable: false,
         description: "The repro",
         inArray: false,
+        bundle: null,
+        share: false,
       },
       {
         path: "trace",
@@ -44,6 +49,8 @@ describe("findArtifactFields", () => {
         nullable: true,
         description: null,
         inArray: false,
+        bundle: null,
+        share: false,
       },
       {
         path: "details.screenshot",
@@ -51,6 +58,8 @@ describe("findArtifactFields", () => {
         nullable: false,
         description: null,
         inArray: false,
+        bundle: null,
+        share: false,
       },
     ]);
   });
@@ -109,6 +118,134 @@ describe("findArtifactFields", () => {
   });
 });
 
+describe("bundle fields", () => {
+  test.concurrent("reads bundle and share", () => {
+    const schema = z.toJSONSchema(
+      z.object({
+        report: artifact.bundle({ share: true }),
+        site: artifact.bundle({ entry: "docs/start.html" }).nullable(),
+      }),
+    );
+    expect(findArtifactFields(schema)).toEqual([
+      {
+        path: "report",
+        accept: [],
+        nullable: false,
+        description: null,
+        inArray: false,
+        bundle: { entry: "index.html" },
+        share: true,
+      },
+      {
+        path: "site",
+        accept: [],
+        nullable: true,
+        description: null,
+        inArray: false,
+        bundle: { entry: "docs/start.html" },
+        share: false,
+      },
+    ]);
+  });
+
+  test.concurrent(
+    "defaults a stored bundle with no entry to index.html",
+    () => {
+      const schema = {
+        type: "object",
+        properties: { report: { type: "string", [KEYWORD]: { bundle: {} } } },
+      };
+      expect(findArtifactFields(schema)[0]).toMatchObject({
+        bundle: { entry: "index.html" },
+        share: false,
+      });
+    },
+  );
+
+  test.concurrent("ignores share on a file field", () => {
+    const schema = {
+      type: "object",
+      properties: {
+        clip: { type: "string", [KEYWORD]: { accept: [], share: true } },
+      },
+    };
+    expect(findArtifactFields(schema)[0]).toMatchObject({
+      bundle: null,
+      share: false,
+    });
+  });
+});
+
+describe("findArtifactFieldsWithProblems", () => {
+  test.concurrent("a keyword without the new keys has no problems", () => {
+    const schema = z.toJSONSchema(z.object({ clip: artifact() }));
+    expect(findArtifactFieldsWithProblems(schema).problems).toEqual([]);
+  });
+
+  test.concurrent("reports unknown and malformed keys", () => {
+    const schema = {
+      type: "object",
+      properties: {
+        clip: { type: "string", [KEYWORD]: { accept: [], maxBytes: 5 } },
+        report: {
+          type: "string",
+          [KEYWORD]: { accept: [], bundle: { entry: 3, spa: true }, share: 1 },
+        },
+      },
+    };
+    const { fields, problems } = findArtifactFieldsWithProblems(schema);
+    expect(fields.map((field) => field.path)).toEqual(["clip", "report"]);
+    expect(problems).toEqual([
+      { path: "clip", message: 'unknown key "maxBytes"' },
+      { path: "report", message: '"share" must be a boolean' },
+      { path: "report", message: 'unknown key "bundle.spa"' },
+      { path: "report", message: '"bundle.entry" must be a string' },
+    ]);
+    const [firstProblem] = problems;
+    if (!firstProblem) throw new Error("Expected an artifact field problem");
+    expect(describeArtifactFieldProblem(firstProblem)).toBe(
+      'Artifact field `clip`: unknown key "maxBytes"; this step needs a newer Scarn worker.',
+    );
+  });
+
+  test.concurrent("findArtifactFields still returns the fields", () => {
+    const schema = {
+      type: "object",
+      properties: {
+        clip: { type: "string", [KEYWORD]: { accept: [], future: {} } },
+      },
+    };
+    expect(findArtifactFields(schema).map((field) => field.path)).toEqual([
+      "clip",
+    ]);
+  });
+});
+
+describe("artifactBundleEntryProblem", () => {
+  test.concurrent("accepts relative .html paths", () => {
+    expect(artifactBundleEntryProblem("index.html")).toBeNull();
+    expect(artifactBundleEntryProblem("docs/Start.HTML")).toBeNull();
+  });
+
+  test.concurrent("rejects other paths", () => {
+    for (const entry of [
+      "",
+      "/index.html",
+      "../index.html",
+      "a/./index.html",
+      "a//index.html",
+      "a\\index.html",
+    ]) {
+      expect(artifactBundleEntryProblem(entry)).toContain(
+        "must be a relative path",
+      );
+    }
+    expect(artifactBundleEntryProblem("report.md")).toContain(
+      "must be an .html file",
+    );
+  });
+});
+
 describe("matchArtifactNode", () => {
   test.concurrent("matches direct and nullable nodes only", () => {
     const direct = { type: "string", [KEYWORD]: { accept: [".png"] } };
@@ -116,6 +253,9 @@ describe("matchArtifactNode", () => {
       accept: [".png"],
       nullable: false,
       description: null,
+      bundle: null,
+      share: false,
+      problems: [],
     });
     expect(
       matchArtifactNode({ anyOf: [direct, { type: "null" }] }),

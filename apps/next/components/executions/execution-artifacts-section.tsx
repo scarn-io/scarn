@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import {
   Alert,
   Box,
@@ -13,11 +13,21 @@ import {
 import { RecordList } from "@/components/common/record-list/record-list";
 import { RecordListRow } from "@/components/common/record-list/record-list-row";
 import { RecordListEmpty } from "@/components/common/record-list/record-list-empty";
+import { useHasProjectPermission } from "@/components/project-route-context";
 import {
   ArtifactActionButtons,
   isArtifactExpired,
 } from "./artifact-action-buttons";
-import { basename, formatArtifactMeta } from "./format-artifact";
+import {
+  ArtifactBundleActions,
+  groupArtifactsByBundle,
+  isBundleDimmed,
+} from "./artifact-bundle-actions";
+import {
+  basename,
+  formatArtifactMeta,
+  formatBundleMeta,
+} from "./format-artifact";
 import { useArtifactActions } from "./use-artifact-actions";
 import { useTaskRunArtifacts } from "./use-task-run-artifacts";
 import { useTaskRunArtifactFailures } from "./use-task-run-artifact-failures";
@@ -37,13 +47,15 @@ function formatArtifactFailuresBannerText(count: number): string {
  *
  * Always renders the list (with an empty state for zero artifacts) per the
  * product decision to surface the section even when a step produced nothing.
+ * Each bundle is one row (its files collapse into it); loose files list
+ * individually.
  */
 export function ExecutionArtifactsSection({
   taskRunId,
 }: {
   taskRunId: string | null;
 }) {
-  const { artifacts, status, loading, error, load, getDownloadUrl } =
+  const { artifacts, bundles, status, loading, error, load, getDownloadUrl } =
     useTaskRunArtifacts(taskRunId);
   const {
     artifactFailures,
@@ -52,6 +64,11 @@ export function ExecutionArtifactsSection({
     load: loadFailures,
   } = useTaskRunArtifactFailures(taskRunId);
   const actions = useArtifactActions(getDownloadUrl);
+  const canShare = useHasProjectPermission("executions:write");
+  const grouped = useMemo(
+    () => groupArtifactsByBundle(artifacts, bundles),
+    [artifacts, bundles],
+  );
 
   // Fires once on mount (i.e. on first expand); both hooks ignore repeat
   // calls while their own fetch is in flight, so re-mounts on expand/collapse
@@ -69,6 +86,7 @@ export function ExecutionArtifactsSection({
     status === "loaded" &&
     failuresStatus === "loaded" &&
     artifacts.length === 0 &&
+    bundles.length === 0 &&
     artifactFailures.length === 0;
 
   return (
@@ -132,12 +150,56 @@ export function ExecutionArtifactsSection({
               }
             />
           ))}
-          {artifacts.map((artifact, index) => {
+          {grouped.bundles.map((bundle, index) => {
+            const dimmed = isBundleDimmed(bundle);
+            return (
+              <RecordListRow
+                key={bundle.id}
+                isFirst={index === 0 && artifactFailures.length === 0}
+                primary={
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      fontWeight: 600,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                      opacity: dimmed ? 0.5 : 1,
+                    }}
+                  >
+                    {bundle.name}
+                  </Typography>
+                }
+                secondary={
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ opacity: dimmed ? 0.5 : 1 }}
+                  >
+                    {formatBundleMeta(bundle)}
+                  </Typography>
+                }
+                trailing={
+                  <ArtifactBundleActions
+                    bundle={bundle}
+                    entryArtifact={grouped.entryArtifacts.get(bundle.id)}
+                    actions={actions}
+                    canShare={canShare}
+                  />
+                }
+              />
+            );
+          })}
+          {grouped.loose.map((artifact, index) => {
             const isExpired = isArtifactExpired(artifact);
             return (
               <RecordListRow
                 key={artifact.id}
-                isFirst={index === 0 && artifactFailures.length === 0}
+                isFirst={
+                  index === 0 &&
+                  artifactFailures.length === 0 &&
+                  grouped.bundles.length === 0
+                }
                 primary={
                   <Typography
                     variant="body2"

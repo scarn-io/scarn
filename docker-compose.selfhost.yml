@@ -100,6 +100,12 @@ services:
   # Standalone API (Bun). The web app also serves /api in-process, so browsers
   # use the web app's origin; this service backs server-side rendering
   # (SCARN_API_URL) and the scheduler.
+  #
+  # It is also the artifact content origin when share links are on
+  # (SCARN_ARTIFACT_CONTENT_URL and ARTIFACT_SHARE_SECRET in .env.selfhost):
+  # point the second hostname at this port through your reverse proxy, with
+  # the original Host header. It must be another registrable domain than the
+  # web app's (e.g. artifacts.example-content.com), or sharing stays off.
   api:
     <<: *scarn-api-image
     restart: unless-stopped

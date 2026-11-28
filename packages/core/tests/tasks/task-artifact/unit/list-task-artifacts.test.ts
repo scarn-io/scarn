@@ -59,6 +59,7 @@ const anArtifact = (taskRunId: UuidV7): ArtifactContract => ({
   contentType: "application/json",
   kind: "generic",
   createdAt: NOW.toISOString(),
+  bundleId: null,
 });
 
 const fakeArtifactRepo = (artifacts: ArtifactContract[]): ArtifactRepo => ({

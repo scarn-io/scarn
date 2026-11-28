@@ -1,4 +1,4 @@
-import type { ArtifactKind } from "@scarn/sdk/contracts/artifacts";
+import type { TaskRunArtifactClient } from "./task-run-artifact-client";
 import type {
   ResolvedEnvironment,
   ResolvedEnvironmentRefInput,
@@ -203,7 +203,7 @@ export type TaskRunWorkItemsApi = {
   }): Promise<TaskRunWorkItemsApiResponse>;
 };
 
-export type TaskRunWorkerClient = {
+export type TaskRunWorkerClient = TaskRunArtifactClient & {
   userId: UuidV7;
   /**
    * A code step's work-item routes for its step bridge. Absent on clients
@@ -349,29 +349,6 @@ export type TaskRunWorkerClient = {
     claimToken: string;
     workItemId: string;
   }): Promise<{ title: string; platformKey: string }>;
-  createArtifactUploadUrl(input: {
-    taskRunId: string;
-    claimToken: string;
-    relativeStorePath: string;
-    contentType?: string | undefined;
-    /**
-     * The artifact's byte size, known here because the store reads the full
-     * file into memory before requesting the upload URL (see
-     * `RemoteArtifactStore.saveArtifact`). Passed through so the API's
-     * pre-flight usage guard can check real storage headroom instead of only
-     * the write-count cap.
-     */
-    sizeBytes?: number | undefined;
-  }): Promise<{
-    uploadUrl: string;
-    storeRef: string;
-    objectKey: string;
-    expiresInSeconds: number;
-  }>;
-  /**
-   * A presigned PUT URL for the Task's exported agent session, uploaded as
-   * JSON before the Task yields. `sizeBytes` feeds the storage pre-flight.
-   */
   createSessionUploadUrl(input: {
     taskRunId: string;
     claimToken: string;
@@ -381,32 +358,6 @@ export type TaskRunWorkerClient = {
     objectKey: string;
     expiresInSeconds: number;
   }>;
-  recordArtifact(input: {
-    taskRunId: string;
-    claimToken: string;
-    objectKey: string;
-    relativeStorePath: string;
-    sizeBytes: number;
-    contentType?: string | undefined;
-    kind: ArtifactKind;
-  }): Promise<void>;
-  /**
-   * Best-effort telemetry for an artifact-save attempt that failed (storage
-   * quota, network error, etc.). Purely informational — callers must treat a
-   * failure to report as non-fatal (see `collectStepArtifacts`'s own
-   * try/catch around this call) since it must never mask the real save
-   * failure it is reporting.
-   */
-  recordArtifactFailure(input: {
-    taskRunId: string;
-    claimToken: string;
-    relativeStorePath: string;
-    attemptedSizeBytes: number;
-    kind?: ArtifactKind | undefined;
-    errorCode: string;
-    errorMessage: string;
-    httpStatus?: number | undefined;
-  }): Promise<void>;
 };
 
 /**
@@ -415,7 +366,10 @@ export type TaskRunWorkerClient = {
  */
 export type RemoteArtifactUploader = Pick<
   TaskRunWorkerClient,
-  "createArtifactUploadUrl" | "recordArtifact"
+  | "createArtifactUploadUrl"
+  | "recordArtifact"
+  | "createArtifactBundle"
+  | "finalizeArtifactBundle"
 >;
 
 export type LaunchedRuntimeOrchestrator = {

@@ -17,6 +17,8 @@ const stubRemoteUploader: RemoteArtifactUploader = {
       expiresInSeconds: 60,
     }),
   recordArtifact: () => Promise.resolve(),
+  createArtifactBundle: () => Promise.resolve({ id: "bundle-1" }),
+  finalizeArtifactBundle: () => Promise.resolve(undefined),
 };
 
 describe("resolveArtifactStores", () => {

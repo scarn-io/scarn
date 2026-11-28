@@ -2,12 +2,15 @@ import Ajv from "ajv/dist/2020";
 import { access, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { Grant } from "@scarn/sdk";
-import { ARTIFACT_SCHEMA_KEYWORD } from "@scarn/sdk/contracts/artifacts";
+import {
+  ARTIFACT_SCHEMA_KEYWORD,
+  describeArtifactFieldProblem,
+} from "@scarn/sdk/contracts/artifacts";
 import {
   applyArtifactSubmissions,
   checkReturnedArtifactPaths,
   checkSubmittedArtifactFiles,
-  findSubmittableArtifactFields,
+  findSubmittableArtifactFieldsWithProblems,
   readStepArtifactSubmissions,
 } from "@scarn/sdk/contracts/step-artifact-submissions";
 import { readWorkItemChanges } from "@scarn/sdk/contracts/work-item-changes";
@@ -196,7 +199,9 @@ async function checkArtifactFields(
   workspacePath: string,
   source: ArtifactFieldSource,
 ): Promise<string[]> {
-  const fields = findSubmittableArtifactFields(resultSchemaJson);
+  const { fields, problems } =
+    findSubmittableArtifactFieldsWithProblems(resultSchemaJson);
+  if (problems.length > 0) return problems.map(describeArtifactFieldProblem);
   if (fields.length === 0) return [];
 
   if (source === "returned") {

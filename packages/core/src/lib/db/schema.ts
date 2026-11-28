@@ -1381,6 +1381,97 @@ export const taskLogLines = appSchema.table(
   ],
 );
 
+export const taskArtifactBundleStatusEnum = pgEnum(
+  "task_artifact_bundle_status",
+  ["pending", "ready", "failed"],
+);
+
+/**
+ * An artifact bundle: a folder of member files (ordinary `taskArtifacts` rows
+ * linked by `bundleId`) with an HTML entry page. Created `pending`; finalize
+ * marks it `ready` once every manifest member has uploaded, or `failed`.
+ * `rootPath` and `entryPath` are run-relative store paths.
+ */
+export const taskArtifactBundles = appSchema.table(
+  "task_artifact_bundles",
+  {
+    id: uuid("id").primaryKey(),
+    projectId: uuid("project_id")
+      .references(() => projects.id, { onDelete: "cascade" })
+      .notNull(),
+    taskRunId: uuid("task_run_id")
+      .references(() => taskRuns.id, { onDelete: "cascade" })
+      .notNull(),
+    name: text("name").notNull(),
+    /** The declared result field this bundle fills; null for an undeclared bundle. */
+    fieldPath: text("field_path"),
+    rootPath: text("root_path").notNull(),
+    entryPath: text("entry_path").notNull(),
+    status: taskArtifactBundleStatusEnum("status").notNull().default("pending"),
+    fileCount: integer("file_count"),
+    sizeBytes: bigint("size_bytes", { mode: "number" }),
+    createdAt: createdAtColumn(),
+    finalizedAt: timestamp("finalized_at", { withTimezone: true }),
+    /**
+     * Set by `clearExpiredArtifacts` once the bundle ages past
+     * `STORAGE_RETENTION_DAYS`, alongside the clearing of its members' bytes.
+     * The row stays readable so an expired link can say so.
+     */
+    expiredAt: timestamp("expired_at", { withTimezone: true }),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  },
+  (table) => [
+    uniqueIndex("task_artifact_bundles_task_run_name_unique").on(
+      table.taskRunId,
+      table.name,
+    ),
+    index("task_artifact_bundles_project_id_idx").on(table.projectId),
+    index("task_artifact_bundles_status_created_at_idx").on(
+      table.status,
+      table.createdAt,
+    ),
+  ],
+);
+
+export const artifactShareCreatedViaEnum = pgEnum(
+  "artifact_share_created_via",
+  ["person", "step"],
+);
+
+/**
+ * A share link for an artifact bundle. The link's token is derived from the
+ * share id with `ARTIFACT_SHARE_SECRET` (nothing secret is stored), so a
+ * share can be rebuilt at any time. Revoking sets `revokedAt`; a bundle has at
+ * most one active (unrevoked) share.
+ */
+export const artifactShares = appSchema.table(
+  "artifact_shares",
+  {
+    id: uuid("id").primaryKey(),
+    projectId: uuid("project_id")
+      .references(() => projects.id, { onDelete: "cascade" })
+      .notNull(),
+    bundleId: uuid("bundle_id")
+      .references(() => taskArtifactBundles.id, { onDelete: "cascade" })
+      .notNull(),
+    createdVia: artifactShareCreatedViaEnum("created_via").notNull(),
+    createdByUserId: uuid("created_by_user_id"),
+    createdByTaskId: uuid("created_by_task_id").references(
+      (): AnyPgColumn => tasks.id,
+      { onDelete: "set null" },
+    ),
+    createdAt: createdAtColumn(),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    revokedByUserId: uuid("revoked_by_user_id"),
+  },
+  (table) => [
+    uniqueIndex("artifact_shares_bundle_active_unique")
+      .on(table.bundleId)
+      .where(sql`${table.revokedAt} IS NULL`),
+    index("artifact_shares_project_id_idx").on(table.projectId),
+  ],
+);
+
 export const taskArtifacts = appSchema.table(
   "task_artifacts",
   {
@@ -1391,6 +1482,10 @@ export const taskArtifacts = appSchema.table(
     projectId: uuid("project_id")
       .references(() => projects.id, { onDelete: "cascade" })
       .notNull(),
+    /** The bundle this file is a member of; null for a standalone artifact. */
+    bundleId: uuid("bundle_id").references(() => taskArtifactBundles.id, {
+      onDelete: "set null",
+    }),
     relativeStorePath: text("relative_store_path").notNull(),
     /**
      * Object-storage key (the S3 key) the artifact was uploaded under.
@@ -1429,6 +1524,7 @@ export const taskArtifacts = appSchema.table(
     index("task_artifacts_task_run_id_idx").on(table.taskRunId),
     index("task_artifacts_created_at_idx").on(table.createdAt),
     index("task_artifacts_project_id_idx").on(table.projectId),
+    index("task_artifacts_bundle_id_idx").on(table.bundleId),
     index("task_artifacts_project_deleted_idx").on(
       table.projectId,
       table.deletedAt,

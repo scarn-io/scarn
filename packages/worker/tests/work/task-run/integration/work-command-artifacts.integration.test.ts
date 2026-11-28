@@ -38,7 +38,10 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { writeStepArtifactSubmissions } from "@scarn/sdk/contracts/step-artifact-submissions";
 import { createUuidV7 } from "../../../../src/common/contracts/uuid-v7";
+import type { SaveArtifactBundleInput } from "../../../../src/artifacts/artifact-store/domain/artifact-store";
+import { CompositeArtifactStore } from "../../../../src/artifacts/artifact-store/infra/composite-artifact-store";
 import { LocalArtifactStore } from "../../../../src/artifacts/artifact-store/infra/local-artifact-store";
 import { runProjectWork } from "../../../../src/work/task-run/application/run-project-work";
 import {
@@ -185,6 +188,106 @@ describe.skipIf(!integrationEnabled)(
             seed.relativePath,
           );
           const storedContent = await readFile(storedPath, "utf8");
+          expect(storedContent).toBe(seed.content);
+        }
+      },
+      TEST_TIMEOUT_MS,
+    );
+
+    test(
+      "saves a submitted bundle as one bundle and keeps its tree in the local store",
+      async () => {
+        const projectId = createUuidV7();
+        const taskRunId = createUuidV7();
+        const findings = { confidence: 1, summary: "bundle persistence ok" };
+        const scenario = buildSingleStepScenario({
+          projectId,
+          taskRunId,
+          prompt: "Submit the integration findings.",
+          findings,
+        });
+        const seedArtifacts = [
+          { relativePath: "report/index.html", content: "<h1>report</h1>" },
+          { relativePath: "report/img/shot.png", content: "png-bytes" },
+          { relativePath: "notes.txt", content: "loose-file" },
+        ];
+
+        const savedBundles: SaveArtifactBundleInput[] = [];
+        const artifactStore = new CompositeArtifactStore([
+          new LocalArtifactStore(artifactsBaseDir),
+          {
+            saveArtifact: () =>
+              Promise.resolve({ storeRef: "recorded", sizeBytes: 0 }),
+            saveBundle: (input) => {
+              savedBundles.push(input);
+              return Promise.resolve({
+                storeRef: "bundle-1",
+                sizeBytes: 0,
+                fileCount: input.members.length,
+              });
+            },
+          },
+        ]);
+
+        const fakeAiPort = await fakeAi.start();
+        fakeAi.configure("scarn-submit-step-findings", {
+          findingsJson: findings,
+        });
+        await seedOpencodeConfig(homeDir, fakeAiPort);
+
+        const workerClient = new FakeTaskRunWorkerClient(scenario);
+        const built = buildIntegrationDeps({
+          workerClient,
+          verbose: process.env["SCARN_INTEGRATION_VERBOSE"] === "true",
+          seedArtifacts,
+          artifactStore,
+          afterClone: (workspacePath) =>
+            writeStepArtifactSubmissions(workspacePath, {
+              fields: {},
+              extra: [
+                {
+                  kind: "bundle",
+                  stored: "report",
+                  sourcePath: "out/report",
+                  sizeBytes: 24,
+                  entry: "index.html",
+                  fileCount: 2,
+                },
+              ],
+            }),
+        });
+        containerRegistry = built.containerRegistry;
+
+        await runProjectWork(
+          {
+            projectId,
+            baseUrl: "http://127.0.0.1:1",
+            concurrency: 1,
+            batchSize: 1,
+            pollIntervalMs: 250,
+            missingFindingsGraceMs: 5_000,
+            leaseDurationSeconds: 60,
+            once: true,
+            preserveRuntimeOnComplete: keepContainers,
+          },
+          built.deps,
+        );
+
+        expect(workerClient.completeCalls).toHaveLength(1);
+        expect(savedBundles).toHaveLength(1);
+        expect(savedBundles[0]).toMatchObject({
+          name: "report",
+          rootPath: "report",
+          entryPath: "index.html",
+        });
+        expect(
+          savedBundles[0]?.members.map((member) => member.path).sort(),
+        ).toEqual(["img/shot.png", "index.html"]);
+        for (const seed of seedArtifacts) {
+          const storedContent = await readFile(
+            path.join(artifactsBaseDir, taskRunId, seed.relativePath),
+            "utf8",
+          );
           expect(storedContent).toBe(seed.content);
         }
       },

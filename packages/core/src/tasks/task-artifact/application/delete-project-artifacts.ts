@@ -149,7 +149,31 @@ export const deleteProjectArtifacts = async (
 
   const loaded = await loadRequiredArtifacts(projectId, artifactIds, deps);
   if (!loaded.ok) return loaded;
-  const artifacts = loaded.value;
+
+  const deletedIds = await purgeProjectArtifacts(projectId, loaded.value, deps);
+  return Result.ok(deletedIds.length);
+};
+
+export type PurgeProjectArtifactsDeps = Omit<
+  DeleteProjectArtifactsDeps,
+  "userAuthz"
+>;
+
+/**
+ * Deletes already-loaded artifacts of one project, with no authorization
+ * check: removes their objects (best-effort), soft-deletes their rows and
+ * emits {@link ArtifactDeletedDomainEvent}s for billing. Returns the ids
+ * actually deleted. Shared by the user-facing delete and the stale-bundle
+ * sweep.
+ */
+export const purgeProjectArtifacts = async (
+  projectId: UuidV7,
+  artifacts: ArtifactContract[],
+  deps: PurgeProjectArtifactsDeps,
+): Promise<UuidV7[]> => {
+  if (artifacts.length === 0) {
+    return [];
+  }
 
   // Best-effort S3 delete per non-expired artifact (decision 13: failures are
   // logged, never fatal — the 30-day lifecycle rule cleans up any orphan).
@@ -167,7 +191,7 @@ export const deleteProjectArtifacts = async (
   );
 
   const deletedIds = await deps.artifactRepo.softDeleteMany(
-    artifactIds,
+    artifacts.map((artifact) => artifact.id),
     deps.timeProvider.now(),
     deps.dbExecutor,
   );
@@ -182,7 +206,7 @@ export const deleteProjectArtifacts = async (
     { projectId, ...deps },
   );
 
-  return Result.ok(deletedIds.length);
+  return deletedIds;
 };
 
 export const deleteProjectArtifact = async (

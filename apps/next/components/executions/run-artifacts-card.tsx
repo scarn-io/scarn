@@ -3,21 +3,33 @@
 /**
  * A finished run's artifacts, shown inline at the end of its conversation so
  * the evidence sits where the agent's work concludes rather than only in the
- * Details drawer. Renders nothing until the list loads, and nothing at all
- * for a run that produced no artifacts and had no upload failures.
+ * Details drawer. Each bundle is one row (its files collapse into it); loose
+ * files list individually. Renders nothing until the list loads, and nothing
+ * at all for a run that produced no artifacts and had no upload failures.
  */
 
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { Box, Stack, Tooltip, Typography } from "@mui/material";
 import AttachFileIcon from "@mui/icons-material/AttachFile";
+import FolderOutlinedIcon from "@mui/icons-material/FolderOutlined";
 import InsertDriveFileOutlinedIcon from "@mui/icons-material/InsertDriveFileOutlined";
 import TravelExploreOutlinedIcon from "@mui/icons-material/TravelExploreOutlined";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
+import { useHasProjectPermission } from "@/components/project-route-context";
 import {
   ArtifactActionButtons,
   isArtifactExpired,
 } from "./artifact-action-buttons";
-import { basename, formatArtifactMeta } from "./format-artifact";
+import {
+  ArtifactBundleActions,
+  groupArtifactsByBundle,
+  isBundleDimmed,
+} from "./artifact-bundle-actions";
+import {
+  basename,
+  formatArtifactMeta,
+  formatBundleMeta,
+} from "./format-artifact";
 import { formatBytes } from "./format-bytes";
 import { humanizeArtifactFailureReason } from "./humanize-artifact-failure-reason";
 import { useArtifactActions } from "./use-artifact-actions";
@@ -32,11 +44,16 @@ const tracesFirst = (artifacts: readonly ArtifactContract[]) => [
 ];
 
 export function RunArtifactsCard({ taskRunId }: { taskRunId: string }) {
-  const { artifacts, status, error, load, getDownloadUrl } =
+  const { artifacts, bundles, status, error, load, getDownloadUrl } =
     useTaskRunArtifacts(taskRunId);
   const { artifactFailures, load: loadFailures } =
     useTaskRunArtifactFailures(taskRunId);
   const actions = useArtifactActions(getDownloadUrl);
+  const canShare = useHasProjectPermission("executions:write");
+  const grouped = useMemo(
+    () => groupArtifactsByBundle(artifacts, bundles),
+    [artifacts, bundles],
+  );
 
   useEffect(() => {
     load();
@@ -52,7 +69,7 @@ export function RunArtifactsCard({ taskRunId }: { taskRunId: string }) {
     );
   }
   const count = artifacts.length + artifactFailures.length;
-  if (count === 0) return null;
+  if (count === 0 && bundles.length === 0) return null;
 
   return (
     <Box
@@ -95,7 +112,28 @@ export function RunArtifactsCard({ taskRunId }: { taskRunId: string }) {
         </Typography>
       ) : null}
       <Stack divider={<Box sx={{ borderTop: 1, borderColor: "divider" }} />}>
-        {tracesFirst(artifacts).map((artifact) => {
+        {grouped.bundles.map((bundle) => (
+          <ArtifactRow
+            key={bundle.id}
+            icon={
+              <FolderOutlinedIcon
+                sx={{ fontSize: 18, color: "text.secondary" }}
+              />
+            }
+            name={bundle.name}
+            meta={formatBundleMeta(bundle)}
+            dimmed={isBundleDimmed(bundle)}
+            trailing={
+              <ArtifactBundleActions
+                bundle={bundle}
+                entryArtifact={grouped.entryArtifacts.get(bundle.id)}
+                actions={actions}
+                canShare={canShare}
+              />
+            }
+          />
+        ))}
+        {tracesFirst(grouped.loose).map((artifact) => {
           const isTrace = artifact.kind === "playwright-trace";
           const Icon = isTrace
             ? TravelExploreOutlinedIcon
